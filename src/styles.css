@@ -2755,11 +2755,13 @@ h4 {
   flex-direction: column;
   overflow: hidden;
 }
-/* A grid so the track's single row stretches to at least the visible height: the add bands run full height. */
+/* The board never scrolls up and down: its one row is the visible height and each act or sequence scrolls its own content. */
 .board {
   flex: 1;
+  min-height: 0;
   display: grid;
-  overflow: auto;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: auto hidden;
   padding: 16px;
   justify-content: safe center;
   background: var(--canvas);
@@ -2768,18 +2770,22 @@ h4 {
   display: flex;
   gap: 14px;
   align-items: flex-start;
+  min-height: 0;
 }
 /* An act is a big card holding its sequences, each a card holding its scenes: stacked on the whole story, side by side once the act is opened. */
+/* Acts, sequences and scene cards share one padding (10px) and one gap (8px) between what they hold. */
 .column {
   flex: none;
-  display: grid;
-  gap: 10px;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 100%;
+  min-height: 0;
   padding: 10px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  border-top: 3px solid var(--act, var(--line-strong));
-  background: var(--panel);
+  /* The act wears its colour; its sequences stay neutral, its scenes wear their own. */
+  border: 1px solid color-mix(in srgb, var(--act, var(--line)) 40%, var(--line));
+  background: color-mix(in srgb, var(--act, var(--panel)) 16%, var(--panel));
   box-shadow: var(--shadow-sm);
 }
 .column.drop,
@@ -2789,21 +2795,26 @@ h4 {
   outline-offset: 2px;
 }
 .column.z-story {
-  width: 328px;
-  grid-template-columns: minmax(0, 1fr);
+  width: 360px;
 }
-.column.folded {
-  cursor: pointer;
+.column-head {
+  flex: none;
 }
-.column.folded:hover {
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow-md);
+/* An opened act or sequence drops its own frame: the breadcrumb names it, the board shows only what it holds. */
+.column.z-act,
+.column.z-seq {
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 .column-head,
 .seq-head {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .column-head {
   min-height: 30px;
@@ -2817,15 +2828,15 @@ h4 {
   margin: 0;
   font: inherit;
 }
-/* The title button opens the act or sequence; the chevron beside it folds it in place. */
+/* The title button opens the act or sequence; the « + » beside it adds to it. Counts sit level with the title line. */
 .drill {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   width: 100%;
   min-width: 0;
   min-height: 30px;
-  padding: 2px 6px 2px 2px;
+  padding: 0;
   border: none;
   border-radius: var(--radius);
   background: none;
@@ -2833,24 +2844,13 @@ h4 {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 120ms ease-out;
 }
 .seq-head .drill {
   flex: 1;
   min-height: 26px;
-  padding-left: 4px;
-}
-.drill:hover {
-  background: var(--hover);
-}
-.drill.static {
-  cursor: default;
-}
-.drill.static:hover {
-  background: none;
 }
 .drill:focus-visible,
-.fold-toggle:focus-visible {
+.head-add:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
@@ -2858,19 +2858,13 @@ h4 {
 .drill > .muted.small {
   flex: 1 0 auto;
   white-space: nowrap;
+  line-height: 1.5;
 }
-.drill > .act-pill,
+.drill > .act-name,
 .drill > .seq-title {
   flex: 0 1 auto;
 }
-.fold-chev {
-  flex: none;
-  width: 15px;
-  height: 15px;
-  color: var(--muted);
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.fold-toggle {
+.head-add {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -2881,37 +2875,41 @@ h4 {
   border: none;
   border-radius: var(--radius);
   background: none;
-  color: inherit;
+  color: var(--muted);
   cursor: pointer;
-  transition: background 120ms ease-out;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
 }
-.fold-toggle:hover {
+.head-add svg {
+  width: 15px;
+  height: 15px;
+}
+.head-add:hover {
   background: var(--hover);
-}
-.fold-toggle[aria-expanded="true"] .fold-chev {
-  transform: rotate(90deg);
-}
-.fold-toggle:hover .fold-chev {
   color: var(--ink);
 }
-.act-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-  height: 26px;
-  margin: 0;
-  padding: 0 11px 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
+/* The act title reads as the column heading, a step above its sequences. */
 .act-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+/* The automatic number on its own line, grey, above the title. */
+.act-name,
+.seq-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.act-name > .auto-num,
+.seq-title > .auto-num {
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+.named {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* Drag handle on the left edge of every act, sequence and scene card. */
 .grip {
@@ -2947,135 +2945,151 @@ h4 {
 .grip:active {
   cursor: grabbing;
 }
-.act-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--act, var(--accent));
-}
 .seq-title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Rename and delete float over the header's right end on hover, so they never squeeze the title. */
-.column-head,
-.seq-head {
-  position: relative;
-}
-.seq-actions {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  translate: 0 -50%;
+/* « ⋯ » opens rename and delete; it sits beside the « + » in a header, over the top-right corner of a card. */
+.more-btn {
+  flex: none;
   display: inline-flex;
-  padding: 1px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease-out;
-}
-.seq-actions .btn {
-  width: 24px;
-  height: 24px;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out,
+    opacity 120ms ease-out;
 }
-/* Clear of the fold chevron when there is one. */
-.seq-actions:has(+ .fold-toggle) {
-  right: 30px;
+.more-btn svg {
+  width: 16px;
+  height: 16px;
 }
-.column-head:hover .seq-actions,
-.seq-head:hover .seq-actions,
-.seq-actions:focus-within {
-  opacity: 1;
-  pointer-events: auto;
+.more-btn:hover,
+.more-btn.on {
+  background: var(--hover);
+  color: var(--ink);
+}
+.more-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.more-menu {
+  min-width: 160px;
+}
+.more-menu button.danger,
+.more-menu button.danger:hover,
+.more-menu button.danger:focus-visible {
+  color: var(--danger);
 }
 .act-seqs {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
   animation: unfold 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .seq {
-  flex: 0 0 300px;
+  flex: 0 0 330px;
   min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  padding: 6px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--act, var(--accent)) 5%, var(--sunken));
-}
-.act-seqs.row > .seq.folded {
-  flex-basis: 220px;
+  background: var(--sunken);
 }
 /* On the whole story, an act's sequences stack in its column. */
 .act-seqs.stack {
   flex-direction: column;
   align-items: stretch;
+  overflow-y: auto;
+  /* A gutter the scrollbar's width on both edges keeps the left and right margins equal, scrollbar or not. */
+  scrollbar-gutter: stable both-edges;
+  margin: 0 -10px -10px;
+  padding: 0 0 10px;
 }
 .act-seqs.stack > .seq {
   flex: none;
+  max-height: none;
 }
 .act-seqs.stack > .seq-band {
   width: auto;
   min-height: 36px;
 }
-/* One sequence opened: its scenes spread over the width. */
+/* An act opened: each sequence scrolls its scenes. */
+.act-seqs.row > .seq .cards {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  margin: 0 -10px;
+}
+/* One sequence opened: its scenes run on one row, slid sideways by dragging or with the wheel. */
 .board.solo {
-  justify-content: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  /* The row runs to the board's edges; its own padding gives the first and last cards their room. */
+  padding-inline: 0;
 }
 .board.solo .column {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
+  flex: 1;
+  min-width: 0;
 }
 .seq.solo {
-  flex: none;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
 }
 .seq.solo .cards {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  align-items: start;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 2px 16px 10px;
+  scroll-padding-inline: 16px;
+  cursor: ew-resize;
+}
+.seq.solo .cards > .card {
+  flex: none;
+  width: 330px;
+}
+.seq.solo .cards > .card-add {
+  flex: none;
+  width: 220px;
+}
+.seq.solo .card-add > button {
+  min-height: 120px;
+}
+.seq.solo .cards.panning,
+.seq.solo .cards.panning * {
+  user-select: none;
+  cursor: ew-resize;
 }
 .seq-head {
+  flex: none;
   min-height: 26px;
 }
 .seq-title {
   font-weight: 600;
   font-size: 12.5px;
-  color: var(--ink-2);
+  color: var(--ink);
 }
 .seq-head .muted.small {
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-/* A folded act lists its sequences, one quiet row each. */
-.seq-summary {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-.seq-summary li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--act, var(--accent)) 5%, var(--sunken));
-}
-.seq-summary .muted.small {
-  flex: none;
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -3140,16 +3154,16 @@ h4 {
   padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 8px;
   animation: unfold 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .card {
   display: flex;
   min-width: 0;
   border-radius: 8px;
-  background: var(--panel);
+  background: color-mix(in srgb, var(--scene, var(--panel)) 16%, var(--panel));
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
   box-shadow: var(--shadow-sm);
   transition:
     border-color 120ms ease-out,
@@ -3157,7 +3171,7 @@ h4 {
     opacity 160ms ease-out;
 }
 .card:hover {
-  border-color: var(--line-strong);
+  border-color: color-mix(in srgb, var(--scene, var(--line-strong)) 60%, var(--line-strong));
   box-shadow: var(--shadow-md);
 }
 .card.on {
@@ -3185,16 +3199,17 @@ h4 {
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   text-align: left;
-  padding: 10px 12px 10px 0;
+  padding: 10px 10px 10px 0;
   border: none;
   background: none;
   color: inherit;
   cursor: pointer;
 }
+/* The scene number on its own line above the heading. */
 .card-top {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 1px;
 }
 .card-num {
   display: inline-flex;
@@ -3204,15 +3219,7 @@ h4 {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.card[style] .card-num::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--scene);
-}
 .card-heading {
-  flex: 1;
   min-width: 0;
   font-size: 11.5px;
   font-weight: 600;
@@ -3221,11 +3228,6 @@ h4 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.card-len {
-  font-size: 11.5px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 .card-summary {
   font-size: 12.5px;
@@ -3247,9 +3249,430 @@ h4 {
 .card-foot:empty {
   display: none;
 }
-.card-add .btn {
+/* Adding a scene is an empty card waiting to be filled. */
+.card-add > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
+  min-height: 64px;
+  border-radius: 8px;
+  border: 1px dashed var(--line-strong);
+  background: none;
   color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease-out,
+    background 120ms ease-out,
+    color 120ms ease-out;
+}
+.card-add > button:hover {
+  border-color: var(--muted);
+  background: var(--hover);
+  color: var(--ink);
+}
+.card-add > button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.card-add svg {
+  width: 14px;
+  height: 14px;
+}
+/* Canvas: the story as a tree on a dotted surface that pans and zooms. Same headers and cards as the columns. */
+.canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background-color: var(--canvas);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--hint) 40%, transparent) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  background-attachment: local;
+  cursor: grab;
+}
+/* The canvas is moved, not read like a page: no text selection gets in the way of a pan. */
+.canvas {
+  user-select: none;
+}
+.canvas.panning,
+.canvas.panning * {
+  cursor: grabbing;
+}
+/* The chevron that folds an act or sequence down to its header. */
+.head-fold {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
+}
+.head-fold svg {
+  width: 15px;
+  height: 15px;
+}
+.head-fold:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.head-fold:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* A folded act or sequence shows the edge of what it holds, stacked under its header. */
+.cv-node.folded {
+  box-shadow:
+    0 5px 0 -2px color-mix(in srgb, var(--line-strong) 85%, transparent),
+    var(--shadow-sm);
+}
+/* « + » on a wire: invisible until the pointer reaches the wire, then a small round button over it. */
+.cv-insert {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.cv-insert.down {
+  left: 0;
+  right: 0;
+  top: -26px;
+  height: 26px;
+}
+.cv-insert.side {
+  right: 100%;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+}
+.cv-insert.trunk {
+  left: -64px;
+  bottom: 100%;
+  width: 40px;
+  height: 36px;
+}
+.cv-insert-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--wire);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  scale: 0.7;
+  transition:
+    opacity 120ms ease-out,
+    scale 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cv-insert.trunk .cv-insert-dot {
+  border-color: var(--trunk);
+}
+.cv-insert-dot svg {
+  width: 12px;
+  height: 12px;
+}
+.cv-insert:hover .cv-insert-dot,
+.cv-insert:focus-visible .cv-insert-dot {
+  opacity: 1;
+  scale: 1;
+}
+.cv-insert:focus-visible {
+  outline: none;
+}
+.cv-insert:focus-visible .cv-insert-dot {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+/* Reaching for the wire above a card does not light the card up. */
+.cv-cards > .card:has(> .cv-insert:hover) {
+  border-color: color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
+  box-shadow: var(--shadow-sm);
+}
+.cv-cards > .card:has(> .cv-insert:hover) > .card-more {
+  opacity: 0;
+}
+.canvas-tools-sep {
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--line);
+}
+.canvas-world {
+  width: max-content;
+  padding: 32px 40px 96px;
+}
+.cv-tree,
+.cv-tree :where(ol) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* Wires: the trunk from the film to its acts stays neutral; inside an act they wear its colour. */
+.cv-tree,
+.cv-act {
+  --trunk: var(--hint);
+  --wire: color-mix(in srgb, var(--act, var(--hint)) 70%, var(--hint));
+  --wire-w: 1.5px;
+}
+.cv-node {
+  position: relative;
+  cursor: default;
+}
+.cv-film {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  min-width: 220px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+.cv-film-title {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cv-film .muted.small {
+  font-variant-numeric: tabular-nums;
+}
+.cv-act-node {
+  width: 300px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--act, var(--line)) 40%, var(--line));
+  background: color-mix(in srgb, var(--act, var(--panel)) 16%, var(--panel));
+  box-shadow: var(--shadow-sm);
+}
+.cv-act-node.drop {
+  outline: 2px dashed var(--focus);
+  outline-offset: 2px;
+}
+.cv-node.seq {
+  flex: none;
+  width: 300px;
+  max-height: none;
+  box-shadow: var(--shadow-sm);
+}
+.cv-add > .add-band {
+  width: 52px;
+  min-height: 52px;
+  border-radius: 8px;
+}
+.cv-add > .add-band svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Acts hang off the trunk, which runs down from under the film's left edge. */
+.cv-acts {
+  margin-left: 28px;
+}
+.cv-act {
+  position: relative;
+  padding: 36px 0 0 44px;
+}
+.cv-acts > .cv-act:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: var(--wire-w) solid var(--trunk);
+}
+/* An elbow from the line above to the node's middle, ending in an arrowhead. */
+.cv-acts > .cv-act > .cv-node::before,
+.cv-seqs > .cv-seq:first-child > .cv-node::before {
+  content: "";
+  position: absolute;
+  right: calc(100% + 3px);
+  bottom: 50%;
+  box-sizing: border-box;
+  width: 41px;
+  height: calc(50% + 36px);
+  border-left: var(--wire-w) solid var(--trunk);
+  border-bottom: var(--wire-w) solid var(--trunk);
+  border-bottom-left-radius: 12px;
+}
+.cv-seqs > .cv-seq:first-child > .cv-node::before {
+  border-color: var(--wire);
+}
+.cv-acts > .cv-act > .cv-node:not(.add-band)::after,
+.cv-seqs > .cv-seq > .cv-node:not(.add-band)::after {
+  content: "";
+  position: absolute;
+  right: calc(100% + 2px);
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-top: var(--wire-w) solid var(--wire);
+  border-right: var(--wire-w) solid var(--wire);
+  transform: translateY(-50%) rotate(45deg);
+}
+.cv-acts > .cv-act > .cv-node::after {
+  border-color: var(--trunk);
+}
+/* Sequences run left to right under their act, one arrow from each to the next. */
+.cv-seqs {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  margin-left: 28px;
+  padding-top: 36px;
+}
+.cv-seq {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+.cv-seqs > .cv-seq:first-child {
+  padding-left: 44px;
+}
+.cv-seq + .cv-seq > .cv-node::before {
+  content: "";
+  position: absolute;
+  right: calc(100% + 3px);
+  top: 50%;
+  width: 37px;
+  border-top: var(--wire-w) solid var(--wire);
+  translate: 0 -50%;
+}
+/* The slots that add an act or a sequence hang on a dashed wire. */
+.cv-acts > .cv-add > .cv-node::before,
+.cv-seqs > .cv-add:first-child > .cv-node::before {
+  border-left-style: dashed;
+  border-bottom-style: dashed;
+}
+.cv-seq + .cv-add > .cv-node::before {
+  border-top-style: dashed;
+}
+/* Each sequence heads a column of its scenes, an arrow down to each. */
+.cv-cards {
+  width: 300px;
+  margin-top: 26px;
+  gap: 26px;
+}
+.cv-cards > li {
+  position: relative;
+}
+.cv-cards > li::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 3px);
+  height: 22px;
+  border-left: var(--wire-w) solid var(--wire);
+  translate: -50% 0;
+}
+.cv-cards > .card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  width: 7px;
+  height: 7px;
+  border-right: var(--wire-w) solid var(--wire);
+  border-bottom: var(--wire-w) solid var(--wire);
+  transform: translateX(-50%) rotate(45deg);
+}
+.cv-cards > .card-add::before {
+  border-left-style: dashed;
+}
+/* An opened act or sequence is the root of its own tree: nothing leads into it. */
+.cv-root,
+.cv-tree.cv-seqs > .cv-root:first-child {
+  padding: 0;
+}
+.cv-tree.cv-seqs {
+  margin-left: 0;
+  padding-top: 0;
+}
+.cv-tree .cv-root:first-child > .cv-node::before,
+.cv-tree .cv-root:first-child > .cv-node::after {
+  content: none;
+}
+.canvas-tools {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+}
+.canvas-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
+}
+.canvas-tools button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--ink);
+}
+.canvas-tools button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.canvas-tools button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.canvas-tools svg {
+  width: 15px;
+  height: 15px;
+}
+.canvas-tools .canvas-pct {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
 }
 .card-panel {
   position: absolute;
@@ -3280,10 +3703,8 @@ h4 {
   gap: 8px;
 }
 .card-panel h2 {
-  font-size: 13px;
+  font-size: 14px;
   flex: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
   line-height: 1.4;
 }
 .swatches {
@@ -4820,4 +5241,30 @@ h4 {
   .print-page:last-child {
     break-after: auto;
   }
+}
+
+.card {
+  position: relative;
+}
+.card-more {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 1;
+  opacity: 0;
+}
+.card:hover > .card-more,
+.card-more:focus-visible,
+.card-more.on {
+  opacity: 1;
+}
+.heading-input {
+  text-transform: uppercase;
+}
+
+/* An automatic number (« Act. I », « Séq. A », « Scè. 12 ») reads grey; the title beside it keeps the ink colour. */
+.auto-num {
+  color: var(--muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }

@@ -4,6 +4,7 @@ import { useProject } from "../../../project/ui/projectContext";
 import { prettyName } from "../../bible/domain/appearances";
 import { useScenes } from "../../screenplay/application/scriptSession";
 import { formatEighths } from "../../screenplay/domain/duration";
+import { numberedTitles, sceneLabel } from "../domain/outline";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline } from "../application/story";
 
 const ROW = 30;
@@ -53,6 +54,7 @@ export function TimelineView() {
 
   if (!story) return <div className="view pad muted">Chargement…</div>;
   const groups = storyOutline(story, scenes.map((s) => s.id));
+  const titles = numberedTitles(groups);
   const spans = (ids: string[]) => {
     const ls = ids.map((id) => pos.get(id)).filter((l) => !!l);
     if (!ls.length) return null;
@@ -87,8 +89,8 @@ export function TimelineView() {
                 <g key={g.act.id}>
                   <rect x={sp.x} y={2} width={sp.w} height={ROW - 4} className={`tl-act a${i % 2}`} rx={3} />
                   <text x={sp.x + 6} y={ROW - 10} className="tl-label">
-                    <title>{g.act.title}</title>
-                    {fit(g.act.title, sp.w, 8)}
+                    <title>{titles.get(g.act.id)}</title>
+                    {fit(titles.get(g.act.id)!, sp.w, 8)}
                   </text>
                 </g>
               ) : null;
@@ -100,8 +102,8 @@ export function TimelineView() {
                   <g key={s.sequence.id}>
                     <rect x={sp.x} y={ROW + 2} width={sp.w} height={ROW - 4} className={`tl-seq s${i % 2}`} rx={3} />
                     <text x={sp.x + 4} y={2 * ROW - 10} className="tl-label small">
-                      <title>{s.sequence.title}</title>
-                      {fit(s.sequence.title, sp.w, 7.4)}
+                      <title>{titles.get(s.sequence.id)}</title>
+                      {fit(titles.get(s.sequence.id)!, sp.w, 7.4)}
                     </text>
                   </g>
                 ) : null;
@@ -161,7 +163,7 @@ export function TimelineView() {
         {shown && (
           <>
             <strong>
-              {shown.index + 1}. {shown.heading || "(sans en-tête)"}
+              <span className="auto-num">{sceneLabel(shown.index + 1)}</span> {shown.heading || "(sans en-tête)"}
             </strong>{" "}
             <span className="muted">
               p. {shown.page} · {formatEighths(shown.eighths)} · {SCENE_STATUSES.find((s) => s.id === story.meta.get(shown.id)?.status)?.label ?? "sans statut"}

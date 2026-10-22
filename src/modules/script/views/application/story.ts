@@ -109,10 +109,18 @@ export function lastRank(items: { rank: string }[]): string | null {
   return items.reduce<string | null>((m, x) => (m === null || x.rank > m ? x.rank : m), null);
 }
 
-export async function addAct(story: Story, title: string): Promise<string> {
+/** The rank that puts a new item just before `beforeId` among `items`, or after the last one. */
+function rankBefore(items: { id: string; rank: string }[], beforeId: string | null): string {
+  const sorted = [...items].sort((a, b) => (a.rank < b.rank ? -1 : 1));
+  const at = beforeId ? sorted.findIndex((x) => x.id === beforeId) : -1;
+  if (at < 0) return rankBetween(lastRank(sorted), null);
+  return rankBetween(at > 0 ? sorted[at - 1].rank : null, sorted[at].rank);
+}
+
+export async function addAct(story: Story, title: string, beforeId: string | null = null): Promise<string> {
   const id = uuidv7();
   const now = nowIso();
-  await write("Nouvel acte", ["act"], [db.insertInto("act").values({ id, rank: rankBetween(lastRank(story.acts), null), title, created_at: now, updated_at: now })]);
+  await write("Nouvel acte", ["act"], [db.insertInto("act").values({ id, rank: rankBefore(story.acts, beforeId), title, created_at: now, updated_at: now })]);
   return id;
 }
 
@@ -138,11 +146,11 @@ export async function deleteAct(id: string): Promise<void> {
   await write("Acte supprimé", ["act", "sequence"], [db.deleteFrom("act").where("id", "=", id)]);
 }
 
-export async function addSequence(story: Story, actId: string | null, title: string, summary = ""): Promise<string> {
+export async function addSequence(story: Story, actId: string | null, title: string, summary = "", beforeId: string | null = null): Promise<string> {
   const id = uuidv7();
   const now = nowIso();
   const siblings = story.sequences.filter((s) => s.actId === actId);
-  const rank = rankBetween(lastRank(siblings.length ? siblings : story.sequences), null);
+  const rank = beforeId ? rankBefore(siblings, beforeId) : rankBetween(lastRank(siblings.length ? siblings : story.sequences), null);
   await write("Nouvelle séquence", ["sequence"], [
     db.insertInto("sequence").values({ id, act_id: actId, rank, title, summary, created_at: now, updated_at: now }),
   ]);

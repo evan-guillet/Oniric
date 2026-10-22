@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flatten, materialize, memberships, moveScene, outline, type OutlineAct, type OutlineScene, type OutlineSequence } from "./outline";
+import { flatten, letters, materialize, memberships, moveScene, numberedTitles, outline, roman, type OutlineAct, type OutlineScene, type OutlineSequence } from "./outline";
 
 const acts: OutlineAct[] = [
   { id: "a2", rank: "V", title: "Acte II" },
@@ -47,6 +47,43 @@ describe("outline", () => {
     expect(materialize(scenes, sequences)).toEqual([
       { id: "s2", sequenceId: "q1" },
       { id: "s5", sequenceId: "q3" },
+    ]);
+  });
+});
+
+describe("numberedTitles", () => {
+  it("counts in Roman numerals and letters", () => {
+    expect([1, 4, 9, 14, 40].map(roman)).toEqual(["I", "IV", "IX", "XIV", "XL"]);
+    expect([1, 26, 27].map(letters)).toEqual(["A", "Z", "AA"]);
+  });
+
+  it("numbers acts and sequences by position, replacing a number typed by hand", () => {
+    const a: OutlineAct[] = [
+      { id: "a1", rank: "F", title: "Acte I : le départ" },
+      { id: "a2", rank: "V", title: "Acte II" },
+      { id: "a3", rank: "X", title: "Mi-temps" },
+      { id: "a4", rank: "Z", title: "Act. 4 – Le retour" },
+      { id: "a5", rank: "ZZ", title: "Act. V Le bout" },
+    ];
+    const q: OutlineSequence[] = [
+      { id: "q1", actId: "a1", rank: "F", title: "A. Les ferrailleurs" },
+      { id: "q2", actId: "a2", rank: "F", title: "Le toit" },
+      { id: "q3", actId: "a3", rank: "F", title: "" },
+      { id: "q4", actId: "a4", rank: "F", title: "Seq. D – La chute" },
+      { id: "q5", actId: "a5", rank: "F", title: "Séq. E La fin" },
+    ];
+    const t = numberedTitles(outline([], q, a));
+    expect([...t.entries()]).toEqual([
+      ["a1", "Act. I Le départ"],
+      ["q1", "Séq. A Les ferrailleurs"],
+      ["a2", "Act. II"],
+      ["q2", "Séq. B Le toit"],
+      ["a3", "Act. III Mi-temps"],
+      ["q3", "Séq. C"],
+      ["a4", "Act. IV Le retour"],
+      ["q4", "Séq. D La chute"],
+      ["a5", "Act. V Le bout"],
+      ["q5", "Séq. E La fin"],
     ]);
   });
 });

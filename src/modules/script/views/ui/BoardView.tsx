@@ -1,5 +1,5 @@
-import { ChevronRight, Diamond, GripVertical, Pencil, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, Ellipsis, GripVertical, Pencil, Plus, Trash2, X, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
@@ -8,8 +8,8 @@ import { TagInput } from "../../../../ui-kit/Form";
 import { useProject } from "../../../project/ui/projectContext";
 import { headingPlace, prettyName } from "../../bible/domain/appearances";
 import { useScenes, type SceneInfo } from "../../screenplay/application/scriptSession";
-import { formatEighths, formatMinutes } from "../../screenplay/domain/duration";
-import { moveScene, type ActGroup, type SequenceGroup } from "../domain/outline";
+import { formatEighths } from "../../screenplay/domain/duration";
+import { moveScene, numberedParts, numberedTitles, sceneLabel, type ActGroup, type SequenceGroup } from "../domain/outline";
 import {
   actPlace,
   addAct,
@@ -29,18 +29,27 @@ import {
   type SceneMeta,
   type Story,
 } from "../application/story";
+import { CanvasSurface } from "./CanvasSurface";
 
-type Level = "acts" | "sequences" | "all";
 type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
+type BoardMode = "columns" | "canvas" | "plotlines";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
 type Focus = { act: string; seq?: string } | null;
 
+// The chosen layout is a per-computer convenience; it falls back to the columns when storage is unavailable.
+const MODE_KEY = "oniric.board.mode";
+const savedMode = (): BoardMode => {
+  try {
+    const m = localStorage.getItem(MODE_KEY);
+    return m === "canvas" || m === "plotlines" ? m : "columns";
+  } catch {
+    return "columns";
+  }
+};
 const statusLabel = (s: string | null) => SCENE_STATUSES.find((x) => x.id === s)?.label ?? "";
 const actKey = (g: ActGroup) => `a:${g.act?.id ?? "none"}`;
 const seqKey = (g: ActGroup, seq: SequenceGroup) => `s:${seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`}`;
-const actTitle = (g: ActGroup) => g.act?.title ?? "Sans acte";
-const seqTitle = (s: SequenceGroup) => s.sequence?.title ?? "Hors séquence";
 
 /** The left-edge handle: only it starts a drag, so a click on the card stays a click. */
 function Grip({ label, onDragStart }: { label: string; onDragStart: (e: DragEvent<HTMLElement>) => void }) {
@@ -51,13 +60,176 @@ function Grip({ label, onDragStart }: { label: string; onDragStart: (e: DragEven
   );
 }
 
-/** The chevron that folds an act or a sequence in place, apart from its title, which opens it. */
-function FoldToggle({ open, what, onClick }: { open: boolean; what: string; onClick: () => void }) {
+/** The chevron at the left of a canvas header: folds the act or sequence down to its header. */
+function HeadFold({ open, label, onClick }: { open: boolean; label: string; onClick: () => void }) {
+  const Icon = open ? ChevronDown : ChevronRight;
   return (
-    <button type="button" className="fold-toggle" aria-expanded={open} aria-label={`${open ? "Replier" : "Déplier"} ${what}`} title={open ? "Replier" : "Déplier"} onClick={onClick}>
-      <ChevronRight className="fold-chev" aria-hidden="true" />
+    <button type="button" className="head-fold" aria-label={`${open ? "Plier" : "Déplier"} ${label}`} title={open ? "Plier" : "Déplier"} aria-expanded={open} onClick={onClick}>
+      <Icon aria-hidden="true" />
     </button>
   );
+}
+
+/** A « + » on a canvas wire: adds an act, a sequence or a scene right there, before the card the wire leads to. */
+function WireAdd({ dir, label, onClick }: { dir: "down" | "side" | "trunk"; label: string; onClick: () => void }) {
+  return (
+    <button type="button" className={`cv-insert ${dir}`} aria-label={label} title={label} onClick={onClick}>
+      <span className="cv-insert-dot">
+        <Plus aria-hidden="true" />
+      </span>
+    </button>
+  );
+}
+
+/** The « + » at the right of an act or sequence header: a new sequence in the act, a new scene in the sequence. */
+function HeadAdd({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="head-add" aria-label={label} title={label} onClick={onClick}>
+      <Plus aria-hidden="true" />
+    </button>
+  );
+}
+
+type MoreItem = { label: string; icon: LucideIcon; danger?: boolean; onClick: () => void };
+
+/** The « ⋯ » button and its menu (rename, delete…), drawn over the page so no scrolling box clips it. */
+function MoreMenu({ label, items, className = "" }: { label: string; items: MoreItem[]; className?: string }) {
+  const button = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  useEffect(() => {
+    if (!at) return;
+    requestAnimationFrame(() => menu.current?.querySelector("button")?.focus());
+    const close = () => setAt(null);
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!menu.current?.contains(t) && !button.current?.contains(t)) close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+        button.current?.focus();
+      } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const all = [...(menu.current?.querySelectorAll("button") ?? [])];
+        const i = all.indexOf(document.activeElement as HTMLButtonElement);
+        all[(i + (e.key === "ArrowDown" ? 1 : all.length - 1)) % all.length]?.focus();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [at]);
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        className={`more-btn ${at ? "on" : ""} ${className}`}
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={!!at}
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          setAt(at ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+        }}
+      >
+        <Ellipsis aria-hidden="true" />
+      </button>
+      {at &&
+        createPortal(
+          <div ref={menu} className="project-menu more-menu" role="menu" style={{ top: at.top, right: at.right }}>
+            {items.map(({ label, icon: Icon, danger, onClick }) => (
+              <button
+                key={label}
+                type="button"
+                role="menuitem"
+                className={danger ? "danger" : undefined}
+                onClick={() => {
+                  setAt(null);
+                  onClick();
+                }}
+              >
+                <Icon aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/**
+ * Click and drag sideways to slide a row along with the pointer; the wheel scrolls it sideways too.
+ * The grip and the add button keep their own gestures, and a drag never ends in a click.
+ */
+function useDragScroll() {
+  const cleanup = useRef<(() => void) | null>(null);
+  // Stable, so a re-render mid-drag does not drop the listeners.
+  return useCallback((el: HTMLElement | null) => {
+    cleanup.current?.();
+    cleanup.current = null;
+    if (!el) return;
+    let start: { x: number; left: number; id: number } | null = null;
+    let moved = false;
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0 || (e.target as Element).closest(".grip, .card-add, .more-btn")) return;
+      start = { x: e.clientX, left: el.scrollLeft, id: e.pointerId };
+      moved = false;
+    };
+    const move = (e: PointerEvent) => {
+      if (!start || e.pointerId !== start.id) return;
+      const dx = e.clientX - start.x;
+      if (!moved && Math.abs(dx) < 4) return;
+      if (!moved) {
+        moved = true;
+        el.setPointerCapture(e.pointerId);
+        el.classList.add("panning");
+      }
+      el.scrollLeft = start.left - dx;
+    };
+    const up = () => {
+      start = null;
+      el.classList.remove("panning");
+    };
+    const click = (e: MouseEvent) => {
+      if (!moved) return;
+      moved = false;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    const wheel = (e: WheelEvent) => {
+      if (e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY) || el.scrollWidth <= el.clientWidth) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("click", click, true);
+    el.addEventListener("wheel", wheel, { passive: false });
+    cleanup.current = () => {
+      el.removeEventListener("pointerdown", down);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      el.removeEventListener("click", click, true);
+      el.removeEventListener("wheel", wheel);
+    };
+  }, []);
 }
 
 /**
@@ -65,21 +237,65 @@ function FoldToggle({ open, what, onClick }: { open: boolean; what: string; onCl
  * opening an act lays its sequences side by side, and opening a sequence spreads its scenes out.
  */
 export function BoardView() {
-  const { session, notify, prompt, ask, openScene, headerActions, setTrail } = useProject();
+  const { project, session, notify, prompt, ask, openScene, headerActions, setTrail } = useProject();
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
-  // Folded acts and sequences; everything starts unfolded.
-  const [closed, setClosed] = useState<Set<string>>(() => new Set());
-  const [mode, setMode] = useState<"columns" | "plotlines">("columns");
+  const panRow = useDragScroll();
+  const [mode, setModeState] = useState<BoardMode>(savedMode);
+  const setMode = (m: BoardMode) => {
+    setModeState(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      // Not remembered, still applied.
+    }
+  };
   const [filter, setFilter] = useState<{ kind: FilterKind; value: string } | null>(null);
   const [highlight, setHighlight] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [focus, setFocus] = useState<Focus>(null);
+  // Acts and sequences folded on the canvas, by fold key; remembered per project on this computer.
+  const foldKey = `oniric.board.folds.${project.id}`;
+  const [folded, setFoldedState] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(foldKey) ?? "[]") as string[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const setFolded = (next: Set<string>) => {
+    setFoldedState(next);
+    try {
+      localStorage.setItem(foldKey, JSON.stringify([...next]));
+    } catch {
+      // Not remembered, still applied.
+    }
+  };
+  const toggleFold = (key: string) => {
+    const next = new Set(folded);
+    if (!next.delete(key)) next.add(key);
+    setFolded(next);
+  };
   const drag = useRef<Drag | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   const byId = useMemo(() => new Map(scenes.map((s) => [s.id, s])), [scenes]);
   const groups = useMemo(() => (story ? storyOutline(story, scenes.map((s) => s.id)) : []), [story, scenes]);
+  const titles = useMemo(() => numberedTitles(groups), [groups]);
+  const actTitle = (g: ActGroup) => (g.act && titles.get(g.act.id)) || "Sans acte";
+  const seqTitle = (s: SequenceGroup) => (s.sequence && titles.get(s.sequence.id)) || "Hors séquence";
+  // On the board the number sits grey above the title.
+  const parts = useMemo(() => numberedParts(groups), [groups]);
+  const numbered = (id: string | undefined, fallback: string) => {
+    const n = id ? parts.get(id) : undefined;
+    if (!n) return <span className="named">{fallback}</span>;
+    return (
+      <>
+        <span className="auto-num">{n.num}</span>
+        {n.title && <span className="named">{n.title}</span>}
+      </>
+    );
+  };
   // A deleted act or sequence drops the focus back to the level above.
   const focusAct = focus ? groups.find((g) => actKey(g) === focus.act) : undefined;
   const focusSeq = focus?.seq && focusAct ? focusAct.sequences.find((s) => seqKey(focusAct, s) === focus.seq) : undefined;
@@ -105,7 +321,7 @@ export function BoardView() {
   useEffect(() => {
     if (!focus || selected) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, [role=dialog]")) return;
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, [role=dialog], [role=menu]")) return;
       setFocus(focus.seq ? { act: focus.act } : null);
     };
     window.addEventListener("keydown", onKey);
@@ -113,30 +329,10 @@ export function BoardView() {
   }, [focus, selected]);
 
   if (!story) return <div className="view pad muted">Chargement…</div>;
-  const actKeys = groups.map(actKey);
-  const seqKeys = groups.flatMap((g) => g.sequences.map((s) => seqKey(g, s)));
-  const level: Level | "mixed" = [...actKeys, ...seqKeys].every((k) => !closed.has(k))
-    ? "all"
-    : actKeys.every((k) => closed.has(k))
-      ? "acts"
-      : actKeys.every((k) => !closed.has(k)) && seqKeys.every((k) => closed.has(k))
-        ? "sequences"
-        : "mixed";
-  const setLevel = (l: Level) => setClosed(new Set(l === "acts" ? actKeys : l === "sequences" ? seqKeys : []));
-  // Unfolding an act lays out all its sequences with their scenes; folding just closes it.
-  const toggleAct = (g: ActGroup) =>
-    setClosed((prev) => {
-      const next = new Set(prev);
-      if (next.delete(actKey(g))) g.sequences.forEach((s) => next.delete(seqKey(g, s)));
-      else next.add(actKey(g));
-      return next;
-    });
-  const toggleSeq = (key: string) =>
-    setClosed((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
+  const newSequence = async (g: ActGroup, beforeId: string | null = null) => {
+    const t = await prompt("Nouvelle séquence", "Titre de la séquence");
+    if (t) await addSequence(story, g.act?.id ?? null, t, "", beforeId);
+  };
   const actColor = (id: string | undefined) => (id ? story.acts.find((a) => a.id === id)?.color : null) ?? null;
 
   const meta = (id: string): SceneMeta =>
@@ -239,14 +435,16 @@ export function BoardView() {
     if (dropTarget !== key) setDropTarget(key);
   };
 
-  const newScene = async (seq: SequenceGroup) => {
+  /** A new scene at the end of `seq`, or just before the scene `beforeId`. */
+  const newScene = async (seq: SequenceGroup, beforeId: string | null = null) => {
     const editor = session.editor;
     if (!editor) return;
     try {
       const order = groups.flatMap((g) => g.sequences);
       const idx = order.indexOf(seq);
       let at = editor.doc.childCount;
-      if (seq.scenes.length) at = editor.indexOfScene(seq.scenes[seq.scenes.length - 1]) + 1;
+      if (beforeId) at = editor.indexOfScene(beforeId);
+      else if (seq.scenes.length) at = editor.indexOfScene(seq.scenes[seq.scenes.length - 1]) + 1;
       else {
         const next = order.slice(idx + 1).find((s) => s.scenes.length);
         if (next) at = editor.indexOfScene(next.scenes[0]);
@@ -260,10 +458,27 @@ export function BoardView() {
     }
   };
 
+  const renameScene = async (s: SceneInfo) => {
+    const t = await prompt("Renommer la scène", "En-tête", s.heading);
+    if (t !== null) session.editor?.setSceneHeading(s.id, t.trim());
+  };
+  // The scene leaves the screenplay for the bin of cut scenes (Versions view), where it can be restored.
+  const removeScene = async (id: string) => {
+    const c = await ask({
+      title: "Supprimer la scène ?",
+      text: <p>La scène quitte le scénario mais reste dans la corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.</p>,
+      cancel: "Annuler",
+      choices: [{ label: "Supprimer", value: "y", danger: true }],
+    });
+    if (c !== "y") return;
+    session.editor?.removeScene(id);
+    if (selected === id) setSelected(null);
+  };
+
   const durationOf = (ids: string[]) => ids.reduce((n, id) => n + (byId.get(id)?.eighths ?? 0), 0);
   const beatsOf = (id: string) => story.beats.filter((b) => b.scenes.includes(id)).map((b) => b.title);
 
-  const card = (id: string, seqId: string | null) => {
+  const card = (id: string, seqId: string | null, before?: ReactNode) => {
     const s = byId.get(id);
     if (!s) return null;
     const m = meta(id);
@@ -284,12 +499,12 @@ export function BoardView() {
         }}
         style={m.color ? ({ "--scene": m.color } as CSSProperties) : undefined}
       >
+        {before}
         <Grip label="Glisser pour déplacer la scène" onDragStart={startDrag({ kind: "scene", id }, ".card")} />
         <button type="button" className="card-body" onClick={() => setSelected(id)} onDoubleClick={() => openScene(id)} aria-label={`Scène ${s.index + 1} ${s.heading}`}>
           <span className="card-top">
-            <span className="card-num">{s.index + 1}</span>
+            <span className="card-num">{sceneLabel(s.index + 1)}</span>
             <span className="card-heading">{s.heading || "(sans en-tête)"}</span>
-            <span className="card-len">{formatEighths(s.eighths)}</span>
           </span>
           {m.summary && <span className="card-summary">{m.summary}</span>}
           {s.characters.length > 0 && <span className="card-chars">{s.characters.map(prettyName).join(", ")}</span>}
@@ -305,187 +520,192 @@ export function BoardView() {
                 {t}
               </span>
             ))}
-            {beatsOf(id).map((b) => (
-              <span key={b} className="badge beat">
+            {beatsOf(id).map((b, i) => (
+              <span key={`${i}-${b}`} className="badge beat">
                 <Diamond aria-hidden="true" />
                 {b}
               </span>
             ))}
           </span>
         </button>
+        <MoreMenu
+          label="Actions de la scène"
+          className="card-more"
+          items={[
+            { label: "Renommer", icon: Pencil, onClick: () => void renameScene(s) },
+            { label: "Supprimer", icon: Trash2, danger: true, onClick: () => void removeScene(id) },
+          ]}
+        />
       </li>
     );
   };
 
-  const sequenceBlock = (g: ActGroup, seq: SequenceGroup, solo = false) => {
+  const seqDrop = (g: ActGroup, seq: SequenceGroup) => {
     const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
     const sid = seq.sequence?.id ?? null;
-    const open = solo || !closed.has(seqKey(g, seq));
-    const counts = (
-      <span className="muted small">
-        {seq.scenes.length} sc. · {formatEighths(durationOf(seq.scenes))}
-      </span>
-    );
+    return {
+      onDragOver: (e: DragEvent) => {
+        if (drag.current?.kind !== "act") allow(`s:${key}`)(e);
+      },
+      onDrop: (e: DragEvent) => {
+        if (drag.current?.kind === "act") return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (drag.current?.kind === "scene") dropScene(sid, null);
+        else if (drag.current?.kind === "sequence") dropSequence(g.act?.id ?? null, sid);
+      },
+    };
+  };
+
+  const seqHead = (g: ActGroup, seq: SequenceGroup, fold?: string) => (
+    <header className="seq-head">
+      {seq.sequence && <Grip label="Glisser pour déplacer la séquence" onDragStart={startDrag({ kind: "sequence", id: seq.sequence.id }, ".seq-head")} />}
+      {fold && <HeadFold open={!folded.has(fold)} label="la séquence" onClick={() => toggleFold(fold)} />}
+      <button type="button" className="drill" title="Ouvrir la séquence" onClick={() => setFocus({ act: actKey(g), seq: seqKey(g, seq) })}>
+        <span className="seq-title">{numbered(seq.sequence?.id, "Hors séquence")}</span>
+        <span className="muted small">{seq.scenes.length} sc.</span>
+      </button>
+      {seq.sequence && (
+        <MoreMenu
+          label="Actions de la séquence"
+          items={[
+            {
+              label: "Renommer",
+              icon: Pencil,
+              onClick: async () => {
+                const t = await prompt("Renommer la séquence", "Titre", seq.sequence!.title);
+                if (t) await updateSequence(seq.sequence!.id, { title: t });
+              },
+            },
+            {
+              label: "Supprimer",
+              icon: Trash2,
+              danger: true,
+              onClick: async () => {
+                const c = await ask({
+                  title: "Supprimer la séquence ?",
+                  text: <p>Ses scènes restent dans le scénario et rejoignent la séquence précédente.</p>,
+                  cancel: "Annuler",
+                  choices: [{ label: "Supprimer", value: "y", danger: true }],
+                });
+                if (c === "y") await deleteSequence(seq.sequence!.id);
+              },
+            },
+          ]}
+        />
+      )}
+      <HeadAdd label="Nouvelle scène" onClick={() => void newScene(seq)} />
+    </header>
+  );
+
+  const sceneCards = (seq: SequenceGroup, className: string, ref?: (el: HTMLElement | null) => void, wires = false) => (
+    <ol className={className} ref={ref}>
+      {seq.scenes.map((id) =>
+        card(id, seq.sequence?.id ?? null, wires ? <WireAdd dir="down" label="Insérer une scène ici" onClick={() => void newScene(seq, id)} /> : undefined),
+      )}
+      <li className="card-add">
+        <button type="button" onClick={() => void newScene(seq)}>
+          <Plus aria-hidden="true" />
+          Scène
+        </button>
+      </li>
+    </ol>
+  );
+
+  const sequenceBlock = (g: ActGroup, seq: SequenceGroup, solo = false) => {
+    const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
     return (
-      <section
-        key={key}
-        className={`seq ${open ? "open" : "folded"} ${solo ? "solo" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`}
-        onDragOver={(e) => {
-          if (drag.current?.kind !== "act") allow(`s:${key}`)(e);
-        }}
-        onDrop={(e) => {
-          if (drag.current?.kind === "act") return;
-          e.preventDefault();
-          e.stopPropagation();
-          if (drag.current?.kind === "scene") dropScene(sid, null);
-          else if (drag.current?.kind === "sequence") dropSequence(g.act?.id ?? null, sid);
-        }}
-      >
-        <header className="seq-head">
-          {seq.sequence && !solo && <Grip label="Glisser pour déplacer la séquence" onDragStart={startDrag({ kind: "sequence", id: seq.sequence.id }, ".seq-head")} />}
-          {solo ? (
-            <span className="drill static">
-              <span className="seq-title">{seqTitle(seq)}</span>
-              {counts}
-            </span>
-          ) : (
-            <button type="button" className="drill" title="Ouvrir la séquence" onClick={() => setFocus({ act: actKey(g), seq: seqKey(g, seq) })}>
-              <span className="seq-title">{seqTitle(seq)}</span>
-              {counts}
-            </button>
-          )}
-          {seq.sequence && (
-            <span className="seq-actions">
-              <button
-                type="button"
-                className="btn ghost small"
-                aria-label="Renommer la séquence"
-                onClick={async () => {
-                  const t = await prompt("Renommer la séquence", "Titre", seq.sequence!.title);
-                  if (t) await updateSequence(seq.sequence!.id, { title: t });
-                }}
-              >
-                <Pencil aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="btn ghost small"
-                aria-label="Supprimer la séquence"
-                onClick={async () => {
-                  const c = await ask({
-                    title: "Supprimer la séquence ?",
-                    text: <p>Ses scènes restent dans le scénario et rejoignent la séquence précédente.</p>,
-                    cancel: "Annuler",
-                    choices: [{ label: "Supprimer", value: "y", danger: true }],
-                  });
-                  if (c === "y") await deleteSequence(seq.sequence!.id);
-                }}
-              >
-                <X aria-hidden="true" />
-              </button>
-            </span>
-          )}
-          {!solo && <FoldToggle open={open} what="la séquence" onClick={() => toggleSeq(seqKey(g, seq))} />}
-        </header>
-        {open && (
-          <ol className="cards">
-            {seq.scenes.map((id) => card(id, sid))}
-            <li className="card-add">
-              <button type="button" className="btn ghost small" onClick={() => void newScene(seq)}>
-                <Plus aria-hidden="true" />
-                Scène
-              </button>
-            </li>
-          </ol>
-        )}
+      <section key={key} className={`seq ${solo ? "solo" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`} {...seqDrop(g, seq)}>
+        {!solo && seqHead(g, seq)}
+        {sceneCards(seq, "cards", solo ? panRow : undefined)}
       </section>
     );
   };
 
   const totalEighths = scenes.reduce((n, s) => n + s.eighths, 0);
 
+  const actDrop = (g: ActGroup, into: SequenceGroup | undefined) => {
+    const key = g.act?.id ?? "none";
+    return {
+      onDragOver: allow(`a:${key}`),
+      onDrop: (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (drag.current?.kind === "act") dropAct(g.act?.id ?? null);
+        else if (drag.current?.kind === "sequence") dropSequence(g.act?.id ?? null, null);
+        else if (drag.current?.kind === "scene") dropScene(into?.sequence?.id ?? null, null);
+      },
+    };
+  };
+  const actStyle = (g: ActGroup) => (actColor(g.act?.id) ? ({ "--act": actColor(g.act?.id)! } as CSSProperties) : undefined);
+
+  const actHead = (g: ActGroup, fold?: string) => {
+    const ids = g.sequences.flatMap((s) => s.scenes);
+    return (
+      <header className="column-head">
+        {g.act && <Grip label="Glisser pour déplacer l'acte" onDragStart={startDrag({ kind: "act", id: g.act.id }, ".column-head")} />}
+        {fold && <HeadFold open={!folded.has(fold)} label="l'acte" onClick={() => toggleFold(fold)} />}
+        <h3 className="act-title">
+          <button type="button" className="drill" title="Ouvrir l'acte" onClick={() => setFocus({ act: actKey(g) })}>
+            <span className="act-name">{numbered(g.act?.id, "Sans acte")}</span>
+            <span className="muted small">
+              {ids.length} sc. · {totalEighths ? Math.round((durationOf(ids) / totalEighths) * 100) : 0} %
+            </span>
+          </button>
+        </h3>
+        {g.act && (
+          <MoreMenu
+            label="Actions de l'acte"
+            items={[
+              {
+                label: "Renommer",
+                icon: Pencil,
+                onClick: async () => {
+                  const t = await prompt("Renommer l'acte", "Titre", g.act!.title);
+                  if (t) await updateAct(g.act!.id, { title: t });
+                },
+              },
+              {
+                label: "Supprimer",
+                icon: Trash2,
+                danger: true,
+                onClick: async () => {
+                  const c = await ask({
+                    title: "Supprimer l'acte ?",
+                    text: <p>Ses séquences et ses scènes sont conservées, sans acte.</p>,
+                    cancel: "Annuler",
+                    choices: [{ label: "Supprimer", value: "y", danger: true }],
+                  });
+                  if (c === "y") await deleteAct(g.act!.id);
+                },
+              },
+            ]}
+          />
+        )}
+        <HeadAdd label="Nouvelle séquence" onClick={() => void newSequence(g)} />
+      </header>
+    );
+  };
+
+  const newAct = async (beforeId: string | null = null) => {
+    const t = await prompt("Nouvel acte", "Titre de l'acte", `Acte ${story.acts.length + 1}`);
+    if (t) await addAct(story, t, beforeId);
+  };
+
   /** One act: a column of stacked sequences on the whole story, its sequences side by side once opened, or one sequence spread out. */
   const actColumn = (g: ActGroup, zoom: "story" | "act" | "seq") => {
-    const ids = g.sequences.flatMap((s) => s.scenes);
     const key = g.act?.id ?? "none";
-    const open = zoom !== "story" || !closed.has(actKey(g));
-    const counts = (
-      <span className="muted small">
-        {ids.length} sc. · {totalEighths ? Math.round((durationOf(ids) / totalEighths) * 100) : 0} %
-      </span>
-    );
-    const pill = (
-      <span className="act-pill">
-        <span className="act-dot" aria-hidden="true" />
-        <span className="act-name">{actTitle(g)}</span>
-      </span>
-    );
     return (
       <div
         key={key}
-        className={`column z-${zoom} ${open ? "open" : "folded"} ${dropTarget === `a:${key}` ? "drop" : ""}`}
-        onDragOver={allow(`a:${key}`)}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (drag.current?.kind === "act") dropAct(g.act?.id ?? null);
-          else if (drag.current?.kind === "sequence") dropSequence(g.act?.id ?? null, null);
-          else if (drag.current?.kind === "scene") dropScene((zoom === "seq" ? focusSeq : g.sequences.at(-1))?.sequence?.id ?? null, null);
-        }}
-        style={actColor(g.act?.id) ? ({ "--act": actColor(g.act?.id)! } as CSSProperties) : undefined}
+        className={`column z-${zoom} ${dropTarget === `a:${key}` ? "drop" : ""}`}
+        {...actDrop(g, zoom === "seq" ? focusSeq : g.sequences.at(-1))}
+        style={actStyle(g)}
       >
-        {zoom !== "seq" && (
-          <header className="column-head">
-            {g.act && zoom === "story" && <Grip label="Glisser pour déplacer l'acte" onDragStart={startDrag({ kind: "act", id: g.act.id }, ".column-head")} />}
-            <h3 className="act-title">
-              {zoom === "story" ? (
-                <button type="button" className="drill" title="Ouvrir l'acte" onClick={() => setFocus({ act: actKey(g) })}>
-                  {pill}
-                  {counts}
-                </button>
-              ) : (
-                <span className="drill static">
-                  {pill}
-                  {counts}
-                </span>
-              )}
-            </h3>
-            {g.act && (
-              <span className="seq-actions">
-                <button
-                  type="button"
-                  className="btn ghost small"
-                  aria-label="Renommer l'acte"
-                  onClick={async () => {
-                    const t = await prompt("Renommer l'acte", "Titre", g.act!.title);
-                    if (t) await updateAct(g.act!.id, { title: t });
-                  }}
-                >
-                  <Pencil aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="btn ghost small"
-                  aria-label="Supprimer l'acte"
-                  onClick={async () => {
-                    const c = await ask({
-                      title: "Supprimer l'acte ?",
-                      text: <p>Ses séquences et ses scènes sont conservées, sans acte.</p>,
-                      cancel: "Annuler",
-                      choices: [{ label: "Supprimer", value: "y", danger: true }],
-                    });
-                    if (c === "y") await deleteAct(g.act!.id);
-                  }}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </span>
-            )}
-            {zoom === "story" && <FoldToggle open={open} what="l'acte" onClick={() => toggleAct(g)} />}
-          </header>
-        )}
+        {zoom === "story" && actHead(g)}
         {zoom === "seq" && focusSeq ? (
           sequenceBlock(g, focusSeq, true)
-        ) : open ? (
+        ) : (
           <div className={`act-seqs ${zoom === "act" ? "row" : "stack"}`}>
             {g.sequences.map((s) => sequenceBlock(g, s))}
             <button
@@ -493,26 +713,111 @@ export function BoardView() {
               className="add-band seq-band"
               aria-label="Nouvelle séquence"
               title="Nouvelle séquence"
-              onClick={async () => {
-                const t = await prompt("Nouvelle séquence", "Titre de la séquence");
-                if (t) await addSequence(story, g.act?.id ?? null, t);
-              }}
+              onClick={() => void newSequence(g)}
             >
               <Plus aria-hidden="true" />
             </button>
           </div>
-        ) : (
-          // A folded act lists its sequences; a click opens the act, the title button is its keyboard twin.
-          <ul className="seq-summary" onClick={() => setFocus({ act: actKey(g) })}>
-            {g.sequences.map((s) => (
-              <li key={s.sequence?.id ?? "none"}>
-                <span className="seq-title">{seqTitle(s)}</span>
-                <span className="muted small">{s.scenes.length} sc.</span>
-              </li>
-            ))}
-            {g.sequences.length === 0 && <li className="muted small">Aucune séquence</li>}
-          </ul>
         )}
+      </div>
+    );
+  };
+
+  /*
+   * The canvas: the film at the top left, a trunk down to each act, each act branching to a row of sequences,
+   * each sequence heading a column of its scenes. Arrows follow the story's order. Opening an act or a sequence
+   * keeps only its own tree.
+   */
+  const cvSeq = (g: ActGroup, seq: SequenceGroup, root = false) => {
+    const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
+    const fold = seqKey(g, seq);
+    const closed = !root && folded.has(fold);
+    return (
+      <li key={key} className={`cv-seq ${root ? "cv-root" : ""}`} {...seqDrop(g, seq)}>
+        <div className={`cv-node seq ${closed ? "folded" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`}>
+          {!root && seq.sequence && <WireAdd dir="side" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
+          {seqHead(g, seq, root ? undefined : fold)}
+        </div>
+        {!closed && sceneCards(seq, "cards cv-cards", undefined, true)}
+      </li>
+    );
+  };
+
+  const cvAct = (g: ActGroup, root = false) => {
+    const key = g.act?.id ?? "none";
+    const fold = actKey(g);
+    const closed = !root && folded.has(fold);
+    return (
+      <li key={key} className={`cv-act ${root ? "cv-root" : ""}`} style={actStyle(g)}>
+        <div className={`cv-node cv-act-node ${closed ? "folded" : ""} ${dropTarget === `a:${key}` ? "drop" : ""}`} {...actDrop(g, g.sequences.at(-1))}>
+          {!root && g.act && <WireAdd dir="trunk" label="Insérer un acte ici" onClick={() => void newAct(g.act!.id)} />}
+          {actHead(g, root ? undefined : fold)}
+        </div>
+        {!closed && (
+          <ol className="cv-seqs">
+            {g.sequences.map((s) => cvSeq(g, s))}
+            <li className="cv-seq cv-add">
+              <button type="button" className="add-band cv-node" aria-label="Nouvelle séquence" title="Nouvelle séquence" onClick={() => void newSequence(g)}>
+                <Plus aria-hidden="true" />
+              </button>
+            </li>
+          </ol>
+        )}
+      </li>
+    );
+  };
+
+  // Every act and sequence on view, folded or not.
+  const allFolds = groups.flatMap((g) => [actKey(g), ...g.sequences.map((s) => seqKey(g, s))]);
+  const foldTools = (
+    <>
+      <button type="button" aria-label="Tout déplier" title="Tout déplier" disabled={folded.size === 0} onClick={() => setFolded(new Set())}>
+        <ChevronsUpDown aria-hidden="true" />
+      </button>
+      <button type="button" aria-label="Tout plier" title="Tout plier" disabled={allFolds.every((k) => folded.has(k))} onClick={() => setFolded(new Set(allFolds))}>
+        <ChevronsDownUp aria-hidden="true" />
+      </button>
+    </>
+  );
+
+  const canvas = () => {
+    if (focusAct && focusSeq)
+      return (
+        <ol className="cv-tree cv-seqs" style={actStyle(focusAct)}>
+          {cvSeq(focusAct, focusSeq, true)}
+        </ol>
+      );
+    if (focusAct) return <ol className="cv-tree">{cvAct(focusAct, true)}</ol>;
+    const acts = groups.filter((g) => g.act).length;
+    return (
+      <div className="cv-tree">
+        <div className="cv-node cv-film">
+          <span className="cv-film-title">{project.title}</span>
+          <span className="muted small">
+            {acts} acte{acts > 1 ? "s" : ""} · {scenes.length} sc.
+          </span>
+        </div>
+        <ol className="cv-acts">
+          {groups.map((g) => cvAct(g))}
+          <li className="cv-act cv-add">
+            <button
+              type="button"
+              className={`add-band cv-node ${dropTarget === "a:end" ? "drop" : ""}`}
+              aria-label="Nouvel acte"
+              title="Nouvel acte"
+              onDragOver={(e) => {
+                if (drag.current?.kind === "act") allow("a:end")(e);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                dropAct(null);
+              }}
+              onClick={() => void newAct()}
+            >
+              <Plus aria-hidden="true" />
+            </button>
+          </li>
+        </ol>
       </div>
     );
   };
@@ -524,24 +829,12 @@ export function BoardView() {
           <div className="header-tools" role="toolbar" aria-label="Tableau">
             <label>
               Affichage{" "}
-              <select value={mode} onChange={(e) => setMode(e.target.value as "columns" | "plotlines")}>
+              <select value={mode} onChange={(e) => setMode(e.target.value as BoardMode)}>
                 <option value="columns">Actes et séquences</option>
+                <option value="canvas">Canevas</option>
                 <option value="plotlines">Lignes d'intrigue</option>
               </select>
             </label>
-            {mode === "columns" && (
-              <label>
-                Niveau{" "}
-                <select value={level} onChange={(e) => setLevel(e.target.value as Level)}>
-                  <option value="mixed" disabled hidden>
-                    Personnalisé
-                  </option>
-                  <option value="acts">Actes seuls</option>
-                  <option value="sequences">Actes et séquences</option>
-                  <option value="all">Tout</option>
-                </select>
-              </label>
-            )}
             <label>
               Filtre{" "}
               <select
@@ -572,15 +865,14 @@ export function BoardView() {
                 <input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} /> Colorer au lieu de griser
               </label>
             )}
-            <span className="muted small">
-              {scenes.length} scènes · ≈ {formatMinutes(totalEighths / 8)}
-            </span>
           </div>,
           headerActions,
         )}
 
       {mode === "plotlines" ? (
         <Plotlines scenes={scenes} story={story} selected={selected} onSelect={setSelected} />
+      ) : mode === "canvas" ? (
+        <CanvasSurface place={`${focus?.act ?? ""}/${focus?.seq ?? ""}`} tools={focusSeq ? undefined : foldTools} onDragEnd={() => setDropTarget(null)}>{canvas()}</CanvasSurface>
       ) : (
         <div className={`board ${focusSeq ? "solo" : ""}`} onDragEnd={() => setDropTarget(null)}>
           <div className="board-track">
@@ -598,10 +890,7 @@ export function BoardView() {
                   e.preventDefault();
                   dropAct(null);
                 }}
-                onClick={async () => {
-                  const t = await prompt("Nouvel acte", "Titre de l'acte", `Acte ${story.acts.length + 1}`);
-                  if (t) await addAct(story, t);
-                }}
+                onClick={() => void newAct()}
               >
                 <Plus aria-hidden="true" />
               </button>
@@ -611,7 +900,7 @@ export function BoardView() {
       )}
 
       {selected && byId.get(selected) && (
-        <CardPanel key={selected} scene={byId.get(selected)!} meta={meta(selected)} story={story} onClose={() => setSelected(null)} />
+        <CardPanel key={selected} scene={byId.get(selected)!} meta={meta(selected)} story={story} onClose={() => setSelected(null)} onRemove={() => void removeScene(selected)} />
       )}
     </div>
   );
@@ -671,8 +960,10 @@ function PlotRow({ label, scenes, has, selected, onSelect }: { label: string; sc
   );
 }
 
-function CardPanel({ scene, meta, story, onClose }: { scene: SceneInfo; meta: SceneMeta; story: Story; onClose: () => void }) {
-  const { openScene, session, notify, ask } = useProject();
+function CardPanel({ scene, meta, story, onClose, onRemove }: { scene: SceneInfo; meta: SceneMeta; story: Story; onClose: () => void; onRemove: () => void }) {
+  const { openScene, session, notify } = useProject();
+  const [heading, setHeading] = useState(scene.heading);
+  useEffect(() => setHeading(scene.heading), [scene.heading]);
   const [summary, setSummary] = useState(meta.summary);
   const [storyTime, setStoryTime] = useState(meta.storyTime ?? "");
   const save = (patch: Partial<SceneMeta>) => updateSceneMeta(scene.id, patch).catch((e) => notify({ text: describeError(e), tone: "error" }));
@@ -681,9 +972,7 @@ function CardPanel({ scene, meta, story, onClose }: { scene: SceneInfo; meta: Sc
   return (
     <aside className="card-panel" aria-label="Carte de scène">
       <header>
-        <h2>
-          {scene.index + 1}. {scene.heading || "(sans en-tête)"}
-        </h2>
+        <h2 className="auto-num">{sceneLabel(scene.index + 1)}</h2>
         <button type="button" className="btn ghost small" onClick={onClose} aria-label="Fermer la carte">
           <X aria-hidden="true" />
         </button>
@@ -692,6 +981,17 @@ function CardPanel({ scene, meta, story, onClose }: { scene: SceneInfo; meta: Sc
         {formatEighths(scene.eighths)} de page · p. {scene.page}
         {scene.characters.length > 0 && ` · ${scene.characters.map(prettyName).join(", ")}`}
       </p>
+      <label className="fld wide">
+        <span className="fld-label">En-tête</span>
+        <input
+          className="heading-input"
+          value={heading}
+          placeholder="INT. LIEU – JOUR"
+          onChange={(e) => setHeading(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          onBlur={() => heading.trim() !== scene.heading && session.editor?.setSceneHeading(scene.id, heading.trim())}
+        />
+      </label>
       <label className="fld wide">
         <span className="fld-label">Résumé</span>
         <textarea rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} onBlur={() => summary !== meta.summary && void save({ summary })} />
@@ -726,23 +1026,8 @@ function CardPanel({ scene, meta, story, onClose }: { scene: SceneInfo; meta: Sc
         <button type="button" className="btn primary small" onClick={() => openScene(scene.id)}>
           Ouvrir dans le scénario
         </button>
-        <button
-          type="button"
-          className="btn ghost small danger"
-          onClick={async () => {
-            const c = await ask({
-              title: "Couper la scène ?",
-              text: <p>La scène quitte le scénario mais reste dans la corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.</p>,
-              cancel: "Annuler",
-              choices: [{ label: "Couper la scène", value: "y", danger: true }],
-            });
-            if (c === "y") {
-              session.editor?.removeScene(scene.id);
-              onClose();
-            }
-          }}
-        >
-          Couper la scène
+        <button type="button" className="btn ghost small danger" onClick={onRemove}>
+          Supprimer la scène
         </button>
       </div>
     </aside>

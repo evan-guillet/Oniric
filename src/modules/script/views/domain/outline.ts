@@ -107,3 +107,51 @@ export function moveScene(groups: ActGroup[], id: string, target: string | null,
   }
   return groups;
 }
+
+const ROMAN: [number, string][] = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+
+/** 1 → I, 4 → IV, 14 → XIV. */
+export function roman(n: number): string {
+  let out = "";
+  for (const [v, s] of ROMAN) for (; n >= v; n -= v) out += s;
+  return out;
+}
+
+/** 1 → A, 26 → Z, 27 → AA. */
+export function letters(n: number): string {
+  let out = "";
+  for (; n > 0; n = Math.floor((n - 1) / 26)) out = String.fromCharCode(65 + ((n - 1) % 26)) + out;
+  return out;
+}
+
+// A number typed by hand at the head of a title (« Acte I : », « Act. II – », « II. », « Séquence B – », « C. ») gives way to the automatic one.
+const ACT_NUMBER = /^\s*(?:(?:[Aa]cte|[Aa]ct\.)\s*(?:[IVXLCDM]+|\d+)\b\s*[.:–—-]?\s*|(?:[IVXLCDM]+|\d+)\s*[.:)]\s+)/;
+const SEQ_NUMBER = /^\s*(?:(?:[Ss][ée]quence|[Ss][ée]q\.)\s*(?:[A-Z]{1,2}|\d+)\b\s*[.:–—-]?\s*|[A-Z]{1,2}\s*[.:)]\s+)/;
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** The label of scene `n` (counted from 1): « Scè. 12 ». */
+export const sceneLabel = (n: number) => `Scè. ${n}`;
+
+/** An act or sequence's automatic number (« Act. I », « Séq. A ») and its title without any number typed by hand. */
+export type Numbered = { num: string; title: string };
+
+/**
+ * Numbers by position: acts in Roman numerals (« Act. I »), sequences in letters running through the whole story
+ * (« Séq. A »). An untitled act or sequence has an empty title.
+ */
+export function numberedParts(groups: ActGroup[]): Map<string, Numbered> {
+  const out = new Map<string, Numbered>();
+  let act = 0;
+  let seq = 0;
+  for (const g of groups) {
+    if (g.act) out.set(g.act.id, { num: `Act. ${roman(++act)}`, title: capitalize(g.act.title.replace(ACT_NUMBER, "").trim()) });
+    for (const s of g.sequences) if (s.sequence) out.set(s.sequence.id, { num: `Séq. ${letters(++seq)}`, title: capitalize(s.sequence.title.replace(SEQ_NUMBER, "").trim()) });
+  }
+  return out;
+}
+
+/** The same as plain text, number then title: « Act. I Le départ ». */
+export function numberedTitles(groups: ActGroup[]): Map<string, string> {
+  return new Map([...numberedParts(groups)].map(([id, n]) => [id, n.title ? `${n.num} ${n.title}` : n.num]));
+}

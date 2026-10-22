@@ -217,6 +217,18 @@ export class ScriptEditor {
     return node.attrs.id as string;
   }
 
+  /** Rewrites the scene heading of scene `id`, adding one when the scene opens on something else. */
+  setSceneHeading(id: string, heading: string): void {
+    this.doc.forEach((scene, offset) => {
+      if (scene.attrs.id !== id) return;
+      const state = this.view.state;
+      const node = schema.nodes.scene_heading.create(null, heading ? [schema.text(heading)] : []);
+      const first = scene.firstChild;
+      if (first?.type === schema.nodes.scene_heading) this.view.dispatch(state.tr.replaceWith(offset + 1, offset + 1 + first.nodeSize, node));
+      else this.view.dispatch(state.tr.insert(offset + 1, node));
+    });
+  }
+
   removeScene(id: string): void {
     const doc = this.doc;
     doc.forEach((scene, offset) => {
