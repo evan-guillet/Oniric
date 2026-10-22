@@ -22,6 +22,43 @@ const words = (t: string) => {
   return `${n} mot${n > 1 ? "s" : ""}`;
 };
 
+const NOTCHES = [-2, -1, 0, 1, 2];
+
+/** A five-notch gauge between two poles: the notches from the middle to the chosen one fill up. */
+function ToneNotches({ left, right, value, onChange }: { left: string; right: string; value: number; onChange: (v: number) => void }) {
+  const label = (n: number) => (n === 0 ? "Équilibré" : `${Math.abs(n) === 2 ? "Très" : "Plutôt"} ${(n < 0 ? left : right).toLowerCase()}`);
+  const filled = (n: number) => (value < 0 ? n >= value && n < 0 : value > 0 ? n <= value && n > 0 : false);
+  return (
+    <div
+      className="notches"
+      role="radiogroup"
+      aria-label={`${left} ou ${right}`}
+      onKeyDown={(e) => {
+        const step = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        const next = Math.max(-2, Math.min(2, value + step));
+        onChange(next);
+        (e.currentTarget.children[next + 2] as HTMLElement).focus();
+      }}
+    >
+      {NOTCHES.map((n) => (
+        <button
+          key={n}
+          type="button"
+          role="radio"
+          aria-checked={n === value}
+          tabIndex={n === value ? 0 : -1}
+          title={label(n)}
+          aria-label={label(n)}
+          className={["notch", n === 0 && "mid", filled(n) && "filled", n === value && "on"].filter(Boolean).join(" ")}
+          onClick={() => onChange(n)}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Step 1: idea, premise, theme, genre, tone, genre codes, references (specification, 5.1). */
 export function StepPreparation() {
   const w = useWorkshop();
@@ -112,11 +149,11 @@ export function StepPreparation() {
         <WText k="prep.subgenres" label="Sous-genres" placeholder="film de casse, comédie de remariage…" />
         <div className="tones">
           {TONES.map((t) => (
-            <label key={t.key} className="tone">
+            <div key={t.key} className="tone">
               <span>{t.left}</span>
-              <input type="range" min={-2} max={2} step={1} value={w.get<number>(`prep.tone.${t.key}`, 0)} onChange={(e) => w.set(`prep.tone.${t.key}`, Number(e.target.value))} aria-label={`${t.left} ou ${t.right}`} />
+              <ToneNotches left={t.left} right={t.right} value={w.get<number>(`prep.tone.${t.key}`, 0)} onChange={(v) => w.set(`prep.tone.${t.key}`, v)} />
               <span>{t.right}</span>
-            </label>
+            </div>
           ))}
         </div>
       </section>

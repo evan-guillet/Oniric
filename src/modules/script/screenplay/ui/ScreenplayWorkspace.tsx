@@ -1,4 +1,4 @@
-import { Download, FileText, Plus, StickyNote } from "lucide-react";
+import { FileText, Plus, StickyNote } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -50,7 +50,7 @@ function sameRows(a: SceneRow[], b: SceneRow[]) {
 /** The screenplay view: the editor, its scene list and its notes. It stays mounted while other views are shown. */
 export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const { t } = useTranslation();
-  const { project, session, notify, printPdf, headerActions, transfer } = useProject();
+  const { project, session, notify, printPdf, headerActions } = useProject();
   const mountRef = useRef<HTMLDivElement>(null);
   const columnRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<ScriptEditor | null>(null);
@@ -250,16 +250,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             >
               <FileText aria-hidden="true" />
               Page de titre
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => transfer("export", "script")}
-              disabled={busy}
-              title="Exporter en PDF, Fountain ou FDX"
-            >
-              <Download aria-hidden="true" />
-              {busy ? t("workspace.exporting") : "Exporter"}
             </button>
           </div>,
           headerActions,

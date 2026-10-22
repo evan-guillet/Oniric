@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useLive } from "../../../../core/db/live";
@@ -76,30 +76,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
   return (
     <article className="entry" aria-label={`Fiche ${draft.name}`}>
       <header className="entry-head">
-        <div className="entry-image">
-          {draft.image ? <MediaImage path={draft.image} alt={draft.name} /> : <span className="entry-image-empty">Pas d'image</span>}
-          <div className="entry-image-actions">
-            <button
-              type="button"
-              className="btn small"
-              onClick={async () => {
-                try {
-                  const [p] = await pickImage();
-                  if (p) update({ image: p });
-                } catch (e) {
-                  notify({ text: describeError(e), tone: "error" });
-                }
-              }}
-            >
-              {draft.image ? "Changer l'image…" : "Choisir une image…"}
-            </button>
-            {draft.image && (
-              <button type="button" className="btn ghost small" onClick={() => update({ image: null })}>
-                Retirer
-              </button>
-            )}
-          </div>
-        </div>
+        <ImageFrame path={draft.image} onChange={(image) => update({ image })} />
         <div className="entry-title">
           <input className="entry-name-input" value={draft.name} onChange={(e) => update({ name: e.target.value })} onBlur={() => void flush()} aria-label="Nom" />
           <div className="entry-meta">
@@ -247,7 +224,6 @@ function FieldInput({
   entries: Entry[];
   selfId: string;
 }) {
-  const { notify } = useProject();
   const text = typeof value === "string" || typeof value === "number" ? String(value) : "";
   switch (field.kind) {
     case "longtext":
@@ -279,21 +255,7 @@ function FieldInput({
       return (
         <div className="fld">
           <span className="fld-label">{field.label}</span>
-          {text && <MediaImage path={text} alt={field.label} className="field-image" />}
-          <button
-            type="button"
-            className="btn small"
-            onClick={async () => {
-              try {
-                const [p] = await pickImage();
-                if (p) onChange(p);
-              } catch (e) {
-                notify({ text: describeError(e), tone: "error" });
-              }
-            }}
-          >
-            {text ? "Changer…" : "Choisir une image…"}
-          </button>
+          <ImageFrame path={text || null} onChange={(p) => onChange(p ?? "")} />
         </div>
       );
     case "link": {
@@ -328,6 +290,39 @@ function FieldInput({
         </Labeled>
       );
   }
+}
+
+/** The image frame is the button: empty it invites to choose an image, filled it offers to change or remove it. */
+function ImageFrame({ path, onChange }: { path: string | null; onChange: (p: string | null) => void }) {
+  const { notify } = useProject();
+  return (
+    <div className={path ? "entry-image filled" : "entry-image"}>
+      <button
+        type="button"
+        className="entry-image-pick"
+        aria-label={path ? "Changer l'image" : "Choisir une image"}
+        onClick={async () => {
+          try {
+            const [p] = await pickImage();
+            if (p) onChange(p);
+          } catch (e) {
+            notify({ text: describeError(e), tone: "error" });
+          }
+        }}
+      >
+        {path && <MediaImage path={path} alt="" />}
+        <span className="entry-image-hint">
+          <ImagePlus aria-hidden="true" />
+          {path ? "Changer" : "Choisir une image"}
+        </span>
+      </button>
+      {path && (
+        <button type="button" className="entry-image-remove" aria-label="Retirer l'image" title="Retirer l'image" onClick={() => onChange(null)}>
+          <X aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 function LinksInput({
