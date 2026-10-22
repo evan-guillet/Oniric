@@ -14,7 +14,7 @@ Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer
 
 Les parties Réalisation et Production sont visibles dans la navigation ; elles arrivent dans les versions 2.0 et 3.0.
 
-Les choix techniques sont décrits dans le [document d'architecture](../Architecture_Oniric.md) ; le besoin, dans le [PRD](../PRD_Oniric.md) et le [cahier des charges](../Cahier_des_charges_Oniric.md).
+Les choix techniques sont décrits dans le [document d'architecture](docs/Architecture_Oniric.md) ; le besoin, dans le [PRD](docs/PRD_Oniric.md) et le [cahier des charges](docs/Cahier_des_charges_Oniric.md).
 
 ## Utiliser Oniric
 
