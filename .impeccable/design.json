@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T00:00:00Z",
+  "title": "Design System: Oniric",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Bleu atelier", "canonical": "#3b5fe8", "dark": "#6d8cff", "tonalRamp": ["#0c1230", "#1d2a75", "#2f50d4", "#3b5fe8", "#6d8cff", "#a3b6fb", "#c8d3fb", "#eef2ff"] },
+      "accent-hover": { "role": "primary", "displayName": "Bleu atelier appuyé", "canonical": "#2f50d4", "dark": "#86a0ff" },
+      "accent-ink": { "role": "primary", "displayName": "Encre sur bleu", "canonical": "#ffffff", "dark": "#0c1230" },
+      "accent-soft": { "role": "primary", "displayName": "Voile bleu", "canonical": "#eef2ff", "dark": "#1d2445" },
+      "accent-line": { "role": "primary", "displayName": "Trait bleu", "canonical": "#c8d3fb", "dark": "#33407a" },
+      "plot": { "role": "tertiary", "displayName": "Violet intrigue", "canonical": "#6941c6", "dark": "#b9a2ff", "tonalRamp": ["#1e1240", "#3f3470", "#5132a0", "#6941c6", "#8f6fe0", "#b9a2ff", "#ddd2fb", "#f4f0fe"] },
+      "plot-soft": { "role": "tertiary", "displayName": "Voile intrigue", "canonical": "#f4f0fe", "dark": "#251f3d" },
+      "plot-line": { "role": "tertiary", "displayName": "Trait intrigue", "canonical": "#ddd2fb", "dark": "#3f3470" },
+      "canvas": { "role": "neutral", "displayName": "Gris établi", "canonical": "#f3f3f5", "dark": "#17171a", "tonalRamp": ["#17171a", "#1f1f23", "#303037", "#676b76", "#9b9daa", "#d5d7dc", "#ebecef", "#f9f9fb"] },
+      "panel": { "role": "neutral", "displayName": "Blanc panneau", "canonical": "#ffffff", "dark": "#1f1f23" },
+      "panel-2": { "role": "neutral", "displayName": "Gris voile", "canonical": "#f6f6f8", "dark": "#28282d" },
+      "sunken": { "role": "neutral", "displayName": "Gris retrait", "canonical": "#f9f9fb", "dark": "#1b1b1f" },
+      "nav-on": { "role": "neutral", "displayName": "Gris pressé", "canonical": "#e7e7eb", "dark": "#2d2d33" },
+      "desk": { "role": "neutral", "displayName": "Bureau", "canonical": "#ebecef", "dark": "#19191c" },
+      "ink": { "role": "neutral", "displayName": "Encre", "canonical": "#1f2128", "dark": "#ececf1" },
+      "ink-2": { "role": "neutral", "displayName": "Encre douce", "canonical": "#3b3e47", "dark": "#c9cad3" },
+      "muted": { "role": "neutral", "displayName": "Gris secondaire", "canonical": "#676b76", "dark": "#9b9daa" },
+      "hint": { "role": "neutral", "displayName": "Gris indice", "canonical": "#8f939c" },
+      "line": { "role": "neutral", "displayName": "Trait", "canonical": "#e6e7ea", "dark": "#303037" },
+      "line-strong": { "role": "neutral", "displayName": "Trait appuyé", "canonical": "#d5d7dc", "dark": "#404049" },
+      "paper": { "role": "neutral", "displayName": "Papier", "canonical": "#ffffff", "dark": "#ffffff" },
+      "paper-ink": { "role": "neutral", "displayName": "Encre papier", "canonical": "#111111", "dark": "#111111" },
+      "ok": { "role": "status", "displayName": "Validé", "canonical": "#1d7a43", "dark": "#6fd39a", "tonalRamp": ["#15281e", "#24503a", "#1d7a43", "#22a35a", "#3fbf74", "#6fd39a", "#bfe3cc", "#edf8f1"] },
+      "ok-dot": { "role": "status", "displayName": "Point validé", "canonical": "#22a35a", "dark": "#3fbf74" },
+      "ok-soft": { "role": "status", "displayName": "Voile validé", "canonical": "#edf8f1", "dark": "#15281e" },
+      "ok-line": { "role": "status", "displayName": "Trait validé", "canonical": "#bfe3cc", "dark": "#24503a" },
+      "warning": { "role": "status", "displayName": "En cours", "canonical": "#9a5b00", "dark": "#f1bf62", "tonalRamp": ["#2d2414", "#5a4520", "#9a5b00", "#c97f00", "#f0a020", "#f1bf62", "#f3d9a6", "#fff6e5"] },
+      "warning-dot": { "role": "status", "displayName": "Point en cours", "canonical": "#f0a020", "dark": "#f0a020" },
+      "warning-soft": { "role": "status", "displayName": "Voile en cours", "canonical": "#fff6e5", "dark": "#2d2414" },
+      "warning-line": { "role": "status", "displayName": "Trait en cours", "canonical": "#f3d9a6", "dark": "#5a4520" },
+      "danger": { "role": "status", "displayName": "À reprendre", "canonical": "#b42323", "dark": "#ff9b9b", "tonalRamp": ["#2f1a1c", "#5c2a2e", "#b42323", "#e5484d", "#f0565b", "#ff9b9b", "#f4c7c7", "#fdf0f0"] },
+      "danger-dot": { "role": "status", "displayName": "Point à reprendre", "canonical": "#e5484d", "dark": "#f0565b" },
+      "danger-soft": { "role": "status", "displayName": "Voile à reprendre", "canonical": "#fdf0f0", "dark": "#2f1a1c" },
+      "danger-line": { "role": "status", "displayName": "Trait à reprendre", "canonical": "#f4c7c7", "dark": "#5c2a2e" },
+      "gray-dot": { "role": "status", "displayName": "Point à faire", "canonical": "#a3a6ae", "dark": "#6f717b" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Nom de l'application sur l'accueil." },
+      "headline": { "displayName": "Headline", "purpose": "Titre de vue dans l'en-tête, titre d'état vide." },
+      "title": { "displayName": "Title", "purpose": "Titres de panneaux, h3 ; dialogues en 15px." },
+      "body": { "displayName": "Body", "purpose": "Texte courant de toute l'interface." },
+      "body-small": { "displayName": "Body small", "purpose": "Fil d'Ariane, résumés de cartes, libellés de champs." },
+      "label": { "displayName": "Label", "purpose": "Chips, boutons et libellés de barre d'outils." },
+      "caption": { "displayName": "Caption", "purpose": "Parties de navigation, barre d'état, pastilles, compteurs." },
+      "slug": { "displayName": "En-tête de scène", "purpose": "En-têtes de scène hors de la feuille, en majuscules." },
+      "screenplay": { "displayName": "Feuille", "purpose": "Texte du scénario, aux métriques d'impression du format ; continuité et comparaisons." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(16, 18, 27, 0.05)", "dark": "0 1px 2px rgba(0, 0, 0, 0.3)", "purpose": "Pose : boutons, panneau de vue, cartes au repos, navigation active." },
+      { "name": "shadow-md", "value": "0 1px 2px rgba(16, 18, 27, 0.04), 0 4px 12px -2px rgba(16, 18, 27, 0.08)", "dark": "0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -4px rgba(0, 0, 0, 0.4)", "purpose": "Soulèvement : carte survolée, logo de l'accueil." },
+      { "name": "shadow-lg", "value": "0 2px 6px rgba(16, 18, 27, 0.06), 0 18px 48px -10px rgba(16, 18, 27, 0.24)", "dark": "0 2px 6px rgba(0, 0, 0, 0.35), 0 20px 50px -10px rgba(0, 0, 0, 0.6)", "purpose": "Flottant : dialogues, notifications, panneau de carte." },
+      { "name": "sheet-shadow", "value": "0 0 0 1px rgba(16, 18, 27, 0.06), 0 2px 4px rgba(16, 18, 27, 0.04), 0 14px 36px -14px rgba(16, 18, 27, 0.22)", "dark": "0 0 0 1px rgba(0, 0, 0, 0.4), 0 16px 40px -16px rgba(0, 0, 0, 0.7)", "purpose": "La feuille de scénario sur le bureau." },
+      { "name": "focus-halo", "value": "0 0 0 3px var(--accent-soft)", "purpose": "Focus des champs, carte sélectionnée." },
+      { "name": "focus-outline", "value": "outline: 2px solid var(--focus); outline-offset: 1px", "purpose": "Focus clavier de tout élément." }
+    ],
+    "motion": [
+      { "name": "state", "value": "120ms ease-out", "purpose": "Fond, bordure et couleur des contrôles au survol." },
+      { "name": "lift", "value": "160ms ease-out", "purpose": "Ombre et opacité des cartes." },
+      { "name": "enter", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrée des dialogues (160ms, translation 6px et échelle 0.985), notifications (220ms, 8px), panneau de carte (200ms, 16px latéral)." },
+      { "name": "reduced-motion", "value": "animation: none; transition: none", "purpose": "Tout mouvement coupé sous prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "1180px", "purpose": "Navigation réduite à 64px d'icônes, liste des scènes à 196px." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'action principale unique d'une vue, par exemple Exporter en PDF.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 15V3\"/><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10 5 5 5-5\"/></svg>Exporter en PDF</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); color: var(--ink-2); font: 500 13px var(--ui-font); box-shadow: var(--shadow-sm); cursor: pointer; transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out; } .ds-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 2px rgba(30, 50, 140, 0.25); } .ds-btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); } .ds-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }"
+    },
+    {
+      "name": "Bouton secondaire",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Bouton blanc par défaut des barres d'outils et dialogues.",
+      "html": "<button class=\"ds-btn2\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/></svg>Notes</button>",
+      "css": ".ds-btn2 { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); color: var(--ink-2); font: 500 13px var(--ui-font); box-shadow: var(--shadow-sm); cursor: pointer; transition: background-color 120ms ease-out, color 120ms ease-out; } .ds-btn2 svg { color: var(--muted); } .ds-btn2:hover { background: var(--panel-2); color: var(--ink); } .ds-btn2:active { background: var(--nav-on); } .ds-btn2:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }"
+    },
+    {
+      "name": "Champ",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Champ texte de 30px avec halo bleu au focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"Titre du projet\">",
+      "css": ".ds-input { height: 30px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); color: var(--ink); font: 13px var(--ui-font); transition: border-color 120ms ease-out, box-shadow 120ms ease-out; } .ds-input::placeholder { color: var(--muted); } .ds-input:hover { border-color: var(--muted); } .ds-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }"
+    },
+    {
+      "name": "Chips de filtre",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pilules de filtre, la sélectionnée en bleu doux.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-on\">Tout</button><button class=\"ds-chip\">Personnages</button><button class=\"ds-chip\">Lieux</button></div>",
+      "css": ".ds-chips { display: flex; gap: 6px; } .ds-chip { height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink-2); font: 500 12px var(--ui-font); cursor: pointer; transition: background-color 120ms ease-out, border-color 120ms ease-out; } .ds-chip:hover { background: var(--panel-2); } .ds-chip-on, .ds-chip-on:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); } .ds-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }"
+    },
+    {
+      "name": "Pastilles d'état",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Statuts de scène : point coloré sur fond doux cerclé.",
+      "html": "<div class=\"ds-badges\"><span class=\"ds-badge ds-ok\">Validée</span><span class=\"ds-badge ds-warn\">Premier jet</span><span class=\"ds-badge ds-danger\">À réécrire</span><span class=\"ds-badge ds-todo\">À écrire</span></div>",
+      "css": ".ds-badges { display: flex; gap: 6px; } .ds-badge { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font: 500 11.5px var(--ui-font); } .ds-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; } .ds-ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); } .ds-ok::before { background: var(--ok-dot); } .ds-warn { color: var(--warning); border-color: var(--warning-line); background: var(--warning-soft); } .ds-warn::before { background: var(--warning-dot); } .ds-danger { color: var(--danger); border-color: var(--danger-line); background: var(--danger-soft); } .ds-danger::before { background: var(--danger-dot); } .ds-todo { color: var(--muted); } .ds-todo::before { background: var(--gray-dot); }"
+    },
+    {
+      "name": "Navigation de projet",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Colonne iconée dans son cadre arrondi ; l'élément actif est une petite surface blanche.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav-part\">Script</div><a class=\"ds-nav-link\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/></svg><span>Bible</span></a><a class=\"ds-nav-link ds-on\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><path d=\"M8 7v7\"/><path d=\"M12 7v4\"/><path d=\"M16 7v9\"/></svg><span>Tableau</span></a><a class=\"ds-nav-link ds-later\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/></svg><span>Moodboard</span><i class=\"ds-nav-later\">2.0</i></a></nav>",
+      "css": ".ds-nav { display: grid; gap: 1px; width: 226px; padding: 8px 6px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--sunken); font: 13px var(--ui-font); } .ds-nav-part { font-size: 11.5px; font-weight: 500; color: var(--muted); padding: 6px 10px 4px; } .ds-nav-link { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: var(--radius); color: var(--ink-2); cursor: pointer; transition: background-color 120ms ease-out; } .ds-nav-link span { flex: 1; } .ds-nav-link svg { color: var(--muted); } .ds-nav-link:hover { background: var(--hover); } .ds-on, .ds-on:hover { background: var(--panel); box-shadow: 0 0 0 1px var(--line), var(--shadow-sm); color: var(--ink); font-weight: 500; } .ds-on svg { color: var(--ink); } .ds-later { color: var(--muted); } .ds-nav-later { font-style: normal; font-size: 10.5px; font-weight: 500; line-height: 16px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); }"
+    },
+    {
+      "name": "En-tête de vue",
+      "kind": "custom",
+      "refersTo": "count",
+      "description": "Fil d'Ariane gris, titre 17px et compteur en pastille.",
+      "html": "<header class=\"ds-vh\"><ol class=\"ds-crumbs\"><li>Le Dernier Phare</li><li><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg>Script</li></ol><h1 class=\"ds-vt\">Tableau<span class=\"ds-count\">18</span></h1></header>",
+      "css": ".ds-vh { display: grid; gap: 4px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); font-family: var(--ui-font); } .ds-crumbs { display: flex; list-style: none; margin: 0; padding: 0; font-size: 12.5px; color: var(--muted); } .ds-crumbs li { display: flex; align-items: center; } .ds-crumbs svg { margin: 0 6px; color: var(--line-strong); } .ds-vt { display: flex; align-items: center; margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); } .ds-count { display: inline-flex; align-items: center; min-width: 20px; height: 18px; margin-left: 8px; padding: 0 6px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Carte de scène",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Carte du Tableau : numéro, en-tête de scène en majuscules, durée, résumé, pastilles.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-top\"><span class=\"ds-card-num\">1</span><span class=\"ds-card-h\">Ext. mer d'Iroise – jour</span><span class=\"ds-card-len\">5/8</span></div><p class=\"ds-card-sum\">Léa traverse vers l'île sur la Marie-Jeanne.</p><div class=\"ds-card-foot\"><span class=\"ds-pill\">extérieur</span></div></article>",
+      "css": ".ds-card { display: grid; gap: 6px; width: 280px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow-sm); font: 13px var(--ui-font); transition: border-color 120ms ease-out, box-shadow 160ms ease-out; } .ds-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-md); } .ds-card:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); } .ds-card-top { display: flex; gap: 8px; align-items: center; } .ds-card-num { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; } .ds-card-num::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--danger-dot); } .ds-card-h { flex: 1; font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em; text-transform: uppercase; } .ds-card-len { font-size: 11.5px; color: var(--muted); } .ds-card-sum { margin: 0; font-size: 12.5px; color: var(--ink-2); } .ds-card-foot { display: flex; gap: 4px; padding-top: 8px; border-top: 1px solid var(--line); } .ds-pill { height: 20px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); font-size: 11.5px; font-weight: 500; line-height: 18px; color: var(--ink-2); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "L'établi silencieux",
+    "overview": "Oniric est un atelier d'écriture qui se lit comme un outil produit moderne : calme, dense, net. Tout l'écran est construit en couches grises très proches les unes des autres, inscrites dans des cadres arrondis à bordure d'un pixel, pour que le seul élément à fort contraste soit le texte de l'auteur, et en particulier la feuille de scénario blanche posée sur son bureau gris.\n\nLa densité est celle d'un outil de travail utilisé pendant des heures : texte courant à 13px, contrôles de 30px de haut, barres d'outils de 46px. La couleur ne décore jamais ; un seul bleu porte l'action principale, la sélection et le focus, et une petite famille de pastilles à point coloré porte les états. Les icônes sont des traits fins (Lucide, trait 1,75) en gris secondaire, qui ne prennent l'encre qu'à l'état actif.\n\nLe monde refuse explicitement l'interface « formulaire Windows » qu'il remplace : selects gris en relief, cadres violets, bordures colorées épaisses. Le clair et le sombre suivent Windows et partagent exactement la même logique de couches ; seule la feuille reste blanche dans les deux.",
+    "keyCharacteristics": [
+      "Fond gris très clair, surfaces blanches cerclées de 1px, rayons de 6 à 12px.",
+      "Une colonne de navigation iconée dans son propre cadre arrondi, séparée du panneau de vue.",
+      "En-tête de vue : fil d'Ariane gris, titre 17px, compteur gris en pastille.",
+      "Un seul accent bleu, réservé à l'action, à la sélection et au focus.",
+      "Pastilles d'état arrondies avec point coloré (vert, ambre, rouge, gris).",
+      "Ombres douces et basses ; la profondeur vient surtout des bordures et des tons.",
+      "La page de scénario garde ses métriques d'impression, à l'écran comme sur papier."
+    ],
+    "rules": [
+      { "name": "La règle du bleu unique", "body": "Le bleu plein ne sert qu'à trois choses : l'action principale de la vue, la sélection, le focus. Une vue n'a qu'un seul bouton principal.", "section": "colors" },
+      { "name": "La règle du triplet d'état", "body": "Un état s'exprime par un point plein (`*-dot`) sur un fond doux (`*-soft`) cerclé d'un trait doux (`*-line`), texte en couleur foncée (`ok`, `warning`, `danger`). Jamais d'aplat saturé ni de bordure colorée épaisse.", "section": "colors" },
+      { "name": "La règle de la feuille blanche", "body": "La page de scénario reste `paper` sur `desk` dans les deux thèmes ; aucune couleur d'interface n'entre sur la feuille, sauf les liens vers la Bible en bleu.", "section": "colors" },
+      { "name": "La règle des métriques d'impression", "body": "La feuille de scénario suit la pagination de l'impression : police, taille, interlignage et marges viennent du format et ne sont jamais ajustés pour l'écran.", "section": "typography" },
+      { "name": "La règle des majuscules de scène", "body": "Les majuscules sont réservées aux en-têtes de scène, qui sont des majuscules dans le scénario lui-même. Aucun autre libellé n'est mis en capitales.", "section": "typography" },
+      { "name": "La règle du trait avant l'ombre", "body": "Une surface se sépare d'abord par sa bordure de 1px et son ton ; l'ombre ne fait que confirmer. Jamais d'ombre dure décalée.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** séparer chaque surface par une bordure de 1px `line` et un ton avant toute ombre.",
+      "**Do** réserver le bleu `accent` à l'action principale, à la sélection et au focus ; une seule action principale par vue.",
+      "**Do** exprimer un état par le triplet point / fond doux / trait doux de sa couleur.",
+      "**Do** utiliser des icônes Lucide au trait de 1,75, en `muted` au repos et en `ink` ou `accent` à l'état actif.",
+      "**Do** garder le texte courant à 13px et les contrôles à 30px de haut.",
+      "**Do** passer toute couleur par les jetons CSS pour que le thème sombre suive automatiquement.",
+      "**Do** garder les en-têtes de scène en majuscules (11.5px 600) partout où ils apparaissent hors de la feuille."
+    ],
+    "donts": [
+      "**Don't** revenir aux selects gris en relief, aux cadres violets ou aux bordures colorées épaisses de l'ancienne interface.",
+      "**Don't** modifier la police, la taille, l'interlignage ou les marges de la feuille de scénario pour l'écran.",
+      "**Don't** colorer la feuille selon le thème : elle reste blanche à encre noire.",
+      "**Don't** utiliser le violet `plot` ailleurs que sur les pastilles de temps forts.",
+      "**Don't** mettre en capitales un libellé qui n'est pas un en-tête de scène.",
+      "**Don't** utiliser d'ombre dure décalée ni de dégradé décoratif."
+    ]
+  }
+}

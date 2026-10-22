@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Oniric",
+  "mainBinaryName": "Oniric",
+  "version": "0.5.0",
+  "identifier": "org.oniric.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Oniric",
+        "width": 1360,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "decorations": false,
+        "shadow": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Oniric",
+    "copyright": "GPL-3.0-or-later",
+    "category": "Video",
+    "shortDescription": "Logiciel libre de création de films",
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "license": "../LICENSE",
+    "fileAssociations": [
+      { "ext": ["oniric"], "name": "Projet Oniric", "description": "Projet Oniric", "role": "Editor" }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["French", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}
