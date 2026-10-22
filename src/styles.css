@@ -1099,7 +1099,10 @@ kbd {
   padding: 12px 20px 12px;
   border-bottom: 1px solid var(--line);
 }
+/* The location keeps its width (up to half the header); the view's tools wrap around it. */
 .view-header-text {
+  flex-shrink: 0;
+  max-width: 50%;
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -1136,6 +1139,32 @@ kbd {
 .crumbs li:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* When space runs out, the project name gives way first. */
+.crumbs li:not(:first-child) {
+  flex: none;
+  max-width: 220px;
+}
+.crumb-link {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.crumb-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.crumb-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 .crumbs svg {
   width: 14px;
@@ -2740,7 +2769,7 @@ h4 {
   gap: 14px;
   align-items: flex-start;
 }
-/* An act is a big card laying its sequences side by side, each a card holding its scenes. */
+/* An act is a big card holding its sequences, each a card holding its scenes: stacked on the whole story, side by side once the act is opened. */
 .column {
   flex: none;
   display: grid;
@@ -2759,9 +2788,11 @@ h4 {
   outline: 2px dashed var(--focus);
   outline-offset: 2px;
 }
-.column.folded {
-  width: 340px;
+.column.z-story {
+  width: 328px;
   grid-template-columns: minmax(0, 1fr);
+}
+.column.folded {
   cursor: pointer;
 }
 .column.folded:hover {
@@ -2786,8 +2817,8 @@ h4 {
   margin: 0;
   font: inherit;
 }
-/* The disclosure: title, counts and chevron in one button. */
-.fold {
+/* The title button opens the act or sequence; the chevron beside it folds it in place. */
+.drill {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2804,25 +2835,32 @@ h4 {
   cursor: pointer;
   transition: background 120ms ease-out;
 }
-.seq-head .fold {
+.seq-head .drill {
   flex: 1;
   min-height: 26px;
   padding-left: 4px;
 }
-.fold:hover {
+.drill:hover {
   background: var(--hover);
 }
-.fold:focus-visible {
+.drill.static {
+  cursor: default;
+}
+.drill.static:hover {
+  background: none;
+}
+.drill:focus-visible,
+.fold-toggle:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 /* Counts stay whole; a long title gives way with an ellipsis. */
-.fold > .muted.small {
+.drill > .muted.small {
   flex: 1 0 auto;
   white-space: nowrap;
 }
-.fold > .act-pill,
-.fold > .seq-title {
+.drill > .act-pill,
+.drill > .seq-title {
   flex: 0 1 auto;
 }
 .fold-chev {
@@ -2832,10 +2870,28 @@ h4 {
   color: var(--muted);
   transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.fold[aria-expanded="true"] .fold-chev {
+.fold-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.fold-toggle:hover {
+  background: var(--hover);
+}
+.fold-toggle[aria-expanded="true"] .fold-chev {
   transform: rotate(90deg);
 }
-.fold:hover .fold-chev {
+.fold-toggle:hover .fold-chev {
   color: var(--ink);
 }
 .act-pill {
@@ -2929,6 +2985,10 @@ h4 {
   height: 24px;
   padding: 0;
 }
+/* Clear of the fold chevron when there is one. */
+.seq-actions:has(+ .fold-toggle) {
+  right: 30px;
+}
 .column-head:hover .seq-actions,
 .seq-head:hover .seq-actions,
 .seq-actions:focus-within {
@@ -2952,8 +3012,36 @@ h4 {
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--act, var(--accent)) 5%, var(--sunken));
 }
-.seq.folded {
+.act-seqs.row > .seq.folded {
   flex-basis: 220px;
+}
+/* On the whole story, an act's sequences stack in its column. */
+.act-seqs.stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.act-seqs.stack > .seq {
+  flex: none;
+}
+.act-seqs.stack > .seq-band {
+  width: auto;
+  min-height: 36px;
+}
+/* One sequence opened: its scenes spread over the width. */
+.board.solo {
+  justify-content: stretch;
+}
+.board.solo .column {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.seq.solo {
+  flex: none;
+}
+.seq.solo .cards {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-items: start;
 }
 .seq-head {
   min-height: 26px;
@@ -3083,12 +3171,12 @@ h4 {
 .card.dim {
   opacity: 0.35;
 }
-/* The handle runs down the card's left edge, its dots level with the heading line. */
+/* The handle is the card's whole left margin, its dots level with the heading line. */
 .card > .grip {
-  width: 18px;
-  margin: 3px 0 3px 3px;
-  padding-top: 8px;
+  width: 22px;
+  padding-top: 11px;
   align-items: flex-start;
+  border-radius: 7px 0 0 7px;
 }
 .card-body {
   flex: 1;
@@ -3097,7 +3185,7 @@ h4 {
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   text-align: left;
-  padding: 10px 12px 10px 3px;
+  padding: 10px 12px 10px 0;
   border: none;
   background: none;
   color: inherit;

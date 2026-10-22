@@ -39,6 +39,15 @@ export interface ProjectApi {
   headerActions: HTMLElement | null;
   /** Opens the project's import or export window, on `section` when given. */
   transfer: (mode: TransferMode, section?: TransferSection) => void;
+  /** Where the user is inside the current view, from the view itself down; the last crumb becomes the header title. Null for the view's top. */
+  setTrail: (trail: Crumb[] | null) => void;
+}
+
+export interface Crumb {
+  label: string;
+  /** Goes back to this level; absent on the last crumb. */
+  onClick?: () => void;
+  count?: number;
 }
 
 export type TransferMode = "import" | "export";

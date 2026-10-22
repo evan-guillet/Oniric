@@ -70,6 +70,7 @@ import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
 import { LaterView } from "./LaterView";
 import {
   ProjectContext,
+  type Crumb,
   type ProjectApi,
   type TransferMode,
   type TransferSection,
@@ -184,6 +185,7 @@ export function ProjectShell({
     css: string;
   } | null>(null);
   const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
+  const [trail, setTrail] = useState<Crumb[] | null>(null);
   const [transferReq, setTransferReq] = useState<{
     mode: TransferMode;
     section?: TransferSection;
@@ -300,6 +302,7 @@ export function ProjectShell({
       printPdf,
       headerActions,
       transfer,
+      setTrail,
     }),
     [
       project,
@@ -312,6 +315,7 @@ export function ProjectShell({
       printPdf,
       headerActions,
       transfer,
+      setTrail,
     ],
   );
 
@@ -469,6 +473,7 @@ export function ProjectShell({
             project={project}
             view={view}
             session={session}
+            trail={trail}
             actionsRef={setHeaderActions}
           />
           <div className="shell-main">
@@ -658,11 +663,13 @@ function ViewHeader({
   project,
   view,
   session,
+  trail,
   actionsRef,
 }: {
   project: OpenState;
   view: ViewId;
   session: ScriptSession;
+  trail: Crumb[] | null;
   actionsRef: (el: HTMLElement | null) => void;
 }) {
   useSessionState(session);
@@ -672,11 +679,14 @@ function ViewHeader({
   );
   const group = NAV.find((g) => g.items.some((i) => i.id === view));
   const label = group?.items.find((i) => i.id === view)?.label ?? "Réglages";
-  const count = SCENE_VIEWS.has(view)
+  const viewCount = SCENE_VIEWS.has(view)
     ? session.snapshot?.headings.length
     : view === "bible"
       ? entries
       : undefined;
+  // A view that went down a level (an act on the board…) names it; the levels above become links.
+  const here = trail?.at(-1);
+  const count = here ? here.count : viewCount;
   return (
     <header className="view-header">
       <div className="view-header-text">
@@ -688,9 +698,17 @@ function ViewHeader({
               {group.label}
             </li>
           )}
+          {trail?.slice(0, -1).map((c, i) => (
+            <li key={i}>
+              <ChevronRight aria-hidden="true" />
+              <button type="button" className="crumb-link" onClick={c.onClick}>
+                {c.label}
+              </button>
+            </li>
+          ))}
         </ol>
         <h1 className="view-title">
-          {label}
+          {here?.label ?? label}
           {count !== undefined && count > 0 && (
             <span className="count">{count}</span>
           )}
