@@ -1,25 +1,9 @@
-import {
-  ArrowLeft,
-  ArrowLeftRight,
-  Bookmark,
-  Check,
-  ChevronDown,
-  CircleCheck,
-  Copy,
-  FileDiff,
-  GitCompareArrows,
-  Lock,
-  PenLine,
-  Scissors,
-  Undo2,
-  UnfoldVertical,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
+import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { useProject } from "../../../project/ui/projectContext";
 import { diffLines, diffScenes, foldLines, lineStats, type DiffLine, type LineSide, type SceneDiff } from "../domain/diff";
 import { formatById } from "../domain/formats";
@@ -41,15 +25,16 @@ import {
 import { readTitlePage } from "../application/titlePageSettings";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-const dayFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" });
 const CURRENT = "__current__";
 
-type Tab = "history" | "versions" | "cuts" | "changes";
+type Kind = SceneDiff["kind"];
 
 /** One scene of a comparison, with its lines facing each other. */
 interface ComparedScene {
   key: string;
   diff: SceneDiff;
+  /** Place of the scene in the compared version, or in the reference one when it was removed. */
+  number: number;
   lines: DiffLine[];
   added: number;
   removed: number;
@@ -62,18 +47,33 @@ interface Comparison {
 }
 
 function compareVersions(base: VersionFile, head: VersionFile): Comparison {
-  const scenes = diffScenes(versionScenes(base), versionScenes(head)).map((d, i) => {
+  const left = versionScenes(base);
+  const right = versionScenes(head);
+  const leftAt = new Map(left.map((s, i) => [s.id, i + 1]));
+  const rightAt = new Map(right.map((s, i) => [s.id, i + 1]));
+  const scenes = diffScenes(left, right).map((d, i) => {
     const lines = diffLines(d.left?.text ?? "", d.right?.text ?? "");
-    return { key: `${(d.right ?? d.left)!.id}-${i}`, diff: d, lines, ...lineStats(lines) };
+    const number = d.right ? (rightAt.get(d.right.id) ?? 0) : (leftAt.get(d.left!.id) ?? 0);
+    return { key: `${(d.right ?? d.left)!.id}-${i}`, diff: d, number, lines, ...lineStats(lines) };
   });
   return { base, head, scenes };
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "");
+
+const KIND_LABEL: Record<Kind, [string, string]> = {
+  same: ["identique", "identiques"],
+  changed: ["modifiée", "modifiées"],
+  added: ["ajoutée", "ajoutées"],
+  removed: ["supprimée", "supprimées"],
+  moved: ["déplacée", "déplacées"],
+};
+const KINDS: Exclude<Kind, "same">[] = ["changed", "added", "removed", "moved"];
 
 /**
- * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06], laid out like a code review:
- * a reference version and a compared one, a history, the list of versions, and the changes side by side.
+ * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06]: the thread of the versions
+ * on the left, newest first, and on the right what changed between the two chosen ones, scene by scene.
  */
 export function VersionsView() {
   const { session, project, notify, prompt, ask, headerActions } = useProject();
@@ -82,9 +82,7 @@ export function VersionsView() {
   const format = useScriptFormat();
   const [base, setBase] = useState("");
   const [head, setHead] = useState(CURRENT);
-  const [tab, setTab] = useState<Tab>("history");
   const [cmp, setCmp] = useState<Comparison | null>(null);
-  const [loading, setLoading] = useState(false);
 
   // The reference follows the latest frozen version, so that freezing leaves nothing to compare.
   const latest = versions[0]?.file ?? "";
@@ -102,11 +100,10 @@ export function VersionsView() {
       return;
     }
     let live = true;
-    setLoading(true);
+    setCmp(null);
     Promise.all([load(base), load(head)])
       .then(([a, b]) => live && setCmp(compareVersions(a, b)))
-      .catch((e) => live && notify({ text: describeError(e), tone: "error" }))
-      .finally(() => live && setLoading(false));
+      .catch((e) => live && notify({ text: describeError(e), tone: "error" }));
     return () => {
       live = false;
     };
@@ -153,7 +150,10 @@ export function VersionsView() {
     if (c === "y") await deleteVersionRow(v.id);
   };
 
-  const reinstateCut = (c: CutScene) => void reinstate(session, c).catch((e) => notify({ text: describeError(e), tone: "error" }));
+  const reinstateCut = (c: CutScene) =>
+    void reinstate(session, c)
+      .then(() => notify({ text: `Scène « ${c.heading || "sans en-tête"} » réintégrée dans le scénario.` }))
+      .catch((e) => notify({ text: describeError(e), tone: "error" }));
   const purgeCut = async (c: CutScene) => {
     const x = await ask({
       title: "Supprimer définitivement ?",
@@ -165,63 +165,23 @@ export function VersionsView() {
   };
 
   const label = (file: string) => (file === CURRENT ? "Version actuelle" : (versions.find((v) => v.file === file)?.name ?? file));
-  const row = (file: string) => versions.find((v) => v.file === file);
-  const compareWith = (file: string) => {
+  const pick = (file: string) => {
+    if (file === CURRENT) {
+      setHead(CURRENT);
+      if (base === CURRENT) setBase(latest);
+      return;
+    }
     setBase(file);
-    setHead(CURRENT);
-    setTab("changes");
+    if (head === file) setHead(CURRENT);
   };
-
-  const changed = cmp?.scenes.filter((s) => s.diff.kind !== "same") ?? [];
-  const totals = changed.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
-  const baseRow = row(base);
-  const headIsCurrent = head === CURRENT;
-
-  const tabs: { id: Tab; label: string; icon: LucideIcon; count: number }[] = [
-    { id: "history", label: "Historique", icon: Bookmark, count: versions.length + cuts.length },
-    { id: "versions", label: "Versions", icon: GitCompareArrows, count: versions.length },
-    { id: "cuts", label: "Scènes coupées", icon: Scissors, count: cuts.length },
-    { id: "changes", label: "Modifications", icon: FileDiff, count: changed.length },
-  ];
+  // What the current version looks like, once a comparison has read it.
+  const current = cmp ? (head === CURRENT ? cmp.head : base === CURRENT ? cmp.base : null) : null;
 
   return (
-    <div className="view pad versions-view">
+    <div className="view versions-view">
       {headerActions &&
         createPortal(
-          <div className="header-tools" role="group" aria-label="Versions comparées">
-            {versions.length > 0 && (
-              <div className="vr-compare">
-                <select value={base} onChange={(e) => setBase(e.target.value)} aria-label="Version de référence" title="Version de référence">
-                  {versions.map((v) => (
-                    <option key={v.id} value={v.file}>
-                      {v.name}
-                    </option>
-                  ))}
-                  <option value={CURRENT}>Version actuelle</option>
-                </select>
-                <ArrowLeft aria-hidden="true" className="vr-compare-arrow" />
-                <select value={head} onChange={(e) => setHead(e.target.value)} aria-label="Version comparée" title="Version comparée">
-                  <option value={CURRENT}>Version actuelle</option>
-                  {versions.map((v) => (
-                    <option key={v.id} value={v.file}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn ghost vr-icon-btn"
-                  aria-label="Inverser les deux versions"
-                  title="Inverser les deux versions"
-                  onClick={() => {
-                    setBase(head);
-                    setHead(base);
-                  }}
-                >
-                  <ArrowLeftRight aria-hidden="true" />
-                </button>
-              </div>
-            )}
+          <div className="header-tools">
             <button type="button" className="btn primary" onClick={() => void freeze()}>
               <Lock aria-hidden="true" />
               Figer la version actuelle…
@@ -230,468 +190,351 @@ export function VersionsView() {
           headerActions,
         )}
 
-      <header className="vr-title">
-        <h1>
-          {versions.length === 0 ? (
-            "Version actuelle"
-          ) : (
-            <>
-              {label(head)} <span className="vr-title-vs">comparée à</span> {label(base)}
-            </>
-          )}
-        </h1>
-        <div className="vr-meta">
-          <span className={headIsCurrent ? "vr-state open" : "vr-state frozen"}>
-            {headIsCurrent ? <PenLine aria-hidden="true" /> : <Lock aria-hidden="true" />}
-            {headIsCurrent ? "En cours" : "Figée"}
-          </span>
-          {versions.length === 0 ? (
-            <span>Aucune version figée pour l'instant : figez-en une avant chaque grande réécriture.</span>
-          ) : base === head ? (
-            <span>Choisissez deux versions différentes à comparer.</span>
-          ) : (
-            <span>
-              {cmp ? <strong>{plural(changed.length, "scène modifiée", "scènes modifiées")}</strong> : "Comparaison…"} dans <span className="vr-ref">{label(head)}</span> depuis{" "}
-              <span className="vr-ref">{label(base)}</span>
-              {baseRow && <> · figée le {dateFormat.format(new Date(baseRow.createdAt))}</>}
+      <aside className="vr-rail" aria-label="Fil des versions">
+        <ol className="vr-thread">
+          <li className={`vr-stop current${head === CURRENT ? " head" : ""}${base === CURRENT ? " base" : ""}`}>
+            <span className="vr-node" aria-hidden="true">
+              <PenLine />
             </span>
-          )}
-        </div>
-      </header>
-
-      <div className="vr-tabs-row">
-        <div className="vr-tabs" role="tablist" aria-label="Sections des versions">
-          {tabs.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? "vr-tab on" : "vr-tab"} onClick={() => setTab(t.id)}>
-              <t.icon aria-hidden="true" />
-              {t.label}
-              <span className="vr-count">{t.count}</span>
+            <button type="button" className="vr-stop-main" aria-pressed={head === CURRENT} onClick={() => pick(CURRENT)}>
+              <span className="vr-stop-title">
+                Version actuelle
+                <span className="vr-live">En cours</span>
+              </span>
+              <span className="vr-stop-meta">
+                {current ? `${plural(current.pages, "page", "pages")} · ${plural(current.scenes.length, "scène", "scènes")}` : "S'enregistre toute seule à chaque frappe"}
+              </span>
+              <RoleTag file={CURRENT} base={base} head={head} />
             </button>
-          ))}
-        </div>
-        {cmp && changed.length > 0 && (
-          <span className="vr-tabs-stat" title={`${totals.added} lignes ajoutées, ${totals.removed} lignes retirées`}>
-            <DiffStat added={totals.added} removed={totals.removed} />
-          </span>
-        )}
-      </div>
-
-      <div role="tabpanel" className="vr-panel">
-        {tab === "history" && (
-          <HistoryTab
-            versions={versions}
-            cuts={cuts}
-            cmp={base !== head ? cmp : null}
-            loading={loading}
-            changed={changed.length}
-            baseLabel={label(base)}
-            headLabel={label(head)}
-            onCompare={compareWith}
-            onShowChanges={() => setTab("changes")}
-            onReinstate={reinstateCut}
-          />
-        )}
-        {tab === "versions" && <VersionsTab versions={versions} onCompare={compareWith} onRestore={(v) => void restore(v)} onRemove={(v) => void remove(v)} notify={notify} />}
-        {tab === "cuts" && <CutsTab cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />}
-        {tab === "changes" &&
-          (versions.length === 0 ? (
-            <p className="vr-blank">Figez une première version : ses modifications apparaîtront ici, scène par scène.</p>
-          ) : base === head ? (
-            <p className="vr-blank">Choisissez deux versions différentes en haut de la fenêtre.</p>
-          ) : !cmp ? (
-            <p className="vr-blank">Comparaison en cours…</p>
-          ) : (
-            <ChangesTab key={`${base}|${head}`} cmp={cmp} baseLabel={label(base)} headLabel={label(head)} />
-          ))}
-      </div>
-    </div>
-  );
-}
-
-/** Proportion of added and removed lines, in five squares. */
-function DiffStat({ added, removed }: { added: number; removed: number }) {
-  const total = added + removed;
-  const filled = Math.min(5, total);
-  const green = total ? Math.round((filled * added) / total) : 0;
-  return (
-    <span className="vr-diffstat">
-      <span className="vr-plus">+{added}</span>
-      <span className="vr-minus">−{removed}</span>
-      <span className="vr-blocks" aria-hidden="true">
-        {Array.from({ length: 5 }, (_, i) => (
-          <i key={i} className={i < green ? "add" : i < filled ? "del" : ""} />
-        ))}
-      </span>
-    </span>
-  );
-}
-
-type HistoryEvent = { at: string; version: VersionRow } | { at: string; cut: CutScene };
-
-function HistoryTab({
-  versions,
-  cuts,
-  cmp,
-  loading,
-  changed,
-  baseLabel,
-  headLabel,
-  onCompare,
-  onShowChanges,
-  onReinstate,
-}: {
-  versions: VersionRow[];
-  cuts: CutScene[];
-  cmp: Comparison | null;
-  loading: boolean;
-  changed: number;
-  baseLabel: string;
-  headLabel: string;
-  onCompare: (file: string) => void;
-  onShowChanges: () => void;
-  onReinstate: (c: CutScene) => void;
-}) {
-  const events: HistoryEvent[] = [...versions.map((v) => ({ at: v.createdAt, version: v })), ...cuts.map((c) => ({ at: c.deletedAt, cut: c }))].sort((a, b) =>
-    a.at.localeCompare(b.at),
-  );
-
-  return (
-    <div className="vr-conv">
-      <div className="vr-conv-main">
-        {events.length === 0 ? (
-          <div className="vr-intro">
-            <h2>L'histoire du scénario commence ici</h2>
-            <p>
-              Une version figée est une copie datée du scénario, rangée dans le dossier « versions » du projet avec son empreinte. Rien ne la modifie ensuite : vous pouvez
-              toujours la comparer à la version actuelle ou y revenir.
-            </p>
-          </div>
-        ) : (
-          <ol className="vr-timeline">
-            {events.map((e) =>
-              "version" in e ? (
-                <li key={e.version.id} className="vr-event">
-                  <span className="vr-node version" aria-hidden="true">
-                    <Lock />
+          </li>
+          {versions.map((v, i) => {
+            const older = versions[i + 1];
+            return (
+              <li key={v.id} className={`vr-stop${v.file === base ? " base" : ""}${v.file === head ? " head" : ""}`}>
+                <span className="vr-node" aria-hidden="true">
+                  <Lock />
+                </span>
+                <button type="button" className="vr-stop-main" aria-pressed={v.file === base} onClick={() => pick(v.file)} title={`Voir ce qui a changé depuis ${v.name}`}>
+                  <span className="vr-stop-title">{v.name}</span>
+                  <span className="vr-stop-meta">{dateFormat.format(new Date(v.createdAt))}</span>
+                  <span className="vr-stop-meta">
+                    {plural(v.pages, "page", "pages")} · {plural(v.scenes, "scène", "scènes")}
+                    {older && v.scenes !== older.scenes && <span className="vr-gain"> ({signed(v.scenes - older.scenes)})</span>}
                   </span>
-                  <div className="vr-event-body">
-                    <p>
-                      <strong>{e.version.name}</strong> figée <span className="muted">· {dateFormat.format(new Date(e.version.createdAt))}</span>
-                    </p>
-                    <p className="vr-event-sub">
-                      {plural(e.version.pages, "page", "pages")} · {plural(e.version.scenes, "scène", "scènes")}
-                      <span className="vr-sha" title={`SHA-256 ${e.version.sha256}`}>
-                        {e.version.sha256.slice(0, 7)}
-                      </span>
-                    </p>
+                  <RoleTag file={v.file} base={base} head={head} />
+                </button>
+                <MoreMenu
+                  label={`Actions pour ${v.name}`}
+                  className="vr-stop-more"
+                  items={[
+                    { label: "Revenir à cette version", icon: Undo2, onClick: () => void restore(v) },
+                    {
+                      label: "Copier l'empreinte",
+                      icon: Copy,
+                      onClick: () => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: "Empreinte copiée : elle prouve que le fichier n'a pas changé." })),
+                    },
+                    { label: "Retirer de la liste", icon: X, danger: true, onClick: () => void remove(v) },
+                  ]}
+                />
+              </li>
+            );
+          })}
+        </ol>
+
+        <section className="vr-cuts" aria-labelledby="vr-cuts-title">
+          <h2 id="vr-cuts-title">
+            <Scissors aria-hidden="true" />
+            Scènes coupées
+            {cuts.length > 0 && <span className="count">{cuts.length}</span>}
+          </h2>
+          <p className="vr-cuts-note">
+            {cuts.length === 0 ? "Une scène supprimée du scénario attend ici avant d'être effacée." : "Elles attendent ici, prêtes à revenir dans le scénario."}
+          </p>
+          {cuts.length > 0 && (
+            <ul className="vr-cut-list">
+              {cuts.map((c) => (
+                <li key={c.id} className="vr-cut">
+                  <div className="vr-cut-main">
+                    <span className="vr-slug">{c.heading || "(sans en-tête)"}</span>
+                    <span className="vr-stop-meta">Coupée le {dateFormat.format(new Date(c.deletedAt))}</span>
                   </div>
-                  <button type="button" className="btn ghost small" onClick={() => onCompare(e.version.file)}>
-                    <GitCompareArrows aria-hidden="true" />
-                    Comparer
-                  </button>
-                </li>
-              ) : (
-                <li key={e.cut.id} className="vr-event minor">
-                  <span className="vr-node cut" aria-hidden="true">
-                    <Scissors />
-                  </span>
-                  <div className="vr-event-body">
-                    <p>
-                      Scène <strong>{e.cut.heading || "(sans en-tête)"}</strong> coupée <span className="muted">· {dateFormat.format(new Date(e.cut.deletedAt))}</span>
-                    </p>
-                  </div>
-                  <button type="button" className="btn ghost small" onClick={() => onReinstate(e.cut)}>
+                  <button type="button" className="btn small" onClick={() => reinstateCut(c)}>
                     <Undo2 aria-hidden="true" />
                     Réintégrer
                   </button>
+                  <MoreMenu label={`Actions pour la scène coupée ${c.heading}`} items={[{ label: "Supprimer définitivement", icon: Trash2, danger: true, onClick: () => void purgeCut(c) }]} />
                 </li>
-              ),
-            )}
-          </ol>
+              ))}
+            </ul>
+          )}
+        </section>
+      </aside>
+
+      <main className="vr-main">
+        {versions.length === 0 ? (
+          <FirstVersion />
+        ) : (
+          <Compare
+            versions={versions}
+            base={base}
+            head={head}
+            cmp={cmp}
+            label={label}
+            onBase={setBase}
+            onHead={setHead}
+            onSwap={() => {
+              setBase(head);
+              setHead(base);
+            }}
+          />
         )}
-
-        <section className="vr-status" aria-label="État de la comparaison">
-          <div className="vr-status-row">
-            <span className={`vr-status-icon ${cmp && changed === 0 ? "ok" : "neutral"}`} aria-hidden="true">
-              {cmp && changed === 0 ? <Check /> : <FileDiff />}
-            </span>
-            <div>
-              <h3>
-                {versions.length === 0
-                  ? "Aucune version figée"
-                  : !cmp
-                    ? loading
-                      ? "Comparaison en cours…"
-                      : "Rien à comparer"
-                    : changed === 0
-                      ? `Rien n'a changé depuis ${baseLabel}`
-                      : `${plural(changed, "scène a changé", "scènes ont changé")} depuis ${baseLabel}`}
-              </h3>
-              <p className="muted">
-                {versions.length === 0
-                  ? "Figez la version actuelle pour garder une trace de cette étape du scénario."
-                  : cmp
-                    ? `${headLabel} : ${plural(cmp.head.pages, "page", "pages")}, ${plural(cmp.head.scenes.length, "scène", "scènes")} — ${baseLabel} : ${plural(cmp.base.pages, "page", "pages")}, ${plural(cmp.base.scenes.length, "scène", "scènes")}.`
-                    : "Choisissez deux versions différentes en haut de la fenêtre."}
-              </p>
-            </div>
-          </div>
-          <div className="vr-status-row">
-            <span className="vr-status-icon ok" aria-hidden="true">
-              <CircleCheck />
-            </span>
-            <div>
-              <h3>Tout est enregistré</h3>
-              <p className="muted">Le scénario s'enregistre tout seul ; figer une version en garde une copie que rien ne modifie.</p>
-            </div>
-          </div>
-          {cmp && changed > 0 && (
-            <div className="vr-status-foot">
-              <button type="button" className="btn" onClick={onShowChanges}>
-                <FileDiff aria-hidden="true" />
-                Voir les modifications
-              </button>
-            </div>
-          )}
-        </section>
-      </div>
-
-      <aside className="vr-side" aria-label="Résumé de la comparaison">
-        <dl>
-          <div>
-            <dt>Référence</dt>
-            <dd>{versions.length ? <span className="vr-ref">{baseLabel}</span> : <span className="muted">Aucune</span>}</dd>
-          </div>
-          <div>
-            <dt>Comparée</dt>
-            <dd>
-              <span className="vr-ref">{headLabel}</span>
-            </dd>
-          </div>
-          {cmp && (
-            <>
-              <div>
-                <dt>Pages</dt>
-                <dd className="vr-delta">
-                  {cmp.base.pages} <ArrowLeft aria-hidden="true" className="flip" /> {cmp.head.pages}
-                </dd>
-              </div>
-              <div>
-                <dt>Scènes</dt>
-                <dd className="vr-delta">
-                  {cmp.base.scenes.length} <ArrowLeft aria-hidden="true" className="flip" /> {cmp.head.scenes.length}
-                </dd>
-              </div>
-            </>
-          )}
-          <div>
-            <dt>Versions figées</dt>
-            <dd>{versions.length}</dd>
-          </div>
-          <div>
-            <dt>Scènes coupées</dt>
-            <dd>{cuts.length}</dd>
-          </div>
-        </dl>
-      </aside>
+      </main>
     </div>
   );
 }
 
-function VersionsTab({
-  versions,
-  onCompare,
-  onRestore,
-  onRemove,
-  notify,
-}: {
-  versions: VersionRow[];
-  onCompare: (file: string) => void;
-  onRestore: (v: VersionRow) => void;
-  onRemove: (v: VersionRow) => void;
-  notify: (n: { text: string }) => void;
-}) {
-  if (versions.length === 0) return <p className="vr-blank">Aucune version figée pour l'instant. Figez une version avant chaque grande réécriture (V1, V2, « version producteur »…).</p>;
-  const days: { day: string; items: VersionRow[] }[] = [];
-  for (const v of versions) {
-    const day = dayFormat.format(new Date(v.createdAt));
-    if (days[days.length - 1]?.day === day) days[days.length - 1].items.push(v);
-    else days.push({ day, items: [v] });
-  }
-  return (
-    <div className="vr-days">
-      {days.map((d) => (
-        <section key={d.day} className="vr-day">
-          <h2 className="vr-day-head">
-            <span className="vr-node small" aria-hidden="true" />
-            Versions du {d.day}
-          </h2>
-          <ul className="vr-list">
-            {d.items.map((v) => (
-              <li key={v.id}>
-                <div className="vr-list-main">
-                  <strong>{v.name}</strong>
-                  <span className="muted small">
-                    figée à {new Date(v.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · {plural(v.pages, "page", "pages")} ·{" "}
-                    {plural(v.scenes, "scène", "scènes")}
-                  </span>
-                </div>
-                <span className="vr-sha-group">
-                  <span className="vr-sha" title={`SHA-256 ${v.sha256}`}>
-                    {v.sha256.slice(0, 7)}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost vr-icon-btn small"
-                    aria-label={`Copier l'empreinte de ${v.name}`}
-                    title="Copier l'empreinte"
-                    onClick={() => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: "Empreinte copiée." }))}
-                  >
-                    <Copy aria-hidden="true" />
-                  </button>
-                </span>
-                <span className="row-actions">
-                  <button type="button" className="btn small" onClick={() => onCompare(v.file)}>
-                    <GitCompareArrows aria-hidden="true" />
-                    Comparer
-                  </button>
-                  <button type="button" className="btn small" onClick={() => onRestore(v)}>
-                    <Undo2 aria-hidden="true" />
-                    Revenir à cette version
-                  </button>
-                  <button type="button" className="btn ghost vr-icon-btn small" aria-label={`Retirer ${v.name} de la liste`} title="Retirer de la liste" onClick={() => onRemove(v)}>
-                    <X aria-hidden="true" />
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
+/** « Référence » or « Comparée » on the two versions being compared. */
+function RoleTag({ file, base, head }: { file: string; base: string; head: string }) {
+  if (base === head) return null;
+  if (file === base) return <span className="vr-role">Référence</span>;
+  if (file === head) return <span className="vr-role head">Comparée</span>;
+  return null;
 }
 
-function CutsTab({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate: (c: CutScene) => void; onPurge: (c: CutScene) => void }) {
+/** Before the first frozen version: what freezing does, with a glimpse of a comparison. */
+function FirstVersion() {
   return (
-    <section className="vr-box">
-      <header className="vr-box-head">
-        <h2>{cuts.length === 0 ? "Aucune scène coupée" : plural(cuts.length, "scène coupée", "scènes coupées")}</h2>
-        <p className="muted small">Une scène retirée du scénario n'est jamais effacée tout de suite : elle attend ici, prête à être réintégrée.</p>
-      </header>
-      {cuts.length > 0 && (
-        <ul className="vr-list flush">
-          {cuts.map((c) => (
-            <li key={c.id}>
-              <span className="vr-node cut" aria-hidden="true">
-                <Scissors />
-              </span>
-              <div className="vr-list-main">
-                <strong>{c.heading || "(sans en-tête)"}</strong>
-                <span className="muted small">coupée le {dateFormat.format(new Date(c.deletedAt))}</span>
-              </div>
-              <span className="row-actions">
-                <button type="button" className="btn small" onClick={() => onReinstate(c)}>
-                  <Undo2 aria-hidden="true" />
-                  Réintégrer
-                </button>
-                <button type="button" className="btn ghost small danger" onClick={() => onPurge(c)}>
-                  Supprimer
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-const KIND_LABEL: Record<SceneDiff["kind"], string> = { same: "identique", changed: "modifiée", added: "ajoutée", removed: "supprimée", moved: "déplacée" };
-
-function ChangesTab({ cmp, baseLabel, headLabel }: { cmp: Comparison; baseLabel: string; headLabel: string }) {
-  const [onlyChanges, setOnlyChanges] = useState(true);
-  const [search, setSearch] = useState("");
-  const [viewed, setViewed] = useState<Set<string>>(new Set());
-  const [closed, setClosed] = useState<Set<string>>(new Set());
-
-  const shown = cmp.scenes.filter((s) => !onlyChanges || s.diff.kind !== "same");
-  const changedCount = cmp.scenes.filter((s) => s.diff.kind !== "same").length;
-  const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || "(sans en-tête)";
-  const needle = search.trim().toLocaleLowerCase("fr");
-  const listed = needle ? shown.filter((s) => heading(s).toLocaleLowerCase("fr").includes(needle)) : shown;
-  const toggle = (set: Set<string>, key: string) => {
-    const next = new Set(set);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    return next;
-  };
-  const viewedShown = shown.filter((s) => viewed.has(s.key)).length;
-
-  return (
-    <div className="vr-files">
-      <aside className="vr-tree" aria-label="Scènes comparées">
-        <input type="search" placeholder="Filtrer les scènes…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Filtrer les scènes" />
-        <ul>
-          {listed.map((s) => (
-            <li key={s.key}>
-              <button
-                type="button"
-                className={viewed.has(s.key) ? "viewed" : ""}
-                onClick={() => document.getElementById(`vr-scene-${s.key}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              >
-                <span className={`vr-dot ${s.diff.kind}`} aria-hidden="true" />
-                <span className="vr-tree-name">{heading(s)}</span>
-                {viewed.has(s.key) && <Check aria-label="vue" className="vr-tree-check" />}
-              </button>
-            </li>
-          ))}
-          {listed.length === 0 && <li className="muted small vr-tree-none">Aucune scène.</li>}
-        </ul>
-      </aside>
-
-      <div className="vr-files-main">
-        <div className="vr-files-bar">
-          <label className="choice small">
-            <input type="checkbox" checked={onlyChanges} onChange={(e) => setOnlyChanges(e.target.checked)} /> Seulement les scènes modifiées
-          </label>
-          <span className="vr-files-bar-end">
-            <span className="vr-progress" title="Scènes marquées comme vues">
-              <span className="vr-progress-ring" style={{ ["--p" as string]: shown.length ? viewedShown / shown.length : 0 }} aria-hidden="true" />
-              {viewedShown} / {shown.length} vues
-            </span>
-            <button type="button" className="btn ghost small" onClick={() => setClosed(closed.size ? new Set() : new Set(shown.map((s) => s.key)))}>
-              {closed.size ? "Tout déplier" : "Tout replier"}
-            </button>
+    <div className="vr-first">
+      <h2>Gardez une trace de chaque étape du scénario</h2>
+      <p>
+        Figer une version range une copie datée du scénario dans le dossier « versions » du projet. Rien ne la modifie ensuite : vous verrez ce qui a changé depuis, scène par
+        scène, et vous pourrez toujours y revenir.
+      </p>
+      <p className="vr-first-when">Les bons moments : avant une grande réécriture, avant d'envoyer le scénario à quelqu'un, à la fin d'un jet.</p>
+      <figure className="vr-first-sample" aria-label="Exemple de comparaison">
+        <div className="vr-file-head">
+          <span className="vr-file-num">Scè. 12</span>
+          <span className="vr-slug">INT. HANGAR — NUIT</span>
+          <span className="vr-kind changed">modifiée</span>
+        </div>
+        <div className="vr-split" aria-hidden="true">
+          <span className="vr-ln">1</span>
+          <span className="vr-code">
+            <span className="vr-sign"> </span>Lia pousse la porte du hangar.
+          </span>
+          <span className="vr-ln">1</span>
+          <span className="vr-code">
+            <span className="vr-sign"> </span>Lia pousse la porte du hangar.
+          </span>
+          <span className="vr-ln del">2</span>
+          <span className="vr-code del">
+            <span className="vr-sign">−</span>Le vaisseau <mark>dort</mark> sous une bâche.
+          </span>
+          <span className="vr-ln ins">2</span>
+          <span className="vr-code ins">
+            <span className="vr-sign">+</span>Le vaisseau <mark>l'attend</mark> sous une bâche.
           </span>
         </div>
-
-        {shown.length === 0 && <p className="vr-blank">{changedCount === 0 ? `Aucune différence entre ${baseLabel} et ${headLabel}.` : "Aucune scène."}</p>}
-        {shown.map((s) => (
-          <SceneFile
-            key={s.key}
-            scene={s}
-            heading={heading(s)}
-            open={!closed.has(s.key)}
-            viewed={viewed.has(s.key)}
-            onToggle={() => setClosed(toggle(closed, s.key))}
-            onViewed={() => {
-              const was = viewed.has(s.key);
-              setViewed(toggle(viewed, s.key));
-              // A scene marked as viewed folds away, as in a code review; unmarking it opens it again.
-              setClosed((c) => {
-                const next = new Set(c);
-                if (was) next.delete(s.key);
-                else next.add(s.key);
-                return next;
-              });
-            }}
-            baseLabel={baseLabel}
-            headLabel={headLabel}
-          />
-        ))}
-      </div>
+        <figcaption>La version figée à gauche, la version actuelle à droite.</figcaption>
+      </figure>
     </div>
+  );
+}
+
+type Filter = "changes" | Kind | "all";
+
+function Compare({
+  versions,
+  base,
+  head,
+  cmp,
+  label,
+  onBase,
+  onHead,
+  onSwap,
+}: {
+  versions: VersionRow[];
+  base: string;
+  head: string;
+  cmp: Comparison | null;
+  label: (file: string) => string;
+  onBase: (file: string) => void;
+  onHead: (file: string) => void;
+  onSwap: () => void;
+}) {
+  const [filter, setFilter] = useState<Filter>("changes");
+  const [search, setSearch] = useState("");
+  const [closed, setClosed] = useState<Set<string>>(new Set());
+  useEffect(() => setClosed(new Set()), [base, head]);
+
+  const options = (
+    <>
+      <option value={CURRENT}>Version actuelle</option>
+      {versions.map((v) => (
+        <option key={v.id} value={v.file}>
+          {v.name}
+        </option>
+      ))}
+    </>
+  );
+  const pair = (
+    <div className="vr-pair" role="group" aria-label="Versions comparées">
+      <select value={base} onChange={(e) => onBase(e.target.value)} aria-label="Version de référence">
+        {options}
+      </select>
+      <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
+      <select value={head} onChange={(e) => onHead(e.target.value)} aria-label="Version comparée">
+        {options}
+      </select>
+      <button type="button" className="btn ghost vr-swap" aria-label="Inverser les deux versions" title="Inverser les deux versions" onClick={onSwap}>
+        <ArrowLeftRight aria-hidden="true" />
+      </button>
+    </div>
+  );
+
+  if (base === head)
+    return (
+      <header className="vr-head">
+        <h2>Choisissez deux versions différentes</h2>
+        {pair}
+      </header>
+    );
+  if (!cmp)
+    return (
+      <>
+        <header className="vr-head">
+          <h2>Comparaison en cours…</h2>
+          {pair}
+        </header>
+        <div className="vr-loading" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </>
+    );
+
+  const count = (k: Kind) => cmp.scenes.filter((s) => s.diff.kind === k).length;
+  const changed = cmp.scenes.filter((s) => s.diff.kind !== "same");
+  const totals = changed.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
+  const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || "(sans en-tête)";
+  const needle = search.trim().toLocaleLowerCase("fr");
+  const shown = cmp.scenes
+    .filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter))
+    .filter((s) => !needle || heading(s).toLocaleLowerCase("fr").includes(needle));
+  const toggle = (key: string) =>
+    setClosed((c) => {
+      const next = new Set(c);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const allClosed = shown.length > 0 && shown.every((s) => closed.has(s.key));
+  const summary = KINDS.filter((k) => count(k) > 0).map((k) => `${count(k)} ${KIND_LABEL[k][count(k) > 1 ? 1 : 0]}`);
+
+  return (
+    <>
+      <header className="vr-head">
+        <h2>
+          {changed.length === 0
+            ? `Rien n'a changé depuis ${label(base)}`
+            : head === CURRENT
+              ? `Ce qui a changé depuis ${label(base)}`
+              : `${label(head)} comparée à ${label(base)}`}
+        </h2>
+        {pair}
+        <dl className="vr-figures">
+          <div>
+            <dt>Scènes</dt>
+            <dd>
+              {cmp.base.scenes.length}
+              <ArrowRight aria-label="puis" />
+              {cmp.head.scenes.length}
+            </dd>
+          </div>
+          <div>
+            <dt>Pages</dt>
+            <dd>
+              {cmp.base.pages}
+              <ArrowRight aria-label="puis" />
+              {cmp.head.pages}
+            </dd>
+          </div>
+          {changed.length > 0 && (
+            <div>
+              <dt>Lignes</dt>
+              <dd>
+                <LineStat added={totals.added} removed={totals.removed} />
+              </dd>
+            </div>
+          )}
+          {summary.length > 0 && (
+            <div className="vr-figures-wide">
+              <dt>Scènes touchées</dt>
+              <dd className="vr-figures-text">{summary.join(", ")}</dd>
+            </div>
+          )}
+        </dl>
+      </header>
+
+      {changed.length === 0 ? (
+        <div className="vr-same">
+          <span className="vr-same-icon" aria-hidden="true">
+            <Check />
+          </span>
+          <p>
+            {label(head)} et {label(base)} ont exactement le même texte, scène pour scène.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="vr-bar">
+            <div className="chips" role="group" aria-label="Scènes affichées">
+              <button type="button" className={filter === "changes" ? "chip on" : "chip"} aria-pressed={filter === "changes"} onClick={() => setFilter("changes")}>
+                Toutes les modifications <span className="vr-chip-n">{changed.length}</span>
+              </button>
+              {KINDS.filter((k) => count(k) > 0).map((k) => (
+                <button key={k} type="button" className={filter === k ? "chip on" : "chip"} aria-pressed={filter === k} onClick={() => setFilter(k)}>
+                  <span className={`vr-dot ${k}`} aria-hidden="true" />
+                  {KIND_LABEL[k][1].replace(/^./, (c) => c.toUpperCase())} <span className="vr-chip-n">{count(k)}</span>
+                </button>
+              ))}
+              <button type="button" className={filter === "all" ? "chip on" : "chip"} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+                Tout le scénario <span className="vr-chip-n">{cmp.scenes.length}</span>
+              </button>
+            </div>
+            <span className="vr-bar-end">
+              <input type="search" className="vr-search" placeholder="Chercher une scène…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Chercher une scène" />
+              <button
+                type="button"
+                className="btn ghost small"
+                disabled={shown.length === 0}
+                onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
+              >
+                {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
+                {allClosed ? "Tout déplier" : "Tout replier"}
+              </button>
+            </span>
+          </div>
+
+          <div className="vr-files">
+            {shown.length === 0 && <p className="vr-blank">Aucune scène ne correspond à « {search.trim()} ».</p>}
+            {shown.map((s) => (
+              <SceneFile key={s.key} scene={s} heading={heading(s)} open={!closed.has(s.key)} onToggle={() => toggle(s.key)} baseLabel={label(base)} headLabel={label(head)} />
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function LineStat({ added, removed }: { added: number; removed: number }) {
+  return (
+    <span className="vr-linestat" title={`${plural(added, "ligne ajoutée", "lignes ajoutées")}, ${plural(removed, "ligne retirée", "lignes retirées")}`}>
+      <span className="vr-plus">+{added}</span>
+      <span className="vr-minus">−{removed}</span>
+    </span>
   );
 }
 
@@ -699,18 +542,14 @@ function SceneFile({
   scene,
   heading,
   open,
-  viewed,
   onToggle,
-  onViewed,
   baseLabel,
   headLabel,
 }: {
   scene: ComparedScene;
   heading: string;
   open: boolean;
-  viewed: boolean;
   onToggle: () => void;
-  onViewed: () => void;
   baseLabel: string;
   headLabel: string;
 }) {
@@ -719,26 +558,26 @@ function SceneFile({
   const kind = scene.diff.kind;
 
   return (
-    <section id={`vr-scene-${scene.key}`} className={`vr-file ${kind}${viewed ? " viewed" : ""}`} aria-label={heading}>
+    <section className={`vr-file ${kind}`} aria-label={heading}>
       <header className="vr-file-head">
-        <button type="button" className="vr-file-toggle" aria-expanded={open} aria-label={open ? "Replier la scène" : "Déplier la scène"} onClick={onToggle}>
+        <button type="button" className="vr-file-toggle" aria-expanded={open} onClick={onToggle}>
           <ChevronDown aria-hidden="true" />
+          <span className="vr-file-num">Scè. {scene.number}</span>
+          <span className="vr-slug">{heading}</span>
         </button>
-        <span className="vr-file-name">{heading}</span>
-        <span className={`vr-kind ${kind}`}>{KIND_LABEL[kind]}</span>
-        <span className="vr-file-end">
-          {(scene.added > 0 || scene.removed > 0) && <DiffStat added={scene.added} removed={scene.removed} />}
-          <label className={viewed ? "vr-viewed on" : "vr-viewed"}>
-            <input type="checkbox" checked={viewed} onChange={onViewed} />
-            <span className="vr-viewed-box" aria-hidden="true">
-              <Check />
-            </span>
-            Vue
-          </label>
-        </span>
+        <span className={`vr-kind ${kind}`}>{KIND_LABEL[kind][0]}</span>
+        <span className="vr-file-end">{(scene.added > 0 || scene.removed > 0) && <LineStat added={scene.added} removed={scene.removed} />}</span>
       </header>
       {open && (
         <div className="vr-split" role="table" aria-label={`${baseLabel} à gauche, ${headLabel} à droite`}>
+          <div className="vr-row vr-sides" role="row">
+            <span className="vr-side-name" role="columnheader">
+              {baseLabel}
+            </span>
+            <span className="vr-side-name" role="columnheader">
+              {headLabel}
+            </span>
+          </div>
           {kind === "moved" && <div className="vr-split-note">La scène a changé de place ; son texte est identique.</div>}
           {hunks.map((h, i) =>
             h.kind === "fold" && !unfolded.has(i) ? (
@@ -782,7 +621,7 @@ function Side({ side, kind, which }: { side: LineSide | null; kind: DiffLine["ki
           {kind === "same" ? " " : which === "left" ? "−" : "+"}
         </span>
         {side.parts.every((p) => !p.text) ? (
-          " "
+          " "
         ) : kind === "changed" ? (
           side.parts.map((p, i) => (p.kind === "same" ? <span key={i}>{p.text}</span> : <mark key={i}>{p.text}</mark>))
         ) : (
