@@ -73,9 +73,9 @@ async function kill() {
   await sleep(300);
 }
 const button = (name) => page.getByRole("button", { name, exact: true });
-/** Exports through the Exporter dialog: `kind` is PDF, Fountain or FDX. */
+/** Exports the screenplay through the project menu's Exporter dialog: `kind` is PDF, Fountain or FDX. */
 async function exportAs(kind) {
-  await page.locator(".script-actions").getByRole("button", { name: "Exporter", exact: true }).click();
+  await projectMenu("Exporter…");
   await page.locator("dialog.dialog").getByRole("radio", { name: new RegExp(`^${kind}`) }).check();
   await page.locator("dialog.dialog").getByRole("button", { name: "Exporter", exact: true }).click();
 }
@@ -336,8 +336,8 @@ await page.keyboard.press("Control+z");
 
 await nav("Tableau");
 await page.waitForSelector(".board", { timeout: 15000 });
-const levelSelect = page.locator(".header-tools select").nth(1);
-await levelSelect.selectOption("all");
+// The whole story in columns shows every card; the mode is remembered, so set it.
+await page.locator(".header-tools select").first().selectOption("columns");
 const cards = await page.locator(".board .card").count();
 check(cards === sceneCount, `tableau : ${cards} cartes pour ${sceneCount} scènes (VUE-03)`);
 
