@@ -1,4 +1,4 @@
-import { ChevronRight, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Trash2 } from "lucide-react";
 import { memo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ContextMenu } from "../../../../ui-kit/MoreMenu";
@@ -38,7 +38,7 @@ function savedFolds(key: string): Set<string> {
 
 /**
  * The scenes of the screenplay, under their acts and sequences when the story has some.
- * Acts and sequences fold; the folds are remembered per project on this computer.
+ * Acts and sequences fold, one by one or all at once; the folds are remembered per project on this computer.
  * A right click on an act, a sequence or a scene offers to delete it; `onRemove` asks before doing so.
  */
 export const SceneList = memo(function SceneList({
@@ -68,9 +68,7 @@ export const SceneList = memo(function SceneList({
     setMenu({ x: keyboard ? r.left + 24 : e.clientX, y: keyboard ? r.bottom : e.clientY, target, key });
   };
   const [folded, setFoldedState] = useState(() => savedFolds(foldKey));
-  const toggle = (id: string) => {
-    const next = new Set(folded);
-    if (!next.delete(id)) next.add(id);
+  const setFolded = (next: Set<string>) => {
     setFoldedState(next);
     try {
       localStorage.setItem(foldKey, JSON.stringify([...next]));
@@ -78,6 +76,14 @@ export const SceneList = memo(function SceneList({
       // Not remembered: the fold still applies until the project is closed.
     }
   };
+  const toggle = (id: string) => {
+    const next = new Set(folded);
+    if (!next.delete(id)) next.add(id);
+    setFolded(next);
+  };
+  const partIds = groups.flatMap((g) => [g.act?.id, ...g.sequences.map((q) => q.sequence?.id)].filter((id): id is string => !!id));
+  const allFolded = partIds.every((id) => folded.has(id));
+  const noneFolded = partIds.every((id) => !folded.has(id));
 
   const scene = (i: number) => {
     const s = scenes[i];
@@ -124,12 +130,37 @@ export const SceneList = memo(function SceneList({
     );
   };
 
-  const flat = groups.every((g) => !g.act && g.sequences.every((s) => !s.sequence));
+  const flat = partIds.length === 0;
   const sequences = (g: ListGroup) =>
     g.sequences.flatMap((s) => (s.sequence ? [part("seq", s.sequence, s.scenes, s.scenes.map(scene))] : s.scenes.map(scene)));
 
   return (
     <nav className="scene-list" aria-label={t("workspace.scenes")}>
+      {!flat && (
+        <div className="scene-list-tools">
+          <span className="scene-list-count">
+            {scenes.length} scène{scenes.length > 1 ? "s" : ""}
+          </span>
+          <button
+            type="button"
+            title="Tout déplier"
+            aria-label="Tout déplier"
+            disabled={noneFolded}
+            onClick={() => setFolded(new Set())}
+          >
+            <ChevronsUpDown aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            title="Tout plier"
+            aria-label="Tout plier"
+            disabled={allFolded}
+            onClick={() => setFolded(new Set(partIds))}
+          >
+            <ChevronsDownUp aria-hidden="true" />
+          </button>
+        </div>
+      )}
       <ol className={flat ? undefined : "outlined"}>
         {flat
           ? scenes.map((_s, i) => scene(i))

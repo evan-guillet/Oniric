@@ -27,9 +27,13 @@ import {
   ListChecks,
   LogOut,
   MapPin,
+  Monitor,
+  Moon,
   NotebookPen,
+  Search,
   Settings,
   SquareKanban,
+  Sun,
   Users,
   Wallet,
   type LucideIcon,
@@ -38,6 +42,7 @@ import { commands, events, type OpenState } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { describeCoreError, describeError } from "../../../core/errors";
+import { setThemePreference } from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
 import { Dialog, type ChoiceRequest } from "../../../ui-kit/Dialog";
 import type { ToastMessage } from "../../../ui-kit/Toast";
@@ -67,6 +72,7 @@ import { VersionsView } from "../../script/screenplay/ui/VersionsView";
 import { BoardView } from "../../script/views/ui/BoardView";
 import { TimelineView } from "../../script/views/ui/TimelineView";
 import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
+import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { LaterView } from "./LaterView";
 import {
   ProjectContext,
@@ -325,6 +331,61 @@ export function ProjectShell({
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [palette, setPalette] = useState(false);
+
+  /** A view from the side bar; the Bible opens on its home page. */
+  const goView = useCallback((id: ViewId) => {
+    if (id === "bible") {
+      setEntry(null);
+      setBibleHome((n) => n + 1);
+    }
+    setView(id);
+  }, []);
+
+  // Ctrl+K opens the palette from anywhere in the project, unless a dialog is already open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== "k") return;
+      if (document.querySelector("dialog[open]:not(.palette)")) return;
+      e.preventDefault();
+      setPalette((p) => !p);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  const paletteItems = useMemo((): PaletteItem[] => {
+    const views = NAV.filter((g) => !hiddenParts.includes(g.part)).flatMap(
+      (g) =>
+        g.items.map((item) => ({
+          id: `view-${item.id}`,
+          group: "Vues",
+          label: item.label,
+          detail: item.later ? `${g.label} · ${item.later}` : g.label,
+          icon: item.icon,
+          searchOnly: !!item.later,
+          run: () => goView(item.id),
+        })),
+    );
+    const action = (
+      id: string,
+      label: string,
+      icon: LucideIcon,
+      run: () => void,
+      keywords?: string,
+    ): PaletteItem => ({ id, group: "Actions", label, icon, run, keywords });
+    return [
+      ...views,
+      action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
+      action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
+      action("settings", "Réglages", Settings, () => setSettings(true), "préférences options"),
+      action("light", "Thème clair", Sun, () => void setThemePreference("light"), "apparence jour"),
+      action("dark", "Thème sombre", Moon, () => void setThemePreference("dark"), "apparence nuit"),
+      action("system", "Thème du système", Monitor, () => void setThemePreference("system"), "apparence windows"),
+      action("close", "Fermer le projet", LogOut, onClose, "quitter accueil"),
+    ];
+  }, [hiddenParts, goView, transfer, onClose]);
 
   /** Replaces the screenplay by a Fountain or FDX file [EDT-05]. */
   const importFile = async (file: File | undefined) => {
@@ -428,6 +489,16 @@ export function ProjectShell({
               },
             ]}
           />
+          <button
+            type="button"
+            className="nav-link nav-search"
+            aria-keyshortcuts="Control+K"
+            onClick={() => setPalette(true)}
+          >
+            <Search aria-hidden="true" />
+            <span>Rechercher</span>
+            <kbd aria-hidden="true">Ctrl K</kbd>
+          </button>
           <input
             ref={fileRef}
             type="file"
@@ -453,13 +524,7 @@ export function ProjectShell({
                     <NavButton
                       item={item}
                       on={view === item.id}
-                      onClick={() => {
-                        if (item.id === "bible") {
-                          setEntry(null);
-                          setBibleHome((n) => n + 1);
-                        }
-                        setView(item.id);
-                      }}
+                      onClick={() => goView(item.id)}
                     />
                   </li>
                 ))}
@@ -509,6 +574,18 @@ export function ProjectShell({
             (kind === "script" ? fileRef : bibleFileRef).current?.click()
           }
           onClose={() => setTransferReq(null)}
+        />
+      )}
+      {palette && (
+        <CommandPalette
+          items={paletteItems}
+          scenes={session.snapshot?.headings ?? []}
+          onScene={(i) => {
+            setView("script");
+            requestAnimationFrame(() => session.editor?.goToScene(i));
+          }}
+          onEntry={openEntry}
+          onClose={() => setPalette(false)}
         />
       )}
       {promptReq && (

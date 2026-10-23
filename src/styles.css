@@ -1101,6 +1101,17 @@ kbd {
 .nav-link.on svg {
   color: var(--ink);
 }
+/* « Rechercher » under the project name: the palette, Ctrl+K */
+.nav-link.nav-search {
+  margin-bottom: 2px;
+  color: var(--muted);
+}
+.nav-search kbd {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: none;
+}
 .nav-link.later {
   color: var(--muted);
 }
@@ -1491,6 +1502,49 @@ kbd {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+/* Above an outlined list: the scene count, unfold all, fold all; it stays in view, the act heads stick under it */
+.scene-list:has(.scene-list-tools) {
+  --tools-h: 36px;
+}
+.scene-list-tools {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--tools-h);
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.scene-list-count {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.scene-list .scene-list-tools button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--muted);
+}
+.scene-list .scene-list-tools button:hover:not(:disabled) {
+  color: var(--ink);
+}
+.scene-list .scene-list-tools button:disabled {
+  color: var(--hint);
+  opacity: 0.55;
+  cursor: default;
+  background: none;
+}
+.scene-list-tools svg {
+  width: 15px;
+  height: 15px;
+}
 /* Acts and sequences around the scenes: folding heads, a guide line down each open part */
 .scene-list .outlined,
 .outline-part ol {
@@ -1563,7 +1617,7 @@ kbd {
 }
 .scene-list .outline-part.part-act > .outline-head {
   position: sticky;
-  top: 0;
+  top: var(--tools-h, 0px);
   z-index: 1;
   background: var(--panel);
 }
@@ -6084,4 +6138,128 @@ h4 {
   color: var(--muted);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+/* Command palette (Ctrl+K): a search field over the page, its results by kind, the keys at the bottom */
+.palette {
+  position: fixed;
+  inset: 12vh 0 auto;
+  margin: 0 auto;
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(520px, 76vh);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.palette[open] {
+  display: flex;
+  flex-direction: column;
+  animation: dialog-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.palette::backdrop {
+  background: var(--backdrop);
+}
+.palette-search {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.palette-search svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  color: var(--muted);
+}
+.palette-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  outline: none;
+  font-size: 14.5px;
+}
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 6px 8px;
+  scroll-padding: 28px 0 8px;
+}
+.palette-group {
+  padding: 10px 10px 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.palette-item svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.palette-item.on {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.palette-item.on svg {
+  color: var(--accent);
+}
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-detail {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.palette-none {
+  margin: 0;
+  padding: 22px 10px;
+  text-align: center;
+  color: var(--muted);
+}
+.palette-foot {
+  flex: none;
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--sunken);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .palette[open] {
+    animation: none;
+  }
 }
