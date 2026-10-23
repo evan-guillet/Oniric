@@ -2607,14 +2607,15 @@ h4 {
 .entry-cards-none {
   padding: 8px 2px;
 }
+.entry-cards-none:empty {
+  padding: 0;
+}
 .entry-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 100%;
-  height: 100%;
   padding: 12px 14px;
-  text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -2627,10 +2628,26 @@ h4 {
   border-color: var(--line-strong);
   box-shadow: var(--shadow-md);
 }
-.entry-card:focus-visible {
-  outline: none;
+.entry-card:has(.entry-card-open:focus-visible) {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+/* The name is the button; its ::after covers the card so that a click anywhere opens it. */
+.entry-card-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.entry-card-open:focus-visible {
+  outline: none;
+}
+.entry-card-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
 }
 /* Only an entry with an image keeps a picture on top, flush with the card's edges. */
 .entry-card-media {
@@ -2651,6 +2668,8 @@ h4 {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  margin: 0;
+  font: inherit;
 }
 .entry-card-icon {
   display: grid;
@@ -2668,6 +2687,7 @@ h4 {
 }
 .entry-card .entry-name {
   min-width: 0;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
@@ -2703,6 +2723,73 @@ h4 {
 }
 .entry-card-meta .badge {
   margin-left: auto;
+}
+/* Detection: a group per kind of name, the doubtful ones dimmed with their reason, the button always in view. */
+.detect-group {
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.detect-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+}
+.detect-group-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.detect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.detect-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 36px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.detect-item .choice {
+  min-width: 0;
+}
+.detect-name {
+  overflow-wrap: anywhere;
+}
+.detect-item.doubtful .detect-name {
+  color: var(--ink-2);
+}
+.detect-doubt {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.detect-foot {
+  position: sticky;
+  /* The scroll area keeps its 48px bottom padding: the bar sticks to its visible edge. */
+  bottom: -48px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 16px -20px -18px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--panel);
 }
 .empty-actions {
   display: flex;
@@ -2845,6 +2932,7 @@ h4 {
 .entry-modal-body {
   overflow: auto;
   padding: 28px 32px 32px;
+  container: entry / inline-size;
 }
 .entry-modal .entry {
   max-width: none;
@@ -2909,13 +2997,71 @@ h4 {
 }
 .entry-actions {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-wrap: wrap;
 }
-.entry-grid {
+/* Writing on the left, what describes the entry on a rail at the right; one column when the modal is narrow. */
+.entry-body {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 28px;
+  align-items: start;
+}
+.entry-main,
+.entry-side {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+/* Grid children shrink to the rail, or one long scene heading would widen it. */
+.entry-side > *,
+.entry-refs > * {
+  min-width: 0;
+}
+.entry-side {
+  padding-left: 28px;
+  border-left: 1px solid var(--line);
+}
+@container entry (max-width: 760px) {
+  .entry-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .entry-side {
+    padding: 18px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+}
+/* An empty Notes or Galerie is only this button. */
+.entry-fold {
+  justify-self: start;
+  margin-left: -8px;
+  color: var(--ink-2);
+}
+.entry-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.entry-saved::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok-dot);
+}
+.entry-saved.pending::before {
+  background: var(--gray-dot);
+}
+.entry-saved.error {
+  color: var(--danger);
+}
+.entry-saved.error::before {
+  background: var(--danger-dot);
 }
 .gallery {
   display: flex;
@@ -2943,6 +3089,60 @@ h4 {
 .entry-refs {
   display: grid;
   gap: 6px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.entry-refs h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.entry-refs h3:not(:first-child) {
+  margin-top: 10px;
+}
+.entry-refs-count {
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.entry-refs .ref-list {
+  margin: 0;
+}
+.entry-refs .ref-list li {
+  padding: 0;
+}
+/* One line per scene or entry, in ink: the accent would turn the rail into a column of links. */
+.entry-ref {
+  display: block;
+  width: calc(100% + 12px);
+  margin: 0 -6px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.entry-ref:hover {
+  background: var(--sunken);
+  color: var(--accent);
+}
+.entry-ref:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.entry-refs-more {
+  justify-self: start;
+  margin-left: -8px;
 }
 .ref-list li {
   padding: 3px 0;

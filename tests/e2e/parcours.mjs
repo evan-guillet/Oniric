@@ -302,11 +302,12 @@ check((await page.inputValue("#w-prep\\.premise\\.who")) === "Une boulangère ti
 
 await nav("Bible");
 await button("Retrouver les personnages et les lieux du scénario").click();
-await page.waitForSelector(".check-list li", { timeout: 15000 });
-const detected = await page.locator(".check-list li").count();
+await page.waitForSelector(".detect-item", { timeout: 15000 });
+// Doubtful names (probable duplicates, sub-locations, roles) start unchecked; only the checked ones become entries.
+const detected = await page.locator(".detect-item input:checked").count();
 await page.getByRole("button", { name: /^Créer \d+ fiche/ }).click();
-await page.waitForFunction(() => document.querySelectorAll(".entry-card:not(.new)").length > 0, null, { timeout: 15000 });
-const entries = await page.locator(".entry-card:not(.new)").count();
+await page.waitForFunction(() => document.querySelectorAll(".entry-card").length > 0, null, { timeout: 15000 });
+const entries = await page.locator(".entry-card").count();
 check(detected > 0 && entries === detected, `bible : ${detected} personnages et lieux retrouvés dans le scénario, ${entries} fiches créées (BIB-05)`);
 
 await projectMenu("Exporter…");

@@ -90,3 +90,88 @@ export function prettyName(upper: string): string {
     return keep ? w : w.charAt(0).toLocaleUpperCase("fr") + w.slice(1);
   });
 }
+
+/** Why a detected name starts unchecked: it may already have an entry, it is part of a place, or it is a role, not a person. */
+export type Doubt = { kind: "duplicate"; of: EntryRef } | { kind: "sublocation"; of: string } | { kind: "generic" };
+
+export interface Candidate {
+  key: string;
+  type: "character" | "location";
+  name: string;
+  doubt: Doubt | null;
+}
+
+/** Cues that name a role rather than a character: « HOMME », « GARDE 2 », « LA SERVEUSE ». */
+const ROLES = new Set(
+  (
+    "homme femme garcon fille enfant enfants bebe vieil vieux vieille jeune ado adolescent adolescente " +
+    "policier policiere flic agent gendarme garde gardien gardienne soldat soldats officier sergent " +
+    "serveur serveuse barman client cliente vendeur vendeuse caissier caissiere chauffeur livreur " +
+    "medecin docteur infirmier infirmiere passant passante voisin voisine inconnu inconnue " +
+    "voix tous toutes foule groupe journaliste presentateur presentatrice narrateur narratrice " +
+    "pretre secretaire standardiste mecanicien pilote technicien petit petite employe employee ouvrier ouvriere marin pirate villageois villageoise"
+  ).split(" "),
+);
+const ARTICLE = /^(l['’]\s*|(le|la|les|un|une|des)\s+)/;
+
+export function isGenericRole(cue: string): boolean {
+  const f = fold(cue);
+  if (/\d|#/.test(f)) return true;
+  const first = f.replace(ARTICLE, "").split(/[^\p{L}]+/u)[0];
+  return ROLES.has(first);
+}
+
+const words = (name: string) => fold(name).replace(ARTICLE, "").split(/[^\p{L}\p{N}]+/u).filter((w) => w && !PARTICLES.has(w));
+
+/** At most one letter added, removed or changed: « NYRAH » for « Nyra ». */
+function nearlyEqual(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1 || Math.min(a.length, b.length) < 4) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return a.slice(i + 1) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i) || a.slice(i) === b.slice(i + 1);
+}
+
+/** The entry this name probably already is: every word of one name is in the other, or one letter apart. */
+export function probableDuplicate(name: string, entries: EntryRef[]): EntryRef | null {
+  const w = words(name);
+  if (w.length === 0) return null;
+  for (const e of entries) {
+    for (const n of [e.name, ...e.aliases]) {
+      const v = words(n);
+      if (v.length === 0) continue;
+      const [small, big] = w.length <= v.length ? [w, v] : [v, w];
+      if (small.every((x) => big.includes(x)) || nearlyEqual(w.join(" "), v.join(" "))) return e;
+    }
+  }
+  return null;
+}
+
+/** The detected names, each with the doubt that keeps it unchecked [BIB-03]. */
+export function triage(found: { characters: string[]; locations: string[] }, entries: EntryRef[]): Candidate[] {
+  const ofType = (type: string) => entries.filter((e) => e.type === type);
+  const characters = ofType("character");
+  const locations = ofType("location");
+  return [
+    ...found.characters.map((raw): Candidate => {
+      const dup = probableDuplicate(raw, characters);
+      return {
+        key: `c:${raw}`,
+        type: "character",
+        name: prettyName(raw),
+        doubt: dup ? { kind: "duplicate", of: dup } : isGenericRole(raw) ? { kind: "generic" } : null,
+      };
+    }),
+    ...found.locations.map((raw): Candidate => {
+      // « MAISON – CUISINE »: the kitchen of the house, which the house's entry covers.
+      const parts = raw.split(/\s+[-–—]+\s+/);
+      const dup = parts.length === 1 ? probableDuplicate(raw, locations) : null;
+      return {
+        key: `l:${raw}`,
+        type: "location",
+        name: prettyName(raw),
+        doubt: parts.length > 1 ? { kind: "sublocation", of: prettyName(parts[0]) } : dup ? { kind: "duplicate", of: dup } : null,
+      };
+    }),
+  ];
+}

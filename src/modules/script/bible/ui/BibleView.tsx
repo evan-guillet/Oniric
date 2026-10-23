@@ -8,9 +8,9 @@ import { EmptyState } from "../../../../ui-kit/Form";
 import { MediaImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
-import { createEntries, createEntry, loadEntries, loadTypes, type Entry } from "../application/bible";
+import { addAlias, createEntries, createEntry, loadEntries, loadTypes, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
-import { appearances, detect, prettyName } from "../domain/appearances";
+import { appearances, detect, triage, type Candidate } from "../domain/appearances";
 import { fold, type EntryType } from "../domain/types";
 import { EntryEditor } from "./EntryEditor";
 import { TypeEditor } from "./TypeEditor";
@@ -101,6 +101,24 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
   };
   // The cards stay behind an open entry.
   const cardsShown = pane.kind === "none" || pane.kind === "entry";
+  const noMatch = cardsShown && entries.length > 0 && visible.length === 0;
+
+  // When the entry closes, however it closed (button, Escape, deletion), the focus goes back to its card,
+  // or to « Nouvelle fiche » when the card is gone.
+  const lastOpen = useRef<string | null>(null);
+  useEffect(() => {
+    if (current) {
+      lastOpen.current = current.id;
+      return;
+    }
+    const id = lastOpen.current;
+    if (!id) return;
+    lastOpen.current = null;
+    requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>(`.entry-card-open[data-entry="${CSS.escape(id)}"]`);
+      (card ?? document.querySelector<HTMLElement>(".bible-bar .btn.primary"))?.focus();
+    });
+  }, [current?.id]);
 
   return (
     <div className="view bible-view">
@@ -146,6 +164,10 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
               </button>
             </div>
             <EntryCards entries={visible} types={types} presence={presence} sort={sort} onOpen={open} onAdd={setCreating} />
+            {/* Always in the page, so that the screen reader hears the message when a search empties the cards. */}
+            <p className="entry-cards-none muted" role="status">
+              {noMatch ? "Aucune fiche ne correspond." : ""}
+            </p>
           </>
         )}
         {cardsShown && entries.length === 0 && (
@@ -183,6 +205,8 @@ function EntryModal({ name, onClose, children }: { name: string; onClose: () => 
   useEffect(() => {
     const d = ref.current!;
     if (!d.open) d.showModal();
+    // showModal focuses the close button, the first in the dialog; the name is what one edits first.
+    d.querySelector<HTMLElement>(".entry-name-input")?.focus();
     return () => d.close();
   }, []);
   return (
@@ -231,7 +255,7 @@ function EntryCards({
   onOpen: (id: string) => void;
   onAdd: (type: string) => void;
 }) {
-  if (entries.length === 0) return <p className="entry-cards-none muted">Aucune fiche ne correspond.</p>;
+  if (entries.length === 0) return null;
   const order: (a: Entry, b: Entry) => number =
     sort === "recent"
       ? (a, b) => b.updatedAt.localeCompare(a.updatedAt)
@@ -267,31 +291,39 @@ function EntryCards({
             <ul className="entry-cards">
               {s.entries.map((e) => {
                 const where = presenceLabel(e.type, presence.get(e.id));
+                const meta = where || e.status !== "idea";
+                // The button holds only the name, a heading of the grid; the summary and the meta describe it.
+                // Its ::after spreads over the whole card, so the card still opens on a click anywhere.
+                const described = [e.summary && `entry-summary-${e.id}`, meta && `entry-meta-${e.id}`].filter(Boolean).join(" ");
                 return (
-                  <li key={e.id}>
-                    <button type="button" className={e.image ? "entry-card with-image" : "entry-card"} onClick={() => onOpen(e.id)}>
-                      {e.image && (
-                        <span className="entry-card-media">
-                          <MediaImage path={e.image} alt="" />
-                        </span>
-                      )}
-                      <span className="entry-card-head">
-                        {!e.image && (
-                          <span className="entry-card-icon">
-                            <Icon aria-hidden="true" />
-                          </span>
-                        )}
-                        <span className="entry-name">{e.name}</span>
+                  <li key={e.id} className={e.image ? "entry-card with-image" : "entry-card"}>
+                    {e.image && (
+                      <span className="entry-card-media">
+                        <MediaImage path={e.image} alt="" />
                       </span>
-                      {e.summary && <span className="entry-card-summary">{e.summary}</span>}
-                      {(where || e.status !== "idea") && (
-                        <span className="entry-card-meta">
-                          {where && <span className={where === "Aucune scène" ? "entry-card-where none" : "entry-card-where"}>{where}</span>}
-                          {e.status === "validated" && <span className="badge ok">Validé</span>}
-                          {e.status === "abandoned" && <span className="badge st-todo">Abandonné</span>}
+                    )}
+                    <h3 className="entry-card-head">
+                      {!e.image && (
+                        <span className="entry-card-icon">
+                          <Icon aria-hidden="true" />
                         </span>
                       )}
-                    </button>
+                      <button type="button" className="entry-card-open entry-name" data-entry={e.id} aria-describedby={described || undefined} onClick={() => onOpen(e.id)}>
+                        {e.name}
+                      </button>
+                    </h3>
+                    {e.summary && (
+                      <span id={`entry-summary-${e.id}`} className="entry-card-summary">
+                        {e.summary}
+                      </span>
+                    )}
+                    {meta && (
+                      <span id={`entry-meta-${e.id}`} className="entry-card-meta">
+                        {where && <span className={where === "Aucune scène" ? "entry-card-where none" : "entry-card-where"}>{where}</span>}
+                        {e.status === "validated" && <span className="badge ok">Validé</span>}
+                        {e.status === "abandoned" && <span className="badge st-todo">Abandonné</span>}
+                      </span>
+                    )}
                   </li>
                 );
               })}
@@ -453,67 +485,127 @@ function NewEntryDialog({
         </label>
         <label className="field">
           <span>Nom</span>
-          <input name="entry-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <input name="entry-name" value={name} onChange={(e) => setName(e.target.value)} data-autofocus />
         </label>
       </form>
     </Dialog>
   );
 }
 
+const DOUBT_LABEL = { duplicate: "Doublon probable", sublocation: "Sous-lieu", generic: "Rôle sans nom" } as const;
+
+/** Names of the screenplay without an entry, by group; the doubtful ones start unchecked and say why. */
 function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => void }) {
   const { session, notify } = useProject();
   const scenes = useScenes(session);
-  const found = useMemo(
-    () => detect(sceneTexts(scenes), entries.map((e) => ({ id: e.id, type: e.type, name: e.name, aliases: e.aliases }))),
-    [scenes, entries],
-  );
-  const [skip, setSkip] = useState<Set<string>>(new Set());
-  const items = [
-    ...found.characters.map((n) => ({ key: `c:${n}`, type: "character", name: prettyName(n), label: "Personnage" })),
-    ...found.locations.map((n) => ({ key: `l:${n}`, type: "location", name: prettyName(n), label: "Lieu" })),
-  ];
-  const chosen = items.filter((i) => !skip.has(i.key));
+  const candidates = useMemo(() => {
+    const refs = entries.map((e) => ({ id: e.id, type: e.type, name: e.name, aliases: e.aliases }));
+    return triage(detect(sceneTexts(scenes), refs), refs);
+  }, [scenes, entries]);
+  // Only the boxes the user changed; the others follow their doubt.
+  const [picked, setPicked] = useState<Map<string, boolean>>(new Map());
+  const [busy, setBusy] = useState(false);
+  const isChecked = (c: Candidate) => picked.get(c.key) ?? c.doubt === null;
+  const set = (list: Candidate[], value: boolean) => setPicked((p) => new Map([...p, ...list.map((c) => [c.key, value] as const)]));
+  const chosen = candidates.filter(isChecked);
+  const groups = [
+    { id: "character", title: "Personnages", icon: UserRound, items: candidates.filter((c) => c.type === "character") },
+    { id: "location", title: "Lieux", icon: MapPin, items: candidates.filter((c) => c.type === "location") },
+  ].filter((g) => g.items.length > 0);
+
   const create = async () => {
+    setBusy(true);
     try {
-      await createEntries(chosen.map((i) => ({ type: i.type, name: i.name })));
-      notify({ text: `${chosen.length} fiche(s) créée(s).` });
+      await createEntries(chosen.map((c) => ({ type: c.type, name: c.name })));
+      notify({ text: chosen.length === 1 ? "1 fiche créée." : `${chosen.length} fiches créées.` });
       onCreated();
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const alias = async (c: Candidate, entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    try {
+      await addAlias(entry, c.name);
+      notify({ text: `« ${c.name} » est maintenant un autre nom de « ${entry.name} ».` });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
   };
+
   return (
-    <section className="panel">
+    <section className="panel detect">
       <h2>Détecter dans le scénario</h2>
-      <p className="muted">Les noms en majuscules des répliques et les lieux des en-têtes de scène qui n'ont pas encore de fiche.</p>
-      {items.length === 0 ? (
+      <p className="muted">Les noms des répliques et les lieux des en-têtes de scène qui n'ont pas encore de fiche. Les noms douteux restent décochés.</p>
+      {candidates.length === 0 ? (
         <p>Tous les personnages et les lieux du scénario ont déjà une fiche.</p>
       ) : (
         <>
-          <ul className="check-list">
-            {items.map((i) => (
-              <li key={i.key}>
-                <label className="choice">
-                  <input
-                    type="checkbox"
-                    checked={!skip.has(i.key)}
-                    onChange={(e) => {
-                      const next = new Set(skip);
-                      if (e.target.checked) next.delete(i.key);
-                      else next.add(i.key);
-                      setSkip(next);
-                    }}
-                  />
-                  {i.name} <span className="muted small">({i.label})</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="btn primary" disabled={chosen.length === 0} onClick={() => void create()}>
-            Créer {chosen.length} fiche(s)
-          </button>
+          {groups.map((g) => {
+            const on = g.items.filter(isChecked).length;
+            return (
+              <fieldset key={g.id} className="detect-group">
+                <legend className="detect-group-head">
+                  <GroupCheck all={on === g.items.length} some={on > 0} onChange={(v) => set(g.items, v)} label={`Tout cocher : ${g.title}`} />
+                  <g.icon aria-hidden="true" />
+                  <span>{g.title}</span>
+                  <span className="entry-section-count">
+                    {on} / {g.items.length}
+                  </span>
+                </legend>
+                <ul className="detect-list">
+                  {g.items.map((c) => {
+                    const dup = c.doubt?.kind === "duplicate" ? c.doubt.of : null;
+                    return (
+                    <li key={c.key} className={c.doubt ? "detect-item doubtful" : "detect-item"}>
+                      <label className="choice">
+                        <input type="checkbox" checked={isChecked(c)} onChange={(e) => set([c], e.target.checked)} />
+                        <span className="detect-name">{c.name}</span>
+                      </label>
+                      {c.doubt && (
+                        <span className="detect-doubt">
+                          <span className="badge st-todo">{DOUBT_LABEL[c.doubt.kind]}</span>
+                          {c.doubt.kind === "duplicate" && (
+                            <>
+                              <span className="muted small">de « {dup!.name} »</span>
+                              <button type="button" className="btn ghost small" onClick={() => void alias(c, dup!.id)}>
+                                Ajouter comme autre nom
+                              </button>
+                            </>
+                          )}
+                          {c.doubt.kind === "sublocation" && <span className="muted small">de « {c.doubt.of} »</span>}
+                        </span>
+                      )}
+                    </li>
+                    );
+                  })}
+                </ul>
+              </fieldset>
+            );
+          })}
+          <div className="detect-foot">
+            <button type="button" className="btn primary" disabled={chosen.length === 0 || busy} onClick={() => void create()}>
+              {chosen.length === 1 ? "Créer 1 fiche" : `Créer ${chosen.length} fiches`}
+            </button>
+            <span className="muted small" aria-live="polite">
+              {chosen.length === 0 ? "Aucun coché" : chosen.length === 1 ? "1 coché" : `${chosen.length} cochés`} sur{" "}
+              {candidates.length === 1 ? "1 nom trouvé" : `${candidates.length} noms trouvés`}
+            </span>
+          </div>
         </>
       )}
     </section>
   );
+}
+
+/** « Tout cocher » for a group: half-filled when only some of its names are checked. */
+function GroupCheck({ all, some, onChange, label }: { all: boolean; some: boolean; onChange: (v: boolean) => void; label: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = some && !all;
+  }, [all, some]);
+  return <input ref={ref} type="checkbox" checked={all} onChange={() => onChange(!all)} aria-label={label} />;
 }

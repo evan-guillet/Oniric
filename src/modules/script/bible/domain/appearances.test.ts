@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appearances, detect, headingPlace, prettyName, type SceneText } from "./appearances";
+import { appearances, detect, headingPlace, isGenericRole, prettyName, probableDuplicate, triage, type SceneText } from "./appearances";
 import { fieldKey, fold } from "./types";
 
 const scenes: SceneText[] = [
@@ -37,5 +37,32 @@ describe("bible appearances", () => {
     expect(prettyName("JEAN-PIERRE")).toBe("Jean-Pierre");
     expect(prettyName("CUISINE DE MARIE")).toBe("Cuisine de Marie");
     expect(prettyName("L'ÉCOLE")).toBe("L'École");
+  });
+
+  it("flags probable duplicates, sub-locations and generic roles", () => {
+    const nyra = { id: "n", type: "character", name: "Nyra Solenne", aliases: [] };
+    const puits = { id: "p", type: "location", name: "Le Puits sec", aliases: [] };
+    expect(probableDuplicate("NYRA", [nyra])).toBe(nyra);
+    expect(probableDuplicate("NYRAH SOLENNE", [nyra])).toBe(nyra);
+    expect(probableDuplicate("PAUL", [nyra])).toBeNull();
+    expect(probableDuplicate("PUITS SEC", [puits])).toBe(puits);
+    expect(isGenericRole("GARDE 2")).toBe(true);
+    expect(isGenericRole("LA SERVEUSE")).toBe(true);
+    expect(isGenericRole("HOMME EN NOIR")).toBe(true);
+    expect(isGenericRole("PETITE FILLE")).toBe(true);
+    expect(isGenericRole("HÉLÈNE")).toBe(false);
+    expect(fold("Ermitage d’Oren")).toBe(fold("Ermitage d'Oren"));
+
+    const found = { characters: ["NYRA", "GARDE 1", "PAUL"], locations: ["MAISON – CUISINE", "PUITS SEC", "TOIT"] };
+    const out = triage(found, [nyra, puits]);
+    expect(out.map((c) => [c.name, c.doubt?.kind ?? null])).toEqual([
+      ["Nyra", "duplicate"],
+      ["Garde 1", "generic"],
+      ["Paul", null],
+      ["Maison – Cuisine", "sublocation"],
+      ["Puits Sec", "duplicate"],
+      ["Toit", null],
+    ]);
+    expect(out[3].doubt).toEqual({ kind: "sublocation", of: "Maison" });
   });
 });

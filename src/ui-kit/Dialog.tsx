@@ -29,6 +29,8 @@ export function Dialog({
   useEffect(() => {
     const d = ref.current!;
     if (!d.open) d.showModal();
+    // showModal focuses the first control; React's autoFocus can't act sooner, the dialog is hidden until now.
+    d.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     return () => d.close();
   }, []);
   return (

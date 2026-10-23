@@ -188,6 +188,17 @@ export async function deleteEntry(id: string): Promise<void> {
   await write("Fiche supprimée", [...TABLES], [db.updateTable("bible_entry").set({ deleted_at: now, updated_at: now }).where("id", "=", id)]);
 }
 
+/** Brings back an entry deleted a moment ago (the « Annuler » of the deletion notice). */
+export async function restoreEntry(id: string): Promise<void> {
+  await write("Fiche restaurée", [...TABLES], [db.updateTable("bible_entry").set({ deleted_at: null, updated_at: nowIso() }).where("id", "=", id)]);
+}
+
+/** A name found in the screenplay becomes another name of an existing entry. */
+export async function addAlias(entry: Entry, alias: string): Promise<void> {
+  if (entry.aliases.some((a) => fold(a) === fold(alias))) return;
+  await saveEntry({ ...entry, aliases: [...entry.aliases, alias] }, entry);
+}
+
 export async function saveType(t: { id?: string; name: string; fields: FieldDef[] }): Promise<string> {
   const now = nowIso();
   const id = t.id ?? uuidv7();

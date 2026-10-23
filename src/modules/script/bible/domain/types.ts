@@ -156,11 +156,12 @@ export const STATUSES = [
   { id: "abandoned", label: "Abandonné" },
 ] as const;
 
-/** Lowercase, without accents: « Hélène » and « helene » match. */
+/** Lowercase, without accents, one apostrophe: « Hélène » and « helene », « d’Oren » and « d'Oren » match. */
 export function fold(s: string): string {
   return s
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
+    .replace(/[’‘ʼ]/g, "'")
     .toLocaleLowerCase("fr")
     .trim();
 }

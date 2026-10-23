@@ -1,4 +1,4 @@
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useLive } from "../../../../core/db/live";
@@ -9,35 +9,50 @@ import { RichText, richSchema } from "../../../../ui-kit/RichText";
 import { MediaImage, pickImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
-import { archiveEntry, backlinks, bibleIndex, deleteEntry, duplicateEntry, entryVersions, saveEntry, type Entry } from "../application/bible";
+import { archiveEntry, backlinks, bibleIndex, deleteEntry, duplicateEntry, entryVersions, restoreEntry, saveEntry, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
 import { appearances } from "../domain/appearances";
 import { STATUSES, type EntryType, type FieldDef } from "../domain/types";
 import { wikiPlugin } from "./wikiPlugin";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+/** Scenes listed before « Voir les N scènes ». */
+const SCENES_SHOWN = 6;
+
+type SaveState = "idle" | "pending" | "saved" | "error";
+const SAVE_LABEL: Record<Exclude<SaveState, "idle">, string> = { pending: "Modifications…", saved: "Enregistré", error: "Non enregistré" };
 
 /** Edits one entry; changes are saved a moment after the last one [BIB-01]. */
 export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: Entry[]; types: EntryType[] }) {
-  const { notify, ask, openScene, session } = useProject();
+  const { notify, openScene, session } = useProject();
   const [draft, setDraft] = useState(entry);
   const saved = useRef(entry);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(draft);
   latest.current = draft;
   const [history, setHistory] = useState(false);
+  // Nothing shows until the first change.
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [allScenes, setAllScenes] = useState(false);
+  // Empty, Notes and Galerie fold to a button; once open or filled they stay open.
+  const [notesOpen, setNotesOpen] = useState(!!entry.notes);
   const plugins = useMemo(() => [wikiPlugin(richSchema.marks.wikilink, () => bibleIndex)], []);
 
   const flush = async () => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     const next = latest.current;
-    if (JSON.stringify(next) === JSON.stringify(saved.current)) return;
+    if (JSON.stringify(next) === JSON.stringify(saved.current)) {
+      setSaveState((st) => (st === "pending" ? "saved" : st));
+      return;
+    }
     const previous = saved.current;
     saved.current = next;
     try {
       await saveEntry(next, previous);
+      setSaveState("saved");
     } catch (e) {
+      setSaveState("error");
       notify({ text: describeError(e), tone: "error" });
     }
   };
@@ -46,6 +61,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
 
   const update = (patch: Partial<Entry>) => {
     setDraft((d) => ({ ...d, ...patch }));
+    setSaveState("pending");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), 700);
   };
@@ -58,19 +74,37 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
     [scenes, draft.id, draft.type, draft.name, draft.aliases],
   );
   const links = useLive(() => backlinks(draft.id), ["bible_entry", "scene"], [draft.id]);
+  const longFields = type?.fields.filter((f) => f.kind === "longtext") ?? [];
+  const shortFields = type?.fields.filter((f) => f.kind !== "longtext") ?? [];
+  const field = (f: FieldDef) => (
+    <FieldInput key={f.key} field={f} value={draft.fields[f.key]} onChange={(v) => setField(f.key, v)} onBlur={() => void flush()} entries={entries} selfId={draft.id} />
+  );
+  const addImages = async () => {
+    try {
+      const ps = await pickImage(true);
+      if (ps.length) update({ gallery: [...latest.current.gallery, ...ps] });
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  };
   const sceneLabel = (id: string) => {
     const s = scenes.find((x) => x.id === id);
     return s ? `${s.index + 1}. ${s.heading || "(sans en-tête)"}` : null;
   };
 
+  // No confirmation: the notice offers to bring the entry back, with the edits saved just before.
   const remove = async () => {
-    const choice = await ask({
-      title: "Supprimer la fiche ?",
-      text: <p>« {draft.name} » sera supprimée. Les liens qui y mènent resteront dans le texte, sans destination.</p>,
-      cancel: "Annuler",
-      choices: [{ label: "Supprimer", value: "delete", danger: true }],
-    });
-    if (choice === "delete") await deleteEntry(draft.id);
+    const { id, name } = latest.current;
+    try {
+      await flush();
+      await deleteEntry(id);
+      notify({
+        text: `La fiche « ${name} » est supprimée.`,
+        actions: [{ label: "Annuler", onClick: () => void restoreEntry(id).catch((e) => notify({ text: describeError(e), tone: "error" })) }],
+      });
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
   };
 
   return (
@@ -109,86 +143,104 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
             <button type="button" className="btn ghost small danger" onClick={() => void remove()}>
               Supprimer
             </button>
+            {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{SAVE_LABEL[saveState]}</span>}
           </div>
         </div>
       </header>
 
-      <div className="entry-grid">
-        <TagInput label="Autres noms" value={draft.aliases} onChange={(aliases) => update({ aliases })} help="Surnoms, diminutifs : reconnus dans le scénario comme le nom." />
-        <Labeled label="Résumé court" wide>
-          <textarea rows={2} value={draft.summary} onChange={(e) => update({ summary: e.target.value })} onBlur={() => void flush()} />
-        </Labeled>
-        {type?.fields.map((field) => (
-          <FieldInput key={field.key} field={field} value={draft.fields[field.key]} onChange={(v) => setField(field.key, v)} onBlur={() => void flush()} entries={entries} selfId={draft.id} />
-        ))}
-        <TagInput label="Étiquettes" value={draft.tags} onChange={(tags) => update({ tags })} suggestions={[...new Set(entries.flatMap((e) => e.tags))]} />
-        <div className="fld wide">
-          <span className="fld-label">Contenu</span>
-          <RichText value={draft.content} onChange={(content) => update({ content })} label="Contenu de la fiche" plugins={plugins} minHeight={160} />
-        </div>
-        <LinksInput value={draft.links} entries={entries} selfId={draft.id} onChange={(l) => update({ links: l })} label="Liens vers d'autres fiches" />
-        <div className="fld wide">
-          <span className="fld-label">Galerie</span>
-          <div className="gallery">
-            {draft.gallery.map((p) => (
-              <figure key={p}>
-                <MediaImage path={p} alt="" />
-                <button type="button" className="btn ghost small" onClick={() => update({ gallery: draft.gallery.filter((x) => x !== p) })}>
-                  Retirer
-                </button>
-              </figure>
-            ))}
-            <button
-              type="button"
-              className="btn small"
-              onClick={async () => {
-                try {
-                  const ps = await pickImage(true);
-                  if (ps.length) update({ gallery: [...latest.current.gallery, ...ps] });
-                } catch (e) {
-                  notify({ text: describeError(e), tone: "error" });
-                }
-              }}
-            >
-              Ajouter des images…
-            </button>
+      <div className="entry-body">
+        <div className="entry-main">
+          <Labeled label="Résumé court">
+            <textarea rows={2} value={draft.summary} onChange={(e) => update({ summary: e.target.value })} onBlur={() => void flush()} />
+          </Labeled>
+          {longFields.map(field)}
+          <div className="fld">
+            <span className="fld-label">Contenu</span>
+            <RichText value={draft.content} onChange={(content) => update({ content })} label="Contenu de la fiche" plugins={plugins} minHeight={220} />
           </div>
+          {notesOpen ? (
+            <Labeled label="Notes">
+              <textarea rows={3} value={draft.notes} onChange={(e) => update({ notes: e.target.value })} onBlur={() => void flush()} autoFocus={!draft.notes} />
+            </Labeled>
+          ) : (
+            <button type="button" className="btn ghost small entry-fold" onClick={() => setNotesOpen(true)}>
+              <Plus aria-hidden="true" />
+              Notes
+            </button>
+          )}
         </div>
-        <Labeled label="Notes" wide>
-          <textarea rows={3} value={draft.notes} onChange={(e) => update({ notes: e.target.value })} onBlur={() => void flush()} />
-        </Labeled>
-      </div>
 
-      <section className="entry-refs">
-        <h3>Scènes où « {draft.name} » apparaît ({seen.size})</h3>
-        {seen.size === 0 ? (
-          <p className="muted small">Aucune scène pour l'instant.</p>
-        ) : (
-          <ul className="ref-list">
-            {[...seen].map((id) => (
-              <li key={id}>
-                <button type="button" className="link" onClick={() => openScene(id)}>
-                  {sceneLabel(id)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {links && links.entries.length > 0 && (
-          <>
-            <h3>Fiches qui mentionnent « {draft.name} »</h3>
-            <ul className="ref-list">
-              {links.entries.map((e) => (
-                <li key={e.id}>
-                  <button type="button" className="link" onClick={() => bibleIndex.open(e.id)}>
-                    {e.name}
+        <aside className="entry-side" aria-label="Détails de la fiche">
+          <section className="entry-refs">
+            <h3>
+              Scènes <span className="entry-refs-count">{seen.size}</span>
+            </h3>
+            {seen.size === 0 ? (
+              <p className="muted small">Aucune scène pour l'instant.</p>
+            ) : (
+              <>
+                <ul className="ref-list">
+                  {[...seen].slice(0, allScenes ? undefined : SCENES_SHOWN).map((id) => (
+                    <li key={id}>
+                      <button type="button" className="entry-ref" title={sceneLabel(id) ?? undefined} onClick={() => openScene(id)}>
+                        {sceneLabel(id)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {seen.size > SCENES_SHOWN && (
+                  <button type="button" className="btn ghost small entry-refs-more" aria-expanded={allScenes} onClick={() => setAllScenes(!allScenes)}>
+                    {allScenes ? "Voir moins" : `Voir les ${seen.size} scènes`}
                   </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+                )}
+              </>
+            )}
+            {links && links.entries.length > 0 && (
+              <>
+                <h3>
+                  Mentionnée dans <span className="entry-refs-count">{links.entries.length}</span>
+                </h3>
+                <ul className="ref-list">
+                  {links.entries.map((e) => (
+                    <li key={e.id}>
+                      <button type="button" className="entry-ref" onClick={() => bibleIndex.open(e.id)}>
+                        {e.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+          <TagInput label="Autres noms" value={draft.aliases} onChange={(aliases) => update({ aliases })} help="Surnoms, diminutifs : reconnus dans le scénario comme le nom." />
+          {shortFields.map(field)}
+          <TagInput label="Étiquettes" value={draft.tags} onChange={(tags) => update({ tags })} suggestions={[...new Set(entries.flatMap((e) => e.tags))]} />
+          <LinksInput value={draft.links} entries={entries} selfId={draft.id} onChange={(l) => update({ links: l })} label="Liens vers d'autres fiches" />
+          {draft.gallery.length > 0 ? (
+            <div className="fld">
+              <span className="fld-label">Galerie</span>
+              <div className="gallery">
+                {draft.gallery.map((p) => (
+                  <figure key={p}>
+                    <MediaImage path={p} alt="" />
+                    <button type="button" className="btn ghost small" onClick={() => update({ gallery: draft.gallery.filter((x) => x !== p) })}>
+                      Retirer
+                    </button>
+                  </figure>
+                ))}
+                <button type="button" className="btn small" onClick={() => void addImages()}>
+                  Ajouter des images…
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="btn ghost small entry-fold" onClick={() => void addImages()}>
+              <Plus aria-hidden="true" />
+              Galerie
+            </button>
+          )}
+        </aside>
+      </div>
 
       {history && (
         <HistoryDialog
