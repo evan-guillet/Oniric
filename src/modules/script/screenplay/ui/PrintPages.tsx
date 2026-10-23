@@ -56,7 +56,8 @@ export function PrintTitlePage({ page, format }: { page: TitlePage; format: Scre
         style={{
           top: at.top !== undefined ? `${at.top}in` : undefined,
           bottom: at.bottom !== undefined ? `${at.bottom}in` : undefined,
-          left: `${align === "right" ? left + width - half : left}in`,
+          // Centred lines sit on the middle of the sheet, not of the text block: the binding margin is wider.
+          left: `${align === "center" ? (format.page.width - width) / 2 : align === "right" ? left + width - half : left}in`,
           width: `${align === "center" ? width : half}in`,
           textAlign: align,
           textTransform: upper ? "uppercase" : "none",

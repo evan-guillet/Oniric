@@ -122,10 +122,10 @@ export function formatCss(f: ScreenplayFormat, withPage = true): string {
     rules.push(
       `.fmt .el-${type} { margin-left: ${s.indent}in; width: ${s.width}in; text-align: ${s.align};` +
         ` text-transform: ${s.uppercase ? "uppercase" : "none"}; font-style: ${s.italic ? "italic" : "normal"}; }`,
-      `.fmt .ProseMirror .el-${type} { padding-top: ${s.spaceBefore * lh}in; }`,
+      `.fmt .ProseMirror .el-${type} { --space-before: ${s.spaceBefore * lh}in; padding-top: var(--space-before); }`,
     );
   }
-  rules.push(`.fmt .ProseMirror .el.page-top { padding-top: 0; }`);
+  rules.push(`.fmt .ProseMirror .el.page-top { --space-before: 0in; }`);
   if (withPage) rules.push(`@page { size: ${f.page.width}in ${f.page.height}in; margin: 0; }`);
   return rules.join("\n");
 }

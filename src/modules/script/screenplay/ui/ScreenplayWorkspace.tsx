@@ -2,9 +2,11 @@ import {
   Archive,
   ArchiveRestore,
   BookOpen,
+  Feather,
   FileText,
   Pencil,
   Plus,
+  Rows3,
   StickyNote,
   Trash2,
   X,
@@ -56,6 +58,35 @@ import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
+/** How the writing shows on screen; the pagination, exports and printing stay the same. */
+type Display = "bare" | "cards";
+const DISPLAY_KEY = "oniric.script.display";
+const DISPLAYS: SegmentedOption<Display>[] = [
+  { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
+  { id: "cards", label: "Par scène", hint: "Chaque scène dans sa carte, à la couleur du Tableau", icon: Rows3 },
+];
+
+function savedDisplay(): Display {
+  try {
+    if (localStorage.getItem(DISPLAY_KEY) === "cards") return "cards";
+  } catch {
+    // Storage unavailable: the default display.
+  }
+  return "bare";
+}
+
+/** Each scene's colour from the Tableau, and the scene of the cursor outlined, by the id its node carries. */
+function sceneCardCss(ids: string[], color: (id: string) => string | null, current: string | undefined): string {
+  const sel = (id: string) => `.desk.display-cards .mount .scene[data-id="${id}"]`;
+  const rules = ids.flatMap((id) => {
+    const c = color(id);
+    return c && /^#[0-9a-f]{3,8}$/i.test(c) ? [`${sel(id)} { --scene: ${c}; }`] : [];
+  });
+  if (current)
+    rules.push(`${sel(current)} { border-color: color-mix(in srgb, var(--scene, var(--line-strong)) 70%, var(--line-strong)); }`);
+  return rules.join("\n");
+}
+
 /**
  * One view at a time: writing with the scenes beside it, writing with the notes, the title page (its fields beside,
  * the page as it prints in the body), or the whole script as it prints with the scenes beside it.
@@ -96,6 +127,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [mode, setMode] = useState<Mode>("write");
   const panel: Panel = mode === "notes" ? "notes" : mode === "title" ? "title" : "scenes";
   const preview = mode === "preview";
+  const [display, setDisplayState] = useState<Display>(savedDisplay);
+  const setDisplay = (d: Display) => {
+    setDisplayState(d);
+    try {
+      localStorage.setItem(DISPLAY_KEY, d);
+    } catch {
+      // Not remembered: it still applies until the project is closed.
+    }
+    requestAnimationFrame(() => editorRef.current?.focus());
+  };
   /** A view's button opens it in place of the one shown; pressed again, it goes back to writing. */
   const toggleMode = (m: Mode) => {
     const next = mode === m ? "write" : m;
@@ -312,6 +353,12 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   );
 
 
+  const currentId = sceneInfos[snap?.sceneIndex ?? 0]?.id;
+  const cardCss = useMemo(
+    () => (story ? sceneCardCss(sceneInfos.map((s) => s.id), (id) => story.meta.get(id)?.color ?? null, currentId) : ""),
+    [story, sceneInfos, currentId],
+  );
+
   const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
   const storedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
   const printedTitle = hasContent(storedTitle) ? storedTitle : null;
@@ -320,6 +367,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   return (
     <>
       {format && <style>{formatCss(format, false)}</style>}
+      {display === "cards" && story && <style>{cardCss}</style>}
       <div className="workspace">
         <aside className="sidebar" aria-label={PANELS[panel]}>
           {panel === "scenes" && (
@@ -341,7 +389,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
         <main
           ref={deskRef}
-          className={body === "editor" ? "desk display-bare" : "desk desk-print"}
+          className={body === "editor" ? `desk sheetless display-${display}` : "desk desk-print"}
         >
           {format && (
             <div
@@ -389,6 +437,15 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         headerActions &&
         createPortal(
           <div className="header-tools">
+            <Segmented
+              label="Affichage"
+              options={DISPLAYS}
+              value={display}
+              onChange={setDisplay}
+              compact
+              disabled={body !== "editor"}
+            />
+            <span className="bar-sep" aria-hidden="true" />
             <Segmented
               label="Vue"
               options={VIEWS}
