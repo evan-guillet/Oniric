@@ -23,6 +23,19 @@ mod app {
     use tauri_specta::{collect_commands, collect_events, Builder};
 
     const FLUSH_EVERY: Duration = Duration::from_secs(30);
+    const EXIT_GRACE: Duration = Duration::from_secs(5);
+
+    #[cfg(windows)]
+    fn force_exit() {
+        use windows_sys::Win32::System::Threading::{GetCurrentProcess, TerminateProcess};
+        // TerminateProcess skips the DLL detach work that ExitProcess would wait on again.
+        unsafe { TerminateProcess(GetCurrentProcess(), 0) };
+    }
+
+    #[cfg(not(windows))]
+    fn force_exit() {
+        std::process::exit(0);
+    }
 
     fn builder() -> Builder<tauri::Wry> {
         Builder::<tauri::Wry>::new()
@@ -128,6 +141,13 @@ mod app {
                     let _ = commands::close_current(&core, true);
                 }
                 log::info("arrêt d'Oniric");
+                // Everything is saved and closed by now. Seen on Windows: the process lingering, windowless, for
+                // minutes after this point, which locks the executable; past a few seconds, end it outright.
+                std::thread::spawn(|| {
+                    std::thread::sleep(EXIT_GRACE);
+                    log::info("arrêt forcé : le processus ne s'était pas terminé après la fermeture");
+                    force_exit();
+                });
             }
         });
     }
