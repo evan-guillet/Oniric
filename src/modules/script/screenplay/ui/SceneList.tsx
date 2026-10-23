@@ -104,8 +104,7 @@ export const SceneList = memo(function SceneList({
     g.sequences.flatMap((s) => (s.sequence ? [part("seq", s.sequence, s.scenes, s.scenes.map(scene))] : s.scenes.map(scene)));
 
   return (
-    <nav className="scene-list" aria-labelledby="scenes-title">
-      <h2 id="scenes-title">{t("workspace.scenes")}</h2>
+    <nav className="scene-list" aria-label={t("workspace.scenes")}>
       <ol className={flat ? undefined : "outlined"}>
         {flat
           ? scenes.map((_s, i) => scene(i))

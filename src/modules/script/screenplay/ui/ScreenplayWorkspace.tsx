@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Feather,
   Files,
   FileText,
@@ -14,7 +15,6 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
-import { Dialog } from "../../../../ui-kit/Dialog";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile } from "../../../project/application/profile";
 import { useProject } from "../../../project/ui/projectContext";
@@ -40,6 +40,7 @@ import { schema } from "./editor/schema";
 import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
+import { PrintPages, PrintTitlePage } from "./PrintPages";
 import { SceneList, type ListGroup, type SceneRow } from "./SceneList";
 import { STORY_TABLES, loadStory, storyOutline } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
@@ -54,6 +55,10 @@ const DISPLAYS: SegmentedOption<Display>[] = [
   { id: "continuous", label: "Continu", hint: "Une seule feuille, un trait à chaque saut de page", icon: ScrollText },
   { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
 ];
+
+/** What the side panel holds; the title page also takes the body, to show the page as it prints. */
+type Panel = "scenes" | "notes" | "title";
+const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", title: "Page de titre" };
 
 function savedDisplay(): Display {
   try {
@@ -83,13 +88,27 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const { project, session, notify, printPdf, headerActions } = useProject();
   const mountRef = useRef<HTMLDivElement>(null);
   const columnRef = useRef<HTMLDivElement>(null);
+  const deskRef = useRef<HTMLElement>(null);
   const editorRef = useRef<ScriptEditor | null>(null);
   const [format, setFormat] = useState<ScreenplayFormat | null>(null);
   const [snap, setSnap] = useState<EditorSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dialog, setDialog] = useState<"title" | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [panel, setPanel] = useState<Panel>("scenes");
+  const [preview, setPreview] = useState(false);
   const [display, setDisplayState] = useState<Display>(savedDisplay);
+  const backToEditor = () => requestAnimationFrame(() => editorRef.current?.focus());
+  const togglePanel = (p: Panel) => {
+    const next = panel === p ? "scenes" : p;
+    setPanel(next);
+    if (panel === "title" && !preview) backToEditor();
+  };
+  const togglePreview = (on: boolean) => {
+    setPreview(on);
+    if (on) requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
+    else if (panel !== "title") backToEditor();
+  };
+  const togglePreviewRef = useRef(togglePreview);
+  togglePreviewRef.current = togglePreview;
   const setDisplay = (d: Display) => {
     setDisplayState(d);
     try {
@@ -171,6 +190,42 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     if (active) requestAnimationFrame(() => editorRef.current?.focus());
   }, [active]);
 
+  // The title page, edited in the side panel and saved as it is typed.
+  const [titlePage, setTitlePage] = useState<TitleDraft | null>(null);
+  const titleTimer = useRef<number | undefined>(undefined);
+  const titlePending = useRef<TitlePage | null>(null);
+  useEffect(() => {
+    void Promise.all([readTitlePage(), readProfile()])
+      .then(([p, profile]) =>
+        setTitlePage({
+          stored: p,
+          draft: p ?? { ...emptyTitlePage(project.title, profile), include: true },
+        }),
+      )
+      .catch((e) => notify({ text: describeError(e), tone: "error" }));
+  }, [project.title, notify]);
+  const flushTitle = useCallback(async () => {
+    window.clearTimeout(titleTimer.current);
+    const p = titlePending.current;
+    titlePending.current = null;
+    if (!p) return;
+    try {
+      await writeTitlePage(p);
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  }, [notify]);
+  const editTitle = (p: TitlePage) => {
+    setTitlePage({ stored: p, draft: p });
+    titlePending.current = p;
+    window.clearTimeout(titleTimer.current);
+    titleTimer.current = window.setTimeout(() => void flushTitle(), 400);
+  };
+  useEffect(() => () => void flushTitle(), [flushTitle]);
+  useEffect(() => {
+    if (panel !== "title") void flushTitle();
+  }, [panel, flushTitle]);
+
   const saveNow = useCallback(async () => {
     try {
       await session.flush();
@@ -185,15 +240,20 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     if (busy) return;
     setBusy(true);
     try {
+      await flushTitle();
       await exportScreenplayPdf({ session, printPdf, project });
     } finally {
       setBusy(false);
     }
-  }, [busy, session, printPdf, project]);
+  }, [busy, session, printPdf, project, flushTitle]);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && preview && !e.defaultPrevented) {
+        togglePreviewRef.current(false);
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === "s") {
@@ -206,7 +266,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [active, saveNow, exportPdf]);
+  }, [active, saveNow, exportPdf, preview]);
 
   const rows = useMemo(() => {
     if (!snap) return rowsRef.current;
@@ -246,29 +306,56 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   }, [story, sceneInfos]);
 
   const selectScene = useCallback(
-    (i: number) => editorRef.current?.goToScene(i),
-    [],
+    (i: number) => {
+      if (preview) {
+        // The preview has no cursor: it scrolls to the page the scene starts on.
+        const page = rowsRef.current[i]?.page ?? 1;
+        deskRef.current
+          ?.querySelectorAll(".print-page:not(.title-page)")
+          [page - 1]?.scrollIntoView({ block: "start" });
+      } else editorRef.current?.goToScene(i);
+    },
+    [preview],
   );
+
+
+  const printedTitle = hasContent(titlePage?.stored ?? null) ? titlePage!.stored : null;
+  const body: "editor" | "title" | "preview" = preview ? "preview" : panel === "title" ? "title" : "editor";
 
   return (
     <>
       {format && <style>{formatCss(format, false)}</style>}
-      <div className={notesOpen ? "workspace with-notes" : "workspace"}>
-        <aside className="sidebar">
-          <SceneList
-            scenes={rows}
-            groups={groups}
-            current={snap?.sceneIndex ?? 0}
-            onSelect={selectScene}
-            foldKey={`oniric.script.folds.${project.id}`}
-          />
+      <div className="workspace">
+        <aside className="sidebar" aria-label={PANELS[panel]}>
+          {panel === "scenes" && (
+            <SceneList
+              scenes={rows}
+              groups={groups}
+              current={snap?.sceneIndex ?? 0}
+              onSelect={selectScene}
+              foldKey={`oniric.script.folds.${project.id}`}
+            />
+          )}
+          {panel === "notes" && (
+            <NotesPanel
+              editor={editorRef.current}
+              onReveal={() => setPreview(false)}
+            />
+          )}
+          {panel === "title" && titlePage && (
+            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
+          )}
         </aside>
 
-        <main className={`desk display-${display}`}>
+        <main
+          ref={deskRef}
+          className={body === "editor" ? `desk display-${display}` : "desk desk-print"}
+        >
           {format && (
             <div
               ref={columnRef}
               className="fmt page-column"
+              hidden={body !== "editor"}
               style={{
                 width: `${format.page.width}in`,
                 // Without a sheet, the text block itself is centred rather than the page.
@@ -292,9 +379,35 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               />
             </div>
           )}
+          {format && body === "title" && titlePage && (
+            <div className="fmt">
+              {!titlePage.draft.include && (
+                <p className="print-caption">
+                  Pas imprimée : cochez « Imprimer la page de titre » pour
+                  l'ajouter au PDF.
+                </p>
+              )}
+              <div className={titlePage.draft.include ? undefined : "print-off"}>
+                <PrintTitlePage page={titlePage.draft} format={format} />
+              </div>
+            </div>
+          )}
+          {format && body === "preview" && snap && (
+            <div className="fmt">
+              <p className="print-caption">
+                Le script tel qu'il s'imprime :{" "}
+                {printedTitle ? "page de titre, puis " : ""}
+                {snap.pagination.pages.length} page
+                {snap.pagination.pages.length > 1 ? "s" : ""}.
+              </p>
+              <PrintPages
+                pagination={snap.pagination}
+                format={format}
+                titlePage={printedTitle}
+              />
+            </div>
+          )}
         </main>
-
-        {notesOpen && <NotesPanel editor={editorRef.current} />}
       </div>
 
       {active &&
@@ -307,62 +420,62 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               value={display}
               onChange={setDisplay}
               compact
+              disabled={body !== "editor"}
             />
             <span className="bar-sep" aria-hidden="true" />
             <button
               type="button"
-              className={notesOpen ? "btn on" : "btn"}
-              aria-pressed={notesOpen}
-              onClick={() => setNotesOpen((o) => !o)}
+              className={panel === "notes" ? "btn on" : "btn"}
+              aria-pressed={panel === "notes"}
+              title="Les notes à la place des scènes"
+              onClick={() => togglePanel("notes")}
             >
               <StickyNote aria-hidden="true" />
               Notes
             </button>
             <button
               type="button"
-              className="btn"
-              onClick={() => setDialog("title")}
+              className={panel === "title" ? "btn on" : "btn"}
+              aria-pressed={panel === "title"}
+              title="Éditer la page de titre, son rendu au centre"
+              onClick={() => togglePanel("title")}
             >
               <FileText aria-hidden="true" />
               Page de titre
             </button>
+            <button
+              type="button"
+              className={preview ? "btn on" : "btn"}
+              aria-pressed={preview}
+              title="Le script entier tel qu'il s'imprime (Échap pour revenir)"
+              onClick={() => togglePreview(!preview)}
+            >
+              <BookOpen aria-hidden="true" />
+              Aperçu
+            </button>
           </div>,
           headerActions,
         )}
-      {dialog === "title" && (
-        <TitlePageDialog
-          title={project.title}
-          onClose={() => setDialog(null)}
-        />
-      )}
     </>
   );
 }
 
-function TitlePageDialog({
-  title,
-  onClose,
+interface TitleDraft {
+  /** What is saved, hence printed; null until the title page is first edited. */
+  stored: TitlePage | null;
+  /** What the panel shows: the saved page, or one prefilled from the project and the profile. */
+  draft: TitlePage;
+}
+
+/** The title page fields, in the side panel; the page itself shows in the body as it will print. */
+function TitlePagePanel({
+  page,
+  onChange,
 }: {
-  title: string;
-  onClose: () => void;
+  page: TitlePage;
+  onChange: (p: TitlePage) => void;
 }) {
-  const { notify } = useProject();
-  const [page, setPage] = useState<TitlePage | null>(null);
-  useEffect(() => {
-    void Promise.all([readTitlePage(), readProfile()]).then(([p, profile]) =>
-      setPage(p ?? { ...emptyTitlePage(title, profile), include: true }),
-    );
-  }, [title]);
-  if (!page) return null;
-  const set = (patch: Partial<TitlePage>) => setPage({ ...page, ...patch });
-  const save = async () => {
-    try {
-      await writeTitlePage(page);
-      onClose();
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    }
-  };
+  const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const field = (
     k: keyof Omit<TitlePage, "include">,
     label: string,
@@ -382,35 +495,26 @@ function TitlePageDialog({
     </label>
   );
   return (
-    <Dialog
-      title="Page de titre"
-      wide
-      onCancel={onClose}
-      actions={[
-        { label: "Annuler", onClick: onClose },
-        { label: "Enregistrer", primary: true, onClick: () => void save() },
-      ]}
-    >
-      <div className="form">
-        <label className="choice">
-          <input
-            type="checkbox"
-            checked={page.include}
-            onChange={(e) => set({ include: e.target.checked })}
-          />
-          Imprimer la page de titre au début du PDF et des exports
-        </label>
-        {field("title", "Titre")}
-        {field("authors", "Écrit par (un nom par ligne)", 2)}
-        {field("basedOn", "D'après")}
-        <div className="input-row">
-          {field("version", "Version")}
-          {field("date", "Date")}
-        </div>
-        {field("contact", "Contact", 3)}
-        {field("notes", "Mentions (dépôt SACD, droits…)", 2)}
+    <div className="side-form form">
+      <label className="choice">
+        <input
+          type="checkbox"
+          checked={page.include}
+          onChange={(e) => set({ include: e.target.checked })}
+        />
+        Imprimer la page de titre au début du PDF et des exports
+      </label>
+      {field("title", "Titre")}
+      {field("authors", "Écrit par (un nom par ligne)", 2)}
+      {field("basedOn", "D'après")}
+      <div className="input-row">
+        {field("version", "Version")}
+        {field("date", "Date")}
       </div>
-    </Dialog>
+      {field("contact", "Contact", 4)}
+      {field("notes", "Mentions (dépôt SACD, droits…)", 3)}
+      <p className="muted small">Enregistré à mesure que vous écrivez.</p>
+    </div>
   );
 }
 
@@ -442,7 +546,7 @@ async function loadNotes(): Promise<NoteRow[]> {
 }
 
 /** Margin notes anchored to a passage of the screenplay [EDT-07]. */
-function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
+function NotesPanel({ editor, onReveal }: { editor: ScriptEditor | null; onReveal: () => void }) {
   const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
   const [showResolved, setShowResolved] = useState(false);
@@ -454,7 +558,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
       stop();
     };
   }, [session]);
-  if (!notes) return <aside className="notes-panel" />;
+  if (!notes) return <div className="notes-panel" />;
   const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
@@ -513,9 +617,8 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
     ).catch((e) => notify({ text: describeError(e), tone: "error" }));
 
   return (
-    <aside className="notes-panel" aria-label="Notes">
+    <div className="notes-panel">
       <div className="notes-head">
-        <h2>Notes</h2>
         <button
           type="button"
           className="btn small primary"
@@ -547,7 +650,11 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
                 type="button"
                 className="note-quote"
                 disabled={!span}
-                onClick={() => span && editor?.reveal(span.from, span.to)}
+                onClick={() => {
+                  if (!span) return;
+                  onReveal();
+                  requestAnimationFrame(() => editor?.reveal(span.from, span.to));
+                }}
                 title={
                   span ? "Afficher le passage" : "Le passage a été supprimé"
                 }
@@ -584,7 +691,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
           );
         })}
       </ul>
-    </aside>
+    </div>
   );
 }
 

@@ -1417,20 +1417,13 @@ kbd {
 .workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "desk side";
   min-height: 0;
 }
-.workspace.with-notes {
-  grid-template-columns: minmax(0, 1fr) 300px 248px;
-  grid-template-areas: "desk notes side";
-}
 .desk {
   grid-area: desk;
-}
-.notes-panel {
-  grid-area: notes;
 }
 .sidebar {
   grid-area: side;
@@ -1438,16 +1431,10 @@ kbd {
   border-left: 1px solid var(--line);
   background: var(--panel);
 }
-.scene-list h2 {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  padding: 14px 16px 6px;
-}
 .scene-list ol {
   list-style: none;
   margin: 0;
-  padding: 0 8px 12px;
+  padding: 10px 8px 12px;
   display: grid;
   gap: 1px;
 }
@@ -1487,9 +1474,9 @@ kbd {
   letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Whole headings: a long one wraps rather than being cut */
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
 .scene-list li.on .scene-heading {
   color: var(--ink);
@@ -1517,15 +1504,18 @@ kbd {
 }
 .scene-list .outline-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-height: 30px;
-  padding: 0 8px 0 4px;
+  padding: 7px 8px 7px 4px;
+  line-height: 16px;
   color: var(--ink-2);
 }
 .outline-chevron {
+  flex: none;
   width: 14px;
   height: 14px;
+  margin-top: 1px;
   color: var(--muted);
   transition: rotate 140ms ease-out;
 }
@@ -1541,9 +1531,7 @@ kbd {
 }
 .outline-title {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-size: 12.5px;
 }
 .outline-part.part-act > .outline-head .outline-title {
@@ -5162,11 +5150,8 @@ h4 {
   }
 }
 
-/* Notes */
+/* Notes, in the side panel in place of the scenes */
 .notes-panel {
-  overflow: auto;
-  border-left: 1px solid var(--line);
-  background: var(--panel);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -5404,7 +5389,11 @@ h4 {
   width: 16px;
   height: 16px;
 }
-.seg:hover:not(.on) {
+.seg:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.seg:hover:not(.on):not(:disabled) {
   color: var(--ink);
   background: var(--hover);
 }
@@ -5742,6 +5731,26 @@ h4 {
   position: absolute;
   white-space: pre;
 }
+/* The pages as they print, on the desk: the title page alone, or the whole script */
+.desk-print .print-page {
+  margin: 0 auto 24px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: var(--sheet-shadow);
+}
+.desk-print .print-off .print-page {
+  opacity: 0.55;
+}
+.print-caption {
+  margin: -12px auto 14px;
+  text-align: center;
+  color: var(--muted);
+  font: 400 12px/1.4 var(--ui-font);
+}
+.side-form {
+  padding: 14px 16px 24px;
+  gap: 12px;
+}
 
 @media (max-width: 1180px) {
   .segmented.compact .seg {
@@ -5761,10 +5770,7 @@ h4 {
     padding: 10px 6px;
   }
   .workspace {
-    grid-template-columns: minmax(0, 1fr) 196px;
-  }
-  .workspace.with-notes {
-    grid-template-columns: minmax(0, 1fr) 260px 196px;
+    grid-template-columns: minmax(0, 1fr) 280px;
   }
   .desk {
     padding: 20px 16px 64px;

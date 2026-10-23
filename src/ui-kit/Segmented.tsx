@@ -14,6 +14,7 @@ export function Segmented<T extends string>({
   value,
   onChange,
   compact,
+  disabled,
 }: {
   label: string;
   options: SegmentedOption<T>[];
@@ -21,6 +22,8 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
   /** Labels are dropped under 1180px, the icons stay. */
   compact?: boolean;
+  /** The choice does not apply to what is shown; it is kept for when it does again. */
+  disabled?: boolean;
 }) {
   return (
     <div className={compact ? "segmented compact" : "segmented"} role="group" aria-label={label}>
@@ -31,6 +34,7 @@ export function Segmented<T extends string>({
           className={o.id === value ? "seg on" : "seg"}
           aria-pressed={o.id === value}
           title={o.hint}
+          disabled={disabled}
           onClick={() => onChange(o.id)}
         >
           {o.icon && <o.icon aria-hidden="true" />}

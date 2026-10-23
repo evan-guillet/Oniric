@@ -40,7 +40,7 @@ export const PrintPages = memo(function PrintPages({
 });
 
 /** Title in capitals a third of the way down, authors under it, contact at the bottom left, version at the bottom right. */
-function PrintTitlePage({ page, format }: { page: TitlePage; format: ScreenplayFormat }) {
+export function PrintTitlePage({ page, format }: { page: TitlePage; format: ScreenplayFormat }) {
   const lh = lineHeightIn(format);
   const left = format.margins.left;
   const width = format.page.width - format.margins.left - format.margins.right;
