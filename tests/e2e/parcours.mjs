@@ -306,8 +306,9 @@ await page.waitForSelector(".detect-item", { timeout: 15000 });
 // Doubtful names (probable duplicates, sub-locations, roles) start unchecked; only the checked ones become entries.
 const detected = await page.locator(".detect-item input:checked").count();
 await page.getByRole("button", { name: /^Créer \d+ fiche/ }).click();
-await page.waitForFunction(() => document.querySelectorAll(".entry-card").length > 0, null, { timeout: 15000 });
-const entries = await page.locator(".entry-card").count();
+// Back on the categories: each card counts its entries.
+await page.waitForFunction(() => document.querySelectorAll(".type-card-count").length > 0, null, { timeout: 15000 });
+const entries = (await page.locator(".type-card-count").allInnerTexts()).reduce((n, t) => n + Number(t), 0);
 check(detected > 0 && entries === detected, `bible : ${detected} personnages et lieux retrouvés dans le scénario, ${entries} fiches créées (BIB-05)`);
 
 await projectMenu("Exporter…");
