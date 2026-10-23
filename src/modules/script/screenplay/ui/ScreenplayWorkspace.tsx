@@ -62,18 +62,24 @@ import { exportScreenplayPdf } from "./screenplayExport";
 
 /**
  * How the writing shows on screen, on a white desk: each scene framed in a card or not, the bible links coloured and
- * clickable or not. The pagination, exports and printing stay the same.
+ * clickable or not, the act and sequence pinned beside the text or not. The pagination, exports and printing stay
+ * the same.
  */
-type Display = { cards: boolean; links: boolean };
+type Display = { cards: boolean; links: boolean; pin: boolean };
 const DISPLAY_KEY = "oniric.script.display";
 const LINKS_KEY = "oniric.script.links";
+const PIN_KEY = "oniric.script.pin";
 
 function savedDisplay(): Display {
   try {
-    return { cards: localStorage.getItem(DISPLAY_KEY) === "cards", links: localStorage.getItem(LINKS_KEY) !== "off" };
+    return {
+      cards: localStorage.getItem(DISPLAY_KEY) === "cards",
+      links: localStorage.getItem(LINKS_KEY) !== "off",
+      pin: localStorage.getItem(PIN_KEY) !== "off",
+    };
   } catch {
     // Storage unavailable: the default display.
-    return { cards: false, links: true };
+    return { cards: false, links: true, pin: true };
   }
 }
 
@@ -150,6 +156,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     try {
       localStorage.setItem(DISPLAY_KEY, d.cards ? "cards" : "bare");
       localStorage.setItem(LINKS_KEY, d.links ? "on" : "off");
+      localStorage.setItem(PIN_KEY, d.pin ? "on" : "off");
     } catch {
       // Not remembered: it still applies until the project is closed.
     }
@@ -516,7 +523,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               : "desk desk-print"
           }
         >
-          {format && body === "editor" && pin && (
+          {format && body === "editor" && display.pin && pin && (
             <div
               className="story-pin-rail"
               aria-hidden="true"
@@ -615,6 +622,12 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                   label: "Liens de la Bible",
                   hint: "Les éléments de la Bible en couleur, leur fiche au survol",
                   checked: display.links,
+                },
+                {
+                  id: "pin",
+                  label: "Acte et séquence",
+                  hint: "Le repère à gauche du texte, qui suit la scène en haut du bureau",
+                  checked: display.pin,
                 },
               ]}
               onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
