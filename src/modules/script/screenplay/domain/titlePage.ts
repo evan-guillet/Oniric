@@ -6,17 +6,15 @@ export interface TitlePage {
   /** « Écrit par », one author per line. */
   authors: string;
   basedOn: string;
+  /** Filled in when the page prints: the version in progress, the one the next freeze will be named. */
   version: string;
+  /** Filled in when the page prints: the day it prints. */
   date: string;
   contact: string;
   /** The mention as typed, used when `mention` is « custom ». */
   notes: string;
   /** Printed at the start of the PDF. */
   include: boolean;
-  /** The version follows the project: the version in progress, the one the next freeze will be named. */
-  autoVersion: boolean;
-  /** The date follows the day the page is printed. */
-  autoDate: boolean;
   /** A preset mention (see MENTIONS), or « custom » for `notes`. */
   mention: MentionId;
 }
@@ -65,31 +63,26 @@ export function emptyTitlePage(title: string, profile?: { name?: string; email?:
     contact: [profile?.name, profile?.address, profile?.phone, profile?.email].filter(Boolean).join("\n"),
     notes: "",
     include: false,
-    autoVersion: true,
-    autoDate: true,
     mention: "none",
   };
 }
 
-/** A title page saved before the automatic fields and the mentions: what was typed stays as typed. */
+/** A title page saved before the subtitle and the mentions: a mention typed then stays as typed. */
 export function normalizeTitlePage(raw: Partial<TitlePage> & { title?: string }): TitlePage {
   const p = { ...emptyTitlePage(raw.title ?? ""), ...raw };
-  return {
-    ...p,
-    autoVersion: raw.autoVersion ?? !raw.version?.trim(),
-    autoDate: raw.autoDate ?? !raw.date?.trim(),
-    mention: raw.mention ?? (raw.notes?.trim() ? "custom" : "none"),
-  };
+  return { ...p, mention: raw.mention ?? (raw.notes?.trim() ? "custom" : "none") };
 }
 
-/** The page as it prints: the automatic version and date filled in, the mention written out. */
+/** The page as it prints: the version and date from the project, the authors without empty lines, the mention written out. */
 export function resolveTitlePage(p: TitlePage, auto: TitleAuto | null, year = new Date().getFullYear()): TitlePage {
   const mention = MENTIONS.find((m) => m.id === p.mention);
+  const authors = p.authors.split("\n").map((a) => a.trim()).filter(Boolean).join("\n");
   return {
     ...p,
-    version: p.autoVersion && auto ? auto.version : p.version,
-    date: p.autoDate && auto ? auto.date : p.date,
-    notes: p.mention === "custom" || !mention ? p.notes : mention.text({ year, authors: p.authors }),
+    authors,
+    version: auto?.version ?? p.version,
+    date: auto?.date ?? p.date,
+    notes: p.mention === "custom" || !mention ? p.notes : mention.text({ year, authors }),
   };
 }
 

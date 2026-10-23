@@ -72,8 +72,6 @@ describe("writeFdx", () => {
     const xml = writeFdx(blocks, {
       title: "Les Heures Bleues",
       subtitle: "",
-      autoVersion: false,
-      autoDate: false,
       mention: "custom",
       authors: "Evan",
       basedOn: "",

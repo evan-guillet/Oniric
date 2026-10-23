@@ -6,8 +6,9 @@ import {
   Plus,
   ScrollText,
   StickyNote,
+  X,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { commands } from "../../../../bindings";
@@ -62,7 +63,11 @@ const DISPLAYS: SegmentedOption<Display>[] = [
   { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
 ];
 
-/** What the side panel holds; the title page also takes the body, to show the page as it prints. */
+/**
+ * One view at a time: writing with the scenes beside it, writing with the notes, the title page (its fields beside,
+ * the page as it prints in the body), or the whole script as it prints with the scenes beside it.
+ */
+type Mode = "write" | "notes" | "title" | "preview";
 type Panel = "scenes" | "notes" | "title";
 const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", title: "Page de titre" };
 
@@ -99,22 +104,19 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [format, setFormat] = useState<ScreenplayFormat | null>(null);
   const [snap, setSnap] = useState<EditorSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
-  const [panel, setPanel] = useState<Panel>("scenes");
-  const [preview, setPreview] = useState(false);
+  const [mode, setMode] = useState<Mode>("write");
+  const panel: Panel = mode === "notes" ? "notes" : mode === "title" ? "title" : "scenes";
+  const preview = mode === "preview";
   const [display, setDisplayState] = useState<Display>(savedDisplay);
-  const backToEditor = () => requestAnimationFrame(() => editorRef.current?.focus());
-  const togglePanel = (p: Panel) => {
-    const next = panel === p ? "scenes" : p;
-    setPanel(next);
-    if (panel === "title" && !preview) backToEditor();
+  /** A view's button opens it in place of the one shown; pressed again, it goes back to writing. */
+  const toggleMode = (m: Mode) => {
+    const next = mode === m ? "write" : m;
+    setMode(next);
+    if (next === "write" || next === "notes") requestAnimationFrame(() => editorRef.current?.focus());
+    else requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
   };
-  const togglePreview = (on: boolean) => {
-    setPreview(on);
-    if (on) requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
-    else if (panel !== "title") backToEditor();
-  };
-  const togglePreviewRef = useRef(togglePreview);
-  togglePreviewRef.current = togglePreview;
+  const toggleModeRef = useRef(toggleMode);
+  toggleModeRef.current = toggleMode;
   const setDisplay = (d: Display) => {
     setDisplayState(d);
     try {
@@ -263,7 +265,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && preview && !e.defaultPrevented) {
-        togglePreviewRef.current(false);
+        toggleModeRef.current("preview");
         return;
       }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -334,7 +336,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
   const storedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
   const printedTitle = hasContent(storedTitle) ? storedTitle : null;
-  const body: "editor" | "title" | "preview" = preview ? "preview" : panel === "title" ? "title" : "editor";
+  const body: "editor" | "title" | "preview" = preview ? "preview" : mode === "title" ? "title" : "editor";
 
   return (
     <>
@@ -351,13 +353,10 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             />
           )}
           {panel === "notes" && (
-            <NotesPanel
-              editor={editorRef.current}
-              onReveal={() => setPreview(false)}
-            />
+            <NotesPanel editor={editorRef.current} />
           )}
           {panel === "title" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} auto={titlePage.auto} onChange={editTitle} />
+            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
           )}
         </aside>
 
@@ -442,7 +441,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               className={panel === "notes" ? "btn on" : "btn"}
               aria-pressed={panel === "notes"}
               title="Les notes à la place des scènes"
-              onClick={() => togglePanel("notes")}
+              onClick={() => toggleMode("notes")}
             >
               <StickyNote aria-hidden="true" />
               Notes
@@ -452,7 +451,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               className={panel === "title" ? "btn on" : "btn"}
               aria-pressed={panel === "title"}
               title="Éditer la page de titre, son rendu au centre"
-              onClick={() => togglePanel("title")}
+              onClick={() => toggleMode("title")}
             >
               <FileText aria-hidden="true" />
               Page de titre
@@ -462,7 +461,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               className={preview ? "btn on" : "btn"}
               aria-pressed={preview}
               title="Le script entier tel qu'il s'imprime (Échap pour revenir)"
-              onClick={() => togglePreview(!preview)}
+              onClick={() => toggleMode("preview")}
             >
               <BookOpen aria-hidden="true" />
               Aperçu
@@ -486,17 +485,17 @@ interface TitleDraft {
 /** The title page fields, in the side panel; the page itself shows in the body as it will print. */
 function TitlePagePanel({
   page,
-  auto,
   onChange,
 }: {
   page: TitlePage;
-  auto: TitleAuto;
   onChange: (p: TitlePage) => void;
 }) {
-  const id = useId();
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
+  const [added, setAdded] = useState(-1);
+  const names = page.authors.split("\n");
+  const setNames = (n: string[]) => set({ authors: n.join("\n") });
   const field = (
-    k: "title" | "subtitle" | "authors" | "basedOn" | "contact",
+    k: "title" | "subtitle" | "basedOn" | "contact",
     label: string,
     rows = 1,
     placeholder?: string,
@@ -515,28 +514,6 @@ function TitlePagePanel({
       )}
     </label>
   );
-  /** Version and date: filled in by the project until typed over; « Auto » brings the project's value back. */
-  const autoField = (k: "version" | "date", flag: "autoVersion" | "autoDate", label: string, hint: string) => (
-    <div className="field">
-      <span className="field-head">
-        <label htmlFor={`${id}-${k}`}>{label}</label>
-        <button
-          type="button"
-          className="auto-chip"
-          aria-pressed={page[flag]}
-          title={page[flag] ? `${hint} Tapez pour écrire la vôtre.` : `Revenir à : ${auto[k]}`}
-          onClick={() => set(page[flag] ? { [flag]: false, [k]: auto[k] } : { [flag]: true })}
-        >
-          Auto
-        </button>
-      </span>
-      <input
-        id={`${id}-${k}`}
-        value={page[flag] ? auto[k] : page[k]}
-        onChange={(e) => set({ [k]: e.target.value, [flag]: false })}
-      />
-    </div>
-  );
   const custom = page.mention === "custom";
   return (
     <div className="side-form form">
@@ -550,12 +527,45 @@ function TitlePagePanel({
       </label>
       {field("title", "Titre")}
       {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
-      {field("authors", "Écrit par (un nom par ligne)", 2)}
+      <fieldset className="field">
+        <legend>Écrit par</legend>
+        <div className="name-list">
+          {names.map((n, i) => (
+            <div key={i} className="name-row">
+              <input
+                value={n}
+                aria-label={`Auteur ${i + 1}`}
+                placeholder="Prénom Nom"
+                autoFocus={i === added}
+                onChange={(e) => setNames(names.map((m, j) => (j === i ? e.target.value : m)))}
+              />
+              {names.length > 1 && (
+                <button
+                  type="button"
+                  className="btn ghost small icon-only"
+                  aria-label={`Retirer ${n.trim() || `l'auteur ${i + 1}`}`}
+                  title="Retirer"
+                  onClick={() => setNames(names.filter((_m, j) => j !== i))}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn ghost small name-add"
+          onClick={() => {
+            setAdded(names.length);
+            setNames([...names, ""]);
+          }}
+        >
+          <Plus aria-hidden="true" />
+          Plus
+        </button>
+      </fieldset>
       {field("basedOn", "D'après", 1, "D'après le roman de…")}
-      <div className="input-row">
-        {autoField("version", "autoVersion", "Version", "Suit la version en cours : celle que proposera « Figer » dans Versions.")}
-        {autoField("date", "autoDate", "Date", "Suit la date du jour, à chaque impression.")}
-      </div>
       {field("contact", "Contact", 5, "Nom, agent, téléphone, e-mail")}
       <label className="field">
         <span>Mentions</span>
@@ -579,7 +589,6 @@ function TitlePagePanel({
           />
         </label>
       )}
-      <p className="muted small">Enregistré à mesure que vous écrivez.</p>
     </div>
   );
 }
@@ -612,7 +621,7 @@ async function loadNotes(): Promise<NoteRow[]> {
 }
 
 /** Margin notes anchored to a passage of the screenplay [EDT-07]. */
-function NotesPanel({ editor, onReveal }: { editor: ScriptEditor | null; onReveal: () => void }) {
+function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
   const [showResolved, setShowResolved] = useState(false);
@@ -716,11 +725,7 @@ function NotesPanel({ editor, onReveal }: { editor: ScriptEditor | null; onRevea
                 type="button"
                 className="note-quote"
                 disabled={!span}
-                onClick={() => {
-                  if (!span) return;
-                  onReveal();
-                  requestAnimationFrame(() => editor?.reveal(span.from, span.to));
-                }}
+                onClick={() => span && editor?.reveal(span.from, span.to)}
                 title={
                   span ? "Afficher le passage" : "Le passage a été supprimé"
                 }

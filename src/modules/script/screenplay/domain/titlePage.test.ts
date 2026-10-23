@@ -4,10 +4,9 @@ import { emptyTitlePage, formatTitleDate, normalizeTitlePage, resolveTitlePage }
 const auto = { version: "V3", date: "23 octobre 2026" };
 
 describe("title page", () => {
-  it("fills the version and the date from the project until they are typed over", () => {
-    const p = { ...emptyTitlePage("Les Heures Bleues"), version: "Brouillon", date: "hier" };
-    expect(resolveTitlePage(p, auto)).toMatchObject({ version: "V3", date: "23 octobre 2026" });
-    expect(resolveTitlePage({ ...p, autoVersion: false, autoDate: false }, auto)).toMatchObject({ version: "Brouillon", date: "hier" });
+  it("takes the version and the date from the project, and drops empty author lines", () => {
+    const p = { ...emptyTitlePage("Les Heures Bleues"), version: "Brouillon", date: "hier", authors: "Lise Ferrand\n \nMarc Aubry\n" };
+    expect(resolveTitlePage(p, auto)).toMatchObject({ version: "V3", date: "23 octobre 2026", authors: "Lise Ferrand\nMarc Aubry" });
   });
 
   it("writes the chosen mention out, and keeps a custom one as typed", () => {
@@ -20,7 +19,7 @@ describe("title page", () => {
 
   it("keeps what an older title page had typed", () => {
     const old = { title: "X", authors: "A", basedOn: "", version: "V2", date: "", contact: "", notes: "Dépôt SACD", include: true };
-    expect(normalizeTitlePage(old)).toMatchObject({ subtitle: "", autoVersion: false, autoDate: true, mention: "custom" });
+    expect(normalizeTitlePage(old)).toMatchObject({ subtitle: "", mention: "custom" });
   });
 
   it("writes the date in the screenplay's language", () => {
