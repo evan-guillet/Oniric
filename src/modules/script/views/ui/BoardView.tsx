@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Columns3, Diamond, GitBranch, GripVertical, Pencil, Plus, Rows3, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
@@ -6,6 +6,7 @@ import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
 import { TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
+import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { headingPlace, prettyName } from "../../bible/domain/appearances";
 import { useScenes, type SceneInfo } from "../../screenplay/application/scriptSession";
@@ -40,6 +41,11 @@ type Focus = { act: string; seq?: string } | null;
 
 // The chosen layout is a per-computer convenience; it falls back to the columns when storage is unavailable.
 const MODE_KEY = "oniric.board.mode";
+const BOARD_MODES: SegmentedOption<BoardMode>[] = [
+  { id: "columns", label: "Actes et séquences", icon: Columns3, hint: "Les actes en colonnes, leurs séquences et leurs scènes" },
+  { id: "canvas", label: "Canevas", icon: GitBranch, hint: "L'histoire en arbre, sur un fond libre" },
+  { id: "plotlines", label: "Lignes d'intrigue", icon: Rows3, hint: "Une rangée par ligne d'intrigue" },
+];
 const savedMode = (): BoardMode => {
   try {
     const m = localStorage.getItem(MODE_KEY);
@@ -747,14 +753,13 @@ export function BoardView() {
       {headerActions &&
         createPortal(
           <div className="header-tools" role="toolbar" aria-label="Tableau">
-            <label>
-              Affichage{" "}
-              <select value={mode} onChange={(e) => setMode(e.target.value as BoardMode)}>
-                <option value="columns">Actes et séquences</option>
-                <option value="canvas">Canevas</option>
-                <option value="plotlines">Lignes d'intrigue</option>
-              </select>
-            </label>
+            <Segmented
+              label="Affichage"
+              options={BOARD_MODES}
+              value={mode}
+              onChange={setMode}
+              compact
+            />
             <label>
               Filtre{" "}
               <select

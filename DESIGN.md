@@ -301,10 +301,11 @@ Coins doucement arrondis, toujours plus ronds à mesure que l'objet est grand : 
 
 ### Buttons
 Précis et discrets : la plupart des boutons sont blancs, seul le principal est bleu.
-- **Shape :** coins de 6px, hauteur 30px (26px en petit, 36px en grand, 22px en minuscule), icône de 15px en `muted`.
+- **Shape :** hauteur `--control-h` (32px) et coins `--control-r` (8px), 0 12px de marge, 13px 500, icône de 16px en `muted` à 7px du libellé ; 28px / 7px en petit, 38px / 9px en grand, 22px / 6px en minuscule. Dans l'en-tête de vue (`header-tools`), boutons, champs, sélecteurs et choix segmentés montent à 34px / 9px, comme sur la Bible.
 - **Secondaire (par défaut) :** fond `panel`, bordure `line-strong`, texte `ink-2` en 500, ombre `--shadow-sm`.
-- **Principal :** fond et bordure `accent`, texte `accent-ink`, icône en couleur du texte, ombre bleutée légère.
-- **Hover / Focus :** survol en `panel-2` et texte `ink` (principal : `accent-hover`), pression en `nav-on`, transitions de 120ms `ease-out` ; focus par contour de 2px `focus` décalé de 1px.
+- **Principal :** fond et bordure `accent`, texte `accent-ink`, icône en couleur du texte, un liseré clair de 1px en haut (inset) et une ombre bleutée légère.
+- **Hover / Focus :** survol en `panel-2`, bordure un peu plus marquée et texte `ink` (principal : `accent-hover`), pression en `nav-on` sans ombre, transitions de 120ms `ease-out` ; focus par contour de 2px `focus` décalé de 2px.
+- **Choix segmenté (`Segmented`) :** pour passer d'un affichage à l'autre (Scénario, Tableau), jamais un select. Un rail `--seg-track` cerclé de `line`, 2px de marge ; chaque choix est un bouton pressé (`aria-pressed`) sans bordure, `muted`, survol en `hover` ; le choix en cours devient une petite surface `--seg-on` (anneau `line`, ombre basse), texte `ink` et icône `accent`. Sous 1180px, seules les icônes restent.
 - **Actif (`.on`) :** fond `accent-soft`, bordure `accent-line`, texte et icône `accent`.
 - **Fantôme :** sans bordure ni ombre, survol en `hover`. **Destructif :** texte `danger`, bordure `danger-line`, survol `danger-soft`.
 
@@ -326,7 +327,7 @@ Précis et discrets : la plupart des boutons sont blancs, seul le principal est 
 - **Détection de la Bible :** un groupe par sorte de nom (Personnages, Lieux), chacun avec une case « tout cocher » à trois états et le compte coché / trouvé. Les noms douteux (doublon probable, sous-lieu, rôle sans nom) restent décochés, leur nom en `ink-2` et la raison en badge gris à droite ; un doublon propose « Ajouter comme autre nom ». Le bouton « Créer N fiches » est à gauche d'un pied de page collé en bas de la zone qui défile, hors de portée des notifications. La suppression d'une fiche se fait sans confirmation : la notification propose « Annuler ».
 
 ### Inputs / Fields
-- **Style :** 30px, bordure 1px `line-strong`, fond `panel`, coins de 6px ; selects sans relief natif avec chevron Lucide gris, recherche avec loupe à gauche.
+- **Style :** 32px, bordure 1px `line-strong`, fond `panel`, coins de 8px ; selects sans relief natif, avec la même ombre basse que les boutons, le chevron Lucide gris à 10px du bord et le survol en `panel-2` ; recherche avec loupe à gauche.
 - **Focus :** bordure `accent` et halo de 3px `accent-soft`, sans contour natif ; survol en bordure `muted`.
 - **Error :** encart `danger-soft` cerclé de `danger-line`, texte `danger`.
 
@@ -344,8 +345,8 @@ Fil d'Ariane « Projet › Partie » en 12.5px `muted`, chevrons Lucide 14px en 
 
 ### Feuille de scénario
 La page `paper` sur le `desk`, avec `--sheet-shadow` et un intervalle de 28px en `desk` entre les pages ; curseur et sélection en bleu atelier. Courier Prime aux métriques du format.
-- **Affichages :** trois boutons collés en tête de l'en-tête, avant Notes et Page de titre (icône seule sous 1180px), retenus sur l'ordinateur ; ils ne changent ni la pagination, ni les exports, ni l'impression. « Pages » (`Files`) : les feuilles comme à l'impression. « Continu » (`ScrollText`) : une seule feuille, chaque saut de page devenu un trait pointillé `line-strong` d'un bord à l'autre, le numéro de page en `hint` 11px à droite ; « (SUITE) » et « (À SUIVRE) » disparaissent. « Sans feuille » (`Feather`) : ni feuille, ni ombre, ni saut de page ; le texte, en `ink`, est posé à même `panel`, le bloc de texte (et non la page) centré, curseur, sélection et liens en bleu atelier.
-- **Barre d'éléments :** au-dessus de la ligne du curseur, huit boutons de 32 × 36px, chacun une icône Lucide de 16px en `muted` au-dessus de son chiffre de raccourci (Ctrl + 1 à 8) en 10px `hint` : `Clapperboard` en-tête de scène, `AlignLeft` action, `UserRound` personnage, `Parentheses` parenthèse, `MessageSquareQuote` dialogue, `ChevronsRight` transition, `Video` plan, `Captions` texte à l'écran. Le type en cours passe en `accent-soft` / `accent` ; après un filet, son nom en 12px 500 `ink`. Le libellé et le raccourci complet sont dans l'infobulle et le nom accessible.
+- **Affichages :** un choix segmenté en tête de l'en-tête, séparé de Notes et Page de titre par un filet, retenu sur l'ordinateur ; il ne change ni la pagination, ni les exports, ni l'impression. « Pages » (`Files`) : les feuilles comme à l'impression. « Continu » (`ScrollText`) : une seule feuille, chaque saut de page devenu un trait pointillé `line-strong` d'un bord à l'autre, le numéro de page en `hint` 11px à droite ; « (SUITE) » et « (À SUIVRE) » disparaissent. « Sans feuille » (`Feather`) : ni feuille, ni ombre, ni saut de page ; le texte, en `ink`, est posé à même `panel`, le bloc de texte (et non la page) centré, curseur, sélection et liens en bleu atelier.
+- **Barre d'éléments :** au-dessus de la ligne du curseur, huit boutons de 30px, chacun une icône Lucide de 16px en `muted` : `Clapperboard` en-tête de scène, `AlignLeft` action, `UserRound` personnage, `Parentheses` parenthèse, `MessageSquareQuote` dialogue, `ChevronsRight` transition, `Video` plan, `Captions` texte à l'écran. Seul le type en cours porte son libellé, juste après l'icône, puis son chiffre de raccourci dans une petite touche (10.5px, coins de 4px), le tout en `accent-soft` / `accent`. Tenir Ctrl fait revenir la barre et écrit le chiffre à côté de chaque icône (Ctrl + 1 à 8). Le libellé et le raccourci complet sont aussi dans l'infobulle et le nom accessible.
 
 ## Do's and Don'ts
 

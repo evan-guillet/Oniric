@@ -15,6 +15,7 @@ import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
 import { Dialog } from "../../../../ui-kit/Dialog";
+import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile } from "../../../project/application/profile";
 import { useProject } from "../../../project/ui/projectContext";
 import { bibleIndex } from "../../bible/application/bible";
@@ -45,7 +46,7 @@ import { exportScreenplayPdf } from "./screenplayExport";
 /** How the screenplay shows on screen; the pagination, exports and printing stay the same. */
 type Display = "pages" | "continuous" | "bare";
 const DISPLAY_KEY = "oniric.script.display";
-const DISPLAYS: { id: Display; label: string; hint: string; icon: typeof Files }[] = [
+const DISPLAYS: SegmentedOption<Display>[] = [
   { id: "pages", label: "Pages", hint: "Les pages comme à l'impression", icon: Files },
   { id: "continuous", label: "Continu", hint: "Une seule feuille, un trait à chaque saut de page", icon: ScrollText },
   { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
@@ -276,26 +277,15 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       {active &&
         headerActions &&
         createPortal(
-          <div className="actions script-actions">
-            <div
-              className="btn-group display-switch"
-              role="group"
-              aria-label="Affichage"
-            >
-              {DISPLAYS.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  aria-pressed={display === d.id}
-                  className={display === d.id ? "btn on" : "btn"}
-                  title={d.hint}
-                  onClick={() => setDisplay(d.id)}
-                >
-                  <d.icon aria-hidden="true" />
-                  <span>{d.label}</span>
-                </button>
-              ))}
-            </div>
+          <div className="header-tools">
+            <Segmented
+              label="Affichage"
+              options={DISPLAYS}
+              value={display}
+              onChange={setDisplay}
+              compact
+            />
+            <span className="bar-sep" aria-hidden="true" />
             <button
               type="button"
               className={notesOpen ? "btn on" : "btn"}

@@ -45,6 +45,10 @@
   --titlebar-close: #c42b1c;
   --radius: 6px;
   --radius-lg: 10px;
+  --control-h: 32px;
+  --control-r: 8px;
+  --seg-track: #f0f0f3;
+  --seg-on: #ffffff;
   --shadow-sm: 0 1px 2px rgba(16, 18, 27, 0.05);
   --shadow-md: 0 1px 2px rgba(16, 18, 27, 0.04), 0 4px 12px -2px rgba(16, 18, 27, 0.08);
   --shadow-lg: 0 2px 6px rgba(16, 18, 27, 0.06), 0 18px 48px -10px rgba(16, 18, 27, 0.24);
@@ -66,6 +70,8 @@
 /* Dark theme: data-theme is set from Réglages (or follows Windows) */
 :root[data-theme="dark"] {
   --canvas: #17171a;
+  --seg-track: #141417;
+  --seg-on: #2a2a30;
   --panel: #1f1f23;
   --panel-2: #28282d;
   --sunken: #1b1b1f;
@@ -185,33 +191,46 @@ svg.lucide {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 10px;
+  gap: 7px;
+  height: var(--control-h);
+  padding: 0 12px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--control-r);
   background: var(--panel);
   color: var(--ink-2);
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: -0.005em;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   white-space: nowrap;
   transition:
     background-color 120ms ease-out,
     border-color 120ms ease-out,
-    color 120ms ease-out;
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 .btn svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   color: var(--muted);
+  transition: color 120ms ease-out;
 }
 .btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong), var(--muted) 30%);
   background: var(--panel-2);
   color: var(--ink);
 }
+.btn:hover:not(:disabled) svg {
+  color: var(--ink-2);
+}
 .btn:active:not(:disabled) {
   background: var(--nav-on);
+  box-shadow: none;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .btn:disabled {
   opacity: 0.5;
@@ -221,7 +240,9 @@ svg.lucide {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-  box-shadow: 0 1px 2px rgba(30, 50, 140, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(30, 50, 140, 0.25);
 }
 .btn.primary svg {
   color: currentColor;
@@ -230,6 +251,9 @@ svg.lucide {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   color: var(--accent-ink);
+}
+.btn.primary:hover:not(:disabled) svg {
+  color: currentColor;
 }
 .btn.danger {
   color: var(--danger);
@@ -250,27 +274,31 @@ svg.lucide {
 .btn.danger.ghost {
   color: var(--danger);
 }
-.btn.on {
+.btn.on,
+.btn.on:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-line);
   color: var(--accent);
 }
-.btn.on svg {
+.btn.on svg,
+.btn.on:hover:not(:disabled) svg {
   color: var(--accent);
 }
 .btn.small {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
-  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  gap: 6px;
 }
 .btn.small svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 .btn.large {
-  height: 36px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 9px;
   font-size: 13.5px;
   gap: 8px;
 }
@@ -281,6 +309,7 @@ svg.lucide {
 .btn.tiny {
   height: 22px;
   padding: 0 6px;
+  border-radius: 6px;
   font-size: 11.5px;
   color: var(--muted);
 }
@@ -302,7 +331,7 @@ input,
 select,
 textarea {
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: var(--control-r);
   background: var(--panel);
   transition:
     border-color 120ms ease-out,
@@ -310,8 +339,8 @@ textarea {
 }
 input,
 select {
-  height: 30px;
-  padding: 0 10px;
+  height: var(--control-h);
+  padding: 0 11px;
 }
 textarea {
   width: 100%;
@@ -321,9 +350,13 @@ textarea {
 }
 select {
   appearance: none;
-  padding-right: 28px;
-  background: var(--panel) var(--chevron) no-repeat right 8px center / 14px;
+  padding-right: 32px;
+  background: var(--panel) var(--chevron) no-repeat right 10px center / 14px;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+}
+select:hover:not(:focus) {
+  background-color: var(--panel-2);
 }
 input:hover,
 select:hover,
@@ -1295,13 +1328,16 @@ kbd {
 }
 .header-tools select,
 .header-tools input[type="search"] {
+  --control-h: 34px;
   height: 34px;
   border-radius: 9px;
   font-size: 13px;
   color: var(--ink);
 }
 .header-tools select {
+  max-width: 240px;
   font-weight: 500;
+  text-overflow: ellipsis;
 }
 .header-tools .btn {
   height: 34px;
@@ -1321,7 +1357,8 @@ kbd {
   gap: 6px;
 }
 .view-toolbar select {
-  height: 28px;
+  height: 30px;
+  border-radius: 7px;
   font-size: 12.5px;
   color: var(--ink);
   font-weight: 500;
@@ -1336,11 +1373,6 @@ kbd {
   align-items: center;
   gap: 6px;
   margin-left: auto;
-}
-.script-actions .btn:not(.primary) {
-  height: 28px;
-  padding: 0 9px;
-  font-size: 12.5px;
 }
 .tools label > span {
   position: absolute;
@@ -5248,16 +5280,64 @@ h4 {
 }
 
 /* The screenplay's displays: pages (default), one continuous sheet, or no sheet at all */
-.display-switch .btn:first-child {
-  margin-left: 0;
-  border-radius: var(--radius) 0 0 var(--radius);
+/* Segmented choice: a recessed track, the chosen view a small raised surface in it */
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--control-h);
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--control-r);
+  background: var(--seg-track);
 }
-.display-switch .btn.on {
-  position: relative;
-  z-index: 2;
+.header-tools .segmented {
+  height: 34px;
+  border-radius: 9px;
 }
-.display-switch + .btn {
-  margin-left: 8px;
+.seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  border-radius: calc(var(--control-r) - 2px);
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.header-tools .seg {
+  border-radius: 7px;
+}
+.seg svg {
+  width: 16px;
+  height: 16px;
+}
+.seg:hover:not(.on) {
+  color: var(--ink);
+  background: var(--hover);
+}
+.seg.on {
+  background: var(--seg-on);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 1px 2px rgba(16, 18, 27, 0.08);
+}
+.seg.on svg {
+  color: var(--accent);
+}
+.seg:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
 }
 .desk.display-continuous .pg-fill,
 .desk.display-continuous .pg-gap,
@@ -5349,65 +5429,61 @@ h4 {
   display: none;
 }
 .element-bar button {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 1px;
-  width: 32px;
-  height: 36px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   color: var(--muted);
   font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 90ms ease-out, color 90ms ease-out;
 }
 .element-bar button svg {
   width: 16px;
   height: 16px;
-  stroke-width: 1.75;
-}
-.element-bar kbd {
-  min-width: 0;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  font: 500 10px/1 var(--ui-font);
-  font-variant-numeric: tabular-nums;
-  color: var(--hint);
-}
-.element-bar button:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-.element-bar button:hover kbd {
-  color: var(--muted);
 }
 .element-bar button.on {
+  padding-right: 9px;
   background: var(--accent-soft);
   color: var(--accent);
 }
-.element-bar button.on kbd {
-  color: var(--accent);
+.element-bar button:hover:not(.on) {
+  background: var(--hover);
+  color: var(--ink);
 }
 .element-bar button:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: -1px;
+  outline-offset: -2px;
 }
-.element-bar-name {
-  align-self: center;
-  min-width: 9.5em;
-  margin-left: 4px;
-  padding: 0 8px 0 10px;
-  border-left: 1px solid var(--line);
-  line-height: 22px;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 500;
+/* The shortcut digit: always beside the chosen type, beside every type while Ctrl is held */
+.element-bar kbd {
+  display: none;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-2);
+  box-shadow: none;
+  color: var(--muted);
+  font: 500 10.5px/15px var(--ui-font);
+  font-variant-numeric: tabular-nums;
+}
+.element-bar button.on kbd {
+  display: inline-block;
+  margin-left: 2px;
+  border-color: var(--accent-line);
+  background: var(--panel);
+  color: var(--accent);
+}
+.element-bar.keys kbd {
+  display: inline-block;
 }
 @keyframes element-bar-in {
   from {
@@ -5585,7 +5661,10 @@ h4 {
 }
 
 @media (max-width: 1180px) {
-  .display-switch .btn > span {
+  .segmented.compact .seg {
+    padding: 0 8px;
+  }
+  .segmented.compact .seg > span {
     position: absolute;
     width: 1px;
     height: 1px;
