@@ -18,7 +18,8 @@ export function Segmented<T extends string>({
 }: {
   label: string;
   options: SegmentedOption<T>[];
-  value: T;
+  /** null: none is chosen, as with tabs over a view that has none of its own. */
+  value: T | null;
   onChange: (v: T) => void;
   /** Labels are dropped under 1180px, the icons stay. */
   compact?: boolean;

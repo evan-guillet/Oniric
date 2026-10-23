@@ -5170,14 +5170,18 @@ h4 {
   display: grid;
   gap: 8px;
 }
+/* The card itself says where the note stands: open in amber, archived in green */
 .note {
   display: grid;
   gap: 6px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--warning-line);
+  background: var(--warning-soft);
+}
+.note.resolved {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
 }
 .note-top {
   display: flex;
@@ -5207,21 +5211,11 @@ h4 {
   text-align: left;
   font-style: italic;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--warning);
   cursor: pointer;
 }
-.note-quote::before {
-  content: "";
-  display: inline-block;
-  vertical-align: 1px;
-  margin-right: 8px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--warning-dot);
-}
-.note.resolved .note-quote::before {
-  background: var(--ok-dot);
+.note.resolved .note-quote {
+  color: var(--ok);
 }
 .note-quote:hover:not(:disabled) {
   color: var(--ink);
@@ -5426,30 +5420,10 @@ h4 {
   outline: 2px solid var(--focus);
   outline-offset: 0;
 }
-.desk.display-continuous .pg-fill,
-.desk.display-continuous .pg-gap,
-.desk.display-continuous .pg-label,
 .desk.display-bare .pg-break,
 .desk.display-bare .pg-end {
   /* The break widget sets its own display inline */
   display: none !important;
-}
-.desk.display-continuous .pg-top {
-  height: 0 !important;
-  margin: calc(var(--lh) / 2) 0;
-  border-top: 1px dashed var(--line-strong);
-}
-.desk.display-continuous .pg-number {
-  top: 0 !important;
-  translate: 0 -50%;
-  padding-left: 8px;
-  background: var(--paper);
-  color: var(--hint);
-  font: 500 11px/1 var(--ui-font);
-  font-variant-numeric: tabular-nums;
-}
-.desk.display-continuous .pg-end {
-  height: 1in !important;
 }
 .desk.display-bare {
   background: var(--panel);
@@ -5465,6 +5439,23 @@ h4 {
 }
 .desk.display-bare .mount .ProseMirror ::selection {
   background: var(--accent-soft);
+}
+/* Scene numbers in the left margin, as the scene list counts them */
+.desk.display-bare .mount .ProseMirror {
+  counter-reset: scene;
+}
+.desk.display-bare .mount .scene {
+  counter-increment: scene;
+}
+.desk.display-bare .mount .scene > .el-scene_heading::after {
+  content: counter(scene);
+  position: absolute;
+  top: 0;
+  right: calc(100% + 0.4in);
+  color: var(--hint);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
 }
 .desk.display-bare .page-column .wikilink {
   color: var(--accent);

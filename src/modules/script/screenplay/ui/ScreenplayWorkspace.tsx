@@ -2,12 +2,9 @@ import {
   Archive,
   ArchiveRestore,
   BookOpen,
-  Feather,
-  Files,
   FileText,
   Pencil,
   Plus,
-  ScrollText,
   StickyNote,
   Trash2,
   X,
@@ -59,32 +56,19 @@ import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
-/** How the screenplay shows on screen; the pagination, exports and printing stay the same. */
-type Display = "pages" | "continuous" | "bare";
-const DISPLAY_KEY = "oniric.script.display";
-const DISPLAYS: SegmentedOption<Display>[] = [
-  { id: "pages", label: "Pages", hint: "Les pages comme à l'impression", icon: Files },
-  { id: "continuous", label: "Continu", hint: "Une seule feuille, un trait à chaque saut de page", icon: ScrollText },
-  { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
-];
-
 /**
  * One view at a time: writing with the scenes beside it, writing with the notes, the title page (its fields beside,
  * the page as it prints in the body), or the whole script as it prints with the scenes beside it.
  */
 type Mode = "write" | "notes" | "title" | "preview";
 type Panel = "scenes" | "notes" | "title";
+/** Tabs over the writing: pressed again, a tab goes back to it. */
+const VIEWS: SegmentedOption<Exclude<Mode, "write">>[] = [
+  { id: "notes", label: "Notes", hint: "Les notes à la place des scènes", icon: StickyNote },
+  { id: "title", label: "Page de titre", hint: "Éditer la page de titre, son rendu au centre", icon: FileText },
+  { id: "preview", label: "Aperçu", hint: "Le script entier tel qu'il s'imprime (Échap pour revenir)", icon: BookOpen },
+];
 const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", title: "Page de titre" };
-
-function savedDisplay(): Display {
-  try {
-    const d = localStorage.getItem(DISPLAY_KEY);
-    if (d === "continuous" || d === "bare") return d;
-  } catch {
-    // Storage unavailable: the default display.
-  }
-  return "pages";
-}
 
 function sameRows(a: SceneRow[], b: SceneRow[]) {
   return (
@@ -112,7 +96,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [mode, setMode] = useState<Mode>("write");
   const panel: Panel = mode === "notes" ? "notes" : mode === "title" ? "title" : "scenes";
   const preview = mode === "preview";
-  const [display, setDisplayState] = useState<Display>(savedDisplay);
   /** A view's button opens it in place of the one shown; pressed again, it goes back to writing. */
   const toggleMode = (m: Mode) => {
     const next = mode === m ? "write" : m;
@@ -122,15 +105,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   };
   const toggleModeRef = useRef(toggleMode);
   toggleModeRef.current = toggleMode;
-  const setDisplay = (d: Display) => {
-    setDisplayState(d);
-    try {
-      localStorage.setItem(DISPLAY_KEY, d);
-    } catch {
-      // Not remembered: it still applies until the project is closed.
-    }
-    requestAnimationFrame(() => editorRef.current?.focus());
-  };
   const rowsRef = useRef<SceneRow[]>([]);
   const plugins = useMemo(
     () => [wikiPlugin(schema.marks.wikilink, () => bibleIndex)],
@@ -367,7 +341,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
         <main
           ref={deskRef}
-          className={body === "editor" ? `desk display-${display}` : "desk desk-print"}
+          className={body === "editor" ? "desk display-bare" : "desk desk-print"}
         >
           {format && (
             <div
@@ -377,10 +351,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               style={{
                 width: `${format.page.width}in`,
                 // Without a sheet, the text block itself is centred rather than the page.
-                translate:
-                  display === "bare"
-                    ? `${(format.margins.right - format.margins.left) / 2}in`
-                    : undefined,
+                translate: `${(format.margins.right - format.margins.left) / 2}in`,
               }}
             >
               <div
@@ -404,12 +375,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           )}
           {format && body === "preview" && snap && (
             <div className="fmt">
-              <p className="print-caption">
-                Le script tel qu'il s'imprime :{" "}
-                {printedTitle ? "page de titre, puis " : ""}
-                {snap.pagination.pages.length} page
-                {snap.pagination.pages.length > 1 ? "s" : ""}.
-              </p>
               <PrintPages
                 pagination={snap.pagination}
                 format={format}
@@ -425,44 +390,12 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         createPortal(
           <div className="header-tools">
             <Segmented
-              label="Affichage"
-              options={DISPLAYS}
-              value={display}
-              onChange={setDisplay}
+              label="Vue"
+              options={VIEWS}
+              value={mode === "write" ? null : mode}
+              onChange={toggleMode}
               compact
-              disabled={body !== "editor"}
             />
-            <span className="bar-sep" aria-hidden="true" />
-            <button
-              type="button"
-              className={panel === "notes" ? "btn on" : "btn"}
-              aria-pressed={panel === "notes"}
-              title="Les notes à la place des scènes"
-              onClick={() => toggleMode("notes")}
-            >
-              <StickyNote aria-hidden="true" />
-              Notes
-            </button>
-            <button
-              type="button"
-              className={panel === "title" ? "btn on" : "btn"}
-              aria-pressed={panel === "title"}
-              title="Éditer la page de titre, son rendu au centre"
-              onClick={() => toggleMode("title")}
-            >
-              <FileText aria-hidden="true" />
-              Page de titre
-            </button>
-            <button
-              type="button"
-              className={preview ? "btn on" : "btn"}
-              aria-pressed={preview}
-              title="Le script entier tel qu'il s'imprime (Échap pour revenir)"
-              onClick={() => toggleMode("preview")}
-            >
-              <BookOpen aria-hidden="true" />
-              Aperçu
-            </button>
           </div>,
           headerActions,
         )}
@@ -710,11 +643,6 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
           </button>
         )}
       </div>
-      {showArchives && (
-        <p className="muted small">
-          Notes archivées. « Désarchiver » les remet dans la liste.
-        </p>
-      )}
       {shown.length === 0 && (
         <p className="muted small">
           Aucune note. Sélectionnez un passage puis « Créer une note ».
