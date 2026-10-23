@@ -242,7 +242,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 )}
               </div>
             </div>
-            <EntryCards entries={visible} presence={presence} sort={sort} level={2} onOpen={open} />
+            <EntryCards entries={visible} types={types} presence={presence} sort={sort} level={2} onOpen={open} />
             {shown.length === 0 && <p className="entry-cards-empty muted">{archived ? "Aucune fiche archivée ici." : "Pas encore de fiche ici."}</p>}
           </>
         )}
@@ -419,7 +419,7 @@ function EntrySections({
                 <span className="entry-section-count">{s.entries.length}</span>
               </h2>
             </header>
-            <EntryCards entries={s.entries} presence={presence} sort="name" level={3} onOpen={onOpen} />
+            <EntryCards entries={s.entries} types={categories.flatMap((c) => (c.type ? [c.type] : []))} presence={presence} sort="name" level={3} onOpen={onOpen} />
           </section>
         );
       })}
@@ -430,12 +430,14 @@ function EntrySections({
 /** The cards of some entries. « Validé » is where an entry ends up and shows nothing; « Idée » and « Abandonné » show, as something left to do. */
 function EntryCards({
   entries,
+  types,
   presence,
   sort,
   level,
   onOpen,
 }: {
   entries: Entry[];
+  types: EntryType[];
   presence: Map<string, Presence>;
   sort: Sort;
   level: 2 | 3;
@@ -452,19 +454,19 @@ function EntryCards({
   return (
     <ul className="entry-cards">
       {[...entries].sort(order).map((e) => {
+        const Icon = iconOf(types.find((t) => t.id === e.type));
         const where = presenceLabel(e.type, presence.get(e.id));
         const meta = where || e.status !== "validated";
         // The button holds only the name, a heading of the grid; the summary and the meta describe it.
         // Its ::after spreads over the whole card, so the card still opens on a click anywhere.
         const described = [e.summary && `entry-summary-${e.id}`, meta && `entry-meta-${e.id}`].filter(Boolean).join(" ");
         return (
-          <li key={e.id} className={e.image ? "entry-card with-image" : "entry-card"}>
-            {e.image && (
-              <span className="entry-card-media">
-                <MediaImage path={e.image} alt="" />
-              </span>
-            )}
+          <li key={e.id} className="entry-card">
             <Heading className="entry-card-head">
+              {/* The entry's own picture, when it has one, takes the place of its type's icon. */}
+              <span className={e.image ? "entry-card-icon photo" : "entry-card-icon"}>
+                {e.image ? <MediaImage path={e.image} alt="" /> : <Icon aria-hidden="true" />}
+              </span>
               <button type="button" className="entry-card-open entry-name" data-entry={e.id} aria-describedby={described || undefined} onClick={() => onOpen(e.id)}>
                 {e.name}
               </button>
