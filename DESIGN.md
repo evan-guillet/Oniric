@@ -244,7 +244,7 @@ Le thème sombre (`prefers-color-scheme: dark`) redéfinit chaque jeton sur des 
 
 **La règle du triplet d'état.** Un état s'exprime par un point plein (`*-dot`) sur un fond doux (`*-soft`) cerclé d'un trait doux (`*-line`), texte en couleur foncée (`ok`, `warning`, `danger`). Jamais d'aplat saturé ni de bordure colorée épaisse.
 
-**La règle de la feuille blanche.** La page de scénario reste `paper` sur `desk` dans les deux thèmes ; aucune couleur d'interface n'entre sur la feuille, sauf les liens vers la Bible en bleu.
+**La règle de la feuille blanche.** La page de scénario reste `paper` sur `desk` dans les deux thèmes ; aucune couleur d'interface n'entre sur la feuille, sauf les liens vers la Bible en bleu. Seul l'affichage « Sans feuille », choisi par l'auteur, retire la feuille.
 
 ## Typography
 
@@ -344,6 +344,8 @@ Fil d'Ariane « Projet › Partie » en 12.5px `muted`, chevrons Lucide 14px en 
 
 ### Feuille de scénario
 La page `paper` sur le `desk`, avec `--sheet-shadow` et un intervalle de 28px en `desk` entre les pages ; curseur et sélection en bleu atelier. Courier Prime aux métriques du format.
+- **Affichages :** trois boutons collés en tête de l'en-tête, avant Notes et Page de titre (icône seule sous 1180px), retenus sur l'ordinateur ; ils ne changent ni la pagination, ni les exports, ni l'impression. « Pages » (`Files`) : les feuilles comme à l'impression. « Continu » (`ScrollText`) : une seule feuille, chaque saut de page devenu un trait pointillé `line-strong` d'un bord à l'autre, le numéro de page en `hint` 11px à droite ; « (SUITE) » et « (À SUIVRE) » disparaissent. « Sans feuille » (`Feather`) : ni feuille, ni ombre, ni saut de page ; le texte, en `ink`, est posé à même `panel`, le bloc de texte (et non la page) centré, curseur, sélection et liens en bleu atelier.
+- **Barre d'éléments :** au-dessus de la ligne du curseur, huit boutons de 32 × 36px, chacun une icône Lucide de 16px en `muted` au-dessus de son chiffre de raccourci (Ctrl + 1 à 8) en 10px `hint` : `Clapperboard` en-tête de scène, `AlignLeft` action, `UserRound` personnage, `Parentheses` parenthèse, `MessageSquareQuote` dialogue, `ChevronsRight` transition, `Video` plan, `Captions` texte à l'écran. Le type en cours passe en `accent-soft` / `accent` ; après un filet, son nom en 12px 500 `ink`. Le libellé et le raccourci complet sont dans l'infobulle et le nom accessible.
 
 ## Do's and Don'ts
 
@@ -359,7 +361,7 @@ La page `paper` sur le `desk`, avec `--sheet-shadow` et un intervalle de 28px en
 ### Don't:
 - **Don't** revenir aux selects gris en relief, aux cadres violets ou aux bordures colorées épaisses de l'ancienne interface.
 - **Don't** modifier la police, la taille, l'interlignage ou les marges de la feuille de scénario pour l'écran.
-- **Don't** colorer la feuille selon le thème : elle reste blanche à encre noire.
+- **Don't** colorer la feuille selon le thème : elle reste blanche à encre noire (l'affichage « Sans feuille » n'a pas de feuille).
 - **Don't** utiliser le violet `plot` ailleurs que sur les pastilles de temps forts.
 - **Don't** mettre en capitales un libellé qui n'est pas un en-tête de scène.
 - **Don't** utiliser d'ombre dure décalée ni de dégradé décoratif.

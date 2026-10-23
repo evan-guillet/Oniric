@@ -1,4 +1,11 @@
-import { FileText, Plus, StickyNote } from "lucide-react";
+import {
+  Feather,
+  Files,
+  FileText,
+  Plus,
+  ScrollText,
+  StickyNote,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -35,6 +42,25 @@ import { expectedPdf } from "./expectedPdf";
 import { SceneList, type SceneRow } from "./SceneList";
 import { exportScreenplayPdf } from "./screenplayExport";
 
+/** How the screenplay shows on screen; the pagination, exports and printing stay the same. */
+type Display = "pages" | "continuous" | "bare";
+const DISPLAY_KEY = "oniric.script.display";
+const DISPLAYS: { id: Display; label: string; hint: string; icon: typeof Files }[] = [
+  { id: "pages", label: "Pages", hint: "Les pages comme à l'impression", icon: Files },
+  { id: "continuous", label: "Continu", hint: "Une seule feuille, un trait à chaque saut de page", icon: ScrollText },
+  { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
+];
+
+function savedDisplay(): Display {
+  try {
+    const d = localStorage.getItem(DISPLAY_KEY);
+    if (d === "continuous" || d === "bare") return d;
+  } catch {
+    // Storage unavailable: the default display.
+  }
+  return "pages";
+}
+
 function sameRows(a: SceneRow[], b: SceneRow[]) {
   return (
     a.length === b.length &&
@@ -59,6 +85,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<"title" | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [display, setDisplayState] = useState<Display>(savedDisplay);
+  const setDisplay = (d: Display) => {
+    setDisplayState(d);
+    try {
+      localStorage.setItem(DISPLAY_KEY, d);
+    } catch {
+      // Not remembered: it still applies until the project is closed.
+    }
+    requestAnimationFrame(() => editorRef.current?.focus());
+  };
   const rowsRef = useRef<SceneRow[]>([]);
   const plugins = useMemo(
     () => [wikiPlugin(schema.marks.wikilink, () => bibleIndex)],
@@ -204,12 +240,19 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           />
         </aside>
 
-        <main className="desk">
+        <main className={`desk display-${display}`}>
           {format && (
             <div
               ref={columnRef}
               className="fmt page-column"
-              style={{ width: `${format.page.width}in` }}
+              style={{
+                width: `${format.page.width}in`,
+                // Without a sheet, the text block itself is centred rather than the page.
+                translate:
+                  display === "bare"
+                    ? `${(format.margins.right - format.margins.left) / 2}in`
+                    : undefined,
+              }}
             >
               <div
                 ref={mountRef}
@@ -234,6 +277,25 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         headerActions &&
         createPortal(
           <div className="actions script-actions">
+            <div
+              className="btn-group display-switch"
+              role="group"
+              aria-label="Affichage"
+            >
+              {DISPLAYS.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  aria-pressed={display === d.id}
+                  className={display === d.id ? "btn on" : "btn"}
+                  title={d.hint}
+                  onClick={() => setDisplay(d.id)}
+                >
+                  <d.icon aria-hidden="true" />
+                  <span>{d.label}</span>
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               className={notesOpen ? "btn on" : "btn"}

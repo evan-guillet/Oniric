@@ -1,9 +1,31 @@
+import {
+  AlignLeft,
+  Captions,
+  ChevronsRight,
+  Clapperboard,
+  MessageSquareQuote,
+  Parentheses,
+  UserRound,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { ELEMENT_TYPES } from "../domain/formats";
+import { ELEMENT_TYPES, type ElementType } from "../domain/formats";
 import type { EditorSnapshot, ScriptEditor } from "./editor/ScriptEditor";
 
 const GAP = 6;
+
+const ICONS: Record<ElementType, LucideIcon> = {
+  scene_heading: Clapperboard,
+  action: AlignLeft,
+  character: UserRound,
+  parenthetical: Parentheses,
+  dialogue: MessageSquareQuote,
+  transition: ChevronsRight,
+  shot: Video,
+  on_screen_text: Captions,
+};
 
 /**
  * The kinds of element, floating just above the line that holds the cursor, as in Notion.
@@ -71,18 +93,27 @@ export function ElementBar({ editor, column, snap }: { editor: ScriptEditor | nu
       style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden" }}
       onMouseDown={(e) => e.preventDefault()}
     >
-      {ELEMENT_TYPES.map((type, i) => (
-        <button
-          key={type}
-          type="button"
-          className={type === current ? "on" : undefined}
-          aria-pressed={type === current}
-          title={`${t(`elements.${type}`)} — Ctrl+${i + 1}`}
-          onClick={() => editor.setType(type)}
-        >
-          {t(`elements.${type}`)}
-        </button>
-      ))}
+      {ELEMENT_TYPES.map((type, i) => {
+        const Icon = ICONS[type];
+        return (
+          <button
+            key={type}
+            type="button"
+            className={type === current ? "on" : undefined}
+            aria-pressed={type === current}
+            aria-label={t(`elements.${type}`)}
+            aria-keyshortcuts={`Control+${i + 1}`}
+            title={`${t(`elements.${type}`)} — Ctrl+${i + 1}`}
+            onClick={() => editor.setType(type)}
+          >
+            <Icon aria-hidden="true" />
+            <kbd aria-hidden="true">{i + 1}</kbd>
+          </button>
+        );
+      })}
+      <span className="element-bar-name" aria-hidden="true">
+        {t(`elements.${current}`)}
+      </span>
     </div>
   );
 }

@@ -5247,6 +5247,63 @@ h4 {
   width: 80px;
 }
 
+/* The screenplay's displays: pages (default), one continuous sheet, or no sheet at all */
+.display-switch .btn:first-child {
+  margin-left: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.display-switch .btn.on {
+  position: relative;
+  z-index: 2;
+}
+.display-switch + .btn {
+  margin-left: 8px;
+}
+.desk.display-continuous .pg-fill,
+.desk.display-continuous .pg-gap,
+.desk.display-continuous .pg-label,
+.desk.display-bare .pg-break,
+.desk.display-bare .pg-end {
+  /* The break widget sets its own display inline */
+  display: none !important;
+}
+.desk.display-continuous .pg-top {
+  height: 0 !important;
+  margin: calc(var(--lh) / 2) 0;
+  border-top: 1px dashed var(--line-strong);
+}
+.desk.display-continuous .pg-number {
+  top: 0 !important;
+  translate: 0 -50%;
+  padding-left: 8px;
+  background: var(--paper);
+  color: var(--hint);
+  font: 500 11px/1 var(--ui-font);
+  font-variant-numeric: tabular-nums;
+}
+.desk.display-continuous .pg-end {
+  height: 1in !important;
+}
+.desk.display-bare {
+  background: var(--panel);
+}
+.desk.display-bare .page-column {
+  background: none;
+  color: var(--ink);
+  box-shadow: none;
+}
+.desk.display-bare .mount .ProseMirror {
+  caret-color: var(--accent);
+  padding-bottom: 40vh;
+}
+.desk.display-bare .mount .ProseMirror ::selection {
+  background: var(--accent-soft);
+}
+.desk.display-bare .page-column .wikilink {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 /* Paper: follows the theme on screen; exports and printing stay ink on white */
 .page-column {
   position: relative;
@@ -5292,25 +5349,65 @@ h4 {
   display: none;
 }
 .element-bar button {
-  height: 24px;
-  padding: 0 8px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1px;
+  width: 32px;
+  height: 36px;
+  padding: 0;
   border: none;
   border-radius: 5px;
   background: none;
-  color: var(--ink-2);
+  color: var(--muted);
   font: inherit;
-  font-size: 12px;
   cursor: pointer;
-  transition: background-color 90ms ease-out;
+  transition: background-color 90ms ease-out, color 90ms ease-out;
+}
+.element-bar button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+}
+.element-bar kbd {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: 500 10px/1 var(--ui-font);
+  font-variant-numeric: tabular-nums;
+  color: var(--hint);
 }
 .element-bar button:hover {
   background: var(--hover);
   color: var(--ink);
 }
+.element-bar button:hover kbd {
+  color: var(--muted);
+}
 .element-bar button.on {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 600;
+}
+.element-bar button.on kbd {
+  color: var(--accent);
+}
+.element-bar button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.element-bar-name {
+  align-self: center;
+  min-width: 9.5em;
+  margin-left: 4px;
+  padding: 0 8px 0 10px;
+  border-left: 1px solid var(--line);
+  line-height: 22px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
 }
 @keyframes element-bar-in {
   from {
@@ -5488,6 +5585,13 @@ h4 {
 }
 
 @media (max-width: 1180px) {
+  .display-switch .btn > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
   .shell {
     grid-template-columns: 64px minmax(0, 1fr);
   }
