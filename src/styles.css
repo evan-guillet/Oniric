@@ -5751,6 +5751,41 @@ h4 {
   padding: 14px 16px 24px;
   gap: 12px;
 }
+/* A field the project fills in: « Auto » pressed while it follows, released once typed over */
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 20px;
+}
+.auto-chip {
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: 500 11px/1 var(--ui-font);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+.auto-chip:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.auto-chip[aria-pressed="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.auto-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
 
 @media (max-width: 1180px) {
   .segmented.compact .seg {

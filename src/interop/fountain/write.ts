@@ -22,7 +22,7 @@ export function writeFountain(blocks: ScriptBlock[], title?: string, page?: Titl
   const out: string[] = [];
   if (page) {
     out.push(
-      ...key("Title", page.title || title || ""),
+      ...key("Title", [page.title || title || "", page.subtitle].join("\n")),
       ...(page.authors.trim() ? ["Credit: Écrit par", ...key("Author", page.authors)] : []),
       ...key("Source", page.basedOn),
       ...key("Draft date", [page.version, page.date].filter((s) => s.trim()).join(" – ")),

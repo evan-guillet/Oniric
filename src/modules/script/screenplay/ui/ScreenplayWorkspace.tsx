@@ -7,7 +7,7 @@ import {
   ScrollText,
   StickyNote,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { commands } from "../../../../bindings";
@@ -28,12 +28,18 @@ import { SaveScheduler } from "../application/saveScheduler";
 import { SceneStore } from "../application/sceneStore";
 import {
   readTitlePage,
+  readTitlePageRaw,
+  titleAuto,
   writeTitlePage,
 } from "../application/titlePageSettings";
 import { formatCss, type ScreenplayFormat } from "../domain/formats";
 import {
   emptyTitlePage,
   hasContent,
+  MENTIONS,
+  resolveTitlePage,
+  type MentionId,
+  type TitleAuto,
   type TitlePage,
 } from "../domain/titlePage";
 import { schema } from "./editor/schema";
@@ -195,11 +201,12 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const titleTimer = useRef<number | undefined>(undefined);
   const titlePending = useRef<TitlePage | null>(null);
   useEffect(() => {
-    void Promise.all([readTitlePage(), readProfile()])
-      .then(([p, profile]) =>
+    void Promise.all([readTitlePageRaw(), readProfile(), titleAuto()])
+      .then(([p, profile, auto]) =>
         setTitlePage({
           stored: p,
           draft: p ?? { ...emptyTitlePage(project.title, profile), include: true },
+          auto,
         }),
       )
       .catch((e) => notify({ text: describeError(e), tone: "error" }));
@@ -216,7 +223,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     }
   }, [notify]);
   const editTitle = (p: TitlePage) => {
-    setTitlePage({ stored: p, draft: p });
+    setTitlePage((t) => t && { ...t, stored: p, draft: p });
     titlePending.current = p;
     window.clearTimeout(titleTimer.current);
     titleTimer.current = window.setTimeout(() => void flushTitle(), 400);
@@ -225,6 +232,11 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   useEffect(() => {
     if (panel !== "title") void flushTitle();
   }, [panel, flushTitle]);
+  // The version in progress moves when a version is frozen, the date at midnight: both are read again on showing the page.
+  useEffect(() => {
+    if (panel !== "title" && !preview) return;
+    void titleAuto().then((auto) => setTitlePage((t) => t && { ...t, auto }));
+  }, [panel, preview]);
 
   const saveNow = useCallback(async () => {
     try {
@@ -319,7 +331,9 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   );
 
 
-  const printedTitle = hasContent(titlePage?.stored ?? null) ? titlePage!.stored : null;
+  const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
+  const storedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
+  const printedTitle = hasContent(storedTitle) ? storedTitle : null;
   const body: "editor" | "title" | "preview" = preview ? "preview" : panel === "title" ? "title" : "editor";
 
   return (
@@ -343,7 +357,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             />
           )}
           {panel === "title" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
+            <TitlePagePanel page={titlePage.draft} auto={titlePage.auto} onChange={editTitle} />
           )}
         </aside>
 
@@ -379,7 +393,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               />
             </div>
           )}
-          {format && body === "title" && titlePage && (
+          {format && body === "title" && titlePage && shownTitle && (
             <div className="fmt">
               {!titlePage.draft.include && (
                 <p className="print-caption">
@@ -388,7 +402,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                 </p>
               )}
               <div className={titlePage.draft.include ? undefined : "print-off"}>
-                <PrintTitlePage page={titlePage.draft} format={format} />
+                <PrintTitlePage page={shownTitle} format={format} />
               </div>
             </div>
           )}
@@ -465,21 +479,27 @@ interface TitleDraft {
   stored: TitlePage | null;
   /** What the panel shows: the saved page, or one prefilled from the project and the profile. */
   draft: TitlePage;
+  /** The version in progress and today's date, for the automatic fields. */
+  auto: TitleAuto;
 }
 
 /** The title page fields, in the side panel; the page itself shows in the body as it will print. */
 function TitlePagePanel({
   page,
+  auto,
   onChange,
 }: {
   page: TitlePage;
+  auto: TitleAuto;
   onChange: (p: TitlePage) => void;
 }) {
+  const id = useId();
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const field = (
-    k: keyof Omit<TitlePage, "include">,
+    k: "title" | "subtitle" | "authors" | "basedOn" | "contact",
     label: string,
     rows = 1,
+    placeholder?: string,
   ) => (
     <label className="field">
       <span>{label}</span>
@@ -487,13 +507,37 @@ function TitlePagePanel({
         <textarea
           rows={rows}
           value={page[k]}
+          placeholder={placeholder}
           onChange={(e) => set({ [k]: e.target.value })}
         />
       ) : (
-        <input value={page[k]} onChange={(e) => set({ [k]: e.target.value })} />
+        <input value={page[k]} placeholder={placeholder} onChange={(e) => set({ [k]: e.target.value })} />
       )}
     </label>
   );
+  /** Version and date: filled in by the project until typed over; « Auto » brings the project's value back. */
+  const autoField = (k: "version" | "date", flag: "autoVersion" | "autoDate", label: string, hint: string) => (
+    <div className="field">
+      <span className="field-head">
+        <label htmlFor={`${id}-${k}`}>{label}</label>
+        <button
+          type="button"
+          className="auto-chip"
+          aria-pressed={page[flag]}
+          title={page[flag] ? `${hint} Tapez pour écrire la vôtre.` : `Revenir à : ${auto[k]}`}
+          onClick={() => set(page[flag] ? { [flag]: false, [k]: auto[k] } : { [flag]: true })}
+        >
+          Auto
+        </button>
+      </span>
+      <input
+        id={`${id}-${k}`}
+        value={page[flag] ? auto[k] : page[k]}
+        onChange={(e) => set({ [k]: e.target.value, [flag]: false })}
+      />
+    </div>
+  );
+  const custom = page.mention === "custom";
   return (
     <div className="side-form form">
       <label className="choice">
@@ -505,14 +549,36 @@ function TitlePagePanel({
         Imprimer la page de titre au début du PDF et des exports
       </label>
       {field("title", "Titre")}
+      {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
       {field("authors", "Écrit par (un nom par ligne)", 2)}
-      {field("basedOn", "D'après")}
+      {field("basedOn", "D'après", 1, "D'après le roman de…")}
       <div className="input-row">
-        {field("version", "Version")}
-        {field("date", "Date")}
+        {autoField("version", "autoVersion", "Version", "Suit la version en cours : celle que proposera « Figer » dans Versions.")}
+        {autoField("date", "autoDate", "Date", "Suit la date du jour, à chaque impression.")}
       </div>
-      {field("contact", "Contact", 4)}
-      {field("notes", "Mentions (dépôt SACD, droits…)", 3)}
+      {field("contact", "Contact", 5, "Nom, agent, téléphone, e-mail")}
+      <label className="field">
+        <span>Mentions</span>
+        <select value={page.mention} onChange={(e) => set({ mention: e.target.value as MentionId })}>
+          {MENTIONS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {custom && (
+        <label className="field">
+          <span>Votre mention</span>
+          <textarea
+            rows={3}
+            value={page.notes}
+            placeholder="Dépôt, droits, diffusion…"
+            autoFocus={!page.notes}
+            onChange={(e) => set({ notes: e.target.value })}
+          />
+        </label>
+      )}
       <p className="muted small">Enregistré à mesure que vous écrivez.</p>
     </div>
   );

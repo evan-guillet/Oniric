@@ -1,5 +1,5 @@
 import type { ScriptBlock } from "../modules/script/screenplay/domain/blocks";
-import { emptyTitlePage, type TitlePage } from "../modules/script/screenplay/domain/titlePage";
+import { normalizeTitlePage, type TitlePage } from "../modules/script/screenplay/domain/titlePage";
 import { applyFrenchSpacing } from "../modules/script/screenplay/domain/typography";
 import { parseFdx } from "./fdx/parse";
 import { parseFountain } from "./fountain/parse";
@@ -24,21 +24,21 @@ export function importScript(fileName: string, text: string, french: boolean): S
     const s = parseFdx(text);
     blocks = s.blocks;
     title = s.title ? s.title.charAt(0) + s.title.slice(1).toLocaleLowerCase("fr") : stem;
-    if (s.titlePage) titlePage = { ...emptyTitlePage(title), ...s.titlePage, title, include: true };
+    if (s.titlePage) titlePage = normalizeTitlePage({ ...s.titlePage, title, include: true });
   } else {
     const s = parseFountain(text);
     blocks = s.blocks;
     title = s.title ?? stem;
     if (Object.keys(s.meta).length > 0) {
-      titlePage = {
-        ...emptyTitlePage(title),
+      titlePage = normalizeTitlePage({
+        title,
         authors: s.meta.author ?? s.meta.authors ?? "",
         basedOn: s.meta.source ?? "",
         version: s.meta["draft date"] ?? "",
         contact: s.meta.contact ?? "",
         notes: [s.meta.copyright, s.meta.notes].filter(Boolean).join("\n"),
         include: true,
-      };
+      });
     }
   }
   if (french) blocks = blocks.map((b) => ({ ...b, text: applyFrenchSpacing(b.text) }));

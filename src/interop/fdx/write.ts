@@ -26,6 +26,10 @@ function titlePageXml(p: TitlePage, french: boolean): string {
   const add = (text: string, alignment: string) => lines.push(paragraph("Action", text, alignment).replace(/^ {4}/gm, "      "));
   for (let i = 0; i < 12; i++) add("", "Center");
   add(p.title.toLocaleUpperCase("fr"), "Center");
+  if (p.subtitle.trim()) {
+    add("", "Center");
+    for (const s of p.subtitle.split("\n")) add(s, "Center");
+  }
   if (p.authors.trim()) {
     add("", "Center");
     add(french ? "Écrit par" : "Written by", "Center");

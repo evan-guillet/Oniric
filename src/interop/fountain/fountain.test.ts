@@ -86,6 +86,10 @@ describe("Fountain title page", () => {
   it("reads and writes the keys of the title page", () => {
     const src = writeFountain([{ type: "action", text: "Rien." }], "X", {
       title: "Les Heures Bleues",
+      subtitle: "",
+      autoVersion: false,
+      autoDate: false,
+      mention: "custom",
       authors: "Evan\nCamille",
       basedOn: "D'après une nouvelle",
       version: "V2",
