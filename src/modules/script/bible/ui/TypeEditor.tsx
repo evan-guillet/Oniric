@@ -4,11 +4,14 @@ import { describeError } from "../../../../core/errors";
 import { useProject } from "../../../project/ui/projectContext";
 import { deleteType, saveType } from "../application/bible";
 import { FIELD_KINDS, fieldKey, pluralize, type EntryType, type FieldDef, type FieldKind } from "../domain/types";
+import { iconOf, TYPE_ICONS } from "./typeIcons";
 
-/** Custom entry types and their fields [5.2, « Type personnalisé »]. */
-export function TypeEditor({ types }: { types: EntryType[] }) {
+const blank: EntryType = { id: "", name: "", plural: "", icon: "file", builtin: false, fields: [] };
+
+/** Custom entry types, their icon and their fields [5.2, « Type personnalisé »]. `startNew` opens on a new type. */
+export function TypeEditor({ types, startNew = false }: { types: EntryType[]; startNew?: boolean }) {
   const custom = types.filter((t) => !t.builtin);
-  const [editing, setEditing] = useState<EntryType | null>(null);
+  const [editing, setEditing] = useState<EntryType | null>(startNew ? blank : null);
   return (
     <section className="panel">
       <h2>Types de fiches</h2>
@@ -22,6 +25,7 @@ export function TypeEditor({ types }: { types: EntryType[] }) {
       <ul className="type-list">
         {custom.map((t) => (
           <li key={t.id}>
+            <TypeIcon type={t} />
             <span>
               <strong>{t.name}</strong> <span className="muted small">{t.fields.map((f) => f.label).join(", ") || "aucun champ"}</span>
             </span>
@@ -31,18 +35,30 @@ export function TypeEditor({ types }: { types: EntryType[] }) {
           </li>
         ))}
       </ul>
-      <button type="button" className="btn" onClick={() => setEditing({ id: "", name: "", plural: "", builtin: false, fields: [] })}>
-        <Plus aria-hidden="true" />
-        Nouveau type
-      </button>
+      {!editing && (
+        <button type="button" className="btn" onClick={() => setEditing(blank)}>
+          <Plus aria-hidden="true" />
+          Nouveau type
+        </button>
+      )}
       {editing && <TypeForm key={editing.id || "new"} type={editing} types={types} onDone={() => setEditing(null)} />}
     </section>
+  );
+}
+
+function TypeIcon({ type }: { type: EntryType }) {
+  const Icon = iconOf(type);
+  return (
+    <span className="type-list-icon">
+      <Icon aria-hidden="true" />
+    </span>
   );
 }
 
 function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]; onDone: () => void }) {
   const { notify, ask } = useProject();
   const [name, setName] = useState(type.name);
+  const [icon, setIcon] = useState(type.icon || "file");
   const [fields, setFields] = useState<FieldDef[]>(type.fields);
   const patch = (i: number, p: Partial<FieldDef>) => setFields(fields.map((f, k) => (k === i ? { ...f, ...p } : f)));
   const move = (i: number, d: number) => {
@@ -54,7 +70,7 @@ function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]
   const save = async () => {
     try {
       const keyed = fields.map((f, i) => (f.key ? f : { ...f, key: fieldKey(f.label, fields.filter((_, k) => k !== i).map((x) => x.key)) }));
-      await saveType({ id: type.id || undefined, name, fields: keyed.filter((f) => f.label.trim()) });
+      await saveType({ id: type.id || undefined, name, icon, fields: keyed.filter((f) => f.label.trim()) });
       onDone();
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -77,8 +93,27 @@ function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]
       <label className="field">
         <span>Nom du type</span>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Planète, sortilège, recette…" autoFocus />
-        {name.trim() && <span className="fld-help">Au pluriel, dans les sections et le filtre : {pluralize(name)}</span>}
+        {name.trim() && <span className="fld-help">Au pluriel, sur sa carte : {pluralize(name)}</span>}
       </label>
+      <div className="field">
+        <span id="type-icon-label">Icône</span>
+        <div className="icon-picker" role="radiogroup" aria-labelledby="type-icon-label">
+          {Object.entries(TYPE_ICONS).map(([key, { icon: Icon, label }]) => (
+            <button
+              key={key}
+              type="button"
+              role="radio"
+              aria-checked={icon === key}
+              aria-label={label}
+              title={label}
+              className={icon === key ? "icon-choice on" : "icon-choice"}
+              onClick={() => setIcon(key)}
+            >
+              <Icon aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      </div>
       <table className="fields-table">
         <thead>
           <tr>

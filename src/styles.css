@@ -2396,7 +2396,7 @@ h4 {
 .view-main.wide {
   --main-max: 1240px;
 }
-/* Above the cards: the sort (and the archives) on the left, the new entry on the right. */
+/* Above a category's cards: back on the left, the sort and the archives on the right. */
 .bible-bar {
   display: flex;
   align-items: center;
@@ -2404,10 +2404,7 @@ h4 {
   gap: 12px;
   margin-bottom: 20px;
 }
-.bible-bar.end {
-  justify-content: flex-end;
-}
-.bible-bar-start {
+.bible-bar-tools {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2599,6 +2596,21 @@ h4 {
   font-weight: 500;
   color: var(--ink-2);
 }
+/* The last card makes a new type: dashed like an empty one, in the accent. */
+.type-card.new {
+  border-style: dashed;
+  background: none;
+}
+.type-card.new .type-card-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.type-card.new .type-card-open {
+  color: var(--accent);
+}
+.type-card.new:hover {
+  border-color: var(--accent-line);
+}
 .entry-cards-none:empty {
   padding: 0;
 }
@@ -2662,20 +2674,6 @@ h4 {
   min-width: 0;
   margin: 0;
   font: inherit;
-}
-.entry-card-icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--sunken);
-  color: var(--muted);
-}
-.entry-card-icon svg {
-  width: 16px;
-  height: 16px;
 }
 .entry-card .entry-name {
   min-width: 0;
@@ -3156,10 +3154,65 @@ h4 {
 .type-form {
   display: grid;
   gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.type-list-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+.type-list-icon svg {
+  width: 15px;
+  height: 15px;
+}
+/* The icon of a custom type: a grid of choices, the chosen one in the accent. */
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.icon-choice {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.icon-choice:hover {
+  background: var(--hover);
+}
+.icon-choice.on {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.icon-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.icon-choice svg {
+  width: 17px;
+  height: 17px;
 }
 .fields-table {
   width: 100%;
   border-collapse: collapse;
+}
+/* No field yet: no headers over nothing. */
+.fields-table:not(:has(tbody tr)) {
+  display: none;
 }
 .fields-table td {
   padding: 3px 4px;

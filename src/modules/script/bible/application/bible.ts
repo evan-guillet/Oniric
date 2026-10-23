@@ -84,7 +84,7 @@ export async function loadTypes(): Promise<EntryType[]> {
   const rows = await query(db.selectFrom("bible_type").selectAll().where("deleted_at", "is", null).orderBy("name"));
   return [
     ...BUILTIN_TYPES,
-    ...rows.map((r) => ({ id: r.id, name: r.name, plural: pluralize(r.name), builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
+    ...rows.map((r) => ({ id: r.id, name: r.name, plural: pluralize(r.name), icon: r.icon, builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
   ];
 }
 
@@ -199,14 +199,14 @@ export async function addAlias(entry: Entry, alias: string): Promise<void> {
   await saveEntry({ ...entry, aliases: [...entry.aliases, alias] }, entry);
 }
 
-export async function saveType(t: { id?: string; name: string; fields: FieldDef[] }): Promise<string> {
+export async function saveType(t: { id?: string; name: string; icon: string; fields: FieldDef[] }): Promise<string> {
   const now = nowIso();
   const id = t.id ?? uuidv7();
   await write("Type de fiche", ["bible_type"], [
     db
       .insertInto("bible_type")
-      .values({ id, name: t.name.trim() || "Type", fields: JSON.stringify(t.fields), created_at: now, updated_at: now })
-      .onConflict((oc) => oc.column("id").doUpdateSet({ name: t.name.trim() || "Type", fields: JSON.stringify(t.fields), updated_at: now })),
+      .values({ id, name: t.name.trim() || "Type", icon: t.icon, fields: JSON.stringify(t.fields), created_at: now, updated_at: now })
+      .onConflict((oc) => oc.column("id").doUpdateSet({ name: t.name.trim() || "Type", icon: t.icon, fields: JSON.stringify(t.fields), updated_at: now })),
   ]);
   return id;
 }
@@ -253,7 +253,8 @@ export interface BibleFile {
   format: "oniric-bible";
   version: 1;
   exportedAt: string;
-  types: { id: string; name: string; fields: FieldDef[] }[];
+  /** `icon` is missing from the files exported before types had one. */
+  types: { id: string; name: string; icon?: string; fields: FieldDef[] }[];
   entries: Entry[];
   relations: Relation[];
 }
@@ -265,7 +266,7 @@ export async function exportBible(): Promise<BibleFile> {
     format: "oniric-bible",
     version: 1,
     exportedAt: nowIso(),
-    types: types.filter((t) => !t.builtin).map((t) => ({ id: t.id, name: t.name, fields: t.fields })),
+    types: types.filter((t) => !t.builtin).map((t) => ({ id: t.id, name: t.name, icon: t.icon ?? "", fields: t.fields })),
     entries,
     relations,
   };
@@ -284,8 +285,9 @@ export async function importBible(text: string): Promise<{ added: number; update
     queries.push(
       db
         .insertInto("bible_type")
-        .values({ id: t.id, name: t.name, fields: JSON.stringify(t.fields), created_at: now, updated_at: now })
-        .onConflict((oc) => oc.column("id").doUpdateSet({ name: t.name, fields: JSON.stringify(t.fields), updated_at: now, deleted_at: null })),
+        .values({ id: t.id, name: t.name, icon: t.icon ?? "", fields: JSON.stringify(t.fields), created_at: now, updated_at: now })
+        // A file from before the icons keeps the icon the type has here.
+        .onConflict((oc) => oc.column("id").doUpdateSet({ name: t.name, ...(t.icon !== undefined && { icon: t.icon }), fields: JSON.stringify(t.fields), updated_at: now, deleted_at: null })),
     );
   }
   for (const e of file.entries) {

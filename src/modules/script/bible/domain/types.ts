@@ -17,6 +17,8 @@ export interface EntryType {
   id: string;
   name: string;
   plural: string;
+  /** Key of its icon in the app's set (ui/typeIcons). */
+  icon?: string;
   builtin: boolean;
   fields: FieldDef[];
 }
@@ -26,6 +28,7 @@ const f = (key: string, label: string, kind: FieldKind = "longtext", extra: Part
 export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "character",
+    icon: "user",
     name: "Personnage",
     plural: "Personnages",
     builtin: true,
@@ -49,6 +52,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "location",
+    icon: "map-pin",
     name: "Lieu",
     plural: "Lieux",
     builtin: true,
@@ -64,6 +68,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "object",
+    icon: "package",
     name: "Objet",
     plural: "Objets",
     builtin: true,
@@ -76,6 +81,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "vehicle",
+    icon: "car",
     name: "Véhicule",
     plural: "Véhicules",
     builtin: true,
@@ -90,6 +96,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "faction",
+    icon: "flag",
     name: "Faction",
     plural: "Factions",
     builtin: true,
@@ -103,6 +110,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "event",
+    icon: "calendar",
     name: "Événement",
     plural: "Événements",
     builtin: true,
@@ -115,6 +123,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "culture",
+    icon: "landmark",
     name: "Culture",
     plural: "Cultures",
     builtin: true,
@@ -122,6 +131,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "concept",
+    icon: "lightbulb",
     name: "Concept",
     plural: "Concepts",
     builtin: true,
@@ -132,6 +142,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   },
   {
     id: "creature",
+    icon: "paw",
     name: "Créature",
     plural: "Créatures",
     builtin: true,

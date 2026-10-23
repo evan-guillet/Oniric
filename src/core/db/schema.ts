@@ -106,6 +106,8 @@ export interface BibleTypeTable {
   name: string;
   /** JSON array of field definitions. */
   fields: Generated<string>;
+  /** Key of the type's icon in the app's set; empty for the plain sheet. */
+  icon: Generated<string>;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
