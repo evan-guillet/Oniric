@@ -1,11 +1,15 @@
 import {
+  Archive,
+  ArchiveRestore,
   BookOpen,
   Feather,
   Files,
   FileText,
+  Pencil,
   Plus,
   ScrollText,
   StickyNote,
+  Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +20,7 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
+import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile } from "../../../project/application/profile";
 import { useProject } from "../../../project/ui/projectContext";
@@ -394,15 +399,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           )}
           {format && body === "title" && titlePage && shownTitle && (
             <div className="fmt">
-              {!titlePage.draft.include && (
-                <p className="print-caption">
-                  Pas imprimée : cochez « Imprimer la page de titre » pour
-                  l'ajouter au PDF.
-                </p>
-              )}
-              <div className={titlePage.draft.include ? undefined : "print-off"}>
-                <PrintTitlePage page={shownTitle} format={format} />
-              </div>
+              <PrintTitlePage page={shownTitle} format={format} />
             </div>
           )}
           {format && body === "preview" && snap && (
@@ -517,14 +514,6 @@ function TitlePagePanel({
   const custom = page.mention === "custom";
   return (
     <div className="side-form form">
-      <label className="choice">
-        <input
-          type="checkbox"
-          checked={page.include}
-          onChange={(e) => set({ include: e.target.checked })}
-        />
-        Imprimer la page de titre au début du PDF et des exports
-      </label>
       {field("title", "Titre")}
       {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
       <fieldset className="field">
@@ -624,7 +613,8 @@ async function loadNotes(): Promise<NoteRow[]> {
 function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
-  const [showResolved, setShowResolved] = useState(false);
+  const [archives, setArchives] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
   const docVersion = useRef(0);
   const [, force] = useState(0);
   useEffect(() => {
@@ -637,8 +627,11 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
+  // `resolved` holds « archivée »: the note leaves the list, its passage stays marked.
+  const archivedCount = notes.filter((n) => n.resolved).length;
+  const showArchives = archives && archivedCount > 0;
   const shown = notes
-    .filter((n) => showResolved || !n.resolved)
+    .filter((n) => n.resolved === showArchives)
     .sort((a, b) => order(a) - order(b));
 
   const add = async () => {
@@ -671,6 +664,8 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
         ],
       );
       editor.addMark(range.from, range.to, schema.marks.note.create({ id }));
+      setArchives(false);
+      setEditing(id);
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -700,64 +695,100 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
           onClick={() => void add()}
         >
           <Plus aria-hidden="true" />
-          Note sur la sélection
+          Créer une note
         </button>
+        {archivedCount > 0 && (
+          <button
+            type="button"
+            className={showArchives ? "btn small on" : "btn small"}
+            aria-pressed={showArchives}
+            onClick={() => setArchives(!showArchives)}
+          >
+            <Archive aria-hidden="true" />
+            Archivées
+            <span className="btn-count">{archivedCount}</span>
+          </button>
+        )}
       </div>
-      <label className="choice small">
-        <input
-          type="checkbox"
-          checked={showResolved}
-          onChange={(e) => setShowResolved(e.target.checked)}
-        />
-        Afficher les notes résolues
-      </label>
+      {showArchives && (
+        <p className="muted small">
+          Notes archivées. « Désarchiver » les remet dans la liste.
+        </p>
+      )}
       {shown.length === 0 && (
         <p className="muted small">
-          Aucune note. Sélectionnez un passage puis « + Note ».
+          Aucune note. Sélectionnez un passage puis « Créer une note ».
         </p>
       )}
       <ul className="notes">
         {shown.map((n) => {
           const span = spans.get(n.id);
+          const isEditing = editing === n.id;
           return (
             <li key={n.id} className={n.resolved ? "note resolved" : "note"}>
-              <button
-                type="button"
-                className="note-quote"
-                disabled={!span}
-                onClick={() => span && editor?.reveal(span.from, span.to)}
-                title={
-                  span ? "Afficher le passage" : "Le passage a été supprimé"
-                }
-              >
-                « {span?.text ?? n.quote} »
-                {!span && <span className="badge warn">passage supprimé</span>}
-              </button>
-              <NoteBody
-                value={n.body}
-                onSave={(body) => void update(n.id, { body })}
-              />
-              <div className="row-actions">
+              <div className="note-top">
                 <button
                   type="button"
-                  className="btn ghost small"
-                  onClick={() =>
-                    void update(n.id, { resolved: n.resolved ? 0 : 1 })
+                  className="note-quote"
+                  disabled={!span}
+                  onClick={() => span && editor?.reveal(span.from, span.to)}
+                  title={
+                    span ? "Afficher le passage" : "Le passage a été supprimé"
                   }
                 >
-                  {n.resolved ? "Rouvrir" : "Résolue"}
+                  « {span?.text ?? n.quote} »
+                  {!span && (
+                    <span className="badge warn">passage supprimé</span>
+                  )}
                 </button>
-                <button
-                  type="button"
-                  className="btn ghost small"
-                  onClick={() => {
-                    editor?.removeMarkById("note", n.id);
-                    void update(n.id, { deleted_at: nowIso() });
-                  }}
-                >
-                  Supprimer
-                </button>
+                <MoreMenu
+                  label="Actions sur la note"
+                  items={[
+                    {
+                      label: "Modifier",
+                      icon: Pencil,
+                      onClick: () => setEditing(n.id),
+                    },
+                    n.resolved
+                      ? {
+                          label: "Désarchiver",
+                          icon: ArchiveRestore,
+                          onClick: () => {
+                            if (archivedCount === 1) setArchives(false);
+                            void update(n.id, { resolved: 0 });
+                          },
+                        }
+                      : {
+                          label: "Archiver",
+                          icon: Archive,
+                          hint: "Retire la note de la liste sans l'effacer. Pour la revoir : « Archivées ».",
+                          onClick: () => void update(n.id, { resolved: 1 }),
+                        },
+                    {
+                      label: "Supprimer",
+                      icon: Trash2,
+                      danger: true,
+                      onClick: () => {
+                        editor?.removeMarkById("note", n.id);
+                        void update(n.id, { deleted_at: nowIso() });
+                      },
+                    },
+                  ]}
+                />
               </div>
+              {isEditing ? (
+                <NoteBody
+                  value={n.body}
+                  onDone={(body) => {
+                    setEditing(null);
+                    if (body !== n.body) void update(n.id, { body });
+                  }}
+                />
+              ) : n.body.trim() ? (
+                <p className="note-body">{n.body}</p>
+              ) : (
+                <p className="note-body muted">Note vide</p>
+              )}
             </li>
           );
         })}
@@ -766,23 +797,42 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   );
 }
 
+/** The note being edited: saved on leaving the field or Ctrl + Entrée, Échap drops the change. */
 function NoteBody({
   value,
-  onSave,
+  onDone,
 }: {
   value: string;
-  onSave: (v: string) => void;
+  onDone: (v: string) => void;
 }) {
   const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
+  // Leaving the field after Échap or Ctrl + Entrée must not save a second time.
+  const closed = useRef(false);
+  const done = (body: string) => {
+    if (closed.current) return;
+    closed.current = true;
+    onDone(body);
+  };
   return (
     <textarea
-      rows={2}
+      rows={3}
       value={v}
+      aria-label="Note"
       placeholder="Votre note…"
+      autoFocus
+      onFocus={(e) => e.currentTarget.setSelectionRange(v.length, v.length)}
       onChange={(e) => setV(e.target.value)}
-      onBlur={() => v !== value && onSave(v)}
-      autoFocus={!value}
+      onBlur={() => done(v)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          done(value);
+        } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          done(v);
+        }
+      }}
     />
   );
 }

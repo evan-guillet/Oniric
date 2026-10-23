@@ -13,7 +13,7 @@ export interface TitlePage {
   contact: string;
   /** The mention as typed, used when `mention` is « custom ». */
   notes: string;
-  /** Printed at the start of the PDF. */
+  /** Kept for older projects: a title page with content always prints at the start of the PDF. */
   include: boolean;
   /** A preset mention (see MENTIONS), or « custom » for `notes`. */
   mention: MentionId;
@@ -91,5 +91,5 @@ export function formatTitleDate(d: Date, language: "fr" | "en"): string {
 }
 
 export function hasContent(p: TitlePage | null): p is TitlePage {
-  return !!p && p.include && [p.title, p.subtitle, p.authors, p.basedOn, p.version, p.date, p.contact, p.notes].some((s) => s.trim());
+  return !!p && [p.title, p.subtitle, p.authors, p.basedOn, p.version, p.date, p.contact, p.notes].some((s) => s.trim());
 }

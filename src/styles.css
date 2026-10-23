@@ -5163,9 +5163,6 @@ h4 {
   justify-content: space-between;
   gap: 6px;
 }
-.notes-head h2 {
-  font-size: 13px;
-}
 .notes {
   list-style: none;
   margin: 0;
@@ -5182,14 +5179,28 @@ h4 {
   background: var(--panel);
   box-shadow: var(--shadow-sm);
 }
-.note.resolved {
-  opacity: 0.6;
+.note-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.note-top .note-quote {
+  flex: 1;
+  min-width: 0;
+}
+.note-top .more-btn {
+  flex: none;
+  margin: -4px -6px -4px 0;
+}
+.note-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .note-quote {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 8px;
+  display: block;
   border: none;
   background: none;
   padding: 0;
@@ -5201,8 +5212,9 @@ h4 {
 }
 .note-quote::before {
   content: "";
-  flex: none;
-  align-self: center;
+  display: inline-block;
+  vertical-align: 1px;
+  margin-right: 8px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -5216,6 +5228,9 @@ h4 {
 }
 .note-quote:disabled {
   cursor: default;
+}
+.note-quote .badge {
+  margin-left: 8px;
 }
 
 /* Settings */
@@ -5737,9 +5752,6 @@ h4 {
   background: var(--paper);
   color: var(--paper-ink);
   box-shadow: var(--sheet-shadow);
-}
-.desk-print .print-off .print-page {
-  opacity: 0.55;
 }
 .print-caption {
   margin: -12px auto 14px;
