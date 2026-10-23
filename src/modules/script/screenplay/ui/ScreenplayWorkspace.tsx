@@ -19,6 +19,7 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
+import { useChoice } from "../../../../ui-kit/Dialog";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile } from "../../../project/application/profile";
@@ -53,8 +54,8 @@ import { sceneGapsPlugin } from "./editor/sceneGaps";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
 import { PrintPages, PrintTitlePage } from "./PrintPages";
-import { SceneList, type ListGroup, type SceneRow } from "./SceneList";
-import { STORY_TABLES, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
+import { SceneList, type ListGroup, type ListTarget, type SceneRow } from "./SceneList";
+import { STORY_TABLES, deleteAct, deleteSequence, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
@@ -74,6 +75,18 @@ function savedDisplay(): Display {
     // Storage unavailable: the default display.
   }
   return "bare";
+}
+
+/** How far below the top of the desk the act/sequence pin sits (`.story-pin` in the styles). */
+const PIN_TOP = 28;
+
+/** Where a scene starts for the eye: the edge of its card, or without cards the top of its heading's text. */
+function sceneStart(scene: HTMLElement, cards: boolean): number {
+  const top = scene.getBoundingClientRect().top;
+  if (cards) return top;
+  const heading = scene.firstElementChild as HTMLElement | null;
+  if (!heading) return top;
+  return heading.getBoundingClientRect().top + parseFloat(getComputedStyle(heading).paddingTop);
 }
 
 /** Each scene's colour from the Tableau, and the scene of the cursor outlined, by the id its node carries. */
@@ -360,6 +373,44 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   );
 
 
+  // A right click in the list deletes, as the board's « ⋯ » menus do: acts and sequences leave their scenes in
+  // the screenplay, a scene goes to the bin of cut scenes.
+  const [choice, ask] = useChoice();
+  const removeFromList = async (target: ListTarget) => {
+    const name = (num: string, title: string) => <strong>{title ? `${num} · ${title}` : num}</strong>;
+    const request =
+      target.kind === "scene"
+        ? {
+            title: "Supprimer la scène ?",
+            text: (
+              <p>
+                {name(`Scène ${target.index + 1}`, rowsRef.current[target.index]?.heading ?? "")}. Elle quitte le scénario mais reste dans la
+                corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.
+              </p>
+            ),
+          }
+        : target.kind === "act"
+          ? {
+              title: "Supprimer l'acte ?",
+              text: <p>{name(target.part.num, target.part.title)}. Ses séquences et ses scènes sont conservées, sans acte.</p>,
+            }
+          : {
+              title: "Supprimer la séquence ?",
+              text: <p>{name(target.part.num, target.part.title)}. Ses scènes restent dans le scénario et rejoignent la séquence précédente.</p>,
+            };
+    const c = await ask({ ...request, cancel: "Annuler", choices: [{ label: "Supprimer", value: "y", danger: true }] });
+    if (c !== "y") return;
+    try {
+      if (target.kind === "scene") {
+        const id = sceneInfos[target.index]?.id;
+        if (id) editorRef.current?.removeScene(id);
+      } else if (target.kind === "act") await deleteAct(target.part.id);
+      else await deleteSequence(target.part.id);
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  };
+
   // A new scene under another joins its sequence, as on the board.
   addAfterRef.current = (afterId) => {
     const editor = editorRef.current;
@@ -382,11 +433,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const line = desk.getBoundingClientRect().top + desk.clientHeight * 0.3;
-      const scenes = mountRef.current?.querySelectorAll(":scope > .ProseMirror > .scene") ?? [];
+      // The line is the top of the pin itself: the pin changes as the scene it names comes level with it.
+      const rail = desk.querySelector(".story-pin-rail");
+      const line = (rail ? rail.getBoundingClientRect().top : desk.getBoundingClientRect().top) + PIN_TOP;
+      const cards = desk.classList.contains("display-cards");
+      const scenes = mountRef.current?.querySelectorAll<HTMLElement>(":scope > .ProseMirror > .scene") ?? [];
       let i = 0;
       for (let k = 0; k < scenes.length; k++) {
-        if (scenes[k].getBoundingClientRect().top > line) break;
+        if (sceneStart(scenes[k], cards) > line + 0.5) break;
         i = k;
       }
       setTopScene(i);
@@ -426,6 +480,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     <>
       {format && <style>{formatCss(format, false)}</style>}
       {display === "cards" && story && <style>{cardCss}</style>}
+      {choice}
       <div className="workspace">
         <aside className="sidebar" aria-label={PANELS[panel]}>
           {panel === "scenes" && (
@@ -435,6 +490,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               current={snap?.sceneIndex ?? 0}
               onSelect={selectScene}
               foldKey={`oniric.script.folds.${project.id}`}
+              onRemove={(target) => void removeFromList(target)}
             />
           )}
           {panel === "notes" && (
