@@ -4,7 +4,7 @@ import { onTablesChanged, parseJson } from "../../../../core/db/live";
 import type { EntryStatus } from "../../../../core/db/schema";
 import { uuidv7 } from "../../../../core/ids";
 import type { WikiSource, WikiTarget } from "../ui/wikiPlugin";
-import { BUILTIN_TYPES, fold, type EntryType, type FieldDef } from "../domain/types";
+import { BUILTIN_TYPES, fold, pluralize, type EntryType, type FieldDef } from "../domain/types";
 
 export interface Entry {
   id: string;
@@ -84,7 +84,7 @@ export async function loadTypes(): Promise<EntryType[]> {
   const rows = await query(db.selectFrom("bible_type").selectAll().where("deleted_at", "is", null).orderBy("name"));
   return [
     ...BUILTIN_TYPES,
-    ...rows.map((r) => ({ id: r.id, name: r.name, plural: r.name, builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
+    ...rows.map((r) => ({ id: r.id, name: r.name, plural: pluralize(r.name), builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
   ];
 }
 

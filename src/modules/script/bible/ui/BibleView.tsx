@@ -11,7 +11,7 @@ import { useScenes } from "../../screenplay/application/scriptSession";
 import { addAlias, createEntries, createEntry, loadEntries, loadTypes, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
 import { appearances, detect, triage, type Candidate } from "../domain/appearances";
-import { fold, type EntryType } from "../domain/types";
+import { firstSentence, fold, type EntryType } from "../domain/types";
 import { EntryEditor } from "./EntryEditor";
 import { TypeEditor } from "./TypeEditor";
 
@@ -40,7 +40,7 @@ const byName = (a: Entry, b: Entry) => sortKey(a.name).localeCompare(sortKey(b.n
 
 /** `home` changes each time the Bible is chosen in the side bar, which brings back the cards of all the entries. */
 export function BibleView({ selected, onSelected, home }: { selected: string | null; onSelected: (id: string | null) => void; home: number }) {
-  const { session, notify, headerActions } = useProject();
+  const { session, notify, headerActions, setTrail } = useProject();
   const entries = useLive(loadEntries, ["bible_entry"]) ?? [];
   const types = useLive(loadTypes, ["bible_type"]) ?? [];
   const [filter, setFilter] = useState<Set<string>>(new Set());
@@ -68,6 +68,20 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
   useEffect(() => {
     if (selected) setPane({ kind: "entry", id: selected });
   }, [selected]);
+
+  // Détecter and Types are a level below the cards: the header says where one is, « Bible » or Escape goes back.
+  const sub = pane.kind === "detect" ? "Détecter" : pane.kind === "types" ? "Types de fiches" : null;
+  useEffect(() => {
+    if (!sub) return setTrail(null);
+    setTrail([{ label: "Bible", onClick: () => setPane({ kind: "none" }) }, { label: sub }]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, dialog, [role=dialog], [role=menu]")) return;
+      setPane({ kind: "none" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sub, setTrail]);
+  useEffect(() => () => setTrail(null), [setTrail]);
 
   const visible = entries.filter(
     (e) =>
@@ -125,14 +139,18 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
       {headerActions &&
         createPortal(
           <div className="header-tools" role="search" aria-label="Filtrer les fiches">
-            {(pane.kind === "detect" || pane.kind === "types") && (
+            {/* Search and filter act on the cards only, so they leave with them. */}
+            {sub ? (
               <button type="button" className="btn" onClick={() => setPane({ kind: "none" })}>
                 <ArrowLeft aria-hidden="true" />
                 Toutes les fiches
               </button>
+            ) : (
+              <>
+                <input type="search" className="header-search" placeholder="Rechercher une fiche…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Rechercher une fiche" />
+                <TypeFilter types={types} counts={counts} filter={filter} onFilter={setFilter} archived={archived} onArchived={setArchived} />
+              </>
             )}
-            <input type="search" className="header-search" placeholder="Rechercher une fiche…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Rechercher une fiche" />
-            <TypeFilter types={types} counts={counts} filter={filter} onFilter={setFilter} archived={archived} onArchived={setArchived} />
             <button type="button" className={pane.kind === "detect" ? "btn on" : "btn"} onClick={() => setPane({ kind: "detect" })}>
               <ScanSearch aria-hidden="true" />
               Détecter
@@ -182,7 +200,8 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 Nouvelle fiche
               </button>
               <button type="button" className="btn" onClick={() => setPane({ kind: "detect" })}>
-                Retrouver les personnages et les lieux du scénario
+                <ScanSearch aria-hidden="true" />
+                Détecter les personnages et les lieux
               </button>
             </p>
             {session.editor === null && <p className="muted small">Le scénario se charge…</p>}
@@ -232,11 +251,11 @@ function EntryModal({ name, onClose, children }: { name: string; onClose: () => 
   );
 }
 
-/** « 12 scènes · 1re : sc. 3 », for the types the screenplay places: characters by their cues, locations by the headings. */
+/** « 12 scènes · dès la sc. 3 », for the types the screenplay places: characters by their cues, locations by the headings. */
 function presenceLabel(type: string, p: Presence | undefined): string | null {
   if (type !== "character" && type !== "location") return null;
   if (!p || p.count === 0) return "Aucune scène";
-  return p.count === 1 ? `1 scène · sc. ${p.first + 1}` : `${p.count} scènes · 1re : sc. ${p.first + 1}`;
+  return p.count === 1 ? `1 scène · sc. ${p.first + 1}` : `${p.count} scènes · dès la sc. ${p.first + 1}`;
 }
 
 /** The entries in one section per type, in the order of the types; « idea » is the default status and shows nothing. */
@@ -283,7 +302,7 @@ function EntryCards({
                 {s.title}
                 <span className="entry-section-count">{s.entries.length}</span>
               </h2>
-              <button type="button" className="btn ghost small" onClick={() => onAdd(s.id)} aria-label={`Ajouter une fiche : ${s.name}`}>
+              <button type="button" className="btn ghost small" onClick={() => onAdd(s.id)} aria-label={`Ajouter une fiche : ${s.name}`}>
                 <Plus aria-hidden="true" />
                 Ajouter
               </button>
@@ -314,7 +333,7 @@ function EntryCards({
                     </h3>
                     {e.summary && (
                       <span id={`entry-summary-${e.id}`} className="entry-card-summary">
-                        {e.summary}
+                        {firstSentence(e.summary)}
                       </span>
                     )}
                     {meta && (
@@ -530,7 +549,7 @@ function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => 
     if (!entry) return;
     try {
       await addAlias(entry, c.name);
-      notify({ text: `« ${c.name} » est maintenant un autre nom de « ${entry.name} ».` });
+      notify({ text: `« ${c.name} » est maintenant un autre nom de « ${entry.name} ».` });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -538,7 +557,7 @@ function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => 
 
   return (
     <section className="panel detect">
-      <h2>Détecter dans le scénario</h2>
+      <h2>Détecter les personnages et les lieux</h2>
       <p className="muted">Les noms des répliques et les lieux des en-têtes de scène qui n'ont pas encore de fiche. Les noms douteux restent décochés.</p>
       {candidates.length === 0 ? (
         <p>Tous les personnages et les lieux du scénario ont déjà une fiche.</p>
@@ -549,7 +568,7 @@ function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => 
             return (
               <fieldset key={g.id} className="detect-group">
                 <legend className="detect-group-head">
-                  <GroupCheck all={on === g.items.length} some={on > 0} onChange={(v) => set(g.items, v)} label={`Tout cocher : ${g.title}`} />
+                  <GroupCheck all={on === g.items.length} some={on > 0} onChange={(v) => set(g.items, v)} label={`Tout cocher : ${g.title}`} />
                   <g.icon aria-hidden="true" />
                   <span>{g.title}</span>
                   <span className="entry-section-count">
@@ -570,13 +589,13 @@ function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => 
                           <span className="badge st-todo">{DOUBT_LABEL[c.doubt.kind]}</span>
                           {c.doubt.kind === "duplicate" && (
                             <>
-                              <span className="muted small">de « {dup!.name} »</span>
+                              <span className="muted small">de « {dup!.name} »</span>
                               <button type="button" className="btn ghost small" onClick={() => void alias(c, dup!.id)}>
                                 Ajouter comme autre nom
                               </button>
                             </>
                           )}
-                          {c.doubt.kind === "sublocation" && <span className="muted small">de « {c.doubt.of} »</span>}
+                          {c.doubt.kind === "sublocation" && <span className="muted small">de « {c.doubt.of} »</span>}
                         </span>
                       )}
                     </li>

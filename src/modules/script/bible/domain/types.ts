@@ -32,7 +32,7 @@ export const BUILTIN_TYPES: EntryType[] = [
     fields: [
       f("nicknames", "Surnoms", "text"),
       f("age", "Âge", "text"),
-      f("birth", "Date de naissance", "date", { help: "Dans le calendrier du monde du film : « 1944 », « an 312 de l'ère des Lunes »…" }),
+      f("birth", "Date de naissance", "date", { help: "Dans le calendrier du monde du film : « 1944 », « an 312 de l'ère des Lunes »…" }),
       f("appearance", "Apparence"),
       f("physique", "Physique"),
       f("costume", "Costume type"),
@@ -41,8 +41,8 @@ export const BUILTIN_TYPES: EntryType[] = [
       f("desire", "Désir", "longtext", { help: "Ce que le personnage veut, consciemment." }),
       f("need", "Besoin", "longtext", { help: "Ce dont il a réellement besoin, souvent sans le savoir." }),
       f("flaw", "Faille"),
-      f("arc_start", "Arc : état initial"),
-      f("arc_end", "Arc : état final"),
+      f("arc_start", "Arc : état initial"),
+      f("arc_end", "Arc : état final"),
       f("speech", "Façon de parler", "longtext", { help: "Tics, registre, accent, exemples de répliques." }),
       f("actor", "Comédien associé", "text"),
     ],
@@ -65,7 +65,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "object",
     name: "Objet",
-    plural: "Objets et accessoires",
+    plural: "Objets",
     builtin: true,
     fields: [
       f("description", "Description"),
@@ -91,7 +91,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "faction",
     name: "Faction",
-    plural: "Factions et organisations",
+    plural: "Factions",
     builtin: true,
     fields: [
       f("members", "Membres", "links", { target: "character" }),
@@ -104,7 +104,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "event",
     name: "Événement",
-    plural: "Événements historiques",
+    plural: "Événements",
     builtin: true,
     fields: [
       f("date", "Date", "date", { help: "Dans le calendrier du monde du film." }),
@@ -116,14 +116,14 @@ export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "culture",
     name: "Culture",
-    plural: "Cultures, peuples, espèces",
+    plural: "Cultures",
     builtin: true,
     fields: [f("customs", "Coutumes"), f("language", "Langue"), f("religion", "Religion"), f("appearance", "Apparence"), f("history", "Histoire")],
   },
   {
     id: "concept",
     name: "Concept",
-    plural: "Concepts et règles du monde",
+    plural: "Concepts",
     builtin: true,
     fields: [
       f("kind", "Nature", "list", { options: ["Magie", "Technologie", "Loi physique", "Règle sociale", "Glossaire", "Autre"] }),
@@ -133,7 +133,7 @@ export const BUILTIN_TYPES: EntryType[] = [
   {
     id: "creature",
     name: "Créature",
-    plural: "Animaux et créatures",
+    plural: "Créatures",
     builtin: true,
     fields: [f("description", "Description"), f("behavior", "Comportement"), f("shooting_needs", "Besoins de tournage")],
   },
@@ -155,6 +155,43 @@ export const STATUSES = [
   { id: "validated", label: "Validé" },
   { id: "abandoned", label: "Abandonné" },
 ] as const;
+
+/** The card shows the summary's first sentence: cut by the two-line clamp after a full stop, it ended in « .… ». */
+export function firstSentence(text: string): string {
+  return text.match(/^[\s\S]*?[.!?…](?=\s|$)/)?.[0] ?? text;
+}
+
+/** Words that end the part of a type's name that takes the plural: « Arme à feu » → « Armes à feu ». */
+const PLURAL_STOP = new Set(["de", "du", "des", "d", "à", "au", "aux", "en", "pour", "sans", "sur", "avec", "et", "ou"]);
+/** Plurals that don't follow the endings. */
+const PLURAL_EXCEPTIONS: Record<string, string> = { bal: "bals", carnaval: "carnavals", festival: "festivals", récital: "récitals", pneu: "pneus", bleu: "bleus", œil: "yeux", ciel: "cieux" };
+
+/** French plural of one word: -s, -x, -z stay; -al → -aux; -au, -eau, -eu → +x; -ail stays regular; the rest +s. Keeps the case. */
+function pluralWord(w: string): string {
+  const lower = w.toLocaleLowerCase("fr");
+  const exception = PLURAL_EXCEPTIONS[lower];
+  if (exception) return w[0] + exception.slice(1);
+  if (/[sxz]$/i.test(w)) return w;
+  if (/al$/i.test(w)) return w.slice(0, -2) + (w === w.toUpperCase() ? "AUX" : "aux");
+  if (/(au|eu)$/i.test(w)) return w + (w === w.toUpperCase() ? "X" : "x");
+  return w + (w === w.toUpperCase() ? "S" : "s");
+}
+
+/** Plural of a custom type's name, for its section and the filter: « Planète » → « Planètes », « Vaisseau spatial » → « Vaisseaux spatiaux ». */
+export function pluralize(name: string): string {
+  const words = name.trim().split(/(\s+|['’])/);
+  let stopped = false;
+  return words
+    .map((w) => {
+      if (stopped || !/\p{L}/u.test(w)) return w;
+      if (PLURAL_STOP.has(w.toLocaleLowerCase("fr"))) {
+        stopped = true;
+        return w;
+      }
+      return pluralWord(w);
+    })
+    .join("");
+}
 
 /** Lowercase, without accents, one apostrophe: « Hélène » and « helene », « d’Oren » and « d'Oren » match. */
 export function fold(s: string): string {

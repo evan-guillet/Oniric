@@ -1,10 +1,11 @@
-import { ImagePlus, Plus, X } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, History, ImagePlus, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useLive } from "../../../../core/db/live";
 import type { EntryStatus } from "../../../../core/db/schema";
 import { Dialog } from "../../../../ui-kit/Dialog";
 import { Labeled, TagInput } from "../../../../ui-kit/Form";
+import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { RichText, richSchema } from "../../../../ui-kit/RichText";
 import { MediaImage, pickImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
@@ -24,7 +25,7 @@ const SAVE_LABEL: Record<Exclude<SaveState, "idle">, string> = { pending: "Modif
 
 /** Edits one entry; changes are saved a moment after the last one [BIB-01]. */
 export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: Entry[]; types: EntryType[] }) {
-  const { notify, openScene, session } = useProject();
+  const { notify, openScene, openEntry, session } = useProject();
   const [draft, setDraft] = useState(entry);
   const saved = useRef(entry);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +93,17 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
     return s ? `${s.index + 1}. ${s.heading || "(sans en-tête)"}` : null;
   };
 
+  // The copy was silent: the notice says it exists and opens it.
+  const duplicate = async () => {
+    try {
+      await flush();
+      const id = await duplicateEntry(latest.current);
+      notify({ text: `La copie « ${latest.current.name} (copie) » est créée.`, actions: [{ label: "Ouvrir", onClick: () => openEntry(id) }] });
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  };
+
   // No confirmation: the notice offers to bring the entry back, with the edits saved just before.
   const remove = async () => {
     const { id, name } = latest.current;
@@ -99,7 +111,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
       await flush();
       await deleteEntry(id);
       notify({
-        text: `La fiche « ${name} » est supprimée.`,
+        text: `La fiche « ${name} » est supprimée.`,
         actions: [{ label: "Annuler", onClick: () => void restoreEntry(id).catch((e) => notify({ text: describeError(e), tone: "error" })) }],
       });
     } catch (e) {
@@ -128,22 +140,30 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                 </option>
               ))}
             </select>
-            {draft.archivedAt && <span className="badge">Archivée</span>}
-          </div>
-          <div className="entry-actions">
-            <button type="button" className="btn small" onClick={() => void duplicateEntry(draft)}>
-              Dupliquer
-            </button>
-            <button type="button" className="btn small" onClick={() => void archiveEntry(draft.id, !draft.archivedAt)}>
-              {draft.archivedAt ? "Désarchiver" : "Archiver"}
-            </button>
-            <button type="button" className="btn small" onClick={() => setHistory(true)}>
-              Historique
-            </button>
-            <button type="button" className="btn ghost small danger" onClick={() => void remove()}>
-              Supprimer
-            </button>
-            {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{SAVE_LABEL[saveState]}</span>}
+            {/* From the live entry: the draft never sees archiving, which saveEntry leaves alone. */}
+            {entry.archivedAt && <span className="badge">Archivée</span>}
+            {/* The occasional actions wait in « ⋯ »; only Supprimer, which can be undone, stays in view. */}
+            <span className="entry-actions">
+              {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{SAVE_LABEL[saveState]}</span>}
+              <button type="button" className="btn ghost small danger" onClick={() => void remove()}>
+                Supprimer
+              </button>
+              <MoreMenu
+                label="Autres actions sur la fiche"
+                items={[
+                  { label: "Dupliquer", icon: Copy, onClick: () => void duplicate() },
+                  entry.archivedAt
+                    ? { label: "Désarchiver", icon: ArchiveRestore, hint: "La fiche revient parmi les cartes.", onClick: () => void archiveEntry(draft.id, false) }
+                    : {
+                        label: "Archiver",
+                        icon: Archive,
+                        hint: "Retire la fiche des cartes sans l'effacer. Pour la revoir : « Afficher les fiches archivées » dans le filtre.",
+                        onClick: () => void archiveEntry(draft.id, true),
+                      },
+                  { label: "Historique", icon: History, onClick: () => setHistory(true) },
+                ]}
+              />
+            </span>
           </div>
         </div>
       </header>
@@ -212,7 +232,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
               </>
             )}
           </section>
-          <TagInput label="Autres noms" value={draft.aliases} onChange={(aliases) => update({ aliases })} help="Surnoms, diminutifs : reconnus dans le scénario comme le nom." />
+          <TagInput label="Autres noms" value={draft.aliases} onChange={(aliases) => update({ aliases })} help="Surnoms, diminutifs : reconnus dans le scénario comme le nom." />
           {shortFields.map(field)}
           <TagInput label="Étiquettes" value={draft.tags} onChange={(tags) => update({ tags })} suggestions={[...new Set(entries.flatMap((e) => e.tags))]} />
           <LinksInput value={draft.links} entries={entries} selfId={draft.id} onChange={(l) => update({ links: l })} label="Liens vers d'autres fiches" />
@@ -247,7 +267,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
           id={draft.id}
           onClose={() => setHistory(false)}
           onRestore={async (old) => {
-            const restored = { ...old, id: draft.id, archivedAt: draft.archivedAt };
+            const restored = { ...old, id: draft.id, archivedAt: entry.archivedAt };
             const previous = saved.current;
             saved.current = restored;
             setDraft(restored);
@@ -407,8 +427,9 @@ function LinksInput({
           </span>
         ))}
         <select
+          className="links-add"
           value=""
-          aria-label={`Ajouter : ${label}`}
+          aria-label={`Ajouter : ${label}`}
           onChange={(e) => {
             if (e.target.value) onChange([...value, e.target.value]);
           }}
@@ -434,7 +455,7 @@ function HistoryDialog({ id, onClose, onRestore }: { id: string; onClose: () => 
       {!versions ? (
         <p className="muted">Chargement…</p>
       ) : versions.length === 0 ? (
-        <p className="muted">Aucune version antérieure pour l'instant : Oniric en garde une toutes les dix minutes de travail sur la fiche.</p>
+        <p className="muted">Aucune version antérieure pour l'instant : Oniric en garde une toutes les dix minutes de travail sur la fiche.</p>
       ) : (
         <ul className="version-list">
           {versions.map((v) => (

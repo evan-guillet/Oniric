@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appearances, detect, headingPlace, isGenericRole, prettyName, probableDuplicate, triage, type SceneText } from "./appearances";
-import { fieldKey, fold } from "./types";
+import { fieldKey, firstSentence, fold, pluralize } from "./types";
 
 const scenes: SceneText[] = [
   { id: "s1", heading: "INT. CUISINE DE MARIE – NUIT", characters: ["MARIE"], text: "La lumière du frigo découpe Marie.", links: [] },
@@ -64,5 +64,22 @@ describe("bible appearances", () => {
       ["Toit", null],
     ]);
     expect(out[3].doubt).toEqual({ kind: "sublocation", of: "Maison" });
+  });
+});
+
+describe("bible wording", () => {
+  it("puts a custom type's name in the plural, up to its first preposition", () => {
+    expect(pluralize("Planète")).toBe("Planètes");
+    expect(pluralize("Vaisseau spatial")).toBe("Vaisseaux spatiaux");
+    expect(pluralize("Arme à feu")).toBe("Armes à feu");
+    expect(pluralize("Pièce d'or")).toBe("Pièces d'or");
+    expect(pluralize("Gaz")).toBe("Gaz");
+    expect(pluralize("Festival")).toBe("Festivals");
+  });
+
+  it("keeps the first sentence of a summary for the card", () => {
+    expect(firstSentence("Reine du crime. Patronne de la Halte.")).toBe("Reine du crime.");
+    expect(firstSentence("Sans point final")).toBe("Sans point final");
+    expect(firstSentence("Un vaisseau… Ou pas.")).toBe("Un vaisseau…");
   });
 });

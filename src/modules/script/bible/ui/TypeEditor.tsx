@@ -3,7 +3,7 @@ import { useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useProject } from "../../../project/ui/projectContext";
 import { deleteType, saveType } from "../application/bible";
-import { FIELD_KINDS, fieldKey, type EntryType, type FieldDef, type FieldKind } from "../domain/types";
+import { FIELD_KINDS, fieldKey, pluralize, type EntryType, type FieldDef, type FieldKind } from "../domain/types";
 
 /** Custom entry types and their fields [5.2, « Type personnalisé »]. */
 export function TypeEditor({ types }: { types: EntryType[] }) {
@@ -77,6 +77,7 @@ function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]
       <label className="field">
         <span>Nom du type</span>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Planète, sortilège, recette…" autoFocus />
+        {name.trim() && <span className="fld-help">Au pluriel, dans les sections et le filtre : {pluralize(name)}</span>}
       </label>
       <table className="fields-table">
         <thead>

@@ -48,6 +48,7 @@
   --shadow-sm: 0 1px 2px rgba(16, 18, 27, 0.05);
   --shadow-md: 0 1px 2px rgba(16, 18, 27, 0.04), 0 4px 12px -2px rgba(16, 18, 27, 0.08);
   --shadow-lg: 0 2px 6px rgba(16, 18, 27, 0.06), 0 18px 48px -10px rgba(16, 18, 27, 0.24);
+  --backdrop: rgba(14, 15, 22, 0.32);
   --sheet-shadow: 0 0 0 1px rgba(16, 18, 27, 0.06), 0 2px 4px rgba(16, 18, 27, 0.04), 0 14px 36px -14px rgba(16, 18, 27, 0.22);
   --ui-font: "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23767a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -101,6 +102,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -4px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+  --backdrop: rgba(0, 0, 0, 0.62);
   --sheet-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
   --paper: #222226;
   --paper-ink: #e2e2e8;
@@ -764,7 +766,7 @@ kbd {
   gap: 16px;
 }
 .dialog::backdrop {
-  background: rgba(14, 15, 22, 0.32);
+  background: var(--backdrop);
 }
 .dialog h2 {
   font-size: 15px;
@@ -1827,6 +1829,15 @@ h4 {
 }
 .tag .link {
   color: inherit;
+}
+.fld select.links-add {
+  width: auto;
+  max-width: 100%;
+  height: 26px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
 }
 .tag button:not(.link) {
   display: grid;
@@ -2940,6 +2951,19 @@ h4 {
 .entry-modal .entry-title {
   padding-right: 36px;
 }
+.entry-modal > .toasts {
+  position: static;
+  max-width: none;
+  justify-items: end;
+}
+.entry-modal > .toasts:not(:empty) {
+  padding: 10px 32px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.entry-modal > .toasts .toast {
+  box-shadow: none;
+}
 .entry-modal-close {
   position: absolute;
   top: 14px;
@@ -2995,11 +3019,12 @@ h4 {
   height: 28px;
   font-size: 12.5px;
 }
+/* Save state, Supprimer and « ⋯ » close the type and status row, on its right. */
 .entry-actions {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  margin-left: auto;
 }
 /* Writing on the left, what describes the entry on a rail at the right; one column when the modal is narrow. */
 .entry-body {
@@ -3043,7 +3068,7 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
+  margin-right: 8px;
   font-size: 12px;
   color: var(--muted);
 }
@@ -3399,6 +3424,25 @@ h4 {
 }
 .more-menu {
   min-width: 160px;
+}
+/* An item with a hint: the label, then what it does on a muted second line. */
+.more-menu button.with-hint {
+  align-items: flex-start;
+  height: auto;
+  padding: 7px 10px;
+}
+.more-menu button.with-hint svg {
+  margin-top: 2px;
+}
+.more-item {
+  display: grid;
+  gap: 2px;
+  max-width: 250px;
+}
+.more-item-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
 }
 .more-menu button.danger,
 .more-menu button.danger:hover,

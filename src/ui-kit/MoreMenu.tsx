@@ -1,14 +1,17 @@
 import { Ellipsis, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-export type MoreItem = { label: string; icon: LucideIcon; danger?: boolean; onClick: () => void };
+/** `hint` is a second, muted line that says what the action does; it is read as the item's description. */
+export type MoreItem = { label: string; icon: LucideIcon; hint?: string; danger?: boolean; onClick: () => void };
 
-/** The « ⋯ » button and its menu (rename, delete…), drawn over the page so no scrolling box clips it. */
+/** The « ⋯ » button and its menu (rename, delete…), drawn over the page so no scrolling box clips it.
+ * Inside a modal <dialog> it is drawn in the dialog: outside, the page is inert. */
 export function MoreMenu({ label, items, className = "" }: { label: string; items: MoreItem[]; className?: string }) {
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState<{ top: number; right: number } | null>(null);
+  const id = useId();
   useEffect(() => {
     if (!at) return;
     requestAnimationFrame(() => menu.current?.querySelector("button")?.focus());
@@ -61,23 +64,33 @@ export function MoreMenu({ label, items, className = "" }: { label: string; item
       {at &&
         createPortal(
           <div ref={menu} className="project-menu more-menu" role="menu" style={{ top: at.top, right: at.right }}>
-            {items.map(({ label, icon: Icon, danger, onClick }) => (
+            {items.map(({ label, icon: Icon, hint, danger, onClick }, i) => (
               <button
                 key={label}
                 type="button"
                 role="menuitem"
-                className={danger ? "danger" : undefined}
+                className={[danger && "danger", hint && "with-hint"].filter(Boolean).join(" ") || undefined}
+                aria-describedby={hint ? `${id}-${i}` : undefined}
                 onClick={() => {
                   setAt(null);
                   onClick();
                 }}
               >
                 <Icon aria-hidden="true" />
-                {label}
+                {hint ? (
+                  <span className="more-item">
+                    {label}
+                    <span id={`${id}-${i}`} className="more-item-hint">
+                      {hint}
+                    </span>
+                  </span>
+                ) : (
+                  label
+                )}
               </button>
             ))}
           </div>,
-          document.body,
+          button.current?.closest("dialog") ?? document.body,
         )}
     </>
   );

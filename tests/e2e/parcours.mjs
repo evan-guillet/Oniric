@@ -301,7 +301,7 @@ await nav("Atelier");
 check((await page.inputValue("#w-prep\\.premise\\.who")) === "Une boulangère timide", "atelier : un champ rempli est gardé d'une vue à l'autre (ATL-02)");
 
 await nav("Bible");
-await button("Retrouver les personnages et les lieux du scénario").click();
+await button("Détecter les personnages et les lieux").click();
 await page.waitForSelector(".detect-item", { timeout: 15000 });
 // Doubtful names (probable duplicates, sub-locations, roles) start unchecked; only the checked ones become entries.
 const detected = await page.locator(".detect-item input:checked").count();
