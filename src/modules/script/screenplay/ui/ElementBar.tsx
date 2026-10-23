@@ -15,6 +15,7 @@ import { ELEMENT_TYPES, type ElementType } from "../domain/formats";
 import type { EditorSnapshot, ScriptEditor } from "./editor/ScriptEditor";
 
 const GAP = 6;
+const NAVIGATION = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);
 
 const ICONS: Record<ElementType, LucideIcon> = {
   scene_heading: Clapperboard,
@@ -56,7 +57,8 @@ export function ElementBar({ editor, column, snap }: { editor: ScriptEditor | nu
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey || e.key === "Shift") return;
-      setTyping(true);
+      // Moving through the text keeps the bar in view, over the line the cursor lands on.
+      setTyping(!NAVIGATION.has(e.key));
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Control") setKeys(false);

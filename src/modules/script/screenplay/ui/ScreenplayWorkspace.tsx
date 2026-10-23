@@ -40,7 +40,10 @@ import { schema } from "./editor/schema";
 import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
-import { SceneList, type SceneRow } from "./SceneList";
+import { SceneList, type ListGroup, type SceneRow } from "./SceneList";
+import { STORY_TABLES, loadStory, storyOutline } from "../../views/application/story";
+import { numberedParts } from "../../views/domain/outline";
+import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
 /** How the screenplay shows on screen; the pagination, exports and printing stay the same. */
@@ -224,6 +227,24 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     return rowsRef.current;
   }, [snap]);
 
+  // Acts and sequences around the scenes, as the board arranges them.
+  const story = useLive(loadStory, [...STORY_TABLES]);
+  const sceneInfos = useScenes(session);
+  const groups = useMemo<ListGroup[]>(() => {
+    if (!story) return [];
+    const outlined = storyOutline(story, sceneInfos.map((s) => s.id));
+    const parts = numberedParts(outlined);
+    const index = new Map(sceneInfos.map((s, i) => [s.id, i]));
+    const label = (id: string) => ({ id, ...parts.get(id)! });
+    return outlined.map((g) => ({
+      act: g.act ? label(g.act.id) : null,
+      sequences: g.sequences.map((q) => ({
+        sequence: q.sequence ? label(q.sequence.id) : null,
+        scenes: q.scenes.map((id) => index.get(id)).filter((i): i is number => i !== undefined),
+      })),
+    }));
+  }, [story, sceneInfos]);
+
   const selectScene = useCallback(
     (i: number) => editorRef.current?.goToScene(i),
     [],
@@ -236,8 +257,10 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         <aside className="sidebar">
           <SceneList
             scenes={rows}
+            groups={groups}
             current={snap?.sceneIndex ?? 0}
             onSelect={selectScene}
+            foldKey={`oniric.script.folds.${project.id}`}
           />
         </aside>
 

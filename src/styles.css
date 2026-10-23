@@ -1499,6 +1499,87 @@ kbd {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+/* Acts and sequences around the scenes: folding heads, a guide line down each open part */
+.scene-list .outlined,
+.outline-part ol {
+  grid-template-columns: minmax(0, 1fr);
+}
+.scene-list .outlined {
+  gap: 2px;
+}
+.outline-part ol {
+  list-style: none;
+  display: grid;
+  gap: 1px;
+  margin: 1px 0 4px 11px;
+  padding: 0 0 0 4px;
+  border-left: 1px solid var(--line);
+}
+.scene-list .outline-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px 0 4px;
+  color: var(--ink-2);
+}
+.outline-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: rotate 140ms ease-out;
+}
+.outline-head[aria-expanded="true"] .outline-chevron {
+  rotate: 90deg;
+}
+.outline-num {
+  flex: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.outline-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.outline-part.part-act > .outline-head .outline-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+.outline-part.part-seq > .outline-head .outline-title {
+  font-weight: 500;
+}
+.outline-count {
+  margin-left: auto;
+  padding-left: 6px;
+  color: var(--hint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+/* A folded part holding the current scene keeps a trace of it */
+.outline-part.here > .outline-head[aria-expanded="false"] {
+  background: var(--accent-soft);
+}
+.outline-part.here > .outline-head[aria-expanded="false"] .outline-num,
+.outline-part.here > .outline-head[aria-expanded="false"] .outline-chevron {
+  color: var(--accent);
+}
+.scene-list .outline-part.part-act > .outline-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
+}
+.scene-list .outline-part.part-act > .outline-head:hover {
+  background: color-mix(in srgb, var(--panel), var(--ink) 4.5%);
+}
+.scene-list .outline-part.here.part-act > .outline-head[aria-expanded="false"] {
+  background: var(--accent-soft);
+}
 .desk {
   overflow: auto;
   background: var(--desk);
@@ -4381,14 +4462,15 @@ h4 {
 /* Versions: the thread of the versions on the left, newest first; what changed between two of them on the right. */
 .versions-view {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
   overflow: hidden;
 }
 
 .vr-rail {
+  order: 2;
   overflow: auto;
   padding: 16px 12px 32px;
-  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
   background: var(--sunken);
 }
 .vr-thread {
@@ -5070,8 +5152,9 @@ h4 {
     grid-template-rows: auto minmax(0, 1fr);
   }
   .vr-rail {
+    order: 0;
     max-height: 38vh;
-    border-right: none;
+    border-left: none;
     border-bottom: 1px solid var(--line);
   }
   .vr-main {
