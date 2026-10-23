@@ -34,15 +34,38 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 
 /**
  * Wiki links in any ProseMirror editor: a list of bible entries under the cursor after `@` or `[[`,
- * a preview on hover, Ctrl+click to open the entry.
+ * a preview on hover, Ctrl+click to open the entry. A plain click places the caret in the word, as in any text;
+ * the preview itself is the way to the entry: the pointer can move onto it, and a click there opens the entry.
+ * `links` says whether the links show: hidden, they read as plain text, without a preview.
  */
-export function wikiPlugin(mark: MarkType, source: () => WikiSource | null): Plugin {
+export function wikiPlugin(mark: MarkType, source: () => WikiSource | null, links?: () => boolean): Plugin {
   let active: Active | null = null;
   let dismissedAt = -1;
   let view: EditorView | null = null;
   const popup = el("div", "wiki-popup");
   popup.setAttribute("role", "listbox");
   const preview = el("div", "wiki-preview");
+  preview.setAttribute("role", "link");
+  let previewId: string | null = null;
+  // Leaving the link for the preview crosses a gap: the preview waits a moment before it goes.
+  let hideTimer = 0;
+  const hide = () => {
+    window.clearTimeout(hideTimer);
+    previewId = null;
+    preview.remove();
+  };
+  const hideSoon = () => {
+    window.clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(hide, 350);
+  };
+  preview.addEventListener("mouseenter", () => window.clearTimeout(hideTimer));
+  preview.addEventListener("mouseleave", hideSoon);
+  preview.addEventListener("mousedown", (e) => e.preventDefault());
+  preview.addEventListener("click", () => {
+    const id = previewId;
+    hide();
+    if (id) source()?.open(id);
+  });
 
   const render = () => {
     popup.replaceChildren();
@@ -94,6 +117,8 @@ export function wikiPlugin(mark: MarkType, source: () => WikiSource | null): Plu
   return new Plugin({
     view(v) {
       view = v;
+      // A fixed preview would stay put while the text scrolls away under it.
+      window.addEventListener("scroll", hide, true);
       return {
         update(v) {
           view = v;
@@ -104,13 +129,15 @@ export function wikiPlugin(mark: MarkType, source: () => WikiSource | null): Plu
         },
         destroy() {
           popup.remove();
-          preview.remove();
+          hide();
+          window.removeEventListener("scroll", hide, true);
           view = null;
         },
       };
     },
     props: {
       handleKeyDown(_v, e) {
+        if (previewId) hide();
         if (!active) return false;
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           const n = active.items.length;
@@ -134,25 +161,32 @@ export function wikiPlugin(mark: MarkType, source: () => WikiSource | null): Plu
         mouseover(_v, e) {
           const link = (e.target as HTMLElement).closest?.(".wikilink") as HTMLElement | null;
           const target = link?.dataset.id ? source()?.get(link.dataset.id) : undefined;
-          if (!link || !target) {
-            preview.remove();
+          if (!link || !target || links?.() === false) {
+            if (previewId) hideSoon();
             return false;
           }
-          preview.replaceChildren(el("strong", "", target.name), el("span", "wiki-type", target.typeName));
+          window.clearTimeout(hideTimer);
+          if (previewId === target.id && preview.isConnected) return false;
+          previewId = target.id;
+          const head = el("div", "wiki-preview-head");
+          head.append(el("strong", "", target.name), el("span", "wiki-type", target.typeName));
+          preview.replaceChildren(head);
           if (target.summary) preview.appendChild(el("p", "", target.summary));
+          preview.appendChild(el("span", "wiki-preview-open", "Ouvrir la fiche"));
+          preview.setAttribute("aria-label", `Ouvrir la fiche ${target.name}`);
           const r = link.getBoundingClientRect();
-          Object.assign(preview.style, { left: `${r.left}px`, top: `${r.bottom + 6}px` });
+          Object.assign(preview.style, { left: `${r.left}px`, top: `${r.bottom + 4}px` });
           if (!preview.isConnected) document.body.appendChild(preview);
           return false;
         },
         mouseout(_v, e) {
-          if ((e.target as HTMLElement).closest?.(".wikilink")) preview.remove();
+          if ((e.target as HTMLElement).closest?.(".wikilink")) hideSoon();
           return false;
         },
         click(_v, e) {
           const link = (e.target as HTMLElement).closest?.(".wikilink") as HTMLElement | null;
           if (!link?.dataset.id || !(e.ctrlKey || e.metaKey)) return false;
-          preview.remove();
+          hide();
           source()?.open(link.dataset.id);
           return true;
         },

@@ -1103,14 +1103,19 @@ kbd {
 }
 /* « Rechercher » under the project name: the palette, Ctrl+K */
 .nav-link.nav-search {
-  margin-bottom: 2px;
+  margin-bottom: 6px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line-strong);
   color: var(--muted);
+}
+.nav-link.nav-search:hover {
+  box-shadow: 0 0 0 1px var(--muted);
+  color: var(--ink-2);
 }
 .nav-search kbd {
   flex: none;
   font-size: 10.5px;
   color: var(--muted);
-  background: none;
 }
 .nav-link.later {
   color: var(--muted);
@@ -2177,9 +2182,36 @@ h4 {
   color: var(--muted);
   font-size: 12px;
 }
+/* The way to the entry: the pointer moves onto it from the link, a click opens the entry */
 .wiki-preview {
+  display: grid;
+  gap: 6px;
   padding: 10px 12px;
-  pointer-events: none;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.wiki-preview:hover {
+  border-color: var(--accent-line);
+}
+.wiki-preview p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.wiki-preview-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.wiki-preview-open {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+.wiki-preview:hover .wiki-preview-open {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Workshop */
@@ -5453,6 +5485,79 @@ h4 {
 .header-tools .seg {
   border-radius: 7px;
 }
+/* « Affichage »: a button that opens options with their boxes */
+.check-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+.check-menu-btn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.check-menu-btn .check-menu-caret {
+  width: 14px;
+  height: 14px;
+  transition: rotate 160ms ease-out;
+}
+.check-menu-btn:hover:not(:disabled),
+.check-menu-btn.on {
+  background: var(--hover);
+  border-color: var(--line-strong);
+}
+.check-menu-btn.on .check-menu-caret {
+  rotate: 180deg;
+}
+.check-menu-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.check-menu {
+  min-width: 260px;
+}
+.project-menu.check-menu button {
+  align-items: flex-start;
+  height: auto;
+  padding: 8px 10px;
+}
+.check-box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--panel);
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+.project-menu.check-menu .check-box svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent-ink);
+  stroke-width: 3;
+}
+.check-menu button[aria-checked="true"] .check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
 .seg svg {
   width: 16px;
   height: 16px;
@@ -5485,7 +5590,7 @@ h4 {
   /* The break widget sets its own display inline */
   display: none !important;
 }
-.desk.display-bare {
+.desk.sheetless {
   background: var(--panel);
 }
 .desk.sheetless .page-column {
@@ -5503,6 +5608,11 @@ h4 {
 .desk.sheetless .page-column .wikilink {
   color: var(--accent);
   background: var(--accent-soft);
+}
+/* « Liens Bible » off: the links read as the text around them */
+.desk.links-off .page-column .wikilink {
+  color: inherit;
+  background: none;
 }
 /* No page break to open, so an element keeps its space even at the top of a printed page */
 .desk.sheetless .mount .ProseMirror .el.page-top {
@@ -5528,13 +5638,13 @@ h4 {
   pointer-events: none;
   user-select: none;
 }
-/* One card per scene, tinted with its colour from the Tableau; the text keeps its printed width */
+/* One card per scene on the white desk, tinted with its colour from the Tableau; the text keeps its printed width */
 .desk.display-cards .mount .scene {
   margin: 0 -0.6in;
   padding: 0.2in 0.6in 0.22in;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--scene, var(--panel)) 16%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
+  background: color-mix(in srgb, var(--scene, var(--line)) 14%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--scene, var(--line-strong)) 45%, var(--line));
   box-shadow: var(--shadow-sm);
   transition: border-color 120ms ease-out;
 }
@@ -5647,6 +5757,7 @@ h4 {
   margin: 0 auto;
   pointer-events: none;
 }
+/* Its top, set inline: level with the first scene, then 28px under the top of the desk */
 .story-pin {
   position: absolute;
   top: 28px;
@@ -6027,6 +6138,7 @@ h4 {
   .segmented.compact .seg {
     padding: 0 8px;
   }
+  .check-menu-btn > span,
   .segmented.compact .seg > span {
     position: absolute;
     width: 1px;

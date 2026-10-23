@@ -2,11 +2,10 @@ import {
   Archive,
   ArchiveRestore,
   BookOpen,
-  Feather,
+  Eye,
   FileText,
   Pencil,
   Plus,
-  Rows3,
   StickyNote,
   Trash2,
   X,
@@ -20,6 +19,7 @@ import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
 import { useChoice } from "../../../../ui-kit/Dialog";
+import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile } from "../../../project/application/profile";
@@ -60,24 +60,24 @@ import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
-/** How the writing shows on screen; the pagination, exports and printing stay the same. */
-type Display = "bare" | "cards";
+/**
+ * How the writing shows on screen, on a white desk: each scene framed in a card or not, the bible links coloured and
+ * clickable or not. The pagination, exports and printing stay the same.
+ */
+type Display = { cards: boolean; links: boolean };
 const DISPLAY_KEY = "oniric.script.display";
-const DISPLAYS: SegmentedOption<Display>[] = [
-  { id: "bare", label: "Sans feuille", hint: "Le texte seul, à même le fond", icon: Feather },
-  { id: "cards", label: "Par scène", hint: "Chaque scène dans sa carte, à la couleur du Tableau", icon: Rows3 },
-];
+const LINKS_KEY = "oniric.script.links";
 
 function savedDisplay(): Display {
   try {
-    if (localStorage.getItem(DISPLAY_KEY) === "cards") return "cards";
+    return { cards: localStorage.getItem(DISPLAY_KEY) === "cards", links: localStorage.getItem(LINKS_KEY) !== "off" };
   } catch {
     // Storage unavailable: the default display.
+    return { cards: false, links: true };
   }
-  return "bare";
 }
 
-/** How far below the top of the desk the act/sequence pin sits (`.story-pin` in the styles). */
+/** How far below the top of the desk the act/sequence pin sticks once the first scene has gone up past it. */
 const PIN_TOP = 28;
 
 /** Where a scene starts for the eye: the edge of its card, or without cards the top of its heading's text. */
@@ -143,14 +143,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const preview = mode === "preview";
   const body: "editor" | "title" | "preview" = preview ? "preview" : mode === "title" ? "title" : "editor";
   const [display, setDisplayState] = useState<Display>(savedDisplay);
+  const linksRef = useRef(display.links);
+  linksRef.current = display.links;
   const setDisplay = (d: Display) => {
     setDisplayState(d);
     try {
-      localStorage.setItem(DISPLAY_KEY, d);
+      localStorage.setItem(DISPLAY_KEY, d.cards ? "cards" : "bare");
+      localStorage.setItem(LINKS_KEY, d.links ? "on" : "off");
     } catch {
       // Not remembered: it still applies until the project is closed.
     }
-    requestAnimationFrame(() => editorRef.current?.focus());
   };
   /** A view's button opens it in place of the one shown; pressed again, it goes back to writing. */
   const toggleMode = (m: Mode) => {
@@ -166,7 +168,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const addAfterRef = useRef<(afterId: string) => void>(() => {});
   const plugins = useMemo(
     () => [
-      wikiPlugin(schema.marks.wikilink, () => bibleIndex),
+      wikiPlugin(schema.marks.wikilink, () => bibleIndex, () => linksRef.current),
       sceneGapsPlugin((id) => addAfterRef.current(id)),
     ],
     [],
@@ -426,6 +428,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
   // The act and sequence of the scene at the top of the desk, pinned beside the text.
   const [topScene, setTopScene] = useState(0);
+  /** The pin's top under the rail: level with the first scene, then held `PIN_TOP` under the top of the desk. */
+  const [pinTop, setPinTop] = useState(PIN_TOP);
   const sceneCount = snap?.headings.length ?? 0;
   useEffect(() => {
     const desk = deskRef.current;
@@ -433,11 +437,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      // The line is the top of the pin itself: the pin changes as the scene it names comes level with it.
-      const rail = desk.querySelector(".story-pin-rail");
-      const line = (rail ? rail.getBoundingClientRect().top : desk.getBoundingClientRect().top) + PIN_TOP;
       const cards = desk.classList.contains("display-cards");
       const scenes = mountRef.current?.querySelectorAll<HTMLElement>(":scope > .ProseMirror > .scene") ?? [];
+      // The rail sticks at the top of the desk's content box, where it also starts.
+      const railTop = desk.getBoundingClientRect().top + parseFloat(getComputedStyle(desk).paddingTop);
+      const top = scenes[0] ? Math.max(PIN_TOP, Math.round(sceneStart(scenes[0], cards) - railTop)) : PIN_TOP;
+      setPinTop(top);
+      // The line is the top of the pin itself: the pin changes as the scene it names comes level with it.
+      const line = railTop + top;
       let i = 0;
       for (let k = 0; k < scenes.length; k++) {
         if (sceneStart(scenes[k], cards) > line + 0.5) break;
@@ -454,7 +461,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       desk.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(frame);
     };
-  }, [body, display, sceneCount]);
+  }, [body, display.cards, sceneCount]);
   const pin = useMemo(() => {
     for (const g of groups)
       for (const q of g.sequences)
@@ -479,7 +486,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   return (
     <>
       {format && <style>{formatCss(format, false)}</style>}
-      {display === "cards" && story && <style>{cardCss}</style>}
+      {display.cards && story && <style>{cardCss}</style>}
       {choice}
       <div className="workspace">
         <aside className="sidebar" aria-label={PANELS[panel]}>
@@ -503,7 +510,11 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
         <main
           ref={deskRef}
-          className={body === "editor" ? `desk sheetless display-${display}` : "desk desk-print"}
+          className={
+            body === "editor"
+              ? `desk sheetless ${display.cards ? "display-cards" : "display-bare"}${display.links ? "" : " links-off"}`
+              : "desk desk-print"
+          }
         >
           {format && body === "editor" && pin && (
             <div
@@ -519,6 +530,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                 className="story-pin"
                 style={
                   {
+                    top: pinTop,
                     right: `calc(100% - ${format.margins.left - 0.6}in + 22px)`,
                     // As wide as the room left of the cards, up to 180px.
                     maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px))`,
@@ -587,13 +599,25 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         headerActions &&
         createPortal(
           <div className="header-tools">
-            <Segmented
+            <CheckMenu
               label="Affichage"
-              options={DISPLAYS}
-              value={display}
-              onChange={setDisplay}
-              compact
+              icon={Eye}
               disabled={body !== "editor"}
+              items={[
+                {
+                  id: "cards",
+                  label: "Cartes de scène",
+                  hint: "Chaque scène dans sa carte, à la couleur du Tableau",
+                  checked: display.cards,
+                },
+                {
+                  id: "links",
+                  label: "Liens de la Bible",
+                  hint: "Les éléments de la Bible en couleur, leur fiche au survol",
+                  checked: display.links,
+                },
+              ]}
+              onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
             />
             <span className="bar-sep" aria-hidden="true" />
             <Segmented
