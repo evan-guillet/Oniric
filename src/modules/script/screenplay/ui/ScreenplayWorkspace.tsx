@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { commands } from "../../../../bindings";
@@ -49,11 +49,12 @@ import {
 } from "../domain/titlePage";
 import { schema } from "./editor/schema";
 import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
+import { sceneGapsPlugin } from "./editor/sceneGaps";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
 import { PrintPages, PrintTitlePage } from "./PrintPages";
 import { SceneList, type ListGroup, type SceneRow } from "./SceneList";
-import { STORY_TABLES, loadStory, storyOutline } from "../../views/application/story";
+import { STORY_TABLES, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
@@ -127,6 +128,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [mode, setMode] = useState<Mode>("write");
   const panel: Panel = mode === "notes" ? "notes" : mode === "title" ? "title" : "scenes";
   const preview = mode === "preview";
+  const body: "editor" | "title" | "preview" = preview ? "preview" : mode === "title" ? "title" : "editor";
   const [display, setDisplayState] = useState<Display>(savedDisplay);
   const setDisplay = (d: Display) => {
     setDisplayState(d);
@@ -147,8 +149,13 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const toggleModeRef = useRef(toggleMode);
   toggleModeRef.current = toggleMode;
   const rowsRef = useRef<SceneRow[]>([]);
+  /** « + Nouvelle scène » between two cards: set once the story is loaded. */
+  const addAfterRef = useRef<(afterId: string) => void>(() => {});
   const plugins = useMemo(
-    () => [wikiPlugin(schema.marks.wikilink, () => bibleIndex)],
+    () => [
+      wikiPlugin(schema.marks.wikilink, () => bibleIndex),
+      sceneGapsPlugin((id) => addAfterRef.current(id)),
+    ],
     [],
   );
 
@@ -353,6 +360,58 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   );
 
 
+  // A new scene under another joins its sequence, as on the board.
+  addAfterRef.current = (afterId) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const at = editor.indexOfScene(afterId) + 1;
+    const id = editor.insertScene(at);
+    editor.goToScene(at);
+    void session
+      .flush()
+      .then(() => updateSceneMeta(id, { sequenceId: story?.meta.get(afterId)?.sequenceId ?? null, status: "todo" }))
+      .catch((e) => notify({ text: describeError(e), tone: "error" }));
+  };
+
+  // The act and sequence of the scene at the top of the desk, pinned beside the text.
+  const [topScene, setTopScene] = useState(0);
+  const sceneCount = snap?.headings.length ?? 0;
+  useEffect(() => {
+    const desk = deskRef.current;
+    if (!desk || body !== "editor") return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const line = desk.getBoundingClientRect().top + desk.clientHeight * 0.3;
+      const scenes = mountRef.current?.querySelectorAll(":scope > .ProseMirror > .scene") ?? [];
+      let i = 0;
+      for (let k = 0; k < scenes.length; k++) {
+        if (scenes[k].getBoundingClientRect().top > line) break;
+        i = k;
+      }
+      setTopScene(i);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
+    desk.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      desk.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, [body, display, sceneCount]);
+  const pin = useMemo(() => {
+    for (const g of groups)
+      for (const q of g.sequences)
+        if (q.scenes.includes(topScene)) {
+          if (!g.act && !q.sequence) return null;
+          const color = story?.acts.find((a) => a.id === g.act?.id)?.color;
+          return { act: g.act, sequence: q.sequence, color: color && /^#[0-9a-f]{3,8}$/i.test(color) ? color : null };
+        }
+    return null;
+  }, [groups, topScene, story]);
+
   const currentId = sceneInfos[snap?.sceneIndex ?? 0]?.id;
   const cardCss = useMemo(
     () => (story ? sceneCardCss(sceneInfos.map((s) => s.id), (id) => story.meta.get(id)?.color ?? null, currentId) : ""),
@@ -362,7 +421,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
   const storedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
   const printedTitle = hasContent(storedTitle) ? storedTitle : null;
-  const body: "editor" | "title" | "preview" = preview ? "preview" : mode === "title" ? "title" : "editor";
 
   return (
     <>
@@ -391,6 +449,42 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           ref={deskRef}
           className={body === "editor" ? `desk sheetless display-${display}` : "desk desk-print"}
         >
+          {format && body === "editor" && pin && (
+            <div
+              className="story-pin-rail"
+              aria-hidden="true"
+              style={{
+                width: `${format.page.width}in`,
+                translate: `${(format.margins.right - format.margins.left) / 2}in`,
+              }}
+            >
+              <div
+                key={`${pin.act?.id}:${pin.sequence?.id}`}
+                className="story-pin"
+                style={
+                  {
+                    right: `calc(100% - ${format.margins.left - 0.6}in + 22px)`,
+                    // As wide as the room left of the cards, up to 180px.
+                    maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px))`,
+                    "--act": pin.color ?? undefined,
+                  } as CSSProperties
+                }
+              >
+                {pin.act && (
+                  <span className="story-pin-part">
+                    <span className="story-pin-num">{pin.act.num}</span>
+                    {pin.act.title && <span className="story-pin-title act">{pin.act.title}</span>}
+                  </span>
+                )}
+                {pin.sequence && (
+                  <span className="story-pin-part">
+                    <span className="story-pin-num">{pin.sequence.num}</span>
+                    {pin.sequence.title && <span className="story-pin-title">{pin.sequence.title}</span>}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           {format && (
             <div
               ref={columnRef}

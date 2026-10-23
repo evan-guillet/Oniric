@@ -5445,6 +5445,13 @@ h4 {
   color: var(--accent);
   background: var(--accent-soft);
 }
+/* No page break to open, so an element keeps its space even at the top of a printed page */
+.desk.sheetless .mount .ProseMirror .el.page-top {
+  padding-top: var(--space-before);
+}
+.desk.sheetless .mount .scene:first-child > .el:first-child {
+  --space-before: 0in;
+}
 /* Scene numbers in the left margin, as the scene list counts them, level with the heading's first line */
 .desk.sheetless .mount .ProseMirror {
   counter-reset: scene;
@@ -5464,7 +5471,7 @@ h4 {
 }
 /* One card per scene, tinted with its colour from the Tableau; the text keeps its printed width */
 .desk.display-cards .mount .scene {
-  margin: 0 -0.6in 14px;
+  margin: 0 -0.6in;
   padding: 0.2in 0.6in 0.22in;
   border-radius: 10px;
   background: color-mix(in srgb, var(--scene, var(--panel)) 16%, var(--panel));
@@ -5481,6 +5488,156 @@ h4 {
 }
 .desk.display-cards .mount .ProseMirror {
   padding-top: 4px;
+}
+/* Between two cards: hovered, they part to make room for « + Nouvelle scène » on a line */
+.scene-gap {
+  display: none;
+}
+.desk.display-cards .scene-gap {
+  display: block;
+  position: relative;
+  z-index: 1;
+  height: 14px;
+  margin: 0 -0.6in;
+  user-select: none;
+  transition: height 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.desk.display-cards .scene-gap::before {
+  /* A wider band to catch the pointer, over the cards' edges */
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+}
+.desk.display-cards .scene-gap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  right: 18px;
+  border-top: 1px solid var(--accent-line);
+  opacity: 0;
+  scale: 0.6 1;
+  transition:
+    opacity 160ms ease-out,
+    scale 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scene-gap-add {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px 0 9px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  font: 500 12px/1 var(--ui-font);
+  cursor: pointer;
+  opacity: 0;
+  scale: 0.9;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease-out,
+    scale 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 120ms ease-out;
+}
+.scene-gap-add svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.desk.display-cards .scene-gap:hover {
+  height: 46px;
+  transition-delay: 60ms;
+}
+.desk.display-cards .scene-gap:hover::after {
+  opacity: 1;
+  scale: 1;
+  transition-delay: 100ms;
+}
+.desk.display-cards .scene-gap:hover .scene-gap-add {
+  opacity: 1;
+  scale: 1;
+  pointer-events: auto;
+  transition-delay: 120ms, 120ms, 0ms;
+}
+.scene-gap-add:hover {
+  background: var(--accent-soft);
+}
+.scene-gap-add:active {
+  scale: 0.97;
+}
+/* The act and sequence of the scene at the top, pinned to the left of the text */
+.desk.sheetless {
+  container: desk / inline-size;
+}
+.story-pin-rail {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 0;
+  margin: 0 auto;
+  pointer-events: none;
+}
+.story-pin {
+  position: absolute;
+  top: 28px;
+  display: grid;
+  gap: 10px;
+  width: max-content;
+  padding: 2px 12px 2px 0;
+  border-right: 2px solid color-mix(in srgb, var(--act, var(--line-strong)) 70%, var(--line-strong));
+  text-align: right;
+  font: 12px/1.35 var(--ui-font);
+  animation: pin-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.story-pin-part {
+  display: grid;
+  gap: 1px;
+}
+.story-pin-num {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.story-pin-title {
+  color: var(--ink-2);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.story-pin-title.act {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+@keyframes pin-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+@container desk (max-width: 900px) {
+  .story-pin {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-pin,
+  .desk.display-cards .scene-gap,
+  .desk.display-cards .scene-gap::after,
+  .scene-gap-add {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* Paper: follows the theme on screen; exports and printing stay ink on white */

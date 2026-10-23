@@ -125,7 +125,7 @@ export function formatCss(f: ScreenplayFormat, withPage = true): string {
       `.fmt .ProseMirror .el-${type} { --space-before: ${s.spaceBefore * lh}in; padding-top: var(--space-before); }`,
     );
   }
-  rules.push(`.fmt .ProseMirror .el.page-top { --space-before: 0in; }`);
+  rules.push(`.fmt .ProseMirror .el.page-top { padding-top: 0; }`);
   if (withPage) rules.push(`@page { size: ${f.page.width}in ${f.page.height}in; margin: 0; }`);
   return rules.join("\n");
 }
