@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   CalendarDays,
+  ChartColumn,
   ChartGantt,
   ChevronDown,
   ChevronRight,
@@ -69,6 +70,8 @@ import {
 import { formatMinutes } from "../../script/screenplay/domain/duration";
 import { ScreenplayWorkspace } from "../../script/screenplay/ui/ScreenplayWorkspace";
 import { VersionsView } from "../../script/screenplay/ui/VersionsView";
+import { useWritingJournal } from "../../script/stats/application/journal";
+import { StatsView } from "../../script/stats/ui/StatsView";
 import { BoardView } from "../../script/views/ui/BoardView";
 import { TimelineView } from "../../script/views/ui/TimelineView";
 import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
@@ -110,6 +113,7 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
       { id: "board", label: "Tableau", icon: SquareKanban },
       { id: "timeline", label: "Chronologie", icon: ChartGantt },
       { id: "versions", label: "Versions", icon: History },
+      { id: "stats", label: "Statistiques", icon: ChartColumn },
     ],
   },
   {
@@ -326,6 +330,7 @@ export function ProjectShell({
   );
 
   useBackupWatch(notify);
+  useWritingJournal(session);
 
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -552,6 +557,7 @@ export function ProjectShell({
             {view === "board" && <BoardView />}
             {view === "timeline" && <TimelineView />}
             {view === "versions" && <VersionsView />}
+            {view === "stats" && <StatsView />}
             {LATER.has(view) && <LaterView view={view} />}
           </div>
 

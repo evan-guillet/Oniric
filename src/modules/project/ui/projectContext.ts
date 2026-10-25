@@ -11,6 +11,7 @@ export type ViewId =
   | "board"
   | "timeline"
   | "versions"
+  | "stats"
   | "settings"
   | "moodboard"
   | "shotlist"
