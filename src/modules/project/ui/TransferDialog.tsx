@@ -14,6 +14,7 @@ import { loadDocument } from "../../script/workshop/application/workshop";
 import { exportDocumentPdf } from "../../script/workshop/ui/documentExport";
 import { useProject, type TransferMode, type TransferSection } from "./projectContext";
 
+import { Select } from "../../../ui-kit/Select";
 interface Option {
   id: string;
   label: string;
@@ -168,14 +169,14 @@ export function TransferDialog({
             <div className="form transfer-options">
               <label className="field">
                 <span>Mise en page</span>
-                <select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
+                <Select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
                   {formats.map((x) => (
                     <option key={x.id} value={x.id}>
                       {x.name}
                       {x.id === currentFormat.id ? " (actuel)" : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               {formatId !== currentFormat.id && <p className="muted small">Le scénario n'est pas modifié : seules les pages du PDF sont recalculées dans ce format.</p>}
               <label className="choice">

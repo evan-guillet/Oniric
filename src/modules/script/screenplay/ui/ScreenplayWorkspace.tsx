@@ -60,6 +60,7 @@ import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
+import { Select } from "../../../../ui-kit/Select";
 /**
  * How the writing shows on screen, on a white desk: each scene framed in a card or not, the bible links coloured and
  * clickable or not, the act and sequence pinned beside the text or not. The pagination, exports and printing stay
@@ -735,13 +736,13 @@ function TitlePagePanel({
       {field("contact", "Contact", 5, "Nom, agent, téléphone, e-mail")}
       <label className="field">
         <span>Mentions</span>
-        <select value={page.mention} onChange={(e) => set({ mention: e.target.value as MentionId })}>
+        <Select value={page.mention} onChange={(e) => set({ mention: e.target.value as MentionId })}>
           {MENTIONS.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {custom && (
         <label className="field">

@@ -16,6 +16,7 @@ import { appearances } from "../domain/appearances";
 import { STATUSES, type EntryType, type FieldDef } from "../domain/types";
 import { wikiPlugin } from "./wikiPlugin";
 
+import { Select } from "../../../../ui-kit/Select";
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 /** Scenes listed before « Voir les N scènes ». */
 const SCENES_SHOWN = 6;
@@ -126,20 +127,20 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
         <div className="entry-title">
           <input className="entry-name-input" value={draft.name} onChange={(e) => update({ name: e.target.value })} onBlur={() => void flush()} aria-label="Nom" />
           <div className="entry-meta">
-            <select value={draft.type} onChange={(e) => update({ type: e.target.value })} aria-label="Type">
+            <Select value={draft.type} onChange={(e) => update({ type: e.target.value })} aria-label="Type">
               {types.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
-            </select>
-            <select value={draft.status} onChange={(e) => update({ status: e.target.value as EntryStatus })} aria-label="Statut">
+            </Select>
+            <Select value={draft.status} onChange={(e) => update({ status: e.target.value as EntryStatus })} aria-label="Statut">
               {STATUSES.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {/* From the live entry: the draft never sees archiving, which saveEntry leaves alone. */}
             {entry.archivedAt && <span className="badge">Archivée</span>}
             {/* The occasional actions wait in « ⋯ »; only Supprimer, which can be undone, stays in view. */}
@@ -313,14 +314,14 @@ function FieldInput({
     case "list":
       return (
         <Labeled label={field.label} help={field.help}>
-          <select value={text} onChange={(e) => onChange(e.target.value)}>
+          <Select value={text} onChange={(e) => onChange(e.target.value)}>
             <option value="">—</option>
             {field.options?.map((o) => (
               <option key={o} value={o}>
                 {o}
               </option>
             ))}
-          </select>
+          </Select>
         </Labeled>
       );
     case "image":
@@ -334,14 +335,14 @@ function FieldInput({
       const options = entries.filter((e) => e.id !== selfId && (!field.target || e.type === field.target));
       return (
         <Labeled label={field.label} help={field.help}>
-          <select value={text} onChange={(e) => onChange(e.target.value)}>
+          <Select value={text} onChange={(e) => onChange(e.target.value)}>
             <option value="">—</option>
             {options.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Labeled>
       );
     }
@@ -426,7 +427,7 @@ function LinksInput({
             </button>
           </span>
         ))}
-        <select
+        <Select
           className="links-add"
           value=""
           aria-label={`Ajouter : ${label}`}
@@ -434,7 +435,9 @@ function LinksInput({
             if (e.target.value) onChange([...value, e.target.value]);
           }}
         >
-          <option value="">+ Lier…</option>
+          <option value="" hidden>
+            + Lier…
+          </option>
           {entries
             .filter((e) => e.id !== selfId && !value.includes(e.id))
             .map((e) => (
@@ -442,7 +445,7 @@ function LinksInput({
                 {e.name}
               </option>
             ))}
-        </select>
+        </Select>
       </div>
     </div>
   );

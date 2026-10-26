@@ -39,6 +39,7 @@ import {
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext } from "./projectContext";
 
+import { Select } from "../../../ui-kit/Select";
 export const PARTS_HIDDEN_SETTING = "parts_hidden";
 
 type Notify = (m: Omit<ToastMessage, "id">) => void;
@@ -668,7 +669,7 @@ function FormatEditor({
         </Labeled>
         <div className="input-row">
           <Labeled label="Papier">
-            <select
+            <Select
               value={paper}
               onChange={(e) =>
                 set({
@@ -681,16 +682,16 @@ function FormatEditor({
             >
               <option value="A4">A4</option>
               <option value="Letter">Letter (US)</option>
-            </select>
+            </Select>
           </Labeled>
           <Labeled label="Langue">
-            <select
+            <Select
               value={f.language}
               onChange={(e) => set({ language: e.target.value as "fr" | "en" })}
             >
               <option value="fr">Français</option>
               <option value="en">Anglais</option>
-            </select>
+            </Select>
           </Labeled>
           <Num
             label="Corps (pt)"

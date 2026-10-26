@@ -402,7 +402,7 @@ export function ProjectShell({
       ...views,
       action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
       action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
-      action("folder", "Ouvrir le dossier du projet", FolderOpen, () => void commands.reveal(project.dir, true), "explorateur disque emplacement fichiers"),
+      { ...action("folder", "Ouvrir le dossier du projet", FolderOpen, () => void commands.reveal(project.dir, true), "explorateur disque emplacement fichiers"), detail: project.dir },
       action("settings", "Réglages", Settings, () => setSettings(true), "préférences options"),
       action("light", "Thème clair", Sun, () => void setThemePreference("light"), "apparence jour"),
       action("dark", "Thème sombre", Moon, () => void setThemePreference("dark"), "apparence nuit"),
@@ -506,6 +506,7 @@ export function ProjectShell({
                 },
                 {
                   label: "Ouvrir le dossier du projet",
+                  detail: project.dir,
                   icon: FolderOpen,
                   onClick: () => void commands.reveal(project.dir, true),
                 },
@@ -697,6 +698,8 @@ export function ProjectShell({
 
 interface MenuItem {
   label: string;
+  /** A second, muted line under the label. */
+  detail?: string;
   icon: LucideIcon;
   onClick: () => void;
   separated?: boolean;
@@ -781,7 +784,6 @@ function ProjectMenu({
         >
           <div className="project-menu-head" role="presentation">
             <span className="project-menu-title">{title}</span>
-            <span className="project-menu-dir">{dir}</span>
           </div>
           {items.map((item) => {
             const Icon = item.icon;
@@ -790,14 +792,21 @@ function ProjectMenu({
                 key={item.label}
                 type="button"
                 role="menuitem"
-                className={item.separated ? "separated" : undefined}
+                className={[item.separated && "separated", item.detail && "detailed"].filter(Boolean).join(" ") || undefined}
                 onClick={() => {
                   onOpenChange(false);
                   item.onClick();
                 }}
               >
                 <Icon aria-hidden="true" />
-                {item.label}
+                {item.detail ? (
+                  <span className="project-menu-text">
+                    {item.label}
+                    <span className="project-menu-dir">{item.detail}</span>
+                  </span>
+                ) : (
+                  item.label
+                )}
               </button>
             );
           })}

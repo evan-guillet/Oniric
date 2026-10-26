@@ -9,6 +9,7 @@ import { loadStory, STORY_TABLES } from "../../views/application/story";
 import { DRAMATIC_FUNCTIONS, OPPOSITION_KINDS, RELATION_KINDS } from "../domain/steps";
 import { Help, useWorkshop, WText } from "./fields";
 
+import { Select } from "../../../../ui-kit/Select";
 interface Secondary {
   entryId: string;
   role: string;
@@ -38,7 +39,7 @@ export function StepCharacters() {
   };
 
   const select = (key: string, current?: Entry) => (
-    <select value={current?.id ?? ""} onChange={(e) => void pickOrCreate(e.target.value, key)}>
+    <Select value={current?.id ?? ""} onChange={(e) => void pickOrCreate(e.target.value, key)}>
       <option value="">— Choisir un personnage de la bible —</option>
       {characters.map((c) => (
         <option key={c.id} value={c.id}>
@@ -46,7 +47,7 @@ export function StepCharacters() {
         </option>
       ))}
       <option value="__new">+ Nouveau personnage…</option>
-    </select>
+    </Select>
   );
 
   return (
@@ -64,11 +65,11 @@ export function StepCharacters() {
         <div className="grid-2">
           <label className="fld">
             <span className="fld-label">Nature de l'opposition</span>
-            <select value={w.get("char.opposition", "Personne")} onChange={(e) => w.set("char.opposition", e.target.value)}>
+            <Select value={w.get("char.opposition", "Personne")} onChange={(e) => w.set("char.opposition", e.target.value)}>
               {OPPOSITION_KINDS.map((k) => (
                 <option key={k}>{k}</option>
               ))}
-            </select>
+            </Select>
           </label>
           {w.get("char.opposition", "Personne") === "Personne" && (
             <label className="fld">
@@ -102,11 +103,11 @@ export function StepCharacters() {
                     )}
                   </td>
                   <td>
-                    <select value={s.role} onChange={(ev) => w.set("char.secondary", secondary.map((x, k) => (k === i ? { ...x, role: ev.target.value } : x)))} aria-label="Fonction dramatique">
+                    <Select value={s.role} onChange={(ev) => w.set("char.secondary", secondary.map((x, k) => (k === i ? { ...x, role: ev.target.value } : x)))} aria-label="Fonction dramatique">
                       {DRAMATIC_FUNCTIONS.map((f) => (
                         <option key={f}>{f}</option>
                       ))}
-                    </select>
+                    </Select>
                   </td>
                   <td>
                     <button type="button" className="btn ghost small" aria-label="Retirer" onClick={() => w.set("char.secondary", secondary.filter((_, k) => k !== i))}>
@@ -118,12 +119,12 @@ export function StepCharacters() {
             })}
           </tbody>
         </table>
-        <select
+        <Select
           value=""
           aria-label="Ajouter un personnage secondaire"
           onChange={(e) => e.target.value && w.set("char.secondary", [...secondary, { entryId: e.target.value, role: "Allié" }])}
         >
-          <option value="">+ Ajouter un personnage secondaire…</option>
+          <option value="" hidden>+ Ajouter un personnage secondaire…</option>
           {characters
             .filter((c) => c.id !== protagonist?.id && !secondary.some((s) => s.entryId === c.id))
             .map((c) => (
@@ -131,7 +132,7 @@ export function StepCharacters() {
                 {c.name}
               </option>
             ))}
-        </select>
+        </Select>
       </section>
 
       <section className="step-section">
@@ -244,14 +245,14 @@ function RelationMap({ characters }: { characters: Entry[] }) {
         {acts.length > 0 && (
           <label className="fld">
             <span className="fld-label">Afficher les relations</span>
-            <select value={act} onChange={(e) => setAct(e.target.value)}>
+            <Select value={act} onChange={(e) => setAct(e.target.value)}>
               <option value="">De tout le film</option>
               {acts.map((a) => (
                 <option key={a.id} value={a.id}>
                   Jusqu'à {a.title}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <ul className="rel-list">
@@ -279,37 +280,37 @@ function RelationMap({ characters }: { characters: Entry[] }) {
             }
           }}
         >
-          <select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label="Premier personnage">
-            <option value="">Personnage…</option>
+          <Select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label="Premier personnage">
+            <option value="" hidden>Personnage…</option>
             {characters.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
-          </select>
-          <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label="Nature du lien">
+          </Select>
+          <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label="Nature du lien">
             {RELATION_KINDS.map((k) => (
               <option key={k}>{k}</option>
             ))}
-          </select>
-          <select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label="Second personnage">
-            <option value="">Personnage…</option>
+          </Select>
+          <Select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label="Second personnage">
+            <option value="" hidden>Personnage…</option>
             {characters.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
           <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Précision (frère aîné, ex-femme…)" aria-label="Précision" />
           {acts.length > 0 && (
-            <select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label="À partir de">
+            <Select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label="À partir de">
               <option value="">Dès le début</option>
               {acts.map((a) => (
                 <option key={a.id} value={a.id}>
                   À partir de {a.title}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
           <button type="submit" className="btn small" disabled={!form.from || !form.to || form.from === form.to}>
             Ajouter le lien

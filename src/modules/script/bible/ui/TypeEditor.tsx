@@ -6,6 +6,7 @@ import { deleteType, saveType } from "../application/bible";
 import { FIELD_KINDS, fieldKey, pluralize, type EntryType, type FieldDef, type FieldKind } from "../domain/types";
 import { iconOf, TYPE_ICONS } from "./typeIcons";
 
+import { Select } from "../../../../ui-kit/Select";
 const blank: EntryType = { id: "", name: "", plural: "", icon: "file", builtin: false, fields: [] };
 
 /** Custom entry types, their icon and their fields [5.2, « Type personnalisé »]. `startNew` opens on a new type. */
@@ -130,13 +131,13 @@ function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]
                 <input value={f.label} onChange={(e) => patch(i, { label: e.target.value })} aria-label="Nom du champ" />
               </td>
               <td>
-                <select value={f.kind} onChange={(e) => patch(i, { kind: e.target.value as FieldKind })} aria-label="Nature du champ">
+                <Select value={f.kind} onChange={(e) => patch(i, { kind: e.target.value as FieldKind })} aria-label="Nature du champ">
                   {FIELD_KINDS.map((k) => (
                     <option key={k.kind} value={k.kind}>
                       {k.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </td>
               <td>
                 {f.kind === "list" && (
@@ -148,14 +149,14 @@ function TypeForm({ type, types, onDone }: { type: EntryType; types: EntryType[]
                   />
                 )}
                 {(f.kind === "link" || f.kind === "links") && (
-                  <select value={f.target ?? ""} onChange={(e) => patch(i, { target: e.target.value || undefined })} aria-label="Type des fiches liées">
+                  <Select value={f.target ?? ""} onChange={(e) => patch(i, { target: e.target.value || undefined })} aria-label="Type des fiches liées">
                     <option value="">Tout type</option>
                     {types.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
               </td>
               <td className="row-actions">

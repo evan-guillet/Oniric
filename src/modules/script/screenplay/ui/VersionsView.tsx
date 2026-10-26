@@ -24,6 +24,7 @@ import {
 } from "../application/versions";
 import { readTitlePage } from "../application/titlePageSettings";
 
+import { Select } from "../../../../ui-kit/Select";
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 const shortFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** A date short enough for one line: the year only when it is not this one. */
@@ -83,7 +84,8 @@ const KINDS: Exclude<Kind, "same">[] = ["changed", "added", "removed", "moved"];
  */
 export function VersionsView() {
   const { session, project, notify, prompt, ask, headerActions } = useProject();
-  const versions = useLive(listVersions, ["script_version"]) ?? [];
+  const loaded = useLive(listVersions, ["script_version"]);
+  const versions = loaded ?? [];
   const cuts = useLive(cutScenes, ["scene"]) ?? [];
   const format = useScriptFormat();
   const [base, setBase] = useState("");
@@ -280,7 +282,8 @@ export function VersionsView() {
       </aside>
 
       <main className="vr-main">
-        {versions.length === 0 ? (
+        {/* Nothing while the versions are being read, so the first-version page does not flash before them. */}
+        {!loaded ? null : versions.length === 0 ? (
           <FirstVersion />
         ) : (
           <Compare
@@ -390,16 +393,16 @@ function Compare({
     <div className="vr-pair" role="group" aria-label="Versions comparées">
       <label className="vr-pick">
         <span className="vr-pick-role">Référence</span>
-        <select value={base} onChange={(e) => onBase(e.target.value)}>
+        <Select value={base} onChange={(e) => onBase(e.target.value)}>
           {options}
-        </select>
+        </Select>
       </label>
       <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
       <label className="vr-pick">
         <span className="vr-pick-role">Comparée</span>
-        <select value={head} onChange={(e) => onHead(e.target.value)}>
+        <Select value={head} onChange={(e) => onHead(e.target.value)}>
           {options}
-        </select>
+        </Select>
       </label>
       <button type="button" className="btn ghost vr-swap" aria-label="Inverser les deux versions" title="Inverser les deux versions" onClick={onSwap}>
         <ArrowLeftRight aria-hidden="true" />

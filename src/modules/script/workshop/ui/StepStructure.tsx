@@ -11,6 +11,7 @@ import { addActs, addSequence, deleteBeat, ensureBeat, loadStory, setBeatScenes,
 import { MODELS, modelById, partGaps, type ModelBeat } from "../domain/structures";
 import { Help, useWorkshop } from "./fields";
 
+import { Select } from "../../../../ui-kit/Select";
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 
 /** Step 3: structure model, key points linked to scenes, real against expected [STR-01 to STR-04]. */
@@ -59,13 +60,13 @@ export function StepStructure() {
         <h3>Modèle de structure</h3>
         <Help>Un modèle ne contraint rien : il propose des points clés à placer. Changer de modèle ne perd rien, les points remplis restent proposés.</Help>
         <div className="input-row">
-          <select value={model.id} onChange={(e) => w.set("structure.model", e.target.value)} aria-label="Modèle de structure">
+          <Select value={model.id} onChange={(e) => w.set("structure.model", e.target.value)} aria-label="Modèle de structure">
             {MODELS.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
           {model.parts.length > 0 && (
             <button type="button" className="btn" onClick={() => void createActs()}>
               Créer ces actes dans le Tableau
@@ -150,7 +151,7 @@ export function StepStructure() {
                   <strong>{b.title}</strong> <span className="muted small">({modelById(b.model).name})</span>
                   {b.notes && <span className="muted small"> — {b.notes.slice(0, 120)}</span>}
                 </span>
-                <select
+                <Select
                   value=""
                   aria-label={`Reprendre ${b.title} dans…`}
                   onChange={async (e) => {
@@ -168,13 +169,13 @@ export function StepStructure() {
                     }
                   }}
                 >
-                  <option value="">Reprendre dans…</option>
+                  <option value="" hidden>Reprendre dans…</option>
                   {model.beats.map((x) => (
                     <option key={x.key} value={x.key}>
                       {x.title}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <button
                   type="button"
                   className="btn ghost small"
@@ -235,11 +236,11 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
           </span>
         ))}
         {adding ? (
-          <select
-            autoFocus
+          <Select
+            defaultOpen
             value=""
             aria-label="Scène à relier"
-            onBlur={() => setAdding(false)}
+            onClose={() => setAdding(false)}
             onChange={async (e) => {
               const id = e.target.value;
               setAdding(false);
@@ -253,7 +254,9 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
               }
             }}
           >
-            <option value="">Choisir une scène…</option>
+            <option value="" hidden>
+              Choisir une scène…
+            </option>
             {scenes
               .filter((s) => !stored?.scenes.includes(s.id))
               .map((s) => (
@@ -261,7 +264,7 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
                   {s.index + 1}. {s.heading || "(sans en-tête)"}
                 </option>
               ))}
-          </select>
+          </Select>
         ) : (
           <button type="button" className="btn ghost small" onClick={() => setAdding(true)}>
             <Plus aria-hidden="true" />

@@ -12,6 +12,7 @@ import { StepDocuments } from "./StepDocuments";
 import { StepPreparation } from "./StepPreparation";
 import { StepStructure } from "./StepStructure";
 
+import { Select } from "../../../../ui-kit/Select";
 const STATUS_LABEL: Record<StepStatus, string> = { empty: "À faire", started: "Commencée", done: "Terminée" };
 
 /** The writing workshop: nine steps, none compulsory, the first five in this version [ATL-01 to ATL-03]. */
@@ -117,13 +118,13 @@ export function WorkshopView() {
             <h2>
               {current.n}. {current.title}
             </h2>
-            <select value={status(current.n)} onChange={(e) => workshop.set(`step.${current.n}.status`, e.target.value)} aria-label="État de l'étape">
+            <Select value={status(current.n)} onChange={(e) => workshop.set(`step.${current.n}.status`, e.target.value)} aria-label="État de l'étape">
               {(Object.keys(STATUS_LABEL) as StepStatus[]).map((k) => (
                 <option key={k} value={k}>
                   {STATUS_LABEL[k]}
                 </option>
               ))}
-            </select>
+            </Select>
           </header>
           <Help>{current.intro}</Help>
           {current.n === 1 && <StepPreparation />}

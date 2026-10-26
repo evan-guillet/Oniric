@@ -183,7 +183,7 @@ h2 {
 
 button,
 input,
-select,
+.select,
 textarea {
   font: inherit;
   color: inherit;
@@ -335,7 +335,7 @@ svg.lucide {
 
 /* Inputs */
 input,
-select,
+.select,
 textarea {
   border: 1px solid var(--line-strong);
   border-radius: var(--control-r);
@@ -345,7 +345,7 @@ textarea {
     box-shadow 120ms ease-out;
 }
 input,
-select {
+.select {
   height: var(--control-h);
   padding: 0 11px;
 }
@@ -355,23 +355,52 @@ textarea {
   resize: vertical;
   line-height: 1.5;
 }
-select {
-  appearance: none;
-  padding-right: 32px;
-  background: var(--panel) var(--chevron) no-repeat right 10px center / 14px;
+/* A choice in a list: the field's box, its value and the caret of « Affichage », which turns over while it is open. */
+.select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 9px;
   box-shadow: var(--shadow-sm);
+  text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
-select:hover:not(:focus) {
+.select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-caret {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: rotate 160ms ease-out;
+}
+.select.on .select-caret {
+  rotate: 180deg;
+}
+.select:hover:not(:disabled, .on) {
   background-color: var(--panel-2);
 }
+.select:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
 input:hover,
-select:hover,
+.select:hover:not(:disabled),
 textarea:hover {
   border-color: var(--muted);
 }
+.select:focus {
+  outline: none;
+}
+.select:focus-visible,
+.select.on,
 input:focus,
-select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
@@ -1150,7 +1179,7 @@ kbd {
   box-shadow: var(--shadow-lg);
   animation: element-bar-in 120ms ease-out;
 }
-/* The project the menu acts on, its folder under it. */
+/* The project the menu acts on; its folder shows under « Ouvrir le dossier du projet ». */
 .project-menu-head {
   display: grid;
   gap: 1px;
@@ -1163,6 +1192,16 @@ kbd {
   font-weight: 600;
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+.project-menu-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.project-menu button.detailed {
+  height: auto;
+  min-height: 30px;
+  padding-block: 6px;
 }
 .project-menu-dir {
   font-size: 11.5px;
@@ -1656,7 +1695,7 @@ kbd {
   align-items: center;
   gap: 6px;
 }
-.header-tools select,
+.header-tools .select,
 .header-tools input[type="search"] {
   --control-h: 34px;
   height: 34px;
@@ -1664,7 +1703,7 @@ kbd {
   font-size: 13px;
   color: var(--ink);
 }
-.header-tools select {
+.header-tools .select {
   max-width: 240px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -1686,7 +1725,7 @@ kbd {
   align-items: center;
   gap: 6px;
 }
-.view-toolbar select {
+.view-toolbar .select {
   height: 30px;
   border-radius: 7px;
   font-size: 12.5px;
@@ -2283,7 +2322,7 @@ h4 {
   color: var(--muted);
 }
 .fld input,
-.fld select {
+.fld .select {
   width: 100%;
 }
 .tags {
@@ -2309,7 +2348,7 @@ h4 {
 .tag .link {
   color: inherit;
 }
-.fld select.links-add {
+.fld .select.links-add {
   width: auto;
   max-width: 100%;
   height: 26px;
@@ -2929,7 +2968,7 @@ h4 {
   font-size: 12px;
   color: var(--muted);
 }
-.bible-sort select {
+.bible-sort .select {
   height: 30px;
   border-radius: 8px;
   font-size: 13px;
@@ -3507,7 +3546,7 @@ h4 {
   gap: 8px;
   align-items: center;
 }
-.entry-meta select {
+.entry-meta .select {
   height: 28px;
   font-size: 12.5px;
 }
@@ -3731,7 +3770,7 @@ h4 {
   padding: 3px 4px;
 }
 .fields-table input,
-.fields-table select {
+.fields-table .select {
   width: 100%;
 }
 
@@ -5155,14 +5194,12 @@ h4 {
   text-transform: uppercase;
 }
 /* The versions read as the title: large, no box until the pointer comes. */
-.vr-pick select {
-  field-sizing: content;
+.vr-pick .select {
   max-width: 320px;
   height: 36px;
-  padding: 0 30px 0 8px;
+  padding: 0 8px;
   border-color: transparent;
   background-color: transparent;
-  background-position: right 8px center;
   box-shadow: none;
   color: var(--ink);
   font-size: 19px;
@@ -5170,8 +5207,15 @@ h4 {
   letter-spacing: -0.02em;
   text-overflow: ellipsis;
 }
-.vr-pick select:hover {
+.vr-pick .select:hover:not(:disabled),
+.vr-pick .select.on {
+  border-color: transparent;
   background-color: var(--hover);
+  box-shadow: none;
+}
+.vr-pick .select-caret {
+  width: 16px;
+  height: 16px;
 }
 .vr-pair-arrow {
   flex: none;
@@ -5959,6 +6003,46 @@ h4 {
 .check-menu button[aria-checked="true"] .check-box {
   background: var(--accent);
   border-color: var(--accent);
+}
+/* The menu of a Select: the same rows as « Affichage », a round box for the one choice, the chosen one in blue. */
+.select-menu {
+  min-width: 0;
+  max-width: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.project-menu.select-menu button {
+  flex: none;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+}
+.project-menu.select-menu button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.project-menu.select-menu button[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+.check-box.radio {
+  margin-top: 0;
+  border-radius: 50%;
+}
+.select-menu button[aria-selected="true"] .check-box.radio {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent-ink) 0 3px, var(--accent) 3.5px);
+}
+.select-group {
+  padding: 10px 10px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.select-group:first-child {
+  padding-top: 6px;
 }
 .seg svg {
   width: 16px;

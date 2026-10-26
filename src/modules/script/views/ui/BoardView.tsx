@@ -33,6 +33,7 @@ import {
 } from "../application/story";
 import { CanvasSurface } from "./CanvasSurface";
 
+import { Select } from "../../../../ui-kit/Select";
 type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
@@ -688,7 +689,7 @@ export function BoardView() {
           <div className="header-tools" role="toolbar" aria-label="Tableau">
             <label>
               Filtre{" "}
-              <select
+              <Select
                 value={filter ? `${filter.kind}:${filter.value}` : ""}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -709,7 +710,7 @@ export function BoardView() {
                     </optgroup>
                   ) : null,
                 )}
-              </select>
+              </Select>
             </label>
             {filter && (
               <label className="choice">
@@ -812,13 +813,13 @@ function MoveDialog({
       )}
       <label className="fld move-place">
         <span className="fld-label">Position</span>
-        <select value={before} onChange={(e) => setBefore(e.target.value)}>
+        <Select value={before} onChange={(e) => setBefore(e.target.value)}>
           {positions(target).map((p) => (
             <option key={p.value || "end"} value={p.value}>
               {p.value === currentBefore && target === current ? `${p.label} (actuelle)` : p.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     </Dialog>
   );
@@ -862,14 +863,14 @@ function CardPanel({ scene, meta, story, onClose, onRemove }: { scene: SceneInfo
       </label>
       <label className="fld wide">
         <span className="fld-label">Statut d'écriture</span>
-        <select value={meta.status ?? ""} onChange={(e) => void save({ status: (e.target.value || null) as SceneMeta["status"] })}>
+        <Select value={meta.status ?? ""} onChange={(e) => void save({ status: (e.target.value || null) as SceneMeta["status"] })}>
           <option value="">—</option>
           {SCENE_STATUSES.map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <div className="fld wide">
         <span className="fld-label">Couleur</span>

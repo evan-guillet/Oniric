@@ -30,7 +30,7 @@ export function App() {
   const showProject = useCallback(
     (state: OpenState) => {
       setScreen({ kind: "project", state });
-      void getCurrentWindow().setTitle(state.title);
+      void getCurrentWindow().setTitle(state.dir);
       if (state.from === "restoredWorkingCopy") notify({ text: t("open.restored") });
       if (state.from === "repairedFromWorkingCopy") notify({ text: t("open.repaired"), tone: "warning", timeout: 0 });
       if (state.keptAside) notify({ text: t("open.keptAside", { path: state.keptAside }), tone: "warning", timeout: 0 });
@@ -156,7 +156,7 @@ export function App() {
 
   return (
     <div className="app-frame">
-      <TitleBar title={screen.kind === "project" ? screen.state.title : "Oniric"} merged={screen.kind === "project"} />
+      <TitleBar title={screen.kind === "project" ? screen.state.dir : "Oniric"} merged={screen.kind === "project"} />
       <div className="app-body">
         {screen.kind === "home" && <Home startup={startup} onOpen={(dir) => void openFlow(dir)} onCreate={create} notify={notify} />}
         {screen.kind === "loading" && (

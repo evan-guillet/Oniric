@@ -16,6 +16,7 @@ import { documentVersions, freezeDocument, loadDocument, saveDocument, type Docu
 import { exportDocumentPdf } from "./documentExport";
 import { Help } from "./fields";
 
+import { Select } from "../../../../ui-kit/Select";
 type Tab = "synopsis" | "sequencer" | "treatment" | "continuity";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -266,14 +267,14 @@ function Sequencer() {
               <input defaultValue={s.title} aria-label="Titre de la séquence" onBlur={(e) => e.target.value !== s.title && void updateSequence(s.id, { title: e.target.value })} />
               <textarea rows={2} defaultValue={s.summary} placeholder="Ce qui s'y passe…" aria-label="Résumé de la séquence" onBlur={(e) => e.target.value !== s.summary && void updateSequence(s.id, { summary: e.target.value })} />
             </div>
-            <select value={s.actId ?? ""} onChange={(e) => void updateSequence(s.id, { act_id: e.target.value || null })} aria-label="Acte">
+            <Select value={s.actId ?? ""} onChange={(e) => void updateSequence(s.id, { act_id: e.target.value || null })} aria-label="Acte">
               <option value="">Sans acte</option>
               {story.acts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.title}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="row-actions">
               <button type="button" className="btn ghost small" disabled={i === 0} onClick={() => void move(i, -1)} aria-label="Monter">
                 <ArrowUp aria-hidden="true" />

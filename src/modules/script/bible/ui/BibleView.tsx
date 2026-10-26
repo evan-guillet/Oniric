@@ -16,6 +16,7 @@ import { EntryEditor } from "./EntryEditor";
 import { TypeEditor } from "./TypeEditor";
 import { iconOf } from "./typeIcons";
 
+import { Select } from "../../../../ui-kit/Select";
 /** Where one is in the Bible: the categories, one category's entries, or a tool. The open entry sits over it. */
 type View = { kind: "home" } | { kind: "type"; id: string } | { kind: "detect" } | { kind: "types"; startNew?: boolean };
 
@@ -41,7 +42,8 @@ function categoriesOf(types: EntryType[], entries: Entry[]): Category[] {
 /** `home` changes each time the Bible is chosen in the side bar, which brings back the categories. */
 export function BibleView({ selected, onSelected, home }: { selected: string | null; onSelected: (id: string | null) => void; home: number }) {
   const { session, notify, headerActions, setTrail } = useProject();
-  const entries = useLive(loadEntries, ["bible_entry"]) ?? [];
+  const loaded = useLive(loadEntries, ["bible_entry"]);
+  const entries = loaded ?? [];
   const types = useLive(loadTypes, ["bible_type"]) ?? [];
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
@@ -227,11 +229,11 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
               <div className="bible-bar-tools">
                 <label className="bible-sort">
                   <span>Trier par</span>
-                  <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+                  <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
                     <option value="name">Nom</option>
                     <option value="recent">Modifiées récemment</option>
                     <option value="presence">Présence dans le scénario</option>
-                  </select>
+                  </Select>
                 </label>
                 {(archivedHere > 0 || archived) && (
                   <button type="button" className={archived ? "btn small on" : "btn small"} aria-pressed={archived} onClick={() => setArchived(!archived)}>
@@ -252,7 +254,8 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
             {noMatch ? "Aucune fiche ne correspond." : ""}
           </p>
         )}
-        {browsing && entries.length === 0 && (
+        {/* Not while the cards are still being read: an empty Bible would flash before them. */}
+        {browsing && loaded?.length === 0 && (
           <EmptyState title="La bible du film">
             <p className="muted">
               Personnages, lieux, objets, véhicules, événements… Tout ce qui fait le monde du film. Dans le scénario et les documents, tapez{" "}
@@ -520,13 +523,13 @@ function NewEntryDialog({
       >
         <label className="field">
           <span>Type</span>
-          <select value={t} onChange={(e) => setT(e.target.value)}>
+          <Select value={t} onChange={(e) => setT(e.target.value)}>
             {types.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="field">
           <span>Nom</span>
