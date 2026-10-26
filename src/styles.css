@@ -4111,7 +4111,9 @@ h4 {
   font-variant-numeric: tabular-nums;
 }
 .cv-act-node {
-  width: 300px;
+  width: max-content;
+  min-width: 300px;
+  max-width: 420px;
   padding: 10px;
   border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--act, var(--line)) 40%, var(--line));
@@ -4124,7 +4126,9 @@ h4 {
 }
 .cv-node.seq {
   flex: none;
-  width: 300px;
+  width: max-content;
+  min-width: 300px;
+  max-width: 420px;
   max-height: none;
   box-shadow: var(--shadow-sm);
 }
@@ -4207,12 +4211,14 @@ h4 {
   border-left-style: dashed;
   border-bottom-style: dashed;
 }
-/* Each sequence heads a row of its scenes: an arrow down to the first, then one from each to the next. */
+/* Each sequence heads a row of its scenes: an elbow from under it into the first, then a wire from each to the next.
+   Every wire meets its card level with the scene's heading. */
 .cv-cards {
   display: flex;
   align-items: flex-start;
-  margin-top: 26px;
   gap: 40px;
+  margin-left: 28px;
+  padding: 36px 0 0 44px;
 }
 .cv-cards > .card {
   flex: none;
@@ -4228,56 +4234,66 @@ h4 {
 .cv-cards > li::before {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + 3px);
-  height: 22px;
+  right: calc(100% + 3px);
+  top: 22px;
+  width: 34px;
+  border-top: var(--wire-w) solid var(--wire);
+  translate: 0 -50%;
+}
+.cv-cards > li:first-child::before {
+  top: auto;
+  bottom: calc(100% - 22px);
+  box-sizing: border-box;
+  width: 41px;
+  height: 58px;
+  border-top: none;
   border-left: var(--wire-w) solid var(--wire);
-  translate: -50% 0;
+  border-bottom: var(--wire-w) solid var(--wire);
+  border-bottom-left-radius: 12px;
+  translate: none;
 }
 .cv-cards > .card::after {
   content: "";
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + 2px);
-  width: 7px;
-  height: 7px;
-  border-right: var(--wire-w) solid var(--wire);
-  border-bottom: var(--wire-w) solid var(--wire);
-  transform: translateX(-50%) rotate(45deg);
-}
-.cv-cards > .card-add::before {
-  border-left-style: dashed;
-}
-/* Along the row the wires run level with the scene's heading. */
-.cv-cards > li + li::before {
-  left: auto;
-  right: calc(100% + 3px);
-  top: 22px;
-  bottom: auto;
-  width: 34px;
-  height: 0;
-  border-left: none;
-  border-top: var(--wire-w) solid var(--wire);
-  translate: 0 -50%;
-}
-.cv-cards > li + .card::after {
-  left: auto;
   right: calc(100% + 2px);
   top: 22px;
-  bottom: auto;
-  border-bottom: none;
+  width: 7px;
+  height: 7px;
   border-top: var(--wire-w) solid var(--wire);
+  border-right: var(--wire-w) solid var(--wire);
   transform: translateY(-50%) rotate(45deg);
 }
-.cv-cards > li + .card-add::before {
+.cv-cards > .card-add::before {
   border-top-style: dashed;
+  border-left-style: dashed;
+  border-bottom-style: dashed;
 }
-.cv-cards > li + li > .cv-insert.down {
+.cv-cards > li > .cv-insert.down {
   left: auto;
   right: 100%;
   top: 0;
   width: 40px;
   height: 44px;
+}
+/* Titles on the canvas are read whole: they wrap, never trail off. */
+.cv-film-title,
+.cv-node .named,
+.cv-node .seq-title,
+.cv-cards .card-heading {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+/* Panning along a row of scenes, the film, its acts and its sequences hold at the left edge, so a card always
+   says where it belongs. The wire into each slides in from the edge with it. */
+.cv-film,
+.cv-act-node,
+.cv-node.seq {
+  position: sticky;
+  left: 16px;
+  z-index: 3;
 }
 /* An opened act or sequence is the root of its own tree: nothing leads into it. */
 .cv-root,
