@@ -3997,9 +3997,12 @@ h4 {
   --card-edge: color-mix(in srgb, var(--scene, var(--line-strong)) 60%, var(--line-strong));
   box-shadow: var(--shadow-md);
 }
+/* Selected: its own colour, brighter and more saturated, with a glow of it; a card without colour takes the accent. */
 .card.on {
-  --card-edge: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  --card-edge: oklch(from var(--scene, var(--accent)) calc(l + 0.06) calc(c * 1.4) h);
+  box-shadow:
+    0 0 0 1px var(--card-edge),
+    0 0 18px -2px color-mix(in srgb, var(--card-edge) 65%, transparent);
 }
 .card.lit {
   --card-edge: var(--warning-dot);
@@ -4450,16 +4453,17 @@ h4 {
 
 /*
  * Along a row, a wire runs from the right edge of each scene to the left edge of the next. Each row scrolls sideways
- * on its own, the rest of the tree holding still; it starts just short of the sequence's arrowhead, so what slides
- * past it is cut away there.
+ * on its own, the rest of the tree holding still; what slides past the sequence's arrowhead fades out there.
  */
 .cv-cards {
   display: flex;
   align-items: flex-start;
   align-self: stretch;
   gap: 40px;
-  margin-left: 68px;
-  padding: 36px 40px 12px 4px;
+  /* Room for a selected card's glow, which fades out where the row starts rather than stopping dead. */
+  margin: 0 0 -8px 56px;
+  padding: 36px 40px 20px 16px;
+  mask-image: linear-gradient(to right, transparent, #000 16px);
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
