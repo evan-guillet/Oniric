@@ -4057,7 +4057,7 @@ h4 {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
-/* Reaching for the wire above a card does not light the card up. */
+/* Reaching for the wire leading to a card does not light the card up. */
 .cv-cards > .card:has(> .cv-insert:hover) {
   border-color: color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
   box-shadow: var(--shadow-sm);
@@ -4128,9 +4128,10 @@ h4 {
   outline: 2px dashed var(--focus);
   outline-offset: 2px;
 }
+/* A sequence's header spans the row of its scenes, a band over what it holds. */
 .cv-node.seq {
   flex: none;
-  width: 300px;
+  min-width: 300px;
   max-height: none;
   box-shadow: var(--shadow-sm);
 }
@@ -4228,11 +4229,20 @@ h4 {
 .cv-seq + .cv-add > .cv-node::before {
   border-top-style: dashed;
 }
-/* Each sequence heads a column of its scenes, an arrow down to each. */
+/* Each sequence heads a row of its scenes: an arrow down to the first, then one from each to the next. */
 .cv-cards {
-  width: 300px;
+  display: flex;
+  align-items: flex-start;
   margin-top: 26px;
-  gap: 26px;
+  gap: 40px;
+}
+.cv-cards > .card {
+  flex: none;
+  width: 280px;
+}
+.cv-cards > .card-add {
+  flex: none;
+  width: 120px;
 }
 .cv-cards > li {
   position: relative;
@@ -4259,6 +4269,37 @@ h4 {
 }
 .cv-cards > .card-add::before {
   border-left-style: dashed;
+}
+/* Along the row the wires run level with the scene's heading. */
+.cv-cards > li + li::before {
+  left: auto;
+  right: calc(100% + 3px);
+  top: 22px;
+  bottom: auto;
+  width: 34px;
+  height: 0;
+  border-left: none;
+  border-top: var(--wire-w) solid var(--wire);
+  translate: 0 -50%;
+}
+.cv-cards > li + .card::after {
+  left: auto;
+  right: calc(100% + 2px);
+  top: 22px;
+  bottom: auto;
+  border-bottom: none;
+  border-top: var(--wire-w) solid var(--wire);
+  transform: translateY(-50%) rotate(45deg);
+}
+.cv-cards > li + .card-add::before {
+  border-top-style: dashed;
+}
+.cv-cards > li + li > .cv-insert.down {
+  left: auto;
+  right: 100%;
+  top: 0;
+  width: 40px;
+  height: 44px;
 }
 /* An opened act or sequence is the root of its own tree: nothing leads into it. */
 .cv-root,
@@ -4378,6 +4419,7 @@ h4 {
 
 /* Timeline */
 .timeline-view {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4443,14 +4485,21 @@ h4 {
 .tl-presence {
   fill: var(--accent);
 }
+/* Shown only while a scene is hovered or focused, over the timeline rather than below it. */
 .timeline-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-top: 1px solid var(--line);
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: var(--panel);
-  min-height: 36px;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+.timeline-info p {
+  margin: 4px 0 0;
 }
 
 /* Versions: the thread of the versions on the left, newest first; what changed between two of them on the right. */
@@ -6318,16 +6367,6 @@ h4 {
 .stats-section > h2 + .stats-table {
   margin-top: 8px;
 }
-.stats-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.stats-controls select {
-  width: auto;
-}
 .stats-card {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -6338,42 +6377,6 @@ h4 {
 }
 .stats-card + .stats-card {
   margin-top: 10px;
-}
-.stats-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.stats-card-head h3 {
-  margin: 0;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.stats-nav {
-  display: flex;
-  gap: 2px;
-}
-.stats-nav .btn {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  justify-content: center;
-}
-.stats-big {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.stats-foot {
-  margin: 12px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Overview tiles */
@@ -6478,15 +6481,6 @@ h4 {
 }
 
 /* Series: the mark carries the colour, text stays in ink */
-.stats-chart svg .series-1 {
-  fill: var(--series-1);
-}
-.stats-chart svg .series-2 {
-  fill: var(--series-2);
-}
-.stats-chart svg .series-3 {
-  fill: var(--series-3);
-}
 .stats-split-bar .series-1 {
   background: var(--series-1);
 }
@@ -6538,111 +6532,6 @@ h4 {
   grid-column: 2;
   color: var(--muted);
   font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Charts */
-.stats-chart {
-  position: relative;
-  min-height: 60px;
-}
-.stats-chart svg {
-  display: block;
-  overflow: visible;
-}
-.stats-grid {
-  stroke: var(--line);
-  stroke-dasharray: 2 3;
-}
-.stats-baseline {
-  stroke: var(--line-strong);
-}
-.stats-tick {
-  fill: var(--muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.stats-hit {
-  fill: transparent;
-}
-.stats-col.on .stats-hit {
-  fill: var(--hover);
-}
-.stats-col path {
-  pointer-events: none;
-}
-.stats-line {
-  fill: none;
-  stroke: var(--series-1);
-  stroke-width: 2;
-  stroke-linejoin: round;
-}
-.stats-chart .stats-point {
-  stroke: var(--panel);
-  stroke-width: 2;
-  pointer-events: none;
-}
-.stats-crosshair {
-  stroke: var(--line-strong);
-}
-.stats-chart-empty {
-  position: absolute;
-  inset: 0 0 28px 40px;
-  display: grid;
-  place-items: center;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12.5px;
-  text-align: center;
-  pointer-events: none;
-}
-.stats-tooltip {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  margin-top: -6px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 160px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  box-shadow: var(--shadow-md);
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 2;
-}
-.stats-tooltip strong {
-  font-weight: 600;
-}
-.stats-tooltip strong::first-letter {
-  text-transform: uppercase;
-}
-.stats-tooltip > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink-2);
-}
-.stats-tooltip > span[class^="series-"]::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--series-1);
-}
-.stats-tooltip > span.series-2::before {
-  background: var(--series-2);
-}
-.stats-tooltip > span.series-3::before {
-  background: var(--series-3);
-}
-.stats-tooltip b {
-  margin-left: auto;
-  padding-left: 12px;
-  font-weight: 600;
-  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 

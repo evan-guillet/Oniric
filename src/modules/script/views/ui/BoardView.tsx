@@ -519,7 +519,7 @@ export function BoardView() {
 
   /*
    * The canvas: the film at the top left, a trunk down to each act, each act branching to a row of sequences,
-   * each sequence heading a column of its scenes. Arrows follow the story's order.
+   * each sequence heading a row of its scenes. Arrows follow the story's order.
    */
   const cvSeq = (g: ActGroup, seq: SequenceGroup, root = false) => {
     const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;

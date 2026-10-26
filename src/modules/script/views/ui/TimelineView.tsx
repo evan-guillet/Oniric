@@ -159,9 +159,9 @@ export function TimelineView() {
           </g>
         </svg>
       </div>
-      <div className="timeline-info" aria-live="polite">
+      <div aria-live="polite">
         {shown && (
-          <>
+          <div className="timeline-info">
             <strong>
               <span className="auto-num">{sceneLabel(shown.index + 1)}</span> {shown.heading || "(sans en-tête)"}
             </strong>{" "}
@@ -169,7 +169,7 @@ export function TimelineView() {
               p. {shown.page} · {formatEighths(shown.eighths)} · {SCENE_STATUSES.find((s) => s.id === story.meta.get(shown.id)?.status)?.label ?? "sans statut"}
             </span>
             {story.meta.get(shown.id)?.summary && <p>{story.meta.get(shown.id)?.summary}</p>}
-          </>
+          </div>
         )}
       </div>
     </div>
