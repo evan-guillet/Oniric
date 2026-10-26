@@ -53,7 +53,7 @@ import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
 import { sceneGapsPlugin } from "./editor/sceneGaps";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
-import { PrintPages, PrintTitlePage } from "./PrintPages";
+import { PrintPages } from "./PrintPages";
 import { SceneList, type ListGroup, type ListTarget, type SceneRow } from "./SceneList";
 import { STORY_TABLES, deleteAct, deleteSequence, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
@@ -109,18 +109,17 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
 }
 
 /**
- * One view at a time: writing with the scenes beside it, writing with the notes, the title page (its fields beside,
- * the page as it prints in the body), or the whole script as it prints with the scenes beside it.
+ * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes or the script's
+ * information) and what the desk shows (the writing, or the whole script as it prints with « Aperçu »). The notes
+ * annotate the text, so they leave the preview; the information can be filled in with the preview beside it.
  */
-type Mode = "write" | "notes" | "title" | "preview";
-type Panel = "scenes" | "notes" | "title";
-/** Tabs over the writing: pressed again, a tab goes back to it. */
-const VIEWS: SegmentedOption<Exclude<Mode, "write">>[] = [
+type Panel = "scenes" | "notes" | "info";
+/** Tabs over the scenes: pressed again, a tab brings the scenes back. */
+const PANEL_TABS: SegmentedOption<Exclude<Panel, "scenes">>[] = [
   { id: "notes", label: "Notes", hint: "Les notes à la place des scènes", icon: StickyNote },
-  { id: "title", label: "Page de titre", hint: "Éditer la page de titre, son rendu au centre", icon: FileText },
-  { id: "preview", label: "Aperçu", hint: "Le script entier tel qu'il s'imprime (Échap pour revenir)", icon: BookOpen },
+  { id: "info", label: "Informations", hint: "Titre, auteurs, contact, mention : ce qu'imprime la page de titre", icon: FileText },
 ];
-const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", title: "Page de titre" };
+const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", info: "Informations" };
 
 function sameRows(a: SceneRow[], b: SceneRow[]) {
   return (
@@ -145,10 +144,9 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [format, setFormat] = useState<ScreenplayFormat | null>(null);
   const [snap, setSnap] = useState<EditorSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<Mode>("write");
-  const panel: Panel = mode === "notes" ? "notes" : mode === "title" ? "title" : "scenes";
-  const preview = mode === "preview";
-  const body: "editor" | "title" | "preview" = preview ? "preview" : mode === "title" ? "title" : "editor";
+  const [panel, setPanel] = useState<Panel>("scenes");
+  const [preview, setPreview] = useState(false);
+  const body: "editor" | "preview" = preview ? "preview" : "editor";
   const [display, setDisplayState] = useState<Display>(savedDisplay);
   const linksRef = useRef(display.links);
   linksRef.current = display.links;
@@ -162,15 +160,24 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       // Not remembered: it still applies until the project is closed.
     }
   };
-  /** A view's button opens it in place of the one shown; pressed again, it goes back to writing. */
-  const toggleMode = (m: Mode) => {
-    const next = mode === m ? "write" : m;
-    setMode(next);
-    if (next === "write" || next === "notes") requestAnimationFrame(() => editorRef.current?.focus());
-    else requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
+  /** A panel's tab shows it in place of the scenes; pressed again, the scenes come back. */
+  const togglePanel = (p: Exclude<Panel, "scenes">) => {
+    const next = panel === p ? "scenes" : p;
+    setPanel(next);
+    if (next === "notes") setPreview(false);
+    if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
   };
-  const toggleModeRef = useRef(toggleMode);
-  toggleModeRef.current = toggleMode;
+  /** « Aperçu » shows the whole script as it prints; pressed again, or Échap, it goes back to writing. */
+  const togglePreview = () => {
+    const next = !preview;
+    setPreview(next);
+    if (next) {
+      if (panel === "notes") setPanel("scenes");
+      requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
+    } else requestAnimationFrame(() => editorRef.current?.focus());
+  };
+  const togglePreviewRef = useRef(togglePreview);
+  togglePreviewRef.current = togglePreview;
   const rowsRef = useRef<SceneRow[]>([]);
   /** « + Nouvelle scène » between two cards: set once the story is loaded. */
   const addAfterRef = useRef<(afterId: string) => void>(() => {});
@@ -282,11 +289,11 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   };
   useEffect(() => () => void flushTitle(), [flushTitle]);
   useEffect(() => {
-    if (panel !== "title") void flushTitle();
+    if (panel !== "info") void flushTitle();
   }, [panel, flushTitle]);
   // The version in progress moves when a version is frozen, the date at midnight: both are read again on showing the page.
   useEffect(() => {
-    if (panel !== "title" && !preview) return;
+    if (panel !== "info" && !preview) return;
     void titleAuto().then((auto) => setTitlePage((t) => t && { ...t, auto }));
   }, [panel, preview]);
 
@@ -315,7 +322,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && preview && !e.defaultPrevented) {
-        toggleModeRef.current("preview");
+        togglePreviewRef.current();
         return;
       }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -488,8 +495,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   );
 
   const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
-  const storedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
-  const printedTitle = hasContent(storedTitle) ? storedTitle : null;
+  // The preview prints the information as it is being typed, saved or not.
+  const printedTitle = hasContent(shownTitle) ? shownTitle : null;
 
   return (
     <>
@@ -511,8 +518,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           {panel === "notes" && (
             <NotesPanel editor={editorRef.current} />
           )}
-          {panel === "title" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
+          {panel === "info" && titlePage && (
+            <TitlePagePanel page={titlePage.draft} onChange={editTitle} previewing={preview} onPreview={togglePreview} />
           )}
         </aside>
 
@@ -586,11 +593,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               />
             </div>
           )}
-          {format && body === "title" && titlePage && shownTitle && (
-            <div className="fmt">
-              <PrintTitlePage page={shownTitle} format={format} />
-            </div>
-          )}
           {format && body === "preview" && snap && (
             <div className="fmt">
               <PrintPages
@@ -635,12 +637,23 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             />
             <span className="bar-sep" aria-hidden="true" />
             <Segmented
-              label="Vue"
-              options={VIEWS}
-              value={mode === "write" ? null : mode}
-              onChange={toggleMode}
+              label="Panneau"
+              options={PANEL_TABS}
+              value={panel === "scenes" ? null : panel}
+              onChange={togglePanel}
               compact
             />
+            <span className="bar-sep" aria-hidden="true" />
+            <button
+              type="button"
+              className={preview ? "btn on" : "btn"}
+              aria-pressed={preview}
+              title="Le script entier tel qu'il s'imprime (Échap pour revenir)"
+              onClick={togglePreview}
+            >
+              <BookOpen aria-hidden="true" />
+              <span>Aperçu</span>
+            </button>
           </div>,
           headerActions,
         )}
@@ -657,13 +670,17 @@ interface TitleDraft {
   auto: TitleAuto;
 }
 
-/** The title page fields, in the side panel; the page itself shows in the body as it will print. */
+/** The script's information, in the side panel: what the title page prints, seen with « Aperçu ». */
 function TitlePagePanel({
   page,
   onChange,
+  previewing,
+  onPreview,
 }: {
   page: TitlePage;
   onChange: (p: TitlePage) => void;
+  previewing: boolean;
+  onPreview: () => void;
 }) {
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const [added, setAdded] = useState(-1);
@@ -692,6 +709,15 @@ function TitlePagePanel({
   const custom = page.mention === "custom";
   return (
     <div className="side-form form">
+      <div className="info-head">
+        <p>Imprimées sur la page de titre, en tête du PDF et des exports.</p>
+        {!previewing && (
+          <button type="button" className="btn ghost small" onClick={onPreview}>
+            <BookOpen aria-hidden="true" />
+            Voir l'aperçu
+          </button>
+        )}
+      </div>
       {field("title", "Titre")}
       {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
       <fieldset className="field">

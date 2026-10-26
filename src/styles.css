@@ -6044,6 +6044,43 @@ h4 {
 .select-group:first-child {
   padding-top: 6px;
 }
+/* In a long list, a group head is a button that folds and unfolds its options, held at the top while they scroll. */
+.project-menu.select-menu button.select-group {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px 0 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-weight: 600;
+}
+.project-menu.select-menu button.select-group:hover,
+.project-menu.select-menu button.select-group:focus-visible {
+  background: var(--hover);
+  color: var(--ink-2);
+}
+.project-menu.select-menu button.select-group + button.select-group {
+  margin-top: 0;
+}
+.select-menu .select-group-caret {
+  width: 14px;
+  height: 14px;
+  transition: rotate 160ms ease-out;
+}
+.select-menu .select-group[aria-expanded="true"] .select-group-caret {
+  rotate: 90deg;
+}
+.select-group-name {
+  flex: 1;
+}
+.select-group-n {
+  color: var(--hint);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
 .seg svg {
   width: 16px;
   height: 16px;
@@ -6587,6 +6624,23 @@ h4 {
 .side-form {
   padding: 14px 16px 24px;
   gap: 12px;
+}
+/* What the information is for, and the way to see it printed. */
+.info-head {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.info-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.info-head .btn {
+  margin-left: -8px;
 }
 /* Authors, one field each; « Plus » adds one under the last */
 .name-list {
