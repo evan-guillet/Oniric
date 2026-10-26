@@ -6,15 +6,16 @@ const MAX = 1.6;
 const STEP = 1.2;
 const clamp = (z: number) => Math.min(MAX, Math.max(MIN, Math.round(z * 100) / 100));
 
-// Where a drag pans sideways: the rows of scenes.
-const PAN_ZONE = ".cv-cards";
+// What a drag scrolls sideways: a row of scenes, on its own.
+const ROW = ".cv-cards";
 // What keeps its own gesture inside them: drag handles, fields and the small buttons.
 const OWN_GESTURE = ".grip, [draggable=true], input, textarea, select, .more-btn, .head-add, .head-fold, .cv-insert, .cv-ghost, .canvas-tools";
 
 /**
- * A surface that scrolls both ways and zooms with Ctrl + wheel or its corner buttons. The wheel and the scrollbar
- * move it up and down; a drag on a row of scenes, cards included (a drag never ends in a click), moves it sideways,
- * as do Shift + wheel and the bottom scrollbar. The middle button pans it both ways. What it holds is laid out at its natural size, then scaled as one.
+ * A surface as wide as the view that scrolls up and down (wheel, scrollbar) and zooms with Ctrl + wheel or its corner
+ * buttons. Each row of scenes scrolls sideways on its own, the rest holding still: dragged, cards included (a drag
+ * never ends in a click), or with Shift + wheel. The middle button pans the surface both ways. What it holds is laid
+ * out at its natural size, then scaled as one.
  */
 export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactNode; tools?: ReactNode; onDragEnd?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
@@ -36,10 +37,10 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
     setZoom(z);
   }, []);
 
-  // How far the surface is panned sideways, in the units of what it holds: what holds at the left edge reads it.
-  const trackScroll = useCallback(() => {
+  // The width of the view, in the units of what it holds: the rows of scenes run to its right edge.
+  const fitWidth = useCallback(() => {
     const el = box.current;
-    world.current?.style.setProperty("--scroll-x", `${el ? el.scrollLeft / current.current : 0}px`);
+    if (el) world.current?.style.setProperty("--view-w", `${Math.floor(el.clientWidth / current.current)}px`);
   }, []);
 
   useLayoutEffect(() => {
@@ -49,16 +50,23 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
       el.scrollTop = pending.current.top;
       pending.current = null;
     }
-    trackScroll();
-  }, [zoom, trackScroll]);
+    fitWidth();
+  }, [zoom, fitWidth]);
 
-  // Everything in view from the top left, never larger than life.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const watch = new ResizeObserver(fitWidth);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [fitWidth]);
+
+  // Everything in view from the top, never larger than life; the rows of scenes keep scrolling sideways.
   const fit = () => {
     const el = box.current;
     const w = world.current?.getBoundingClientRect();
     if (!el || !w) return;
-    const natural = { w: w.width / current.current, h: w.height / current.current };
-    zoomTo(Math.min(1, el.clientWidth / natural.w, el.clientHeight / natural.h));
+    zoomTo(Math.min(1, el.clientHeight / (w.height / current.current)));
     if (pending.current) pending.current = { left: 0, top: 0 };
     else el.scrollTo({ left: 0, top: 0 });
   };
@@ -72,29 +80,34 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
       const r = el.getBoundingClientRect();
       zoomTo(current.current * Math.exp(-e.deltaY * 0.002), e.clientX - r.left, e.clientY - r.top);
     };
-    let start: { x: number; y: number; left: number; top: number; id: number; free: boolean } | null = null;
+    // The free pan moves the surface; a drag on a row moves that row.
+  let start: { x: number; y: number; left: number; top: number; id: number; target: Element } | null = null;
     let moved = false;
     const down = (e: PointerEvent) => {
       const middle = e.button === 1;
       const target = e.target as Element;
-      if (!middle && (e.button !== 0 || !target.closest(PAN_ZONE) || target.closest(OWN_GESTURE))) return;
+      const row = target.closest(ROW);
+      if (!middle && (e.button !== 0 || !row || target.closest(OWN_GESTURE))) return;
       // The middle button pans at once, instead of the browser's autoscroll.
       if (middle) e.preventDefault();
-      start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, id: e.pointerId, free: middle };
+      const moving = middle || !row ? el : row;
+      start = { x: e.clientX, y: e.clientY, left: moving.scrollLeft, top: el.scrollTop, id: e.pointerId, target: moving };
       moved = false;
     };
     const move = (e: PointerEvent) => {
       if (!start || e.pointerId !== start.id) return;
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
-      if (!moved && (start.free ? Math.hypot(dx, dy) : Math.abs(dx)) < 4) return;
+      const free = start.target === el;
+      if (!moved && (free ? Math.hypot(dx, dy) : Math.abs(dx)) < 4) return;
       if (!moved) {
         moved = true;
         el.setPointerCapture(e.pointerId);
-        el.classList.add(start.free ? "panning-free" : "panning");
+        el.classList.add(free ? "panning-free" : "panning");
       }
-      el.scrollLeft = start.left - dx;
-      if (start.free) el.scrollTop = start.top - dy;
+      // The pointer may stray off the row: it stays the one being dragged, in the zoomed units it scrolls in.
+      start.target.scrollLeft = start.left - (free ? dx : dx / current.current);
+      if (free) el.scrollTop = start.top - dy;
     };
     const up = () => {
       start = null;
@@ -125,7 +138,7 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
 
   return (
     <div className="canvas-wrap">
-      <div className="canvas" ref={box} onDragEnd={onDragEnd} onScroll={trackScroll}>
+      <div className="canvas" ref={box} onDragEnd={onDragEnd} >
         <div className="canvas-world" ref={world} style={{ zoom }}>
           {children}
         </div>

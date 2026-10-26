@@ -20,6 +20,7 @@ import {
   ClipboardList,
   FileCheck2,
   FileInput,
+  FolderOpen,
   FileOutput,
   FileText,
   History,
@@ -401,13 +402,14 @@ export function ProjectShell({
       ...views,
       action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
       action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
+      action("folder", "Ouvrir le dossier du projet", FolderOpen, () => void commands.reveal(project.dir, true), "explorateur disque emplacement fichiers"),
       action("settings", "Réglages", Settings, () => setSettings(true), "préférences options"),
       action("light", "Thème clair", Sun, () => void setThemePreference("light"), "apparence jour"),
       action("dark", "Thème sombre", Moon, () => void setThemePreference("dark"), "apparence nuit"),
       action("system", "Thème du système", Monitor, () => void setThemePreference("system"), "apparence windows"),
       action("close", "Fermer le projet", LogOut, onClose, "quitter accueil"),
     ];
-  }, [hiddenParts, goView, transfer, onClose]);
+  }, [hiddenParts, goView, transfer, onClose, project.dir]);
 
   /** Replaces the screenplay by a Fountain or FDX file [EDT-05]. */
   const importFile = async (file: File | undefined) => {
@@ -501,6 +503,11 @@ export function ProjectShell({
                   label: t("workspace.export"),
                   icon: FileOutput,
                   onClick: () => transfer("export"),
+                },
+                {
+                  label: "Ouvrir le dossier du projet",
+                  icon: FolderOpen,
+                  onClick: () => void commands.reveal(project.dir, true),
                 },
                 {
                   label: "Fermer le projet",

@@ -4093,8 +4093,7 @@ h4 {
   user-select: none;
 }
 /* The rows of scenes are dragged sideways; the wheel and the scrollbar take care of up and down. */
-.canvas .cv-cards,
-.canvas .cv-cards .card-body {
+.canvas .cv-cards {
   cursor: ew-resize;
 }
 .canvas.panning,
@@ -4216,9 +4215,10 @@ h4 {
   margin: 0 3px;
   background: var(--line);
 }
+/* As wide as the view, so each row of scenes runs to its right edge and scrolls inside it. */
 .canvas-world {
-  width: max-content;
-  padding: 32px 40px 96px;
+  width: var(--view-w, max-content);
+  padding: 32px 0 96px 40px;
 }
 .cv-tree,
 .cv-tree :where(ol) {
@@ -4359,7 +4359,7 @@ h4 {
 /*
  * Wires. Acts hang off a trunk running down from under the film's left edge; sequences hang the same way off
  * their act's own trunk; each sequence heads a row of its scenes. Every node draws the wires that reach it, so
- * they move with it when it holds at the left edge: the elbow that comes in, the trunk that carries on to its
+ * they stay put while its row of scenes scrolls: the elbow that comes in, the trunk that carries on to its
  * next sibling (cut at the bottom of its own branch) and, for a sequence, the elbow down into its first scene.
  */
 .cv-acts,
@@ -4448,13 +4448,22 @@ h4 {
   border-top-style: dashed;
 }
 
-/* Along a row, a wire runs from the right edge of each scene to the left edge of the next. */
+/*
+ * Along a row, a wire runs from the right edge of each scene to the left edge of the next. Each row scrolls sideways
+ * on its own, the rest of the tree holding still; it starts just short of the sequence's arrowhead, so what slides
+ * past it is cut away there.
+ */
 .cv-cards {
   display: flex;
   align-items: flex-start;
+  align-self: stretch;
   gap: 40px;
-  margin-left: 28px;
-  padding: 36px 0 12px 44px;
+  margin-left: 68px;
+  padding: 36px 40px 12px 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
 }
 /* The row holds the space under its cards, so its sequence needs none of its own. */
 .cv-seq:has(> .cv-cards) {
@@ -4502,40 +4511,6 @@ h4 {
   text-overflow: clip;
   overflow-wrap: anywhere;
   text-wrap: pretty;
-}
-/*
- * Panning along a row of scenes, the film, its acts and its sequences hold at the left edge, each level still a
- * step in from the one above, so a card always says where it belongs and the wires between them stay whole. The
- * row slides in under the sequence's elbow: what has gone past its arrowhead is cut away.
- */
-.canvas-world {
-  /* How far the tree has moved past the point where it starts to hold: the 40px gutter less the 16px kept. */
-  --pan: max(0px, var(--scroll-x, 0px) - 24px);
-}
-.cv-tree .cv-node {
-  position: sticky;
-  left: 16px;
-  z-index: 3;
-}
-.cv-acts > .cv-act > .cv-node {
-  left: 88px;
-}
-.cv-acts .cv-seqs > .cv-seq > .cv-node {
-  left: 160px;
-}
-.cv-cards {
-  --cut: min(calc(var(--pan) * 1000), calc(var(--pan) + 44px));
-  --fade: min(calc(var(--pan) * 1000), 24px);
-  align-self: stretch;
-  mask-image: linear-gradient(to right, transparent calc(var(--cut) - var(--fade)), #000 var(--cut));
-}
-/* Once the whole row has gone by, the slot for a new scene waits at the arrowhead: the elbow always lands on a card. */
-.cv-cards > .card-add {
-  position: sticky;
-  left: 88px;
-}
-.cv-acts .cv-cards > .card-add {
-  left: 232px;
 }
 .canvas-tools {
   position: absolute;
