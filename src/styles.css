@@ -4953,73 +4953,131 @@ h4 {
   max-width: 1240px;
   margin-inline: auto;
 }
+/*
+ * The head: the two versions side by side as the title, what came of it under them, then the counts of the
+ * compared version, each with how far it moved.
+ */
 .vr-head {
   display: grid;
   justify-items: start;
-  gap: 14px;
+  gap: 6px;
   padding-bottom: 20px;
-  margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
 .vr-head h2 {
   margin: 0;
-  color: var(--ink);
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 24px;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
 }
+/* Pulled left by the selects' own inset, so their text lines up with what is under them. */
 .vr-pair {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  margin-left: -9px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 10px;
 }
-.vr-pair select {
-  max-width: 200px;
+.vr-pick {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.vr-pick-role {
+  padding-left: 9px;
+  color: var(--hint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* The versions read as the title: large, no box until the pointer comes. */
+.vr-pick select {
+  field-sizing: content;
+  max-width: 320px;
+  height: 36px;
+  padding: 0 30px 0 8px;
+  border-color: transparent;
+  background-color: transparent;
+  background-position: right 8px center;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+}
+.vr-pick select:hover {
+  background-color: var(--hover);
 }
 .vr-pair-arrow {
-  width: 15px;
-  height: 15px;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-bottom: 9px;
   color: var(--hint);
 }
 .vr-swap {
-  width: 30px;
+  width: 32px;
+  margin-bottom: 2px;
   padding: 0;
 }
 .vr-figures {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 32px;
-  margin: 2px 0 0;
+  gap: 12px 0;
+  margin: 14px 0 0;
 }
-.vr-figures dt {
+.vr-figure {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 128px;
+  padding: 0 28px;
+  border-left: 1px solid var(--line);
+}
+.vr-figure:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+.vr-figure dt {
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
 }
-.vr-figures dd {
+.vr-figure dd {
+  margin: 0;
+}
+.vr-figure-value {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 2px 0 0;
+  align-items: baseline;
+  gap: 8px;
   color: var(--ink);
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 600;
+  line-height: 32px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
-.vr-figures dd svg {
-  width: 13px;
-  height: 13px;
-  color: var(--hint);
+.vr-figure-value .vr-linestat {
+  gap: 10px;
 }
-.vr-figures dd.vr-figures-text {
+.vr-delta {
+  align-self: center;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--seg-track);
   color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
   letter-spacing: 0;
+}
+.vr-figure-was {
+  color: var(--hint);
+  font-size: 12px;
+  line-height: 16px;
 }
 .vr-linestat {
   display: inline-flex;
@@ -5033,26 +5091,33 @@ h4 {
 .vr-minus {
   color: var(--danger);
 }
+/* Nothing added, or nothing taken out: said, not shouted. */
+.vr-none {
+  color: var(--hint);
+}
 
+/* The filters stay in reach above the scenes while they scroll by. */
 .vr-bar {
+  position: sticky;
+  /* Up over the scroller's own top padding, so nothing shows above it. */
+  top: -24px;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px 16px;
-  margin-bottom: 14px;
+  margin-bottom: 4px;
+  padding: 14px 0 12px;
+  background: var(--panel);
 }
-.vr-bar .chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.vr-chip-n {
-  color: var(--muted);
+.vr-seg-n {
+  color: var(--hint);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.chip.on .vr-chip-n {
-  color: var(--accent);
+.seg.on .vr-seg-n {
+  color: var(--muted);
 }
 .vr-bar-end {
   display: inline-flex;
@@ -5407,6 +5472,9 @@ h4 {
   }
   .vr-main {
     padding: 20px 16px 40px;
+  }
+  .vr-bar {
+    top: -20px;
   }
 }
 

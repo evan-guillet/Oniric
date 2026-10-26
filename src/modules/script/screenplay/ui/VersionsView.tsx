@@ -379,13 +379,19 @@ function Compare({
   );
   const pair = (
     <div className="vr-pair" role="group" aria-label="Versions comparées">
-      <select value={base} onChange={(e) => onBase(e.target.value)} aria-label="Version de référence">
-        {options}
-      </select>
+      <label className="vr-pick">
+        <span className="vr-pick-role">Référence</span>
+        <select value={base} onChange={(e) => onBase(e.target.value)}>
+          {options}
+        </select>
+      </label>
       <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
-      <select value={head} onChange={(e) => onHead(e.target.value)} aria-label="Version comparée">
-        {options}
-      </select>
+      <label className="vr-pick">
+        <span className="vr-pick-role">Comparée</span>
+        <select value={head} onChange={(e) => onHead(e.target.value)}>
+          {options}
+        </select>
+      </label>
       <button type="button" className="btn ghost vr-swap" aria-label="Inverser les deux versions" title="Inverser les deux versions" onClick={onSwap}>
         <ArrowLeftRight aria-hidden="true" />
       </button>
@@ -395,16 +401,16 @@ function Compare({
   if (base === head)
     return (
       <header className="vr-head">
-        <h2>Choisissez deux versions différentes</h2>
         {pair}
+        <h2>Choisissez deux versions différentes</h2>
       </header>
     );
   if (!cmp)
     return (
       <>
         <header className="vr-head">
-          <h2>Comparaison en cours…</h2>
           {pair}
+          <h2>Comparaison en cours…</h2>
         </header>
         <div className="vr-loading" aria-hidden="true">
           <span />
@@ -430,48 +436,25 @@ function Compare({
       return next;
     });
   const allClosed = shown.length > 0 && shown.every((s) => closed.has(s.key));
-  const summary = KINDS.filter((k) => count(k) > 0).map((k) => `${count(k)} ${KIND_LABEL[k][count(k) > 1 ? 1 : 0]}`);
 
   return (
     <>
       <header className="vr-head">
+        {pair}
         <h2>
           {changed.length === 0
             ? `Rien n'a changé depuis ${label(base)}`
-            : head === CURRENT
-              ? `Ce qui a changé depuis ${label(base)}`
-              : `${label(head)} comparée à ${label(base)}`}
+            : `${plural(changed.length, "scène touchée", "scènes touchées")} depuis ${label(base)}`}
         </h2>
-        {pair}
         <dl className="vr-figures">
-          <div>
-            <dt>Scènes</dt>
-            <dd>
-              {cmp.base.scenes.length}
-              <ArrowRight aria-label="puis" />
-              {cmp.head.scenes.length}
-            </dd>
-          </div>
-          <div>
-            <dt>Pages</dt>
-            <dd>
-              {cmp.base.pages}
-              <ArrowRight aria-label="puis" />
-              {cmp.head.pages}
-            </dd>
-          </div>
+          <Figure label="Scènes" before={cmp.base.scenes.length} after={cmp.head.scenes.length} baseLabel={label(base)} />
+          <Figure label="Pages" before={cmp.base.pages} after={cmp.head.pages} baseLabel={label(base)} />
           {changed.length > 0 && (
-            <div>
+            <div className="vr-figure">
               <dt>Lignes</dt>
-              <dd>
+              <dd className="vr-figure-value">
                 <LineStat added={totals.added} removed={totals.removed} />
               </dd>
-            </div>
-          )}
-          {summary.length > 0 && (
-            <div className="vr-figures-wide">
-              <dt>Scènes touchées</dt>
-              <dd className="vr-figures-text">{summary.join(", ")}</dd>
             </div>
           )}
         </dl>
@@ -489,18 +472,18 @@ function Compare({
       ) : (
         <>
           <div className="vr-bar">
-            <div className="chips" role="group" aria-label="Scènes affichées">
-              <button type="button" className={filter === "changes" ? "chip on" : "chip"} aria-pressed={filter === "changes"} onClick={() => setFilter("changes")}>
-                Toutes les modifications <span className="vr-chip-n">{changed.length}</span>
+            <div className="segmented" role="group" aria-label="Scènes affichées">
+              <button type="button" className={filter === "changes" ? "seg on" : "seg"} aria-pressed={filter === "changes"} onClick={() => setFilter("changes")}>
+                Modifications <span className="vr-seg-n">{changed.length}</span>
               </button>
               {KINDS.filter((k) => count(k) > 0).map((k) => (
-                <button key={k} type="button" className={filter === k ? "chip on" : "chip"} aria-pressed={filter === k} onClick={() => setFilter(k)}>
+                <button key={k} type="button" className={filter === k ? "seg on" : "seg"} aria-pressed={filter === k} onClick={() => setFilter(k)}>
                   <span className={`vr-dot ${k}`} aria-hidden="true" />
-                  {KIND_LABEL[k][1].replace(/^./, (c) => c.toUpperCase())} <span className="vr-chip-n">{count(k)}</span>
+                  {KIND_LABEL[k][1].replace(/^./, (c) => c.toUpperCase())} <span className="vr-seg-n">{count(k)}</span>
                 </button>
               ))}
-              <button type="button" className={filter === "all" ? "chip on" : "chip"} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-                Tout le scénario <span className="vr-chip-n">{cmp.scenes.length}</span>
+              <button type="button" className={filter === "all" ? "seg on" : "seg"} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+                Tout le scénario <span className="vr-seg-n">{cmp.scenes.length}</span>
               </button>
             </div>
             <span className="vr-bar-end">
@@ -529,11 +512,26 @@ function Compare({
   );
 }
 
+/** A count in the compared version, how far it moved, and what it was. */
+function Figure({ label, before, after, baseLabel }: { label: string; before: number; after: number; baseLabel: string }) {
+  const delta = after - before;
+  return (
+    <div className="vr-figure">
+      <dt>{label}</dt>
+      <dd className="vr-figure-value">
+        {after}
+        {delta !== 0 && <span className="vr-delta">{signed(delta)}</span>}
+      </dd>
+      <dd className="vr-figure-was">{delta === 0 ? `Comme dans ${baseLabel}` : `${before} dans ${baseLabel}`}</dd>
+    </div>
+  );
+}
+
 function LineStat({ added, removed }: { added: number; removed: number }) {
   return (
     <span className="vr-linestat" title={`${plural(added, "ligne ajoutée", "lignes ajoutées")}, ${plural(removed, "ligne retirée", "lignes retirées")}`}>
-      <span className="vr-plus">+{added}</span>
-      <span className="vr-minus">−{removed}</span>
+      <span className={added ? "vr-plus" : "vr-none"}>+{added}</span>
+      <span className={removed ? "vr-minus" : "vr-none"}>−{removed}</span>
     </span>
   );
 }
