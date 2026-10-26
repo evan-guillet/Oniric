@@ -4721,6 +4721,21 @@ h4 {
   border-left: 1px solid var(--line);
   background: var(--sunken);
 }
+.vr-rail-title {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  margin: 0 6px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.vr-rail-title .count {
+  height: 17px;
+  letter-spacing: 0;
+}
 .vr-thread {
   margin: 0;
   padding: 0;
@@ -4770,7 +4785,6 @@ h4 {
 }
 .vr-stop-main {
   display: grid;
-  justify-items: start;
   gap: 2px;
   min-width: 0;
   padding: 7px 10px 8px;
@@ -4807,14 +4821,19 @@ h4 {
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  min-height: 20px;
   color: var(--ink);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+.vr-stop-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .vr-stop-meta {
   color: var(--muted);
@@ -4828,15 +4847,8 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 18px;
-  padding: 0 7px;
-  border-radius: 999px;
-  border: 1px solid var(--ok-line);
-  background: var(--ok-soft);
   color: var(--ok);
-  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0;
 }
 .vr-live::before {
   content: "";
@@ -4846,7 +4858,7 @@ h4 {
   background: var(--ok-dot);
 }
 .vr-role {
-  margin-top: 5px;
+  flex: none;
   padding: 1px 7px;
   border-radius: 4px;
   background: var(--accent-soft);
@@ -4875,59 +4887,49 @@ h4 {
 }
 
 .vr-cuts {
-  margin-top: 20px;
-  padding: 16px 4px 0;
+  margin: 20px -12px 0;
+  padding: 16px 12px 0;
   border-top: 1px solid var(--line);
 }
-.vr-cuts h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 6px;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.vr-cuts h2 svg {
-  width: 15px;
-  height: 15px;
-  color: var(--muted);
-}
-.vr-cuts h2 .count {
-  margin-left: 0;
-}
 .vr-cuts-note {
-  margin: 4px 6px 10px;
+  margin: -4px 6px 10px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
 }
 .vr-cut-list {
-  display: grid;
-  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: clip;
 }
+/* A cut scene: its heading, then when it went and the way back on one line. */
 .vr-cut {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 6px 4px;
-  align-items: center;
-  padding: 8px 4px 8px 8px;
-  border-radius: 8px;
-}
-.vr-cut:hover {
-  background: var(--hover);
-}
-.vr-cut-main {
-  grid-column: 1 / -1;
-  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 2px;
-  min-width: 0;
+  align-items: center;
+  padding: 9px 6px 6px 12px;
+}
+.vr-cut + .vr-cut {
+  border-top: 1px solid var(--line);
 }
 .vr-cut .vr-slug {
+  grid-column: 1 / -1;
+  padding-right: 6px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.vr-cut > .vr-stop-meta {
+  white-space: nowrap;
+}
+.vr-cut-back {
+  margin-left: 4px;
+}
+.vr-slug {
   white-space: normal;
 }
 .vr-cut .more-btn {
@@ -4959,10 +4961,18 @@ h4 {
  */
 .vr-head {
   display: grid;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+}
+.vr-head-top {
+  display: grid;
   justify-items: start;
-  gap: 6px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--line);
+  gap: 4px;
+  padding: 14px 18px 16px;
 }
 .vr-head h2 {
   margin: 0;
@@ -5027,7 +5037,10 @@ h4 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 0;
-  margin: 14px 0 0;
+  margin: 0;
+  padding: 14px 18px 15px;
+  border-top: 1px solid var(--line);
+  background: var(--sunken);
 }
 .vr-figure {
   display: grid;

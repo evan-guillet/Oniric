@@ -1,4 +1,4 @@
-import { ArrowLeftRight, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, PenLine, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
@@ -25,6 +25,12 @@ import {
 import { readTitlePage } from "../application/titlePageSettings";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+const shortFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+/** A date short enough for one line: the year only when it is not this one. */
+const shortDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.getFullYear() === new Date().getFullYear() ? shortFormat.format(d) : dateFormat.format(d);
+};
 const CURRENT = "__current__";
 
 type Kind = SceneDiff["kind"];
@@ -184,13 +190,17 @@ export function VersionsView() {
           <div className="header-tools">
             <button type="button" className="btn primary" onClick={() => void freeze()}>
               <Lock aria-hidden="true" />
-              Figer la version actuelle…
+              Figer la version actuelle
             </button>
           </div>,
           headerActions,
         )}
 
       <aside className="vr-rail" aria-label="Fil des versions">
+        <h2 className="vr-rail-title">
+          Versions
+          {versions.length > 0 && <span className="count">{versions.length}</span>}
+        </h2>
         <ol className="vr-thread">
           <li className={`vr-stop current${head === CURRENT ? " head" : ""}${base === CURRENT ? " base" : ""}`}>
             <span className="vr-node" aria-hidden="true">
@@ -198,13 +208,13 @@ export function VersionsView() {
             </span>
             <button type="button" className="vr-stop-main" aria-pressed={head === CURRENT} onClick={() => pick(CURRENT)}>
               <span className="vr-stop-title">
-                Version actuelle
-                <span className="vr-live">En cours</span>
+                <span className="vr-stop-name">Version actuelle</span>
+                <RoleTag file={CURRENT} base={base} head={head} />
               </span>
               <span className="vr-stop-meta">
-                {current ? `${plural(current.pages, "page", "pages")} · ${plural(current.scenes.length, "scène", "scènes")}` : "S'enregistre toute seule à chaque frappe"}
+                <span className="vr-live">En cours</span>
+                {current ? ` · ${plural(current.pages, "page", "pages")} · ${plural(current.scenes.length, "scène", "scènes")}` : " · s'enregistre à chaque frappe"}
               </span>
-              <RoleTag file={CURRENT} base={base} head={head} />
             </button>
           </li>
           {versions.map((v, i) => {
@@ -215,13 +225,15 @@ export function VersionsView() {
                   <Lock />
                 </span>
                 <button type="button" className="vr-stop-main" aria-pressed={v.file === base} onClick={() => pick(v.file)} title={`Voir ce qui a changé depuis ${v.name}`}>
-                  <span className="vr-stop-title">{v.name}</span>
+                  <span className="vr-stop-title">
+                    <span className="vr-stop-name">{v.name}</span>
+                    <RoleTag file={v.file} base={base} head={head} />
+                  </span>
                   <span className="vr-stop-meta">{dateFormat.format(new Date(v.createdAt))}</span>
                   <span className="vr-stop-meta">
                     {plural(v.pages, "page", "pages")} · {plural(v.scenes, "scène", "scènes")}
                     {older && v.scenes !== older.scenes && <span className="vr-gain"> ({signed(v.scenes - older.scenes)})</span>}
                   </span>
-                  <RoleTag file={v.file} base={base} head={head} />
                 </button>
                 <MoreMenu
                   label={`Actions pour ${v.name}`}
@@ -242,8 +254,7 @@ export function VersionsView() {
         </ol>
 
         <section className="vr-cuts" aria-labelledby="vr-cuts-title">
-          <h2 id="vr-cuts-title">
-            <Scissors aria-hidden="true" />
+          <h2 id="vr-cuts-title" className="vr-rail-title">
             Scènes coupées
             {cuts.length > 0 && <span className="count">{cuts.length}</span>}
           </h2>
@@ -254,11 +265,11 @@ export function VersionsView() {
             <ul className="vr-cut-list">
               {cuts.map((c) => (
                 <li key={c.id} className="vr-cut">
-                  <div className="vr-cut-main">
-                    <span className="vr-slug">{c.heading || "(sans en-tête)"}</span>
-                    <span className="vr-stop-meta">Coupée le {dateFormat.format(new Date(c.deletedAt))}</span>
-                  </div>
-                  <button type="button" className="btn small" onClick={() => reinstateCut(c)}>
+                  <span className="vr-slug">{c.heading || "(sans en-tête)"}</span>
+                  <span className="vr-stop-meta" title={`Coupée le ${dateFormat.format(new Date(c.deletedAt))}`}>
+                    {shortDate(c.deletedAt)}
+                  </span>
+                  <button type="button" className="btn ghost small vr-cut-back" onClick={() => reinstateCut(c)}>
                     <Undo2 aria-hidden="true" />
                     Réintégrer
                   </button>
@@ -401,16 +412,20 @@ function Compare({
   if (base === head)
     return (
       <header className="vr-head">
-        {pair}
-        <h2>Choisissez deux versions différentes</h2>
+        <div className="vr-head-top">
+          {pair}
+          <h2>Choisissez deux versions différentes</h2>
+        </div>
       </header>
     );
   if (!cmp)
     return (
       <>
         <header className="vr-head">
-          {pair}
-          <h2>Comparaison en cours…</h2>
+          <div className="vr-head-top">
+            {pair}
+            <h2>Comparaison en cours…</h2>
+          </div>
         </header>
         <div className="vr-loading" aria-hidden="true">
           <span />
@@ -440,12 +455,14 @@ function Compare({
   return (
     <>
       <header className="vr-head">
-        {pair}
-        <h2>
-          {changed.length === 0
-            ? `Rien n'a changé depuis ${label(base)}`
-            : `${plural(changed.length, "scène touchée", "scènes touchées")} depuis ${label(base)}`}
-        </h2>
+        <div className="vr-head-top">
+          {pair}
+          <h2>
+            {changed.length === 0
+              ? `Rien n'a changé depuis ${label(base)}`
+              : `${plural(changed.length, "scène touchée", "scènes touchées")} depuis ${label(base)}`}
+          </h2>
+        </div>
         <dl className="vr-figures">
           <Figure label="Scènes" before={cmp.base.scenes.length} after={cmp.head.scenes.length} baseLabel={label(base)} />
           <Figure label="Pages" before={cmp.base.pages} after={cmp.head.pages} baseLabel={label(base)} />
