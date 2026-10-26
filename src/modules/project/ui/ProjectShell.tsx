@@ -49,8 +49,8 @@ import { describeCoreError, describeError } from "../../../core/errors";
 import {
   getThemePreference,
   onThemePreference,
+  resolveTheme,
   setThemePreference,
-  type ThemePreference,
 } from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
 import { Dialog, type ChoiceRequest } from "../../../ui-kit/Dialog";
@@ -350,8 +350,9 @@ export function ProjectShell({
   // A narrow window has room for the rail only.
   const narrow = useSyncExternalStore(subscribeNarrow, () => NARROW.matches);
   const railed = rail || narrow;
-  const [theme, setTheme] = useState(getThemePreference);
-  useEffect(() => onThemePreference(setTheme), []);
+  // The theme on screen: following Windows, it is still one of the two.
+  const [theme, setTheme] = useState(() => resolveTheme(getThemePreference()));
+  useEffect(() => onThemePreference((p) => setTheme(resolveTheme(p))), []);
   const [palette, setPalette] = useState(false);
 
   /** A view from the side bar; the Bible opens on its home page. */
@@ -600,18 +601,15 @@ export function ProjectShell({
               <button
                 type="button"
                 className="nav-link"
-                title={`Apparence : ${THEME_LABEL[theme]}`}
+                title={`Thème ${THEME_LABEL[theme].toLowerCase()} : passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
                 onClick={() => void setThemePreference(THEME_NEXT[theme])}
               >
                 {theme === "dark" ? (
                   <Moon aria-hidden="true" />
-                ) : theme === "light" ? (
-                  <Sun aria-hidden="true" />
                 ) : (
-                  <Monitor aria-hidden="true" />
+                  <Sun aria-hidden="true" />
                 )}
-                <span>Apparence</span>
-                <span className="nav-value">{THEME_LABEL[theme]}</span>
+                <span>{THEME_LABEL[theme]}</span>
               </button>
             </li>
             <li>
@@ -809,17 +807,10 @@ const subscribeNarrow = (onChange: () => void) => {
   return () => NARROW.removeEventListener("change", onChange);
 };
 
-const THEME_LABEL: Record<ThemePreference, string> = {
-  system: "Système",
-  light: "Clair",
-  dark: "Sombre",
-};
-/** « Apparence » goes round the three. */
-const THEME_NEXT: Record<ThemePreference, ThemePreference> = {
-  system: "light",
-  light: "dark",
-  dark: "system",
-};
+type Shown = "light" | "dark";
+const THEME_LABEL: Record<Shown, string> = { light: "Clair", dark: "Sombre" };
+/** The theme button swaps one for the other. */
+const THEME_NEXT: Record<Shown, Shown> = { light: "dark", dark: "light" };
 
 /** A state kept in this computer's storage; without it, it still holds for the session. */
 function useStoredState<T>(key: string, initial: T): [T, (v: T) => void] {

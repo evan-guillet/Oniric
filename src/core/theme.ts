@@ -16,13 +16,14 @@ function isPreference(v: unknown): v is ThemePreference {
   return v === "system" || v === "light" || v === "dark";
 }
 
-function resolve(p: ThemePreference): "light" | "dark" {
+/** The theme a preference shows: light or dark. */
+export function resolveTheme(p: ThemePreference): "light" | "dark" {
   return p === "system" ? (darkQuery.matches ? "dark" : "light") : p;
 }
 
 function apply(p: ThemePreference) {
   current = p;
-  document.documentElement.dataset.theme = resolve(p);
+  document.documentElement.dataset.theme = resolveTheme(p);
   try {
     localStorage.setItem(CACHE, p);
   } catch {
