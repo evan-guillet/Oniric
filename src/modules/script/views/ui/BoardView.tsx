@@ -61,7 +61,7 @@ function HeadFold({ open, label, onClick }: { open: boolean; label: string; onCl
 }
 
 /** A « + » on a canvas wire: adds an act, a sequence or a scene right there, before the card the wire leads to. */
-function WireAdd({ dir, label, onClick }: { dir: "down" | "side" | "trunk"; label: string; onClick: () => void }) {
+function WireAdd({ dir, label, onClick }: { dir: "down" | "trunk"; label: string; onClick: () => void }) {
   return (
     <button type="button" className={`cv-insert ${dir}`} aria-label={label} title={label} onClick={onClick}>
       <span className="cv-insert-dot">
@@ -518,7 +518,7 @@ export function BoardView() {
   };
 
   /*
-   * The canvas: the film at the top left, a trunk down to each act, each act branching to a row of sequences,
+   * The canvas: the film at the top left, a trunk down to each act, each act a trunk down to each of its sequences,
    * each sequence heading a row of its scenes. Arrows follow the story's order.
    */
   const cvSeq = (g: ActGroup, seq: SequenceGroup, root = false) => {
@@ -528,7 +528,7 @@ export function BoardView() {
     return (
       <li key={key} className={`cv-seq ${root ? "cv-root" : ""}`} {...seqDrop(g, seq)}>
         <div className={`cv-node seq ${closed ? "folded" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`}>
-          {!root && seq.sequence && <WireAdd dir="side" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
+          {!root && seq.sequence && <WireAdd dir="trunk" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
           {seqHead(g, seq, root ? undefined : fold)}
         </div>
         {!closed && sceneCards(seq)}

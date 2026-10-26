@@ -4009,12 +4009,6 @@ h4 {
   top: -26px;
   height: 26px;
 }
-.cv-insert.side {
-  right: 100%;
-  top: 0;
-  bottom: 0;
-  width: 40px;
-}
 .cv-insert.trunk {
   left: -64px;
   bottom: 100%;
@@ -4128,10 +4122,9 @@ h4 {
   outline: 2px dashed var(--focus);
   outline-offset: 2px;
 }
-/* A sequence's header spans the row of its scenes, a band over what it holds. */
 .cv-node.seq {
   flex: none;
-  min-width: 300px;
+  width: 300px;
   max-height: none;
   box-shadow: var(--shadow-sm);
 }
@@ -4145,15 +4138,24 @@ h4 {
   height: 18px;
 }
 
-/* Acts hang off the trunk, which runs down from under the film's left edge. */
-.cv-acts {
+/* Acts hang off the trunk, which runs down from under the film's left edge; sequences hang the same way off
+   their act's own trunk, which runs down from under the act's left edge. */
+.cv-acts,
+.cv-seqs {
   margin-left: 28px;
 }
-.cv-act {
+.cv-act,
+.cv-seq {
   position: relative;
   padding: 36px 0 0 44px;
 }
-.cv-acts > .cv-act:not(:last-child)::before {
+.cv-seq {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.cv-acts > .cv-act:not(:last-child)::before,
+.cv-seqs > .cv-seq:not(:last-child)::before {
   content: "";
   position: absolute;
   top: 0;
@@ -4161,9 +4163,12 @@ h4 {
   left: 0;
   border-left: var(--wire-w) solid var(--trunk);
 }
+.cv-seqs > .cv-seq:not(:last-child)::before {
+  border-color: var(--wire);
+}
 /* An elbow from the line above to the node's middle, ending in an arrowhead. */
 .cv-acts > .cv-act > .cv-node::before,
-.cv-seqs > .cv-seq:first-child > .cv-node::before {
+.cv-seqs > .cv-seq > .cv-node::before {
   content: "";
   position: absolute;
   right: calc(100% + 3px);
@@ -4175,7 +4180,7 @@ h4 {
   border-bottom: var(--wire-w) solid var(--trunk);
   border-bottom-left-radius: 12px;
 }
-.cv-seqs > .cv-seq:first-child > .cv-node::before {
+.cv-seqs > .cv-seq > .cv-node::before {
   border-color: var(--wire);
 }
 .cv-acts > .cv-act > .cv-node:not(.add-band)::after,
@@ -4193,41 +4198,14 @@ h4 {
 .cv-acts > .cv-act > .cv-node::after {
   border-color: var(--trunk);
 }
-/* Sequences run left to right under their act, one arrow from each to the next. */
-.cv-seqs {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 40px;
-  margin-left: 28px;
-  padding-top: 36px;
-}
-.cv-seq {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: none;
-}
-.cv-seqs > .cv-seq:first-child {
-  padding-left: 44px;
-}
-.cv-seq + .cv-seq > .cv-node::before {
-  content: "";
-  position: absolute;
-  right: calc(100% + 3px);
-  top: 50%;
-  width: 37px;
-  border-top: var(--wire-w) solid var(--wire);
-  translate: 0 -50%;
+.cv-seq > .cv-node > .cv-insert.trunk .cv-insert-dot {
+  border-color: var(--wire);
 }
 /* The slots that add an act or a sequence hang on a dashed wire. */
 .cv-acts > .cv-add > .cv-node::before,
-.cv-seqs > .cv-add:first-child > .cv-node::before {
+.cv-seqs > .cv-add > .cv-node::before {
   border-left-style: dashed;
   border-bottom-style: dashed;
-}
-.cv-seq + .cv-add > .cv-node::before {
-  border-top-style: dashed;
 }
 /* Each sequence heads a row of its scenes: an arrow down to the first, then one from each to the next. */
 .cv-cards {
