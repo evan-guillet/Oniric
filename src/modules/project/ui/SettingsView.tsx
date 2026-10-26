@@ -21,7 +21,7 @@ import {
   type ThemePreference,
 } from "../../../core/theme";
 import { uuidv7 } from "../../../core/ids";
-import { Dialog } from "../../../ui-kit/Dialog";
+import { Dialog, useBackdropClose } from "../../../ui-kit/Dialog";
 import { Labeled } from "../../../ui-kit/Form";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import {
@@ -129,6 +129,7 @@ export function SettingsDialog({
   const ctx = useContext(ProjectContext);
   const notify = ctx?.notify ?? notifyProp ?? (() => {});
   const ref = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropClose(onClose);
   const [page, setPage] = useState<PageId>("appearance");
   const [search, setSearch] = useState("");
 
@@ -165,6 +166,7 @@ export function SettingsDialog({
         e.preventDefault();
         onClose();
       }}
+      {...backdrop}
     >
       <nav className="settings-nav" aria-label="Catégories de réglages">
         <label className="settings-search">

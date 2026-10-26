@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 export interface DialogAction {
   label: string;
@@ -8,7 +8,29 @@ export interface DialogAction {
   disabled?: boolean;
 }
 
-/** Modal dialog on the native <dialog> element: focus trap, Escape and screen readers come with it. */
+/**
+ * A click on a modal's backdrop closes it, as Escape does. The backdrop is the <dialog> itself, outside its box;
+ * the press must start there too, so a selection dragged out of a field never closes it.
+ */
+export function useBackdropClose(onClose?: () => void) {
+  const pressed = useRef(false);
+  const outside = (e: MouseEvent<HTMLDialogElement>) => {
+    if (e.target !== e.currentTarget) return false;
+    const r = e.currentTarget.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  return {
+    onMouseDown: (e: MouseEvent<HTMLDialogElement>) => {
+      pressed.current = outside(e);
+    },
+    onClick: (e: MouseEvent<HTMLDialogElement>) => {
+      if (pressed.current && outside(e)) onClose?.();
+      pressed.current = false;
+    },
+  };
+}
+
+/** Modal dialog on the native <dialog> element: focus trap, Escape and screen readers come with it; a click outside cancels. */
 export function Dialog({
   title,
   children,
@@ -26,6 +48,7 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const backdrop = useBackdropClose(onCancel);
   useEffect(() => {
     const d = ref.current!;
     if (!d.open) d.showModal();
@@ -42,6 +65,7 @@ export function Dialog({
         e.preventDefault();
         onCancel?.();
       }}
+      {...backdrop}
     >
       <h2 id={titleId}>{title}</h2>
       <div className="dialog-body">{children}</div>

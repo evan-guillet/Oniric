@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -31,6 +32,8 @@ import {
   Monitor,
   Moon,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   SquareKanban,
@@ -43,7 +46,12 @@ import { commands, events, type OpenState } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { describeCoreError, describeError } from "../../../core/errors";
-import { setThemePreference } from "../../../core/theme";
+import {
+  getThemePreference,
+  onThemePreference,
+  setThemePreference,
+  type ThemePreference,
+} from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
 import { Dialog, type ChoiceRequest } from "../../../ui-kit/Dialog";
 import type { ToastMessage } from "../../../ui-kit/Toast";
@@ -336,6 +344,14 @@ export function ProjectShell({
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Folded to a rail of icons, and the sections folded in it: remembered on this computer.
+  const [rail, setRail] = useStoredState("oniric.nav.rail", false);
+  const [foldedParts, setFoldedParts] = useStoredState<string[]>("oniric.nav.folded", []);
+  // A narrow window has room for the rail only.
+  const narrow = useSyncExternalStore(subscribeNarrow, () => NARROW.matches);
+  const railed = rail || narrow;
+  const [theme, setTheme] = useState(getThemePreference);
+  useEffect(() => onThemePreference(setTheme), []);
   const [palette, setPalette] = useState(false);
 
   /** A view from the side bar; the Bible opens on its home page. */
@@ -464,40 +480,56 @@ export function ProjectShell({
   return (
     <ProjectContext.Provider value={api}>
       <div className="shell">
-        <nav className="shell-nav" aria-label="Vues du projet">
-          <ProjectMenu
-            title={project.title}
-            dir={project.dir}
-            open={menuOpen}
-            onOpenChange={setMenuOpen}
-            items={[
-              {
-                label: t("workspace.import"),
-                icon: FileInput,
-                onClick: () => transfer("import"),
-              },
-              {
-                label: t("workspace.export"),
-                icon: FileOutput,
-                onClick: () => transfer("export"),
-              },
-              {
-                label: "Réglages",
-                icon: Settings,
-                onClick: () => setSettings(true),
-              },
-              {
-                label: "Fermer le projet",
-                icon: LogOut,
-                onClick: onClose,
-                separated: true,
-              },
-            ]}
-          />
+        <nav
+          className={railed ? "shell-nav rail" : "shell-nav"}
+          aria-label="Vues du projet"
+        >
+          <div className="shell-nav-top">
+            <ProjectMenu
+              title={project.title}
+              dir={project.dir}
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
+              items={[
+                {
+                  label: t("workspace.import"),
+                  icon: FileInput,
+                  onClick: () => transfer("import"),
+                },
+                {
+                  label: t("workspace.export"),
+                  icon: FileOutput,
+                  onClick: () => transfer("export"),
+                },
+                {
+                  label: "Fermer le projet",
+                  icon: LogOut,
+                  onClick: onClose,
+                  separated: true,
+                },
+              ]}
+            />
+            <button
+              type="button"
+              className="nav-icon-btn nav-rail-toggle"
+              hidden={narrow}
+              aria-label={rail ? "Déplier le menu" : "Plier le menu"}
+              title={rail ? "Déplier le menu" : "Plier le menu"}
+              aria-expanded={!rail}
+              onClick={() => setRail(!rail)}
+            >
+              {rail ? (
+                <PanelLeftOpen aria-hidden="true" />
+              ) : (
+                <PanelLeftClose aria-hidden="true" />
+              )}
+            </button>
+          </div>
           <button
             type="button"
             className="nav-link nav-search"
             aria-keyshortcuts="Control+K"
+            title="Rechercher (Ctrl K)"
             onClick={() => setPalette(true)}
           >
             <Search aria-hidden="true" />
@@ -520,22 +552,80 @@ export function ProjectShell({
             hidden
             onChange={(e) => void importBibleFile(e.target.files?.[0])}
           />
-          {NAV.filter((g) => !hiddenParts.includes(g.part)).map((g) => (
-            <section key={g.part}>
-              <h2>{g.label}</h2>
-              <ul>
-                {g.items.map((item) => (
-                  <li key={item.id}>
-                    <NavButton
-                      item={item}
-                      on={view === item.id}
-                      onClick={() => goView(item.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          <div className="shell-nav-parts">
+            {NAV.filter((g) => !hiddenParts.includes(g.part)).map((g) => {
+              // A folded section still shows the view one is on.
+              const open = railed || !foldedParts.includes(g.part);
+              const shown = open
+                ? g.items
+                : g.items.filter((item) => item.id === view);
+              return (
+                <section key={g.part}>
+                  <h2>
+                    <button
+                      type="button"
+                      className="nav-part"
+                      aria-expanded={open}
+                      onClick={() =>
+                        setFoldedParts(
+                          open
+                            ? [...foldedParts, g.part]
+                            : foldedParts.filter((x) => x !== g.part),
+                        )
+                      }
+                    >
+                      <ChevronDown aria-hidden="true" />
+                      {g.label}
+                    </button>
+                  </h2>
+                  {shown.length > 0 && (
+                    <ul>
+                      {shown.map((item) => (
+                        <li key={item.id}>
+                          <NavButton
+                            item={item}
+                            on={view === item.id}
+                            onClick={() => goView(item.id)}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+          <ul className="shell-nav-foot">
+            <li>
+              <button
+                type="button"
+                className="nav-link"
+                title={`Apparence : ${THEME_LABEL[theme]}`}
+                onClick={() => void setThemePreference(THEME_NEXT[theme])}
+              >
+                {theme === "dark" ? (
+                  <Moon aria-hidden="true" />
+                ) : theme === "light" ? (
+                  <Sun aria-hidden="true" />
+                ) : (
+                  <Monitor aria-hidden="true" />
+                )}
+                <span>Apparence</span>
+                <span className="nav-value">{THEME_LABEL[theme]}</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="nav-link"
+                title="Réglages"
+                onClick={() => setSettings(true)}
+              >
+                <Settings aria-hidden="true" />
+                <span>Réglages</span>
+              </button>
+            </li>
+          </ul>
         </nav>
 
         <div className="shell-panel">
@@ -668,13 +758,14 @@ function ProjectMenu({
         ref={buttonRef}
         type="button"
         className={open ? "shell-brand on" : "shell-brand"}
-        title={dir}
+        title={`${title} — ${dir}`}
+        aria-label={`Oniric, projet ${title}`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
       >
         <img src="/oniric.svg" alt="" width="22" height="22" />
-        <span className="shell-brand-title">{title}</span>
+        <span className="shell-brand-title">Oniric</span>
         <ChevronDown aria-hidden="true" className="shell-brand-chevron" />
       </button>
       {open && at && (
@@ -684,6 +775,10 @@ function ProjectMenu({
           role="menu"
           style={{ top: at.top, left: at.left }}
         >
+          <div className="project-menu-head" role="presentation">
+            <span className="project-menu-title">{title}</span>
+            <span className="project-menu-dir">{dir}</span>
+          </div>
           {items.map((item) => {
             const Icon = item.icon;
             return (
@@ -706,6 +801,48 @@ function ProjectMenu({
       )}
     </>
   );
+}
+
+const NARROW = window.matchMedia("(max-width: 1180px)");
+const subscribeNarrow = (onChange: () => void) => {
+  NARROW.addEventListener("change", onChange);
+  return () => NARROW.removeEventListener("change", onChange);
+};
+
+const THEME_LABEL: Record<ThemePreference, string> = {
+  system: "Système",
+  light: "Clair",
+  dark: "Sombre",
+};
+/** « Apparence » goes round the three. */
+const THEME_NEXT: Record<ThemePreference, ThemePreference> = {
+  system: "light",
+  light: "dark",
+  dark: "system",
+};
+
+/** A state kept in this computer's storage; without it, it still holds for the session. */
+function useStoredState<T>(key: string, initial: T): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null ? initial : (JSON.parse(raw) as T);
+    } catch {
+      return initial;
+    }
+  });
+  const set = useCallback(
+    (v: T) => {
+      setValue(v);
+      try {
+        localStorage.setItem(key, JSON.stringify(v));
+      } catch {
+        // Not remembered, still applied.
+      }
+    },
+    [key],
+  );
+  return [value, set];
 }
 
 function NavButton({

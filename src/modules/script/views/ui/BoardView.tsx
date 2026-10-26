@@ -36,7 +36,6 @@ import { CanvasSurface } from "./CanvasSurface";
 type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
-type Focus = { act: string; seq?: string } | null;
 
 const statusLabel = (s: string | null) => SCENE_STATUSES.find((x) => x.id === s)?.label ?? "";
 const actKey = (g: ActGroup) => `a:${g.act?.id ?? "none"}`;
@@ -100,16 +99,15 @@ function Ghost({ label, className = "", children, ...rest }: { label: string; cl
 }
 
 /**
- * The board (VUE-03 to VUE-09): the story as a tree on a free canvas. Opening an act or a sequence keeps only its own tree.
+ * The board (VUE-03 to VUE-09): the story as a tree on a free canvas.
  */
 export function BoardView() {
-  const { project, session, notify, prompt, ask, openScene, headerActions, setTrail } = useProject();
+  const { project, session, notify, prompt, ask, openScene, headerActions } = useProject();
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
   const [filter, setFilter] = useState<{ kind: FilterKind; value: string } | null>(null);
   const [highlight, setHighlight] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [focus, setFocus] = useState<Focus>(null);
   // Acts and sequences folded on the canvas, by fold key; remembered per project on this computer.
   const foldKey = `oniric.board.folds.${project.id}`;
   const [folded, setFoldedState] = useState<Set<string>>(() => {
@@ -141,7 +139,6 @@ export function BoardView() {
   const groups = useMemo(() => (story ? storyOutline(story, scenes.map((s) => s.id)) : []), [story, scenes]);
   const titles = useMemo(() => numberedTitles(groups), [groups]);
   const actTitle = (g: ActGroup) => (g.act && titles.get(g.act.id)) || "Sans acte";
-  const seqTitle = (s: SequenceGroup) => (s.sequence && titles.get(s.sequence.id)) || "Hors séquence";
   // On the board the number sits grey above the title.
   const parts = useMemo(() => numberedParts(groups), [groups]);
   const numbered = (id: string | undefined, fallback: string) => {
@@ -154,38 +151,6 @@ export function BoardView() {
       </>
     );
   };
-  // A deleted act or sequence drops the focus back to the level above.
-  const focusAct = focus ? groups.find((g) => actKey(g) === focus.act) : undefined;
-  const focusSeq = focus?.seq && focusAct ? focusAct.sequences.find((s) => seqKey(focusAct, s) === focus.seq) : undefined;
-  const focusActLabel = focusAct && actTitle(focusAct);
-  const focusActCount = focusAct?.sequences.reduce((n, s) => n + s.scenes.length, 0);
-  const focusSeqLabel = focusSeq && seqTitle(focusSeq);
-  const focusSeqCount = focusSeq?.scenes.length;
-
-  // The header's breadcrumb follows the zoom: Tableau › Acte › Séquence.
-  useEffect(() => {
-    if (!focus || focusActLabel === undefined) return setTrail(null);
-    const top = { label: "Tableau", onClick: () => setFocus(null) };
-    const act = { label: focusActLabel, count: focusActCount };
-    setTrail(
-      focusSeqLabel === undefined
-        ? [top, act]
-        : [top, { ...act, onClick: () => setFocus({ act: focus.act }) }, { label: focusSeqLabel, count: focusSeqCount }],
-    );
-  }, [focus, focusActLabel, focusActCount, focusSeqLabel, focusSeqCount, setTrail]);
-  useEffect(() => () => setTrail(null), [setTrail]);
-
-  // Escape climbs back one level, once the card panel is closed.
-  useEffect(() => {
-    if (!focus || selected) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, [role=dialog], [role=menu]")) return;
-      setFocus(focus.seq ? { act: focus.act } : null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [focus, selected]);
-
   if (!story) return <div className="view pad muted">Chargement…</div>;
   const newSequence = async (g: ActGroup, beforeId: string | null = null) => {
     const t = await prompt("Nouvelle séquence", "Titre de la séquence");
@@ -426,14 +391,14 @@ export function BoardView() {
     };
   };
 
-  const seqHead = (g: ActGroup, seq: SequenceGroup, fold?: string) => (
+  const seqHead = (seq: SequenceGroup, fold: string) => (
     <header className="seq-head">
       {seq.sequence && <Grip label="Glisser pour déplacer la séquence" onDragStart={startDrag({ kind: "sequence", id: seq.sequence.id }, ".seq-head")} />}
       {fold && <HeadFold open={!folded.has(fold)} label="la séquence" onClick={() => toggleFold(fold)} />}
-      <button type="button" className="drill" title="Ouvrir la séquence" onClick={() => setFocus({ act: actKey(g), seq: seqKey(g, seq) })}>
+      <div className="head-label">
         <span className="seq-title">{numbered(seq.sequence?.id, "Hors séquence")}</span>
         <span className="muted small">{seq.scenes.length} sc.</span>
-      </button>
+      </div>
       {seq.sequence && (
         <MoreMenu
           label="Actions de la séquence"
@@ -575,12 +540,12 @@ export function BoardView() {
         {g.act && <Grip label="Glisser pour déplacer l'acte" onDragStart={startDrag({ kind: "act", id: g.act.id }, ".column-head")} />}
         {fold && <HeadFold open={!folded.has(fold)} label="l'acte" onClick={() => toggleFold(fold)} />}
         <h3 className="act-title">
-          <button type="button" className="drill" title="Ouvrir l'acte" onClick={() => setFocus({ act: actKey(g) })}>
+          <div className="head-label">
             <span className="act-name">{numbered(g.act?.id, "Sans acte")}</span>
             <span className="muted small">
               {ids.length} sc. · {totalEighths ? Math.round((durationOf(ids) / totalEighths) * 100) : 0} %
             </span>
-          </button>
+          </div>
         </h3>
         {g.act && (
           <MoreMenu
@@ -626,35 +591,35 @@ export function BoardView() {
    * The canvas: the film at the top left, a trunk down to each act, each act a trunk down to each of its sequences,
    * each sequence heading a row of its scenes. Arrows follow the story's order.
    */
-  const cvSeq = (g: ActGroup, seq: SequenceGroup, root = false) => {
+  const cvSeq = (g: ActGroup, seq: SequenceGroup) => {
     const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
     const fold = seqKey(g, seq);
-    const closed = !root && folded.has(fold);
+    const closed = folded.has(fold);
     return (
-      <li key={key} className={`cv-seq ${root ? "cv-root" : ""}`} {...seqDrop(g, seq)}>
+      <li key={key} className="cv-seq" {...seqDrop(g, seq)}>
         <div className={`cv-node seq ${closed ? "folded" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`}>
-          {!root && <Wire kind="in" />}
-          {!root && <Wire kind="on" />}
+          <Wire kind="in" />
+          <Wire kind="on" />
           {!closed && <Wire kind="out" />}
-          {!root && seq.sequence && <WireAdd dir="trunk" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
-          {seqHead(g, seq, root ? undefined : fold)}
+          {seq.sequence && <WireAdd dir="trunk" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
+          {seqHead(seq, fold)}
         </div>
         {!closed && sceneCards(seq)}
       </li>
     );
   };
 
-  const cvAct = (g: ActGroup, root = false) => {
+  const cvAct = (g: ActGroup) => {
     const key = g.act?.id ?? "none";
     const fold = actKey(g);
-    const closed = !root && folded.has(fold);
+    const closed = folded.has(fold);
     return (
-      <li key={key} className={`cv-act ${root ? "cv-root" : ""}`} style={actStyle(g)}>
+      <li key={key} className="cv-act" style={actStyle(g)}>
         <div className={`cv-node cv-act-node ${closed ? "folded" : ""} ${dropTarget === `a:${key}` ? "drop" : ""}`} {...actDrop(g, g.sequences.at(-1))}>
-          {!root && <Wire kind="in" />}
-          {!root && <Wire kind="on" />}
-          {!root && g.act && <WireAdd dir="trunk" label="Insérer un acte ici" onClick={() => void newAct(g.act!.id)} />}
-          {actHead(g, root ? undefined : fold)}
+          <Wire kind="in" />
+          <Wire kind="on" />
+          {g.act && <WireAdd dir="trunk" label="Insérer un acte ici" onClick={() => void newAct(g.act!.id)} />}
+          {actHead(g, fold)}
         </div>
         {!closed && (
           <ol className="cv-seqs">
@@ -684,13 +649,6 @@ export function BoardView() {
   );
 
   const canvas = () => {
-    if (focusAct && focusSeq)
-      return (
-        <ol className="cv-tree cv-seqs" style={actStyle(focusAct)}>
-          {cvSeq(focusAct, focusSeq, true)}
-        </ol>
-      );
-    if (focusAct) return <ol className="cv-tree">{cvAct(focusAct, true)}</ol>;
     const acts = groups.filter((g) => g.act).length;
     return (
       <div className="cv-tree">
@@ -762,7 +720,7 @@ export function BoardView() {
           headerActions,
         )}
 
-      <CanvasSurface place={`${focus?.act ?? ""}/${focus?.seq ?? ""}`} tools={focusSeq ? undefined : foldTools} onDragEnd={() => setDropTarget(null)}>
+      <CanvasSurface tools={foldTools} onDragEnd={() => setDropTarget(null)}>
         {canvas()}
       </CanvasSurface>
 

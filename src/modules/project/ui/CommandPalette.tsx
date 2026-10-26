@@ -4,6 +4,7 @@ import { useLive } from "../../../core/db/live";
 import { loadEntries, loadTypes } from "../../script/bible/application/bible";
 import { fold } from "../../script/bible/domain/types";
 import { iconOf } from "../../script/bible/ui/typeIcons";
+import { useBackdropClose } from "../../../ui-kit/Dialog";
 
 export interface PaletteItem {
   id: string;
@@ -48,6 +49,7 @@ export function CommandPalette({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropClose(onClose);
   const list = useRef<HTMLDivElement>(null);
   const id = useId();
   const [query, setQuery] = useState("");
@@ -124,10 +126,7 @@ export function CommandPalette({
         e.preventDefault();
         onClose();
       }}
-      onMouseDown={(e) => {
-        // A click on the backdrop lands on the dialog itself.
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...backdrop}
     >
       <div className="palette-search">
         <Search aria-hidden="true" />

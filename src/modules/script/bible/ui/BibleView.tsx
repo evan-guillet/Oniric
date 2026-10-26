@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
-import { Dialog } from "../../../../ui-kit/Dialog";
+import { Dialog, useBackdropClose } from "../../../../ui-kit/Dialog";
 import { EmptyState } from "../../../../ui-kit/Form";
 import { MediaImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
@@ -285,6 +285,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
 /** An entry over the cards, on the native <dialog>: Escape, the close button or a click outside closes it. */
 function EntryModal({ name, onClose, children }: { name: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropClose(onClose);
   useEffect(() => {
     const d = ref.current!;
     if (!d.open) d.showModal();
@@ -303,9 +304,7 @@ function EntryModal({ name, onClose, children }: { name: string; onClose: () => 
         e.preventDefault();
         onClose();
       }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...backdrop}
     >
       <button type="button" className="entry-modal-close" aria-label="Fermer la fiche" title="Fermer (Échap)" onClick={onClose}>
         <X aria-hidden="true" />

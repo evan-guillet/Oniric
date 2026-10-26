@@ -1039,27 +1039,40 @@ kbd {
 /* Project shell */
 .shell {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
   height: 100%;
   background: var(--sunken);
+  transition: grid-template-columns 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.shell:has(> .shell-nav.rail) {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+/*
+ * The side menu: the application and the way to fold it, the search, the project's views in sections that fold,
+ * then the appearance and the settings, held at the bottom. Folded, it is a rail of icons.
+ */
 .shell-nav {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
-  padding: 4px 8px 10px;
+  padding: 6px 10px 8px;
   background: var(--sunken);
+}
+.shell-nav-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 .shell-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex: 1;
   min-width: 0;
-  width: 100%;
-  height: 38px;
-  margin-bottom: 4px;
-  padding: 0 10px;
+  height: 36px;
+  padding: 0 8px;
   border: none;
   border-radius: var(--radius);
   background: none;
@@ -1073,28 +1086,92 @@ kbd {
 .shell-brand.on {
   background: var(--hover);
 }
+.shell-brand img {
+  flex: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+}
+.shell-brand-title {
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .shell-brand-chevron {
   flex: none;
   width: 14px;
   height: 14px;
-  margin-left: auto;
   color: var(--muted);
   transition: transform 120ms ease-out;
 }
 .shell-brand.on .shell-brand-chevron {
   transform: rotate(180deg);
 }
+.nav-icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.nav-icon-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.nav-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+.nav-icon-btn[hidden] {
+  display: none;
+}
 .project-menu {
   position: fixed;
   z-index: 50;
   display: grid;
   min-width: 220px;
+  max-width: 320px;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   box-shadow: var(--shadow-lg);
   animation: element-bar-in 120ms ease-out;
+}
+/* The project the menu acts on, its folder under it. */
+.project-menu-head {
+  display: grid;
+  gap: 1px;
+  margin: 0 -4px 4px;
+  padding: 6px 14px 9px;
+  border-bottom: 1px solid var(--line);
+}
+.project-menu-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.project-menu-dir {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
 }
 .project-menu button {
   display: flex;
@@ -1132,24 +1209,6 @@ kbd {
   right: -4px;
   border-top: 1px solid var(--line);
 }
-.shell-brand img {
-  flex: none;
-  border-radius: 6px;
-  box-shadow: var(--shadow-sm);
-}
-.shell-brand-title {
-  font-weight: 600;
-  font-size: 13.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.shell-nav h2 {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--muted);
-  padding: 14px 10px 4px;
-}
 .shell-nav ul {
   list-style: none;
   margin: 0;
@@ -1162,7 +1221,7 @@ kbd {
   align-items: center;
   gap: 10px;
   width: 100%;
-  height: 30px;
+  height: 32px;
   text-align: left;
   padding: 0 10px;
   border: none;
@@ -1180,27 +1239,35 @@ kbd {
   white-space: nowrap;
 }
 .nav-link svg {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 17px;
+  height: 17px;
   color: var(--muted);
 }
 .nav-link:hover {
   background: var(--hover);
 }
 .nav-link.on {
-  background: var(--panel);
-  box-shadow:
-    0 0 0 1px var(--line),
-    var(--shadow-sm);
+  background: var(--nav-on);
   color: var(--ink);
   font-weight: 500;
 }
 .nav-link.on svg {
   color: var(--ink);
 }
-/* « Rechercher » under the project name: the palette, Ctrl+K */
+.nav-link:focus-visible,
+.nav-part:focus-visible,
+.nav-icon-btn:focus-visible,
+.shell-brand:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* « Rechercher » looks like the field it opens: the palette, Ctrl+K. */
 .nav-link.nav-search {
-  margin-bottom: 6px;
+  flex: none;
+  height: 34px;
+  margin-bottom: 10px;
+  border-radius: var(--control-r);
   background: var(--panel);
   box-shadow: 0 0 0 1px var(--line-strong);
   color: var(--muted);
@@ -1211,22 +1278,130 @@ kbd {
 }
 .nav-search kbd {
   flex: none;
-  font-size: 10.5px;
+  font: inherit;
+  font-size: 11px;
   color: var(--muted);
 }
 .nav-link.later {
   color: var(--muted);
 }
-.nav-later {
+.nav-later,
+.nav-value {
   flex: none;
-  font-size: 10.5px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.nav-later {
   font-weight: 500;
   line-height: 16px;
   padding: 0 5px;
   border: 1px solid var(--line-strong);
   border-radius: 4px;
+}
+/* The sections, a line between each, scroll between the search and the foot. */
+.shell-nav-parts {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0 -10px;
+  padding: 0 10px;
+  border-top: 1px solid var(--line);
+}
+.shell-nav-parts > section {
+  padding: 8px 0 10px;
+}
+.shell-nav-parts > section + section {
+  border-top: 1px solid var(--line);
+}
+.shell-nav h2 {
+  margin: 0;
+  font: inherit;
+}
+.nav-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-part:hover {
+  color: var(--ink-2);
+}
+.nav-part svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 120ms ease-out;
+}
+.nav-part[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+.shell-nav .shell-nav-foot {
+  flex: none;
+  margin: 0 -10px;
+  padding: 8px 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Folded: icons alone, their names in the tooltips; a line stands for each section's heading. */
+.shell-nav.rail {
+  padding: 6px 8px 8px;
+}
+.shell-nav.rail .shell-nav-top {
+  flex-direction: column;
+  gap: 2px;
+}
+.shell-nav.rail .shell-brand {
+  flex: none;
+  width: 40px;
+  padding: 0;
+  justify-content: center;
+}
+.shell-nav.rail .shell-brand-title,
+.shell-nav.rail .shell-brand-chevron,
+.shell-nav.rail .nav-later,
+.shell-nav.rail .nav-value,
+.shell-nav.rail .nav-search kbd {
+  display: none;
+}
+.shell-nav.rail .nav-link {
+  justify-content: center;
+  padding: 0;
+}
+.shell-nav.rail .nav-link > span:first-of-type {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.shell-nav.rail .shell-nav-parts,
+.shell-nav.rail .shell-nav-foot {
+  margin: 0 -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.shell-nav.rail .shell-nav-parts > section {
+  padding: 6px 0;
+}
+.shell-nav.rail h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 .shell-panel {
   display: flex;
@@ -3548,40 +3723,31 @@ h4 {
   margin: 0;
   font: inherit;
 }
-/* The title button opens the act or sequence; the « + » beside it adds to it. Counts sit level with the title line. */
-.drill {
+/* The title with its counts, level with the title line; the « + » beside it adds to it. */
+.head-label {
   display: flex;
   align-items: flex-end;
   gap: 8px;
   width: 100%;
   min-width: 0;
   min-height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
-.seq-head .drill {
+.seq-head .head-label {
   flex: 1;
   min-height: 26px;
 }
-.drill:focus-visible,
 .head-add:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 /* Counts stay whole; a long title gives way with an ellipsis. */
-.drill > .muted.small {
+.head-label > .muted.small {
   flex: 1 0 auto;
   white-space: nowrap;
   line-height: 1.5;
 }
-.drill > .act-name,
-.drill > .seq-title {
+.head-label > .act-name,
+.head-label > .seq-title {
   flex: 0 1 auto;
 }
 .head-add {
@@ -4152,8 +4318,8 @@ h4 {
   position: relative;
   padding: 24px 0 12px 44px;
 }
-.cv-act:not(.cv-root),
-.cv-seq:not(.cv-root) {
+.cv-act,
+.cv-seq {
   overflow-x: visible;
   overflow-y: clip;
 }
@@ -4298,7 +4464,6 @@ h4 {
   left: 16px;
   z-index: 3;
 }
-.cv-tree .cv-root > .cv-seqs > .cv-seq > .cv-node,
 .cv-acts > .cv-act > .cv-node {
   left: 88px;
 }
@@ -4316,20 +4481,8 @@ h4 {
   position: sticky;
   left: 88px;
 }
-.cv-root > .cv-seqs .cv-cards > .card-add {
-  left: 160px;
-}
 .cv-acts .cv-cards > .card-add {
   left: 232px;
-}
-/* An opened act or sequence is the root of its own tree: nothing leads into it. */
-.cv-root,
-.cv-tree.cv-seqs > .cv-root:first-child {
-  padding: 0;
-}
-.cv-tree.cv-seqs {
-  margin-left: 0;
-  padding-top: 0;
 }
 .canvas-tools {
   position: absolute;
@@ -6127,45 +6280,11 @@ h4 {
     overflow: hidden;
     clip-path: inset(50%);
   }
-  .shell {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-  .shell-nav {
-    padding: 10px 6px;
-  }
   .workspace {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
   .desk {
     padding: 20px 16px 64px;
-  }
-  .shell-brand {
-    padding: 0;
-    justify-content: center;
-  }
-  .shell-brand-title,
-  .shell-brand-chevron,
-  .nav-later {
-    display: none;
-  }
-  .shell-nav h2 {
-    height: 1px;
-    margin: 8px 6px;
-    padding: 0;
-    overflow: hidden;
-    color: transparent;
-    background: var(--line-strong);
-  }
-  .nav-link {
-    justify-content: center;
-    padding: 0;
-  }
-  .nav-link > span:first-of-type {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
 }
 

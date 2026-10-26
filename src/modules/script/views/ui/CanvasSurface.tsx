@@ -14,7 +14,7 @@ const OWN_GESTURE = ".grip, [draggable=true], input, textarea, select, .more-btn
  * dragged from anywhere, cards included (a drag never ends in a click), or with the middle button; the wheel
  * scrolls it up and down, Shift + wheel sideways. What it holds is laid out at its natural size, then scaled as one.
  */
-export function CanvasSurface({ children, place, tools, onDragEnd }: { children: ReactNode; place: string; tools?: ReactNode; onDragEnd?: () => void }) {
+export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactNode; tools?: ReactNode; onDragEnd?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const world = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -49,11 +49,6 @@ export function CanvasSurface({ children, place, tools, onDragEnd }: { children:
     }
     trackScroll();
   }, [zoom, trackScroll]);
-
-  // A new place (the whole story, an act, a sequence) starts at its top left.
-  useLayoutEffect(() => {
-    box.current?.scrollTo({ left: 0, top: 0 });
-  }, [place]);
 
   // Everything in view from the top left, never larger than life.
   const fit = () => {
