@@ -258,9 +258,7 @@ export function VersionsView() {
             Scènes coupées
             {cuts.length > 0 && <span className="count">{cuts.length}</span>}
           </h2>
-          <p className="vr-cuts-note">
-            {cuts.length === 0 ? "Une scène supprimée du scénario attend ici avant d'être effacée." : "Elles attendent ici, prêtes à revenir dans le scénario."}
-          </p>
+          {cuts.length === 0 && <p className="vr-cuts-note">Une scène supprimée du scénario attend ici avant d'être effacée.</p>}
           {cuts.length > 0 && (
             <ul className="vr-cut-list">
               {cuts.map((c) => (
