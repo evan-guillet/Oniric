@@ -1466,7 +1466,14 @@ kbd {
   min-width: 0;
 }
 .view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-left: auto;
+}
+/* The Structure view switch stays at the far end, where it is whatever the shown view adds before it. */
+.structure-shape {
+  order: 1;
 }
 .view-header-actions:empty {
   display: none;

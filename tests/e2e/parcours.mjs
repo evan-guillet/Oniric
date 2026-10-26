@@ -336,13 +336,15 @@ check(popup && linked > 0, "lien wiki : @ propose les fiches et pose un lien dan
 await page.keyboard.press("Control+z");
 await page.keyboard.press("Control+z");
 
-await nav("Tableau");
+const shape = (name) => page.locator(".view-header").getByRole("button", { name, exact: true }).click();
+await nav("Structure");
+await shape("Tableau");
 await page.waitForSelector(".board-view .cv-tree", { timeout: 15000 });
 // The canvas shows every card of a fresh project, nothing folded.
 const cards = await page.locator(".board-view .cv-tree .card").count();
 check(cards === sceneCount, `tableau : ${cards} cartes pour ${sceneCount} scènes (VUE-03)`);
 
-await nav("Chronologie");
+await shape("Chronologie");
 check(await page.waitForSelector(".timeline-scroll svg .tl-scene", { timeout: 15000 }).then(() => true, () => false), "chronologie affichée (VUE-10)");
 
 await nav("Versions");

@@ -6,7 +6,7 @@ Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer
 
 - l'**Atelier d'écriture**, étapes 1 à 5 : préparation, personnages, structure, documents préparatoires (synopsis, séquencier, traitement, continuité dialoguée), écriture ;
 - la **Bible** : personnages, lieux, objets… et liens `@` ou `[[` depuis le scénario et les documents ;
-- le **Tableau** (actes, séquences, cartes de scène, lignes d'intrigue) et la **Chronologie** ;
+- la **Structure**, vue en **Tableau** (actes, séquences, cartes de scène, lignes d'intrigue) ou en **Chronologie** ;
 - les **Versions** figées, leur comparaison, et les **notes** en marge du scénario ;
 - la **page de titre**, les **formats personnalisés** et le **profil** ;
 - l'export **FDX** (Final Draft), l'import FDX et Fountain ;
@@ -22,7 +22,7 @@ Les choix techniques sont décrits dans le [document d'architecture](docs/Archit
 2. **Nouveau projet** : un titre, un format, un emplacement. Le projet est un dossier ordinaire. **Importer un scénario…** crée un projet à partir d'un fichier Final Draft (`.fdx`) ou Fountain.
 3. Écrire. `Entrée` et `Tab` passent d'un élément à l'autre comme dans les logiciels professionnels ; `Ctrl+1` à `Ctrl+8` choisissent l'élément ; taper `INT.` en début d'action crée un en-tête de scène.
 4. **Exporter en PDF** (`Ctrl+P`) : le fichier arrive dans le dossier `exports` du projet. **Options d'export…** imprime dans un autre format ; **Page de titre…** la remplit.
-5. La colonne de gauche mène aux autres vues : Atelier, Bible, Scénario, Tableau, Chronologie, Versions, Réglages.
+5. La colonne de gauche mène aux autres vues : Atelier, Bible, Scénario, Structure, Versions, Réglages.
 
 Rien à enregistrer à la main : le texte est écrit sur le PC une seconde après la dernière frappe, et recopié dans le dossier du projet toutes les 30 secondes et à la fermeture. `Ctrl+S` force la recopie.
 

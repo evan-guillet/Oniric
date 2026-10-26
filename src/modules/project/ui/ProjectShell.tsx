@@ -14,7 +14,6 @@ import {
   BookOpen,
   CalendarDays,
   ChartColumn,
-  ChartGantt,
   ChevronDown,
   ChevronRight,
   Clapperboard,
@@ -25,6 +24,7 @@ import {
   FileText,
   History,
   Images,
+  Layers,
   LayoutPanelTop,
   ListChecks,
   LogOut,
@@ -36,7 +36,6 @@ import {
   PanelLeftOpen,
   Search,
   Settings,
-  SquareKanban,
   Sun,
   Users,
   Wallet,
@@ -80,8 +79,7 @@ import { ScreenplayWorkspace } from "../../script/screenplay/ui/ScreenplayWorksp
 import { VersionsView } from "../../script/screenplay/ui/VersionsView";
 import { useWritingJournal } from "../../script/stats/application/journal";
 import { StatsView } from "../../script/stats/ui/StatsView";
-import { BoardView } from "../../script/views/ui/BoardView";
-import { TimelineView } from "../../script/views/ui/TimelineView";
+import { StructureView } from "../../script/views/ui/StructureView";
 import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { LaterView } from "./LaterView";
@@ -108,6 +106,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   later?: string;
+  /** Other words the palette finds it by. */
+  keywords?: string;
 }
 
 export const NAV: { part: string; label: string; items: NavItem[] }[] = [
@@ -118,8 +118,7 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
       { id: "workshop", label: "Atelier", icon: NotebookPen },
       { id: "bible", label: "Bible", icon: BookOpen },
       { id: "script", label: "Scénario", icon: FileText },
-      { id: "board", label: "Tableau", icon: SquareKanban },
-      { id: "timeline", label: "Chronologie", icon: ChartGantt },
+      { id: "structure", label: "Structure", icon: Layers, keywords: "tableau chronologie actes séquences" },
       { id: "versions", label: "Versions", icon: History },
       { id: "stats", label: "Statistiques", icon: ChartColumn },
     ],
@@ -386,6 +385,7 @@ export function ProjectShell({
           label: item.label,
           detail: item.later ? `${g.label} · ${item.later}` : g.label,
           icon: item.icon,
+          keywords: item.keywords,
           searchOnly: !!item.later,
           run: () => goView(item.id),
         })),
@@ -642,8 +642,7 @@ export function ProjectShell({
             {view === "bible" && (
               <BibleView selected={entry} onSelected={setEntry} home={bibleHome} />
             )}
-            {view === "board" && <BoardView />}
-            {view === "timeline" && <TimelineView />}
+            {view === "structure" && <StructureView />}
             {view === "versions" && <VersionsView />}
             {view === "stats" && <StatsView />}
             {LATER.has(view) && <LaterView view={view} />}
@@ -867,7 +866,7 @@ function NavButton({
   );
 }
 
-const SCENE_VIEWS = new Set<ViewId>(["script", "board", "timeline"]);
+const SCENE_VIEWS = new Set<ViewId>(["script", "structure"]);
 
 /** Where the user is: project, part, view, and how many things the view holds. */
 function ViewHeader({
