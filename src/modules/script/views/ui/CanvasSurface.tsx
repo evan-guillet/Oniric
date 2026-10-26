@@ -7,7 +7,7 @@ const STEP = 1.2;
 const clamp = (z: number) => Math.min(MAX, Math.max(MIN, Math.round(z * 100) / 100));
 
 // What keeps its own gesture: drag handles, fields and the small buttons; anything else can start a pan.
-const OWN_GESTURE = ".grip, [draggable=true], input, textarea, select, .more-btn, .head-add, .head-fold, .cv-insert, .add-band, .card-add, .canvas-tools";
+const OWN_GESTURE = ".grip, [draggable=true], input, textarea, select, .more-btn, .head-add, .head-fold, .cv-insert, .cv-ghost, .canvas-tools";
 
 /**
  * A surface that scrolls both ways and zooms with Ctrl + wheel or its corner buttons. It pans in X and Y when
@@ -34,13 +34,21 @@ export function CanvasSurface({ children, place, tools, onDragEnd }: { children:
     setZoom(z);
   }, []);
 
+  // How far the surface is panned sideways, in the units of what it holds: what holds at the left edge reads it.
+  const trackScroll = useCallback(() => {
+    const el = box.current;
+    world.current?.style.setProperty("--scroll-x", `${el ? el.scrollLeft / current.current : 0}px`);
+  }, []);
+
   useLayoutEffect(() => {
     const el = box.current;
-    if (!el || !pending.current) return;
-    el.scrollLeft = pending.current.left;
-    el.scrollTop = pending.current.top;
-    pending.current = null;
-  }, [zoom]);
+    if (el && pending.current) {
+      el.scrollLeft = pending.current.left;
+      el.scrollTop = pending.current.top;
+      pending.current = null;
+    }
+    trackScroll();
+  }, [zoom, trackScroll]);
 
   // A new place (the whole story, an act, a sequence) starts at its top left.
   useLayoutEffect(() => {
@@ -119,7 +127,7 @@ export function CanvasSurface({ children, place, tools, onDragEnd }: { children:
 
   return (
     <div className="canvas-wrap">
-      <div className="canvas" ref={box} onDragEnd={onDragEnd}>
+      <div className="canvas" ref={box} onDragEnd={onDragEnd} onScroll={trackScroll}>
         <div className="canvas-world" ref={world} style={{ zoom }}>
           {children}
         </div>

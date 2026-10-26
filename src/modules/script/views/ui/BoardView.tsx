@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, FolderInput, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
+import { Dialog } from "../../../../ui-kit/Dialog";
 import { TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { useProject } from "../../../project/ui/projectContext";
@@ -80,6 +81,24 @@ function HeadAdd({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+/** A wire drawn by the node it belongs to: the elbow coming in, the trunk carrying on, the elbow down to the scenes. */
+function Wire({ kind }: { kind: "in" | "on" | "out" }) {
+  return <i className={`cv-wire ${kind}`} aria-hidden="true" />;
+}
+
+/** An empty card the shape of the ones beside it, at the end of their line: adds one more. */
+function Ghost({ label, className = "", children, ...rest }: { label: string; className?: string; children?: ReactNode } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className" | "children">) {
+  return (
+    <button type="button" className={`cv-ghost ${className}`} {...rest}>
+      {children}
+      <span className="cv-ghost-icon">
+        <Plus aria-hidden="true" />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 /**
  * The board (VUE-03 to VUE-09): the story as a tree on a free canvas. Opening an act or a sequence keeps only its own tree.
  */
@@ -115,6 +134,8 @@ export function BoardView() {
   };
   const drag = useRef<Drag | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // The act, sequence or scene whose « Déplacer vers… » dialog is open.
+  const [moving, setMoving] = useState<Drag | null>(null);
 
   const byId = useMemo(() => new Map(scenes.map((s) => [s.id, s])), [scenes]);
   const groups = useMemo(() => (story ? storyOutline(story, scenes.map((s) => s.id)) : []), [story, scenes]);
@@ -230,29 +251,39 @@ export function BoardView() {
     void apply(moveScene(groups, d.id, target, beforeId), "Scène déplacée : le scénario est réordonné.");
   };
 
+  /** The sequence `id` into the act `actId`, just before the sequence `beforeSeq` or at the end. */
+  const placeSequence = (id: string, actId: string | null, beforeSeq: string | null) => {
+    if (id === beforeSeq) return;
+    const siblings = story.sequences.filter((s) => s.actId === actId && s.id !== id).sort((a, b) => (a.rank < b.rank ? -1 : 1));
+    const at = beforeSeq ? siblings.findIndex((s) => s.id === beforeSeq) : siblings.length;
+    const rank = rankBetween(at > 0 ? siblings[at - 1].rank : null, at >= 0 && at < siblings.length ? siblings[at].rank : null);
+    const moved = { ...story, sequences: story.sequences.map((s) => (s.id === id ? { ...s, actId, rank } : s)) };
+    const next = storyOutline(moved, scenes.map((s) => s.id));
+    void apply(next, "Séquence déplacée : le scénario est réordonné.", [sequencePlace(id, actId, rank)], ["sequence"]);
+  };
+
+  /** The act `id` just before the act `beforeAct`, or at the end. */
+  const placeAct = (id: string, beforeAct: string | null) => {
+    if (id === beforeAct) return;
+    const others = story.acts.filter((a) => a.id !== id).sort((a, b) => (a.rank < b.rank ? -1 : 1));
+    const at = beforeAct ? others.findIndex((a) => a.id === beforeAct) : others.length;
+    const rank = rankBetween(at > 0 ? others[at - 1].rank : null, at >= 0 && at < others.length ? others[at].rank : null);
+    const moved = { ...story, acts: story.acts.map((a) => (a.id === id ? { ...a, rank } : a)) };
+    void apply(storyOutline(moved, scenes.map((s) => s.id)), "Acte déplacé : le scénario est réordonné.", [actPlace(id, rank)], ["act"]);
+  };
+
   const dropSequence = (actId: string | null, beforeSeq: string | null) => {
     const d = drag.current;
     drag.current = null;
     setDropTarget(null);
-    if (d?.kind !== "sequence" || d.id === beforeSeq) return;
-    const siblings = story.sequences.filter((s) => s.actId === actId && s.id !== d.id).sort((a, b) => (a.rank < b.rank ? -1 : 1));
-    const at = beforeSeq ? siblings.findIndex((s) => s.id === beforeSeq) : siblings.length;
-    const rank = rankBetween(at > 0 ? siblings[at - 1].rank : null, at >= 0 && at < siblings.length ? siblings[at].rank : null);
-    const moved = { ...story, sequences: story.sequences.map((s) => (s.id === d.id ? { ...s, actId, rank } : s)) };
-    const next = storyOutline(moved, scenes.map((s) => s.id));
-    void apply(next, "Séquence déplacée : le scénario est réordonné.", [sequencePlace(d.id, actId, rank)], ["sequence"]);
+    if (d?.kind === "sequence") placeSequence(d.id, actId, beforeSeq);
   };
 
   const dropAct = (beforeAct: string | null) => {
     const d = drag.current;
     drag.current = null;
     setDropTarget(null);
-    if (d?.kind !== "act" || d.id === beforeAct) return;
-    const others = story.acts.filter((a) => a.id !== d.id).sort((a, b) => (a.rank < b.rank ? -1 : 1));
-    const at = beforeAct ? others.findIndex((a) => a.id === beforeAct) : others.length;
-    const rank = rankBetween(at > 0 ? others[at - 1].rank : null, at >= 0 && at < others.length ? others[at].rank : null);
-    const moved = { ...story, acts: story.acts.map((a) => (a.id === d.id ? { ...a, rank } : a)) };
-    void apply(storyOutline(moved, scenes.map((s) => s.id)), "Acte déplacé : le scénario est réordonné.", [actPlace(d.id, rank)], ["act"]);
+    if (d?.kind === "act") placeAct(d.id, beforeAct);
   };
 
   const startDrag = (d: Drag, ghost: string) => (e: DragEvent<HTMLElement>) => {
@@ -370,6 +401,7 @@ export function BoardView() {
           className="card-more"
           items={[
             { label: "Renommer", icon: Pencil, onClick: () => void renameScene(s) },
+            { label: "Déplacer vers…", icon: FolderInput, onClick: () => setMoving({ kind: "scene", id }) },
             { label: "Supprimer", icon: Trash2, danger: true, onClick: () => void removeScene(id) },
           ]}
         />
@@ -414,6 +446,7 @@ export function BoardView() {
                 if (t) await updateSequence(seq.sequence!.id, { title: t });
               },
             },
+            { label: "Déplacer vers…", icon: FolderInput, onClick: () => setMoving({ kind: "sequence", id: seq.sequence!.id }) },
             {
               label: "Supprimer",
               icon: Trash2,
@@ -439,15 +472,86 @@ export function BoardView() {
     <ol className="cards cv-cards">
       {seq.scenes.map((id) => card(id, seq.sequence?.id ?? null, <WireAdd dir="down" label="Insérer une scène ici" onClick={() => void newScene(seq, id)} />))}
       <li className="card-add">
-        <button type="button" onClick={() => void newScene(seq)}>
-          <Plus aria-hidden="true" />
-          Scène
-        </button>
+        <Ghost label="Nouvelle scène" onClick={() => void newScene(seq)} />
       </li>
     </ol>
   );
 
   const totalEighths = scenes.reduce((n, s) => n + s.eighths, 0);
+
+  /** Where `id` goes once moved: the whole list it joins, every act, sequence or scene named. */
+  const moveDialog = (m: Drag) => {
+    const close = () => setMoving(null);
+    const named = (id: string) => ({ num: parts.get(id)?.num ?? "", title: parts.get(id)?.title ?? "" });
+    const label = (id: string) => [named(id).num, named(id).title].filter(Boolean).join(" · ");
+    if (m.kind === "scene") {
+      const s = byId.get(m.id);
+      const home = groups.flatMap((g) => g.sequences).find((q) => q.scenes.includes(m.id));
+      if (!s || !home) return null;
+      const seqs = new Map(groups.flatMap((g) => g.sequences).flatMap((q) => (q.sequence ? [[q.sequence.id, q] as const] : [])));
+      const sceneName = (id: string) => {
+        const x = byId.get(id);
+        return x ? `${sceneLabel(x.index + 1)} · ${x.heading || "(sans en-tête)"}` : "";
+      };
+      return (
+        <MoveDialog
+          title={`Déplacer la scène ${s.index + 1}`}
+          subject={s.heading || "(sans en-tête)"}
+          groups={groups
+            .filter((g) => g.sequences.some((q) => q.sequence))
+            .map((g) => ({
+              label: actTitle(g),
+              targets: g.sequences.flatMap((q) => (q.sequence ? [{ id: q.sequence.id, ...named(q.sequence.id), meta: `${q.scenes.length} sc.` }] : [])),
+            }))}
+          current={home.sequence?.id ?? null}
+          currentBefore={home.scenes[home.scenes.indexOf(m.id) + 1] ?? ""}
+          positions={(t) => places((seqs.get(t)?.scenes ?? []).filter((x) => x !== m.id), sceneName)}
+          onMove={(t, before) => {
+            close();
+            void apply(moveScene(groups, m.id, t, before), "Scène déplacée : le scénario est réordonné.");
+          }}
+          onClose={close}
+        />
+      );
+    }
+    const acts = groups.flatMap((g) => (g.act ? [g] : []));
+    if (m.kind === "sequence") {
+      const home = acts.find((g) => g.sequences.some((q) => q.sequence?.id === m.id));
+      const seqIds = (g: ActGroup) => g.sequences.flatMap((q) => (q.sequence ? [q.sequence.id] : []));
+      const mine = home ? seqIds(home) : [];
+      return (
+        <MoveDialog
+          title={`Déplacer la séquence ${named(m.id).num.replace(/^Séq\. /, "")}`}
+          subject={named(m.id).title}
+          groups={[{ targets: acts.map((g) => ({ id: g.act!.id, ...named(g.act!.id), meta: `${seqIds(g).length} séq.` })) }]}
+          current={home?.act?.id ?? null}
+          currentBefore={mine[mine.indexOf(m.id) + 1] ?? ""}
+          positions={(t) => places(seqIds(acts.find((g) => g.act!.id === t)!).filter((x) => x !== m.id), label)}
+          onMove={(t, before) => {
+            close();
+            placeSequence(m.id, t, before);
+          }}
+          onClose={close}
+        />
+      );
+    }
+    const order = acts.map((g) => g.act!.id);
+    return (
+      <MoveDialog
+        title={`Déplacer l'acte ${named(m.id).num.replace(/^Act\. /, "")}`}
+        subject={named(m.id).title}
+        groups={[{ targets: [{ id: "", num: "", title: project.title }] }]}
+        current=""
+        currentBefore={order[order.indexOf(m.id) + 1] ?? ""}
+        positions={() => places(order.filter((x) => x !== m.id), label)}
+        onMove={(_, before) => {
+          close();
+          placeAct(m.id, before);
+        }}
+        onClose={close}
+      />
+    );
+  };
 
   const actDrop = (g: ActGroup, into: SequenceGroup | undefined) => {
     const key = g.act?.id ?? "none";
@@ -490,6 +594,7 @@ export function BoardView() {
                   if (t) await updateAct(g.act!.id, { title: t });
                 },
               },
+              { label: "Déplacer…", icon: FolderInput, onClick: () => setMoving({ kind: "act", id: g.act!.id }) },
               {
                 label: "Supprimer",
                 icon: Trash2,
@@ -528,6 +633,9 @@ export function BoardView() {
     return (
       <li key={key} className={`cv-seq ${root ? "cv-root" : ""}`} {...seqDrop(g, seq)}>
         <div className={`cv-node seq ${closed ? "folded" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`}>
+          {!root && <Wire kind="in" />}
+          {!root && <Wire kind="on" />}
+          {!closed && <Wire kind="out" />}
           {!root && seq.sequence && <WireAdd dir="trunk" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
           {seqHead(g, seq, root ? undefined : fold)}
         </div>
@@ -543,6 +651,8 @@ export function BoardView() {
     return (
       <li key={key} className={`cv-act ${root ? "cv-root" : ""}`} style={actStyle(g)}>
         <div className={`cv-node cv-act-node ${closed ? "folded" : ""} ${dropTarget === `a:${key}` ? "drop" : ""}`} {...actDrop(g, g.sequences.at(-1))}>
+          {!root && <Wire kind="in" />}
+          {!root && <Wire kind="on" />}
           {!root && g.act && <WireAdd dir="trunk" label="Insérer un acte ici" onClick={() => void newAct(g.act!.id)} />}
           {actHead(g, root ? undefined : fold)}
         </div>
@@ -550,9 +660,9 @@ export function BoardView() {
           <ol className="cv-seqs">
             {g.sequences.map((s) => cvSeq(g, s))}
             <li className="cv-seq cv-add">
-              <button type="button" className="add-band cv-node" aria-label="Nouvelle séquence" title="Nouvelle séquence" onClick={() => void newSequence(g)}>
-                <Plus aria-hidden="true" />
-              </button>
+              <Ghost label="Nouvelle séquence" className="cv-node" onClick={() => void newSequence(g)}>
+                <Wire kind="in" />
+              </Ghost>
             </li>
           </ol>
         )}
@@ -593,11 +703,9 @@ export function BoardView() {
         <ol className="cv-acts">
           {groups.map((g) => cvAct(g))}
           <li className="cv-act cv-add">
-            <button
-              type="button"
-              className={`add-band cv-node ${dropTarget === "a:end" ? "drop" : ""}`}
-              aria-label="Nouvel acte"
-              title="Nouvel acte"
+            <Ghost
+              label="Nouvel acte"
+              className={`cv-node ${dropTarget === "a:end" ? "drop" : ""}`}
               onDragOver={(e) => {
                 if (drag.current?.kind === "act") allow("a:end")(e);
               }}
@@ -607,8 +715,8 @@ export function BoardView() {
               }}
               onClick={() => void newAct()}
             >
-              <Plus aria-hidden="true" />
-            </button>
+              <Wire kind="in" />
+            </Ghost>
           </li>
         </ol>
       </div>
@@ -658,10 +766,103 @@ export function BoardView() {
         {canvas()}
       </CanvasSurface>
 
+      {moving && moveDialog(moving)}
+
       {selected && byId.get(selected) && (
         <CardPanel key={selected} scene={byId.get(selected)!} meta={meta(selected)} story={story} onClose={() => setSelected(null)} onRemove={() => void removeScene(selected)} />
       )}
     </div>
+  );
+}
+
+/** The places among `ids` (in order, the moved one left out): first, after each, the last being the end (""). */
+function places(ids: string[], label: (id: string) => string) {
+  if (!ids.length) return [{ value: "", label: "Seule à cet endroit" }];
+  return [{ value: ids[0], label: "En premier" }, ...ids.map((id, i) => ({ value: ids[i + 1] ?? "", label: `Après ${label(id)}` }))];
+}
+
+type MoveTarget = { id: string; num: string; title: string; meta?: string };
+
+/**
+ * « Déplacer vers… »: every place it can go, grouped as on the board, then where in it. Opens on where it is now;
+ * the move is offered once something changes.
+ */
+function MoveDialog({
+  title,
+  subject,
+  groups,
+  current,
+  currentBefore,
+  positions,
+  onMove,
+  onClose,
+}: {
+  title: string;
+  subject: string;
+  groups: { label?: string; targets: MoveTarget[] }[];
+  current: string | null;
+  /** The value of `positions(current)` that is where it is now. */
+  currentBefore: string;
+  positions: (target: string) => { value: string; label: string }[];
+  onMove: (target: string, before: string | null) => void;
+  onClose: () => void;
+}) {
+  const first = groups.flatMap((g) => g.targets)[0]?.id ?? "";
+  const [target, setTarget] = useState(current ?? first);
+  const [before, setBefore] = useState(current === null ? "" : currentBefore);
+  const name = useId();
+  const listId = useId();
+  const many = groups.reduce((n, g) => n + g.targets.length, 0) > 1;
+  const unchanged = target === current && before === currentBefore;
+  const pick = (t: string) => {
+    setTarget(t);
+    setBefore(t === current ? currentBefore : "");
+  };
+  return (
+    <Dialog
+      title={title}
+      wide={many}
+      className="move-dialog"
+      onCancel={onClose}
+      actions={[
+        { label: "Annuler", onClick: onClose },
+        { label: "Déplacer", primary: true, disabled: unchanged, onClick: () => onMove(target, before || null) },
+      ]}
+    >
+      {subject && <p className="move-subject">{subject}</p>}
+      {many && (
+        <div className="fld">
+          <span className="fld-label" id={listId}>
+            Vers
+          </span>
+          <div className="move-list" role="radiogroup" aria-labelledby={listId}>
+            {groups.map((g, i) => (
+              <div key={g.label ?? i} className="move-group" role="group" aria-label={g.label}>
+                {g.label && <div className="move-group-label">{g.label}</div>}
+                {g.targets.map((t) => (
+                  <label key={t.id} className="move-opt">
+                    <input type="radio" name={name} checked={target === t.id} onChange={() => pick(t.id)} data-autofocus={target === t.id ? "" : undefined} />
+                    <span className="move-num">{t.num}</span>
+                    <span className="move-title">{t.title}</span>
+                    <span className="move-meta">{t.id === current ? "Ici" : t.meta}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <label className="fld move-place">
+        <span className="fld-label">Position</span>
+        <select value={before} onChange={(e) => setBefore(e.target.value)}>
+          {positions(target).map((p) => (
+            <option key={p.value || "end"} value={p.value}>
+              {p.value === currentBefore && target === current ? `${p.label} (actuelle)` : p.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </Dialog>
   );
 }
 

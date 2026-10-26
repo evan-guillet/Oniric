@@ -3761,42 +3761,6 @@ h4 {
     transform: translateY(-4px);
   }
 }
-/* Unlabelled add bands: a dashed slot where the next act or sequence will go. */
-.add-band {
-  flex: none;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-lg);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition:
-    background 120ms ease-out,
-    border-color 120ms ease-out,
-    color 120ms ease-out;
-}
-.add-band svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.75;
-}
-.add-band:hover {
-  border-color: var(--muted);
-  background: var(--panel);
-  color: var(--ink);
-}
-.add-band:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-.add-band.drop {
-  outline: 2px dashed var(--focus);
-  outline-offset: 2px;
-}
 .cards {
   list-style: none;
   margin: 0;
@@ -3898,39 +3862,6 @@ h4 {
 .card-foot:empty {
   display: none;
 }
-/* Adding a scene is an empty card waiting to be filled. */
-.card-add > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 64px;
-  border-radius: 8px;
-  border: 1px dashed var(--line-strong);
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-  transition:
-    border-color 120ms ease-out,
-    background 120ms ease-out,
-    color 120ms ease-out;
-}
-.card-add > button:hover {
-  border-color: var(--muted);
-  background: var(--hover);
-  color: var(--ink);
-}
-.card-add > button:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.card-add svg {
-  width: 14px;
-  height: 14px;
-}
 /* Canvas: the story as a tree on a dotted surface that pans and zooms. */
 .canvas-wrap {
   position: relative;
@@ -4013,7 +3944,7 @@ h4 {
   left: -64px;
   bottom: 100%;
   width: 40px;
-  height: 36px;
+  height: 24px;
 }
 .cv-insert-dot {
   display: inline-flex;
@@ -4103,9 +4034,6 @@ h4 {
 .cv-film-title {
   font-size: 15px;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .cv-film .muted.small {
   font-variant-numeric: tabular-nums;
@@ -4132,18 +4060,89 @@ h4 {
   max-height: none;
   box-shadow: var(--shadow-sm);
 }
-.cv-add > .add-band {
-  width: 52px;
-  min-height: 52px;
+
+/* Adding an act, a sequence or a scene is an empty card of the same shape, waiting at the end of its line. */
+.cv-ghost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 0 14px 0 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+  box-shadow: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.cv-ghost:hover {
+  border-color: var(--muted);
+  background: var(--panel);
+  color: var(--ink);
+}
+.cv-ghost:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.cv-ghost.drop {
+  outline: 2px dashed var(--focus);
+  outline-offset: 2px;
+}
+.cv-ghost-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0.8;
+}
+.cv-ghost-icon svg {
+  width: 13px;
+  height: 13px;
+}
+.cv-acts > .cv-add > .cv-ghost {
+  width: 300px;
+  height: 57px;
+}
+.cv-seqs > .cv-add > .cv-ghost {
+  width: 300px;
+  height: 55px;
+}
+/* The scene slot is a card: as wide, its label on the heading line the wire comes in at. */
+.cv-cards > .card-add > .cv-ghost {
+  align-items: flex-start;
+  width: 280px;
+  min-height: 92px;
+  padding: 11px 12px 10px 22px;
   border-radius: 8px;
 }
-.cv-add > .add-band svg {
+.cv-cards > .card-add .cv-ghost-icon {
   width: 18px;
   height: 18px;
+  margin: -1px 0 0 -2px;
+}
+.cv-cards > .card-add .cv-ghost-icon svg {
+  width: 11px;
+  height: 11px;
 }
 
-/* Acts hang off the trunk, which runs down from under the film's left edge; sequences hang the same way off
-   their act's own trunk, which runs down from under the act's left edge. */
+/*
+ * Wires. Acts hang off a trunk running down from under the film's left edge; sequences hang the same way off
+ * their act's own trunk; each sequence heads a row of its scenes. Every node draws the wires that reach it, so
+ * they move with it when it holds at the left edge: the elbow that comes in, the trunk that carries on to its
+ * next sibling (cut at the bottom of its own branch) and, for a sequence, the elbow down into its first scene.
+ */
 .cv-acts,
 .cv-seqs {
   margin-left: 28px;
@@ -4151,74 +4150,96 @@ h4 {
 .cv-act,
 .cv-seq {
   position: relative;
-  padding: 36px 0 0 44px;
+  padding: 24px 0 12px 44px;
+}
+.cv-act:not(.cv-root),
+.cv-seq:not(.cv-root) {
+  overflow-x: visible;
+  overflow-y: clip;
 }
 .cv-seq {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
-.cv-acts > .cv-act:not(:last-child)::before,
-.cv-seqs > .cv-seq:not(:last-child)::before {
-  content: "";
+.cv-wire {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  border-left: var(--wire-w) solid var(--trunk);
-}
-.cv-seqs > .cv-seq:not(:last-child)::before {
-  border-color: var(--wire);
-}
-/* An elbow from the line above to the node's middle, ending in an arrowhead. */
-.cv-acts > .cv-act > .cv-node::before,
-.cv-seqs > .cv-seq > .cv-node::before {
-  content: "";
-  position: absolute;
-  right: calc(100% + 3px);
-  bottom: 50%;
   box-sizing: border-box;
-  width: 41px;
-  height: calc(50% + 36px);
-  border-left: var(--wire-w) solid var(--trunk);
-  border-bottom: var(--wire-w) solid var(--trunk);
-  border-bottom-left-radius: 12px;
+  pointer-events: none;
+  border: 0 solid var(--wire);
 }
-.cv-seqs > .cv-seq > .cv-node::before {
-  border-color: var(--wire);
-}
-.cv-acts > .cv-act > .cv-node:not(.add-band)::after,
-.cv-seqs > .cv-seq > .cv-node:not(.add-band)::after {
-  content: "";
-  position: absolute;
-  right: calc(100% + 2px);
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border-top: var(--wire-w) solid var(--wire);
-  border-right: var(--wire-w) solid var(--wire);
-  transform: translateY(-50%) rotate(45deg);
-}
-.cv-acts > .cv-act > .cv-node::after {
+.cv-acts > .cv-act > .cv-node > .cv-wire {
   border-color: var(--trunk);
 }
 .cv-seq > .cv-node > .cv-insert.trunk .cv-insert-dot {
   border-color: var(--wire);
 }
-/* The slots that add an act or a sequence hang on a dashed wire. */
-.cv-acts > .cv-add > .cv-node::before,
-.cv-seqs > .cv-add > .cv-node::before {
-  border-left-style: dashed;
-  border-bottom-style: dashed;
+/* In: from the trunk above, round the corner, into the node's middle. */
+.cv-wire.in {
+  right: 100%;
+  bottom: calc(50% - var(--wire-w) / 2);
+  width: 44px;
+  height: calc(50% + 24px + var(--wire-w) / 2);
+  border-left-width: var(--wire-w);
+  border-bottom-width: var(--wire-w);
+  border-bottom-left-radius: 12px;
 }
-/* Each sequence heads a row of its scenes: an elbow from under it into the first, then a wire from each to the next.
-   Every wire meets its card level with the scene's heading. */
+/* On: the trunk carries on down past this node to the next one. */
+.cv-wire.on {
+  left: -44px;
+  top: -24px;
+  height: 100000px;
+  border-left-width: var(--wire-w);
+}
+/* Out: from under the sequence, down and round into its first scene, level with the heading. */
+.cv-wire.out {
+  left: 28px;
+  top: 100%;
+  width: 44px;
+  height: calc(58px + var(--wire-w) / 2);
+  border-left-width: var(--wire-w);
+  border-bottom-width: var(--wire-w);
+  border-bottom-left-radius: 12px;
+}
+/* The arrowhead's point touches the node it leads to. */
+.cv-wire.in::after,
+.cv-wire.out::after,
+.cv-cards > li:not(:first-child)::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border-top: var(--wire-w) solid;
+  border-right: var(--wire-w) solid;
+  border-color: inherit;
+  rotate: 45deg;
+}
+.cv-wire.in::after,
+.cv-wire.out::after {
+  right: 1.5px;
+  bottom: calc(var(--wire-w) / 2 - 3.5px);
+}
+/* The slots that add an act, a sequence or a scene hang on a dashed wire. */
+.cv-add > .cv-ghost > .cv-wire.in,
+.cv-seq:has(> .cv-cards > .card-add:first-child) > .cv-node > .cv-wire.out {
+  border-style: dashed;
+}
+.cv-cards > .card-add:not(:first-child)::before {
+  border-top-style: dashed;
+}
+
+/* Along a row, a wire runs from the right edge of each scene to the left edge of the next. */
 .cv-cards {
   display: flex;
   align-items: flex-start;
   gap: 40px;
   margin-left: 28px;
-  padding: 36px 0 0 44px;
+  padding: 36px 0 12px 44px;
+}
+/* The row holds the space under its cards, so its sequence needs none of its own. */
+.cv-seq:has(> .cv-cards) {
+  padding-bottom: 0;
 }
 .cv-cards > .card {
   flex: none;
@@ -4226,47 +4247,24 @@ h4 {
 }
 .cv-cards > .card-add {
   flex: none;
-  width: 120px;
 }
 .cv-cards > li {
   position: relative;
 }
-.cv-cards > li::before {
+.cv-cards > li:not(:first-child)::before {
   content: "";
   position: absolute;
-  right: calc(100% + 3px);
+  right: 100%;
   top: 22px;
-  width: 34px;
+  width: 40px;
   border-top: var(--wire-w) solid var(--wire);
   translate: 0 -50%;
 }
-.cv-cards > li:first-child::before {
-  top: auto;
-  bottom: calc(100% - 22px);
-  box-sizing: border-box;
-  width: 41px;
-  height: 58px;
-  border-top: none;
-  border-left: var(--wire-w) solid var(--wire);
-  border-bottom: var(--wire-w) solid var(--wire);
-  border-bottom-left-radius: 12px;
-  translate: none;
-}
-.cv-cards > .card::after {
-  content: "";
-  position: absolute;
-  right: calc(100% + 2px);
+.cv-cards > li:not(:first-child)::after {
+  right: calc(100% + 1.5px);
   top: 22px;
-  width: 7px;
-  height: 7px;
-  border-top: var(--wire-w) solid var(--wire);
-  border-right: var(--wire-w) solid var(--wire);
-  transform: translateY(-50%) rotate(45deg);
-}
-.cv-cards > .card-add::before {
-  border-top-style: dashed;
-  border-left-style: dashed;
-  border-bottom-style: dashed;
+  border-color: var(--wire);
+  translate: 0 -50%;
 }
 .cv-cards > li > .cv-insert.down {
   left: auto;
@@ -4286,14 +4284,43 @@ h4 {
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
-/* Panning along a row of scenes, the film, its acts and its sequences hold at the left edge, so a card always
-   says where it belongs. The wire into each slides in from the edge with it. */
-.cv-film,
-.cv-act-node,
-.cv-node.seq {
+/*
+ * Panning along a row of scenes, the film, its acts and its sequences hold at the left edge, each level still a
+ * step in from the one above, so a card always says where it belongs and the wires between them stay whole. The
+ * row slides in under the sequence's elbow: what has gone past its arrowhead is cut away.
+ */
+.canvas-world {
+  /* How far the tree has moved past the point where it starts to hold: the 40px gutter less the 16px kept. */
+  --pan: max(0px, var(--scroll-x, 0px) - 24px);
+}
+.cv-tree .cv-node {
   position: sticky;
   left: 16px;
   z-index: 3;
+}
+.cv-tree .cv-root > .cv-seqs > .cv-seq > .cv-node,
+.cv-acts > .cv-act > .cv-node {
+  left: 88px;
+}
+.cv-acts .cv-seqs > .cv-seq > .cv-node {
+  left: 160px;
+}
+.cv-cards {
+  --cut: min(calc(var(--pan) * 1000), calc(var(--pan) + 44px));
+  --fade: min(calc(var(--pan) * 1000), 24px);
+  align-self: stretch;
+  mask-image: linear-gradient(to right, transparent calc(var(--cut) - var(--fade)), #000 var(--cut));
+}
+/* Once the whole row has gone by, the slot for a new scene waits at the arrowhead: the elbow always lands on a card. */
+.cv-cards > .card-add {
+  position: sticky;
+  left: 88px;
+}
+.cv-root > .cv-seqs .cv-cards > .card-add {
+  left: 160px;
+}
+.cv-acts .cv-cards > .card-add {
+  left: 232px;
 }
 /* An opened act or sequence is the root of its own tree: nothing leads into it. */
 .cv-root,
@@ -4303,10 +4330,6 @@ h4 {
 .cv-tree.cv-seqs {
   margin-left: 0;
   padding-top: 0;
-}
-.cv-tree .cv-root:first-child > .cv-node::before,
-.cv-tree .cv-root:first-child > .cv-node::after {
-  content: none;
 }
 .canvas-tools {
   position: absolute;
@@ -6680,4 +6703,80 @@ button[aria-expanded="true"] .stats-chevron {
   .stats-columns {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+/* « Déplacer vers… »: the whole outline as a list to pick from, grouped by act, then the place in it. */
+.move-dialog .dialog-body {
+  display: grid;
+  gap: 14px;
+}
+.move-dialog .move-subject {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.move-list {
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sunken);
+  scrollbar-width: thin;
+}
+.move-group + .move-group {
+  margin-top: 4px;
+}
+.move-group-label {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  padding: 8px 8px 4px;
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.move-opt {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.move-opt:hover {
+  background: var(--hover);
+}
+.move-opt:has(input:checked) {
+  background: var(--accent-soft);
+}
+.move-opt input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.move-opt input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.move-num {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.move-title {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.move-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.move-opt:has(input:checked) .move-title {
+  font-weight: 500;
 }
