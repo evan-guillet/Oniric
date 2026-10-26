@@ -1037,15 +1037,24 @@ kbd {
 }
 
 /* Project shell */
+/* The view on the left, the side menu on the right. */
 .shell {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 248px;
   height: 100%;
   background: var(--sunken);
   transition: grid-template-columns 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .shell:has(> .shell-nav.rail) {
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 56px;
+}
+.shell > .shell-nav {
+  grid-column: 2;
+  grid-row: 1;
+}
+.shell > .shell-panel {
+  grid-column: 1;
+  grid-row: 1;
 }
 /*
  * The side menu: the application and the way to fold it, the search, the project's views in sections that fold,
@@ -1446,8 +1455,8 @@ kbd {
   background: var(--panel);
   overflow: hidden;
   border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
-  border-top-left-radius: var(--radius-lg);
+  border-right: 1px solid var(--line);
+  border-top-right-radius: var(--radius-lg);
 }
 .view-header {
   flex: none;
@@ -4624,7 +4633,8 @@ h4 {
 
 /*
  * Timeline: the head (pages, acts, sequences, scenes) stays on top and the names column on the left while the
- * characters scroll under them; acts and sequences keep their exact span on one line, their whole title on hover.
+ * characters scroll under them; acts and sequences stay on one line, their scenes widened as needed for the whole title to fit; any of them,
+ * or a character, can be picked to isolate it.
  */
 .timeline-view {
   position: relative;
@@ -4728,8 +4738,8 @@ h4 {
 .tl-names.hovering li.on .tl-name-n {
   color: var(--accent);
 }
-/* One character isolated: the others step back, in the list as on the tracks and the scene strip. */
-.tl-names.isolating:not(.hovering) li:not(.alone) button {
+/* A character, an act or a sequence isolated: what is outside it steps back, in the list, on the tracks and the strip. */
+.tl-names.isolating:not(.hovering) li:not(.kept) button {
   color: var(--hint);
 }
 .tl-names li.alone button {
@@ -4748,6 +4758,9 @@ h4 {
 }
 .tl-row.off {
   opacity: 0.18;
+}
+.tl-presence.off {
+  opacity: 0.2;
 }
 .tl-scene.off {
   opacity: 0.25;
@@ -4790,8 +4803,30 @@ h4 {
   stroke: var(--line-strong);
 }
 /* How far a sequence goes when its title is wider than it. */
+.tl-part {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 160ms ease-out;
+}
 .tl-part text {
   pointer-events: none;
+}
+.tl-part:hover rect {
+  stroke: var(--accent-line);
+}
+.tl-part:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.tl-part.picked rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.tl-part.picked text {
+  fill: var(--accent-ink);
+}
+.tl-part.off {
+  opacity: 0.4;
 }
 .tl-scene {
   stroke: var(--panel);

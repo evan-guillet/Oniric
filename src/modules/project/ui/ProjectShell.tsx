@@ -32,8 +32,8 @@ import {
   Monitor,
   Moon,
   NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Search,
   Settings,
   SquareKanban,
@@ -520,9 +520,9 @@ export function ProjectShell({
               onClick={() => setRail(!rail)}
             >
               {rail ? (
-                <PanelLeftOpen aria-hidden="true" />
+                <PanelRightOpen aria-hidden="true" />
               ) : (
-                <PanelLeftClose aria-hidden="true" />
+                <PanelRightClose aria-hidden="true" />
               )}
             </button>
           </div>
@@ -717,7 +717,8 @@ function ProjectMenu({
   useEffect(() => {
     if (!open) return;
     const r = buttonRef.current?.getBoundingClientRect();
-    if (r) setAt({ top: r.bottom + 4, left: r.left });
+    // The menu sits at the right edge of the window: it opens under the button without running past it.
+    if (r) setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 328)) });
     requestAnimationFrame(() =>
       menuRef.current?.querySelector("button")?.focus(),
     );
