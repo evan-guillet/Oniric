@@ -337,10 +337,9 @@ await page.keyboard.press("Control+z");
 await page.keyboard.press("Control+z");
 
 await nav("Tableau");
-await page.waitForSelector(".board", { timeout: 15000 });
-// The whole story in columns shows every card; the mode is remembered, so set it.
-await page.locator(".header-tools .seg", { hasText: "Actes et séquences" }).click();
-const cards = await page.locator(".board .card").count();
+await page.waitForSelector(".board-view .cv-tree", { timeout: 15000 });
+// The canvas shows every card of a fresh project, nothing folded.
+const cards = await page.locator(".board-view .cv-tree .card").count();
 check(cards === sceneCount, `tableau : ${cards} cartes pour ${sceneCount} scènes (VUE-03)`);
 
 await nav("Chronologie");

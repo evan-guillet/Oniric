@@ -1,12 +1,11 @@
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Columns3, Diamond, GitBranch, GripVertical, Pencil, Plus, Rows3, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
 import { TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
-import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { headingPlace, prettyName } from "../../bible/domain/appearances";
 import { useScenes, type SceneInfo } from "../../screenplay/application/scriptSession";
@@ -34,26 +33,10 @@ import {
 import { CanvasSurface } from "./CanvasSurface";
 
 type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
-type BoardMode = "columns" | "canvas" | "plotlines";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
 type Focus = { act: string; seq?: string } | null;
 
-// The chosen layout is a per-computer convenience; it falls back to the columns when storage is unavailable.
-const MODE_KEY = "oniric.board.mode";
-const BOARD_MODES: SegmentedOption<BoardMode>[] = [
-  { id: "columns", label: "Actes et séquences", icon: Columns3, hint: "Les actes en colonnes, leurs séquences et leurs scènes" },
-  { id: "canvas", label: "Canevas", icon: GitBranch, hint: "L'histoire en arbre, sur un fond libre" },
-  { id: "plotlines", label: "Lignes d'intrigue", icon: Rows3, hint: "Une rangée par ligne d'intrigue" },
-];
-const savedMode = (): BoardMode => {
-  try {
-    const m = localStorage.getItem(MODE_KEY);
-    return m === "canvas" || m === "plotlines" ? m : "columns";
-  } catch {
-    return "columns";
-  }
-};
 const statusLabel = (s: string | null) => SCENE_STATUSES.find((x) => x.id === s)?.label ?? "";
 const actKey = (g: ActGroup) => `a:${g.act?.id ?? "none"}`;
 const seqKey = (g: ActGroup, seq: SequenceGroup) => `s:${seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`}`;
@@ -98,84 +81,12 @@ function HeadAdd({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 /**
- * Click and drag sideways to slide a row along with the pointer; the wheel scrolls it sideways too.
- * The grip and the add button keep their own gestures, and a drag never ends in a click.
- */
-function useDragScroll() {
-  const cleanup = useRef<(() => void) | null>(null);
-  // Stable, so a re-render mid-drag does not drop the listeners.
-  return useCallback((el: HTMLElement | null) => {
-    cleanup.current?.();
-    cleanup.current = null;
-    if (!el) return;
-    let start: { x: number; left: number; id: number } | null = null;
-    let moved = false;
-    const down = (e: PointerEvent) => {
-      if (e.button !== 0 || (e.target as Element).closest(".grip, .card-add, .more-btn")) return;
-      start = { x: e.clientX, left: el.scrollLeft, id: e.pointerId };
-      moved = false;
-    };
-    const move = (e: PointerEvent) => {
-      if (!start || e.pointerId !== start.id) return;
-      const dx = e.clientX - start.x;
-      if (!moved && Math.abs(dx) < 4) return;
-      if (!moved) {
-        moved = true;
-        el.setPointerCapture(e.pointerId);
-        el.classList.add("panning");
-      }
-      el.scrollLeft = start.left - dx;
-    };
-    const up = () => {
-      start = null;
-      el.classList.remove("panning");
-    };
-    const click = (e: MouseEvent) => {
-      if (!moved) return;
-      moved = false;
-      e.stopPropagation();
-      e.preventDefault();
-    };
-    const wheel = (e: WheelEvent) => {
-      if (e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY) || el.scrollWidth <= el.clientWidth) return;
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
-    };
-    el.addEventListener("pointerdown", down);
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", up);
-    el.addEventListener("pointercancel", up);
-    el.addEventListener("click", click, true);
-    el.addEventListener("wheel", wheel, { passive: false });
-    cleanup.current = () => {
-      el.removeEventListener("pointerdown", down);
-      el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerup", up);
-      el.removeEventListener("pointercancel", up);
-      el.removeEventListener("click", click, true);
-      el.removeEventListener("wheel", wheel);
-    };
-  }, []);
-}
-
-/**
- * The board (VUE-03 to VUE-09). The whole story stacks each act's sequences and scenes in one column per act;
- * opening an act lays its sequences side by side, and opening a sequence spreads its scenes out.
+ * The board (VUE-03 to VUE-09): the story as a tree on a free canvas. Opening an act or a sequence keeps only its own tree.
  */
 export function BoardView() {
   const { project, session, notify, prompt, ask, openScene, headerActions, setTrail } = useProject();
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
-  const panRow = useDragScroll();
-  const [mode, setModeState] = useState<BoardMode>(savedMode);
-  const setMode = (m: BoardMode) => {
-    setModeState(m);
-    try {
-      localStorage.setItem(MODE_KEY, m);
-    } catch {
-      // Not remembered, still applied.
-    }
-  };
   const [filter, setFilter] = useState<{ kind: FilterKind; value: string } | null>(null);
   const [highlight, setHighlight] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -524,11 +435,9 @@ export function BoardView() {
     </header>
   );
 
-  const sceneCards = (seq: SequenceGroup, className: string, ref?: (el: HTMLElement | null) => void, wires = false) => (
-    <ol className={className} ref={ref}>
-      {seq.scenes.map((id) =>
-        card(id, seq.sequence?.id ?? null, wires ? <WireAdd dir="down" label="Insérer une scène ici" onClick={() => void newScene(seq, id)} /> : undefined),
-      )}
+  const sceneCards = (seq: SequenceGroup) => (
+    <ol className="cards cv-cards">
+      {seq.scenes.map((id) => card(id, seq.sequence?.id ?? null, <WireAdd dir="down" label="Insérer une scène ici" onClick={() => void newScene(seq, id)} />))}
       <li className="card-add">
         <button type="button" onClick={() => void newScene(seq)}>
           <Plus aria-hidden="true" />
@@ -537,16 +446,6 @@ export function BoardView() {
       </li>
     </ol>
   );
-
-  const sequenceBlock = (g: ActGroup, seq: SequenceGroup, solo = false) => {
-    const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
-    return (
-      <section key={key} className={`seq ${solo ? "solo" : ""} ${dropTarget === `s:${key}` ? "drop" : ""}`} {...seqDrop(g, seq)}>
-        {!solo && seqHead(g, seq)}
-        {sceneCards(seq, "cards", solo ? panRow : undefined)}
-      </section>
-    );
-  };
 
   const totalEighths = scenes.reduce((n, s) => n + s.eighths, 0);
 
@@ -618,41 +517,9 @@ export function BoardView() {
     if (t) await addAct(story, t, beforeId);
   };
 
-  /** One act: a column of stacked sequences on the whole story, its sequences side by side once opened, or one sequence spread out. */
-  const actColumn = (g: ActGroup, zoom: "story" | "act" | "seq") => {
-    const key = g.act?.id ?? "none";
-    return (
-      <div
-        key={key}
-        className={`column z-${zoom} ${dropTarget === `a:${key}` ? "drop" : ""}`}
-        {...actDrop(g, zoom === "seq" ? focusSeq : g.sequences.at(-1))}
-        style={actStyle(g)}
-      >
-        {zoom === "story" && actHead(g)}
-        {zoom === "seq" && focusSeq ? (
-          sequenceBlock(g, focusSeq, true)
-        ) : (
-          <div className={`act-seqs ${zoom === "act" ? "row" : "stack"}`}>
-            {g.sequences.map((s) => sequenceBlock(g, s))}
-            <button
-              type="button"
-              className="add-band seq-band"
-              aria-label="Nouvelle séquence"
-              title="Nouvelle séquence"
-              onClick={() => void newSequence(g)}
-            >
-              <Plus aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   /*
    * The canvas: the film at the top left, a trunk down to each act, each act branching to a row of sequences,
-   * each sequence heading a column of its scenes. Arrows follow the story's order. Opening an act or a sequence
-   * keeps only its own tree.
+   * each sequence heading a column of its scenes. Arrows follow the story's order.
    */
   const cvSeq = (g: ActGroup, seq: SequenceGroup, root = false) => {
     const key = seq.sequence?.id ?? `none-${g.act?.id ?? "none"}`;
@@ -664,7 +531,7 @@ export function BoardView() {
           {!root && seq.sequence && <WireAdd dir="side" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
           {seqHead(g, seq, root ? undefined : fold)}
         </div>
-        {!closed && sceneCards(seq, "cards cv-cards", undefined, true)}
+        {!closed && sceneCards(seq)}
       </li>
     );
   };
@@ -753,13 +620,6 @@ export function BoardView() {
       {headerActions &&
         createPortal(
           <div className="header-tools" role="toolbar" aria-label="Tableau">
-            <Segmented
-              label="Affichage"
-              options={BOARD_MODES}
-              value={mode}
-              onChange={setMode}
-              compact
-            />
             <label>
               Filtre{" "}
               <select
@@ -794,94 +654,14 @@ export function BoardView() {
           headerActions,
         )}
 
-      {mode === "plotlines" ? (
-        <Plotlines scenes={scenes} story={story} selected={selected} onSelect={setSelected} />
-      ) : mode === "canvas" ? (
-        <CanvasSurface place={`${focus?.act ?? ""}/${focus?.seq ?? ""}`} tools={focusSeq ? undefined : foldTools} onDragEnd={() => setDropTarget(null)}>{canvas()}</CanvasSurface>
-      ) : (
-        <div className={`board ${focusSeq ? "solo" : ""}`} onDragEnd={() => setDropTarget(null)}>
-          <div className="board-track">
-            {focusAct ? actColumn(focusAct, focusSeq ? "seq" : "act") : groups.map((g) => actColumn(g, "story"))}
-            {!focusAct && (
-              <button
-                type="button"
-                className={`add-band act-band ${dropTarget === "a:end" ? "drop" : ""}`}
-                aria-label="Nouvel acte"
-                title="Nouvel acte"
-                onDragOver={(e) => {
-                  if (drag.current?.kind === "act") allow("a:end")(e);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  dropAct(null);
-                }}
-                onClick={() => void newAct()}
-              >
-                <Plus aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <CanvasSurface place={`${focus?.act ?? ""}/${focus?.seq ?? ""}`} tools={focusSeq ? undefined : foldTools} onDragEnd={() => setDropTarget(null)}>
+        {canvas()}
+      </CanvasSurface>
 
       {selected && byId.get(selected) && (
         <CardPanel key={selected} scene={byId.get(selected)!} meta={meta(selected)} story={story} onClose={() => setSelected(null)} onRemove={() => void removeScene(selected)} />
       )}
     </div>
-  );
-}
-
-function Plotlines({ scenes, story, selected, onSelect }: { scenes: SceneInfo[]; story: Story; selected: string | null; onSelect: (id: string) => void }) {
-  const [by, setBy] = useState<"plotline" | "character">("plotline");
-  const rows =
-    by === "plotline"
-      ? [...new Set([...story.meta.values()].flatMap((m) => m.plotlines))].sort()
-      : [...new Set(scenes.flatMap((s) => s.characters))].sort((a, b) => scenes.filter((s) => s.characters.includes(b)).length - scenes.filter((s) => s.characters.includes(a)).length);
-  const has = (s: SceneInfo, row: string) => (by === "plotline" ? (story.meta.get(s.id)?.plotlines ?? []).includes(row) : s.characters.includes(row));
-  return (
-    <div className="plotlines">
-      <div className="view-toolbar">
-        <label>
-          Une ligne par{" "}
-          <select value={by} onChange={(e) => setBy(e.target.value as "plotline" | "character")}>
-            <option value="plotline">intrigue</option>
-            <option value="character">personnage</option>
-          </select>
-        </label>
-        {rows.length === 0 && (
-          <span className="muted small">{by === "plotline" ? "Donnez des intrigues aux scènes (A, B, C…) dans leur carte pour les voir s'entrelacer." : "Aucun personnage dans le scénario."}</span>
-        )}
-      </div>
-      <div className="plot-grid" style={{ gridTemplateColumns: `160px repeat(${scenes.length}, 22px)` }}>
-        <span />
-        {scenes.map((s) => (
-          <span key={s.id} className="plot-num" title={s.heading}>
-            {s.index + 1}
-          </span>
-        ))}
-        {rows.map((row) => (
-          <PlotRow key={row} label={by === "character" ? prettyName(row) : row} scenes={scenes} has={(s) => has(s, row)} selected={selected} onSelect={onSelect} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PlotRow({ label, scenes, has, selected, onSelect }: { label: string; scenes: SceneInfo[]; has: (s: SceneInfo) => boolean; selected: string | null; onSelect: (id: string) => void }) {
-  return (
-    <>
-      <span className="plot-label">{label}</span>
-      {scenes.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          className={`plot-cell ${has(s) ? "on" : ""} ${selected === s.id ? "sel" : ""}`}
-          title={`${s.index + 1}. ${s.heading}`}
-          aria-label={`${label}, scène ${s.index + 1}${has(s) ? "" : " (absent)"}`}
-          onClick={() => onSelect(s.id)}
-        />
-      ))}
-    </>
   );
 }
 

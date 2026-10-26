@@ -505,46 +505,109 @@ kbd {
   outline-offset: -2px;
 }
 
-/* Home */
+/* Home: one centred column. The name, two ways in (create, open), then the recent projects. */
 .home {
-  max-width: 760px;
+  position: relative;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 72px 24px 28px;
+  padding: clamp(48px, 12vh, 112px) 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 32px;
   min-height: 100%;
 }
 .home-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
   align-items: center;
-  gap: 16px;
 }
 .home-logo {
-  width: 48px;
-  height: 48px;
+  grid-row: span 2;
+  width: 44px;
+  height: 44px;
   box-shadow: var(--shadow-md);
-  border-radius: 12px;
+  border-radius: 11px;
 }
 .home-head h1 {
   font-size: 24px;
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 .home-head p {
-  margin: 2px 0 0;
-  font-size: 14px;
+  margin: 0;
+  font-size: 13.5px;
 }
+/* The two ways in, side by side and the same size: creating carries the accent, opening stays neutral. */
 .home-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
 }
-.home-links {
-  display: flex;
-  gap: 4px;
-  margin: -18px 0 0 -8px;
+.home-action {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  grid-template-areas: "icon label" "icon hint";
+  column-gap: 12px;
+  row-gap: 1px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 160ms ease-out;
 }
-.home-links .btn {
+.home-action:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+}
+.home-action:active {
+  box-shadow: var(--shadow-sm);
+}
+.home-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.home-action-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.home-action.primary .home-action-icon {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.home-action.primary:hover {
+  border-color: var(--accent-line);
+}
+.home-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.home-action-label {
+  grid-area: label;
+  align-self: end;
+  font-size: 14px;
+  font-weight: 600;
+}
+.home-action-hint {
+  grid-area: hint;
+  align-self: start;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .recent h2 {
@@ -553,6 +616,13 @@ kbd {
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 10px;
+}
+.recent-empty {
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
 }
 .recent ul {
   list-style: none;
@@ -567,7 +637,7 @@ kbd {
 .recent li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   padding-right: 10px;
   transition: background-color 120ms ease-out;
 }
@@ -581,37 +651,49 @@ kbd {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: 34px 1fr auto;
-  grid-template-areas: "icon title date" "icon path date";
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-areas: "icon title date" "icon path path";
   align-items: center;
   column-gap: 12px;
+  row-gap: 1px;
   text-align: left;
-  padding: 11px 14px;
+  padding: 10px 6px 10px 14px;
   border: none;
   background: none;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
 }
 .recent-open:disabled {
   cursor: default;
 }
+.recent-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: var(--radius-lg);
+}
 .recent-icon {
   grid-area: icon;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   background: var(--accent-soft);
   color: var(--accent);
 }
 .recent-icon svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 .recent-title {
   grid-area: title;
+  min-width: 0;
   font-weight: 600;
   font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .recent-open:hover:not(:disabled) .recent-title {
   color: var(--accent);
@@ -621,6 +703,7 @@ kbd {
 }
 .recent-date {
   grid-area: date;
+  font-variant-numeric: tabular-nums;
 }
 .recent-path,
 .recent-date {
@@ -637,17 +720,24 @@ kbd {
   background: var(--panel-2);
   color: var(--muted);
 }
-.recent li > .btn {
+.recent-forget {
+  flex: none;
   opacity: 0;
-  color: var(--muted);
 }
-.recent li:hover > .btn,
-.recent li > .btn:focus-visible {
+.recent li:hover > .recent-forget,
+.recent-forget:focus-visible {
   opacity: 1;
 }
 .home-foot {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 12px;
+}
+.home-foot .btn {
+  margin-right: -10px;
+  color: var(--muted);
 }
 .loading {
   display: grid;
@@ -3434,60 +3524,10 @@ h4 {
   flex-direction: column;
   overflow: hidden;
 }
-/* The board never scrolls up and down: its one row is the visible height and each act or sequence scrolls its own content. */
-.board {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  overflow: auto hidden;
-  padding: 16px;
-  justify-content: safe center;
-  background: var(--canvas);
-}
-.board-track {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  min-height: 0;
-}
-/* An act is a big card holding its sequences, each a card holding its scenes: stacked on the whole story, side by side once the act is opened. */
-/* Acts, sequences and scene cards share one padding (10px) and one gap (8px) between what they hold. */
-.column {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 100%;
-  min-height: 0;
-  padding: 10px;
-  border-radius: var(--radius-lg);
-  /* The act wears its colour; its sequences stay neutral, its scenes wear their own. */
-  border: 1px solid color-mix(in srgb, var(--act, var(--line)) 40%, var(--line));
-  background: color-mix(in srgb, var(--act, var(--panel)) 16%, var(--panel));
-  box-shadow: var(--shadow-sm);
-}
-.column.drop,
 .seq.drop,
 .card.drop {
   outline: 2px dashed var(--focus);
   outline-offset: 2px;
-}
-.column.z-story {
-  width: 360px;
-}
-.column-head {
-  flex: none;
-}
-/* An opened act or sequence drops its own frame: the breadcrumb names it, the board shows only what it holds. */
-.column.z-act,
-.column.z-seq {
-  height: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
 }
 .column-head,
 .seq-head {
@@ -3496,6 +3536,7 @@ h4 {
   gap: 6px;
 }
 .column-head {
+  flex: none;
   min-height: 30px;
 }
 .column-head .muted.small {
@@ -3689,14 +3730,6 @@ h4 {
 .more-menu button.danger:focus-visible {
   color: var(--danger);
 }
-.act-seqs {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  animation: unfold 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
 .seq {
   flex: 0 0 330px;
   min-width: 0;
@@ -3708,75 +3741,6 @@ h4 {
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--sunken);
-}
-/* On the whole story, an act's sequences stack in its column. */
-.act-seqs.stack {
-  flex-direction: column;
-  align-items: stretch;
-  overflow-y: auto;
-  /* A gutter the scrollbar's width on both edges keeps the left and right margins equal, scrollbar or not. */
-  scrollbar-gutter: stable both-edges;
-  margin: 0 -10px -10px;
-  padding: 0 0 10px;
-}
-.act-seqs.stack > .seq {
-  flex: none;
-  max-height: none;
-}
-.act-seqs.stack > .seq-band {
-  width: auto;
-  min-height: 36px;
-}
-/* An act opened: each sequence scrolls its scenes. */
-.act-seqs.row > .seq .cards {
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
-  margin: 0 -10px;
-}
-/* One sequence opened: its scenes run on one row, slid sideways by dragging or with the wheel. */
-.board.solo {
-  grid-template-columns: minmax(0, 1fr);
-  overflow: hidden;
-  /* The row runs to the board's edges; its own padding gives the first and last cards their room. */
-  padding-inline: 0;
-}
-.board.solo .column {
-  flex: 1;
-  min-width: 0;
-}
-.seq.solo {
-  flex: 1;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  background: none;
-}
-.seq.solo .cards {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: flex-start;
-  overflow: auto;
-  padding: 2px 16px 10px;
-  scroll-padding-inline: 16px;
-  cursor: ew-resize;
-}
-.seq.solo .cards > .card {
-  flex: none;
-  width: 330px;
-}
-.seq.solo .cards > .card-add {
-  flex: none;
-  width: 220px;
-}
-.seq.solo .card-add > button {
-  min-height: 120px;
-}
-.seq.solo .cards.panning,
-.seq.solo .cards.panning * {
-  user-select: none;
-  cursor: ew-resize;
 }
 .seq-head {
   flex: none;
@@ -3832,19 +3796,6 @@ h4 {
 .add-band.drop {
   outline: 2px dashed var(--focus);
   outline-offset: 2px;
-}
-.act-band {
-  width: 80px;
-  min-height: 200px;
-}
-.seq-band {
-  width: 40px;
-  min-height: 72px;
-  border-radius: 8px;
-}
-.seq-band svg {
-  width: 18px;
-  height: 18px;
 }
 .cards {
   list-style: none;
@@ -3980,7 +3931,7 @@ h4 {
   width: 14px;
   height: 14px;
 }
-/* Canvas: the story as a tree on a dotted surface that pans and zooms. Same headers and cards as the columns. */
+/* Canvas: the story as a tree on a dotted surface that pans and zooms. */
 .canvas-wrap {
   position: relative;
   flex: 1;
@@ -4423,49 +4374,6 @@ h4 {
   box-shadow:
     0 0 0 2px var(--panel),
     0 0 0 4px var(--ink);
-}
-.plotlines {
-  flex: 1;
-  overflow: auto;
-}
-.plot-grid {
-  display: grid;
-  gap: 3px;
-  padding: 16px;
-  align-items: center;
-}
-.plot-num {
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.plot-label {
-  font-size: 12px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-right: 6px;
-}
-.plot-cell {
-  width: 22px;
-  height: 18px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel);
-  cursor: pointer;
-  padding: 0;
-}
-.plot-cell:hover {
-  border-color: var(--line-strong);
-}
-.plot-cell.on {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.plot-cell.sel {
-  outline: 2px solid var(--focus);
 }
 
 /* Timeline */

@@ -8,7 +8,9 @@
   },
   "home": {
     "newProject": "Nouveau projet",
+    "newProjectHint": "Commencer un nouveau film",
     "openProject": "Ouvrir un projet…",
+    "openProjectHint": "Reprendre un film en cours",
     "recent": "Projets récents",
     "noRecent": "Aucun projet pour l'instant. Créez-en un pour commencer à écrire.",
     "unavailable": "introuvable (dossier déplacé ou supprimé)",

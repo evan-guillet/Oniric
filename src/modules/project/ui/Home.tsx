@@ -1,11 +1,9 @@
-import { ArchiveRestore, Clapperboard, FileInput, FolderOpen, Plus, Settings } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Clapperboard, FolderOpen, Plus, Settings, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { commands, type RecentProject, type StartupReport } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
-import { describeError } from "../../../core/errors";
-import { importScript, IMPORT_ACCEPT, type ScriptImport } from "../../../interop/importScript";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import { projectDirOf } from "../application/projects";
 import { NewProjectDialog } from "./NewProjectDialog";
@@ -13,6 +11,7 @@ import { SettingsDialog } from "./SettingsView";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 
+/** The start screen: create or open a project, then the recent ones. Restoring a backup lives in Settings, importing inside a project. */
 export function Home({
   startup,
   onOpen,
@@ -21,15 +20,13 @@ export function Home({
 }: {
   startup: StartupReport | null;
   onOpen: (dir: string) => void;
-  onCreate: (parent: string, title: string, formatId: string, imported?: ScriptImport) => Promise<void>;
+  onCreate: (parent: string, title: string, formatId: string) => Promise<void>;
   notify: (m: Omit<ToastMessage, "id">) => void;
 }) {
   const { t } = useTranslation();
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [creating, setCreating] = useState(false);
-  const [imported, setImported] = useState<ScriptImport | null>(null);
   const [settings, setSettings] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => setRecent(unwrap(await commands.recentList()));
   useEffect(() => {
@@ -41,29 +38,6 @@ export function Home({
     if (typeof file === "string") onOpen(projectDirOf(file));
   };
 
-  const importFile = async (file: File | undefined) => {
-    if (!file) return;
-    try {
-      setImported(importScript(file.name, await file.text(), true));
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    } finally {
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const restore = async () => {
-    const file = await open({ title: "Choisir une sauvegarde", filters: [{ name: "Sauvegarde Oniric", extensions: ["db"] }] });
-    if (typeof file !== "string") return;
-    const parent = await open({ directory: true, title: "Où recréer le projet ?" });
-    if (typeof parent !== "string") return;
-    try {
-      onOpen(unwrap(await commands.backupRestore(file, parent)));
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    }
-  };
-
   const forget = async (path: string) => {
     unwrap(await commands.recentForget(path));
     await refresh();
@@ -72,36 +46,25 @@ export function Home({
   return (
     <main className="home">
       <header className="home-head">
-        <img src="/oniric.svg" alt="" className="home-logo" width="56" height="56" />
-        <div>
-          <h1>{t("app.name")}</h1>
-          <p className="muted">{t("app.tagline")}</p>
-        </div>
+        <img src="/oniric.svg" alt="" className="home-logo" width="44" height="44" />
+        <h1>{t("app.name")}</h1>
+        <p className="muted">{t("app.tagline")}</p>
       </header>
 
       <div className="home-actions">
-        <button type="button" className="btn primary large" onClick={() => setCreating(true)}>
-          <Plus aria-hidden="true" />
-          {t("home.newProject")}
+        <button type="button" className="home-action primary" onClick={() => setCreating(true)}>
+          <span className="home-action-icon" aria-hidden="true">
+            <Plus />
+          </span>
+          <span className="home-action-label">{t("home.newProject")}</span>
+          <span className="home-action-hint">{t("home.newProjectHint")}</span>
         </button>
-        <button type="button" className="btn large" onClick={browse}>
-          <FolderOpen aria-hidden="true" />
-          {t("home.openProject")}
-        </button>
-        <button type="button" className="btn large" onClick={() => fileRef.current?.click()}>
-          <FileInput aria-hidden="true" />
-          Importer un scénario…
-        </button>
-        <input ref={fileRef} type="file" className="home-import" accept={IMPORT_ACCEPT} hidden onChange={(e) => void importFile(e.target.files?.[0])} />
-      </div>
-      <div className="home-links">
-        <button type="button" className="btn ghost small" onClick={() => void restore()}>
-          <ArchiveRestore aria-hidden="true" />
-          Restaurer une sauvegarde…
-        </button>
-        <button type="button" className="btn ghost small" onClick={() => setSettings(true)}>
-          <Settings aria-hidden="true" />
-          Réglages
+        <button type="button" className="home-action" onClick={() => void browse()}>
+          <span className="home-action-icon" aria-hidden="true">
+            <FolderOpen />
+          </span>
+          <span className="home-action-label">{t("home.openProject")}</span>
+          <span className="home-action-hint">{t("home.openProjectHint")}</span>
         </button>
       </div>
 
@@ -111,7 +74,7 @@ export function Home({
           {recent.length > 0 && <span className="count">{recent.length}</span>}
         </h2>
         {recent.length === 0 ? (
-          <p className="muted">{t("home.noRecent")}</p>
+          <p className="recent-empty muted">{t("home.noRecent")}</p>
         ) : (
           <ul>
             {recent.map((r) => (
@@ -124,8 +87,8 @@ export function Home({
                   <span className="recent-path">{r.available ? r.path : `${r.path} — ${t("home.unavailable")}`}</span>
                   <span className="recent-date">{t("home.openedAt", { date: dateFormat.format(new Date(r.openedAt)) })}</span>
                 </button>
-                <button type="button" className="btn ghost small" onClick={() => forget(r.path)}>
-                  {t("home.forget")}
+                <button type="button" className="btn ghost icon-only recent-forget" aria-label={`${t("home.forget")} : ${r.title}`} title={t("home.forget")} onClick={() => void forget(r.path)}>
+                  <X aria-hidden="true" />
                 </button>
               </li>
             ))}
@@ -133,9 +96,15 @@ export function Home({
         )}
       </section>
 
-      <footer className="home-foot muted">
-        {startup && t("app.version", { version: startup.version })}
-        {startup?.portable && ` · ${t("app.portable")}`}
+      <footer className="home-foot">
+        <span className="muted">
+          {startup && t("app.version", { version: startup.version })}
+          {startup?.portable && ` · ${t("app.portable")}`}
+        </span>
+        <button type="button" className="btn ghost small" onClick={() => setSettings(true)}>
+          <Settings aria-hidden="true" />
+          Réglages
+        </button>
       </footer>
 
       {settings && <SettingsDialog notify={notify} onOpenProject={onOpen} onClose={() => setSettings(false)} />}
@@ -145,17 +114,6 @@ export function Home({
           onCreate={async (parent, title, formatId) => {
             await onCreate(parent, title, formatId);
             setCreating(false);
-          }}
-        />
-      )}
-      {imported && (
-        <NewProjectDialog
-          initialTitle={imported.title}
-          intro={`« ${imported.fileName} » : ${imported.blocks.length} éléments reconnus. Un nouveau projet va le recevoir.`}
-          onCancel={() => setImported(null)}
-          onCreate={async (parent, title, formatId) => {
-            await onCreate(parent, title, formatId, imported);
-            setImported(null);
           }}
         />
       )}
