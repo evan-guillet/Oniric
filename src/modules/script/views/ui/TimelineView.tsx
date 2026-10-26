@@ -82,7 +82,7 @@ export function TimelineView() {
   }, [scenes]);
   // The names column is as wide as the longest name, so that none is cut.
   const label = useMemo(
-    () => Math.min(280, Math.max(150, ...characters.map((c) => textWidth(c.label, NAME_FONT) + textWidth(String(c.n), "500 12px") + 48))),
+    () => Math.ceil(Math.min(280, Math.max(150, ...characters.map((c) => textWidth(c.label, NAME_FONT) + textWidth(String(c.n), "500 12px") + 48)))),
     [characters],
   );
 
@@ -157,7 +157,7 @@ export function TimelineView() {
   const color = (id: string) => story.meta.get(id)?.color ?? "var(--accent)";
   const shown = hover ? pos.get(hover.id)?.scene : undefined;
   const present = new Set(shown?.characters ?? []);
-  const svgW = width + GUTTER;
+  const svgW = Math.ceil(width + GUTTER);
 
   const picked = only ? [...acts, ...seqs].find((p) => p.id === only) : undefined;
   const within = picked ? new Set(picked.scenes) : null;
