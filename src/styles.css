@@ -3984,7 +3984,9 @@ h4 {
   border-radius: 8px;
   background: color-mix(in srgb, var(--scene, var(--panel)) 16%, var(--panel));
   color: var(--ink);
-  border: 1px solid color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
+  /* One edge colour for the frame and the line over the badges, following the scene's colour and the card's state. */
+  --card-edge: color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
+  border: 1px solid var(--card-edge);
   box-shadow: var(--shadow-sm);
   transition:
     border-color 120ms ease-out,
@@ -3992,15 +3994,15 @@ h4 {
     opacity 160ms ease-out;
 }
 .card:hover {
-  border-color: color-mix(in srgb, var(--scene, var(--line-strong)) 60%, var(--line-strong));
+  --card-edge: color-mix(in srgb, var(--scene, var(--line-strong)) 60%, var(--line-strong));
   box-shadow: var(--shadow-md);
 }
 .card.on {
-  border-color: var(--accent);
+  --card-edge: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .card.lit {
-  border-color: var(--warning-dot);
+  --card-edge: var(--warning-dot);
   box-shadow: 0 0 0 3px var(--warning-soft);
 }
 .card.dim {
@@ -4065,7 +4067,8 @@ h4 {
   gap: 4px;
   margin-top: 2px;
   padding-top: 8px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--card-edge, var(--line));
+  transition: border-color 120ms ease-out;
 }
 .card-foot:empty {
   display: none;
@@ -4084,14 +4087,22 @@ h4 {
   background-image: radial-gradient(circle, color-mix(in srgb, var(--hint) 40%, transparent) 1px, transparent 1.5px);
   background-size: 22px 22px;
   background-attachment: local;
-  cursor: grab;
 }
 /* The canvas is moved, not read like a page: no text selection gets in the way of a pan. */
 .canvas {
   user-select: none;
 }
+/* The rows of scenes are dragged sideways; the wheel and the scrollbar take care of up and down. */
+.canvas .cv-cards,
+.canvas .cv-cards .card-body {
+  cursor: ew-resize;
+}
 .canvas.panning,
 .canvas.panning * {
+  cursor: ew-resize;
+}
+.canvas.panning-free,
+.canvas.panning-free * {
   cursor: grabbing;
 }
 /* The chevron that folds an act or sequence down to its header. */
@@ -4192,7 +4203,7 @@ h4 {
 }
 /* Reaching for the wire leading to a card does not light the card up. */
 .cv-cards > .card:has(> .cv-insert:hover) {
-  border-color: color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
+  --card-edge: color-mix(in srgb, var(--scene, var(--line)) 40%, var(--line));
   box-shadow: var(--shadow-sm);
 }
 .cv-cards > .card:has(> .cv-insert:hover) > .card-more {

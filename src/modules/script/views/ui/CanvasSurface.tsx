@@ -6,13 +6,15 @@ const MAX = 1.6;
 const STEP = 1.2;
 const clamp = (z: number) => Math.min(MAX, Math.max(MIN, Math.round(z * 100) / 100));
 
-// What keeps its own gesture: drag handles, fields and the small buttons; anything else can start a pan.
+// Where a drag pans sideways: the rows of scenes.
+const PAN_ZONE = ".cv-cards";
+// What keeps its own gesture inside them: drag handles, fields and the small buttons.
 const OWN_GESTURE = ".grip, [draggable=true], input, textarea, select, .more-btn, .head-add, .head-fold, .cv-insert, .cv-ghost, .canvas-tools";
 
 /**
- * A surface that scrolls both ways and zooms with Ctrl + wheel or its corner buttons. It pans in X and Y when
- * dragged from anywhere, cards included (a drag never ends in a click), or with the middle button; the wheel
- * scrolls it up and down, Shift + wheel sideways. What it holds is laid out at its natural size, then scaled as one.
+ * A surface that scrolls both ways and zooms with Ctrl + wheel or its corner buttons. The wheel and the scrollbar
+ * move it up and down; a drag on a row of scenes, cards included (a drag never ends in a click), moves it sideways,
+ * as do Shift + wheel and the bottom scrollbar. The middle button pans it both ways. What it holds is laid out at its natural size, then scaled as one.
  */
 export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactNode; tools?: ReactNode; onDragEnd?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
@@ -70,32 +72,33 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
       const r = el.getBoundingClientRect();
       zoomTo(current.current * Math.exp(-e.deltaY * 0.002), e.clientX - r.left, e.clientY - r.top);
     };
-    let start: { x: number; y: number; left: number; top: number; id: number } | null = null;
+    let start: { x: number; y: number; left: number; top: number; id: number; free: boolean } | null = null;
     let moved = false;
     const down = (e: PointerEvent) => {
       const middle = e.button === 1;
-      if (!middle && (e.button !== 0 || (e.target as Element).closest(OWN_GESTURE))) return;
+      const target = e.target as Element;
+      if (!middle && (e.button !== 0 || !target.closest(PAN_ZONE) || target.closest(OWN_GESTURE))) return;
       // The middle button pans at once, instead of the browser's autoscroll.
       if (middle) e.preventDefault();
-      start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, id: e.pointerId };
+      start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, id: e.pointerId, free: middle };
       moved = false;
     };
     const move = (e: PointerEvent) => {
       if (!start || e.pointerId !== start.id) return;
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
-      if (!moved && Math.hypot(dx, dy) < 4) return;
+      if (!moved && (start.free ? Math.hypot(dx, dy) : Math.abs(dx)) < 4) return;
       if (!moved) {
         moved = true;
         el.setPointerCapture(e.pointerId);
-        el.classList.add("panning");
+        el.classList.add(start.free ? "panning-free" : "panning");
       }
       el.scrollLeft = start.left - dx;
-      el.scrollTop = start.top - dy;
+      if (start.free) el.scrollTop = start.top - dy;
     };
     const up = () => {
       start = null;
-      el.classList.remove("panning");
+      el.classList.remove("panning", "panning-free");
     };
     // A pan that started on a card does not open it.
     const click = (e: MouseEvent) => {
