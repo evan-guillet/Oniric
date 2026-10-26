@@ -4624,7 +4624,7 @@ h4 {
 
 /*
  * Timeline: the head (pages, acts, sequences, scenes) stays on top and the names column on the left while the
- * characters scroll under them; every title shows whole, on as many lanes as it takes.
+ * characters scroll under them; acts and sequences keep their exact span on one line, their whole title on hover.
  */
 .timeline-view {
   position: relative;
@@ -4682,14 +4682,33 @@ h4 {
 }
 .tl-names li {
   display: flex;
+  padding: 2px 6px 2px 4px;
+}
+.tl-names button {
+  display: flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 0 16px;
+  min-width: 0;
+  padding: 0 6px 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
   color: var(--ink);
+  font: inherit;
   font-size: 13.5px;
   font-weight: 500;
+  text-align: left;
   white-space: nowrap;
-  transition: color 120ms ease-out;
+  cursor: pointer;
+  transition: color 120ms ease-out, background-color 120ms ease-out;
+}
+.tl-names button:hover {
+  background: var(--panel-2);
+}
+.tl-names button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .tl-name {
   flex: 1;
@@ -4700,14 +4719,38 @@ h4 {
   font-variant-numeric: tabular-nums;
 }
 /* While a scene is pointed at, the characters who are in it stand out from the others. */
-.tl-names.hovering li {
+.tl-names.hovering button {
   color: var(--hint);
 }
-.tl-names.hovering li.on {
+.tl-names.hovering li.on button {
   color: var(--ink);
 }
 .tl-names.hovering li.on .tl-name-n {
   color: var(--accent);
+}
+/* One character isolated: the others step back, in the list as on the tracks and the scene strip. */
+.tl-names.isolating:not(.hovering) li:not(.alone) button {
+  color: var(--hint);
+}
+.tl-names li.alone button {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.tl-names li.alone .tl-name-n {
+  color: var(--accent);
+}
+.tl-tracks {
+  cursor: ew-resize;
+  touch-action: pan-y;
+}
+.tl-row {
+  transition: opacity 160ms ease-out;
+}
+.tl-row.off {
+  opacity: 0.18;
+}
+.tl-scene.off {
+  opacity: 0.25;
 }
 .tl-grid {
   stroke: var(--line);
@@ -4747,8 +4790,8 @@ h4 {
   stroke: var(--line-strong);
 }
 /* How far a sequence goes when its title is wider than it. */
-.tl-extent {
-  fill: var(--accent);
+.tl-part text {
+  pointer-events: none;
 }
 .tl-scene {
   stroke: var(--panel);

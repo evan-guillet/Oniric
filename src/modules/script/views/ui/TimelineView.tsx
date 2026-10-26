@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FocusEvent, MouseEvent } from "react";
+import type { FocusEvent, MouseEvent, PointerEvent } from "react";
 import { useLive } from "../../../../core/db/live";
 import { useProject } from "../../../project/ui/projectContext";
 import { prettyName } from "../../bible/domain/appearances";
 import { useScenes } from "../../screenplay/application/scriptSession";
 import { formatEighths } from "../../screenplay/domain/duration";
-import { numberedTitles, sceneLabel } from "../domain/outline";
+import { numberedParts, sceneLabel } from "../domain/outline";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline } from "../application/story";
 
 const ROW = 30;
@@ -14,7 +14,6 @@ const ACT_H = 30;
 const SEQ_H = 28;
 const BEAT_GAP = 10;
 const STRIP = 40;
-const PAD = 12;
 const GUTTER = 24;
 
 const ACT_FONT = "600 13px";
@@ -33,28 +32,22 @@ function textWidth(text: string, font: string): number {
 
 interface Span {
   id: string;
+  /** The number and the title, shown whole when hovered. */
   title: string;
   x: number;
   w: number;
-  /** As wide as the span, or as the title when the title is longer. */
-  box: number;
-  lane: number;
+  /** What fits in the span: the whole title, else its number, else nothing. */
+  label: string;
 }
 
-/**
- * Puts each label on the first lane where it fits whole, so that no title is ever cut: a title longer than its
- * span runs past it, and the next span that would collide drops to the lane below.
- */
-function inLanes(items: Omit<Span, "lane" | "box">[], font: string): { spans: Span[]; lanes: number } {
-  const ends: number[] = [];
-  const spans = items.map((it) => {
-    const box = Math.max(it.w, textWidth(it.title, font) + 18);
-    let lane = ends.findIndex((e) => e <= it.x + 0.5);
-    if (lane < 0) lane = ends.length;
-    ends[lane] = it.x + box + (box > it.w ? 3 : 0);
-    return { ...it, box, lane };
+/** Every act or sequence keeps exactly its span on a single line; a title too long for it shrinks to its number. */
+function fitted(items: { id: string; num: string; title: string; x: number; w: number }[], font: string): Span[] {
+  return items.map(({ id, num, title, x, w }) => {
+    const whole = title ? `${num} ${title}` : num;
+    const short = num.split(" ").pop() ?? num;
+    const label = [whole, num, short].find((t) => textWidth(t, font) + 16 <= w) ?? "";
+    return { id, title: whole, x, w, label };
   });
-  return { spans, lanes: Math.max(1, ends.length) };
 }
 
 /** The scenes in the order of the story, as wide as they are long, with acts, beats and characters [VUE-10, VUE-12]. */
@@ -72,6 +65,10 @@ export function TimelineView() {
     return () => ro.disconnect();
   }, [scroller]);
   const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null);
+  // The character picked in the names column: the others fade, and so do the scenes they are not in.
+  const [part, setPart] = useState<{ title: string; left: number; top: number } | null>(null);
+  const [alone, setAlone] = useState<string | null>(null);
+  const drag = useRef<{ x: number; left: number } | null>(null);
 
   const characters = useMemo(() => {
     const count = new Map<string, number>();
@@ -85,7 +82,7 @@ export function TimelineView() {
   );
 
   const pages = scenes.reduce((n, s) => n + s.eighths, 0) / 8;
-  const pxPerPage = Math.max(8, room > 0 ? (room - label - PAD - GUTTER) / Math.max(1, pages) : 40);
+  const pxPerPage = Math.max(8, room > 0 ? (room - label - GUTTER) / Math.max(1, pages) : 40);
   const layout = useMemo(() => {
     let x = 0;
     return scenes.map((s) => {
@@ -101,26 +98,27 @@ export function TimelineView() {
   const width = layout.length ? layout[layout.length - 1].x + layout[layout.length - 1].w : 0;
   const pos = new Map(layout.map((l) => [l.scene.id, l]));
   const groups = storyOutline(story, scenes.map((s) => s.id));
-  const titles = numberedTitles(groups);
+  const numbers = numberedParts(groups);
+  const numbered = (id: string, title: string) => ({ id, num: numbers.get(id)?.num ?? "", title: numbers.get(id)?.title ?? title });
   const extent = (ids: string[]) => {
     const ls = ids.map((id) => pos.get(id)).filter((l) => !!l);
     return ls.length ? { x: ls[0].x, w: ls[ls.length - 1].x + ls[ls.length - 1].w - ls[0].x } : null;
   };
   const actItems = groups.flatMap((g) => {
     const sp = g.act && extent(g.sequences.flatMap((s) => s.scenes));
-    return sp && g.act ? [{ id: g.act.id, title: titles.get(g.act.id) ?? g.act.title, ...sp }] : [];
+    return sp && g.act ? [{ ...numbered(g.act.id, g.act.title), ...sp }] : [];
   });
   const seqItems = groups.flatMap((g) =>
     g.sequences.flatMap((s) => {
       const sp = s.sequence && extent(s.scenes);
-      return sp && s.sequence ? [{ id: s.sequence.id, title: titles.get(s.sequence.id) ?? s.sequence.title, ...sp }] : [];
+      return sp && s.sequence ? [{ ...numbered(s.sequence.id, s.sequence.title), ...sp }] : [];
     }),
   );
-  const acts = inLanes(actItems, ACT_FONT);
-  const seqs = inLanes(seqItems, SEQ_FONT);
+  const acts = fitted(actItems, ACT_FONT);
+  const seqs = fitted(seqItems, SEQ_FONT);
   const actTop = RULER;
-  const seqTop = actTop + (actItems.length ? acts.lanes * ACT_H : 0);
-  const stripTop = seqTop + (seqItems.length ? seqs.lanes * SEQ_H : 0) + BEAT_GAP;
+  const seqTop = actTop + (actItems.length ? ACT_H : 0);
+  const stripTop = seqTop + (seqItems.length ? SEQ_H : 0) + BEAT_GAP;
   const headH = stripTop + STRIP + 12;
   const bodyH = ROW * characters.length + 12;
 
@@ -131,13 +129,36 @@ export function TimelineView() {
   const color = (id: string) => story.meta.get(id)?.color ?? "var(--accent)";
   const shown = hover ? pos.get(hover.id)?.scene : undefined;
   const present = new Set(shown?.characters ?? []);
-  const svgW = PAD + width + GUTTER;
+  const svgW = width + GUTTER;
 
   const point = (id: string) => (e: MouseEvent<SVGRectElement> | FocusEvent<SVGRectElement>) => {
     const v = viewRef.current?.getBoundingClientRect();
     if (!v) return;
     const r = e.currentTarget.getBoundingClientRect();
     setHover({ id, left: Math.max(12, Math.min(r.left - v.left, v.width - 572)), top: r.bottom - v.top + 8 });
+  };
+
+  const name = (title: string) => ({
+    onMouseEnter: (e: MouseEvent<SVGGElement>) => {
+      const v = viewRef.current?.getBoundingClientRect();
+      if (!v) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      setPart({ title, left: Math.max(12, Math.min(r.left - v.left, v.width - 572)), top: r.bottom - v.top + 6 });
+    },
+    onMouseLeave: () => setPart(null),
+  });
+
+  // Dragging across the characters' tracks slides the timeline sideways.
+  const grab = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0 || !scroller) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, left: scroller.scrollLeft };
+  };
+  const slide = (e: PointerEvent<SVGSVGElement>) => {
+    if (drag.current && scroller) scroller.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
+  };
+  const release = () => {
+    drag.current = null;
   };
 
   const grid = (h: number) => (
@@ -163,28 +184,26 @@ export function TimelineView() {
               <span style={{ top: stripTop, height: STRIP }}>Scènes</span>
             </div>
             <svg width={svgW} height={headH} role="img" aria-label="Chronologie des scènes">
-              <g transform={`translate(${PAD},0)`}>
+              <g>
                 {grid(headH)}
                 {ticks.slice(1).map((p) => (
                   <text key={p} x={p * pxPerPage + 4} y={17} className="tl-tick">
                     p. {p}
                   </text>
                 ))}
-                {acts.spans.map((a, i) => (
-                  <g key={a.id}>
-                    <rect x={a.x + 1} y={actTop + a.lane * ACT_H + 3} width={a.box - 2} height={ACT_H - 6} rx={5} className={`tl-act a${i % 2}`} />
-                    {a.box > a.w && <rect x={a.x + 1} y={actTop + a.lane * ACT_H + ACT_H - 6} width={Math.max(3, a.w - 2)} height={3} className="tl-extent" />}
-                    <text x={a.x + 9} y={actTop + a.lane * ACT_H + ACT_H / 2 + 4.5} className="tl-act-label">
-                      {a.title}
+                {acts.map((a, i) => (
+                  <g key={a.id} className="tl-part" aria-label={a.title} {...name(a.title)}>
+                    <rect x={a.x + 1} y={actTop + 3} width={Math.max(2, a.w - 2)} height={ACT_H - 6} rx={5} className={`tl-act a${i % 2}`} />
+                    <text x={a.x + 9} y={actTop + ACT_H / 2 + 4.5} className="tl-act-label">
+                      {a.label}
                     </text>
                   </g>
                 ))}
-                {seqs.spans.map((s, i) => (
-                  <g key={s.id}>
-                    <rect x={s.x + 1} y={seqTop + s.lane * SEQ_H + 3} width={s.box - 2} height={SEQ_H - 6} rx={4} className={`tl-seq s${i % 2}`} />
-                    {s.box > s.w && <rect x={s.x + 1} y={seqTop + s.lane * SEQ_H + SEQ_H - 6} width={Math.max(3, s.w - 2)} height={3} className="tl-extent" />}
-                    <text x={s.x + 8} y={seqTop + s.lane * SEQ_H + SEQ_H / 2 + 4.5} className="tl-seq-label">
-                      {s.title}
+                {seqs.map((q, i) => (
+                  <g key={q.id} className="tl-part" aria-label={q.title} {...name(q.title)}>
+                    <rect x={q.x + 1} y={seqTop + 3} width={Math.max(2, q.w - 2)} height={SEQ_H - 6} rx={4} className={`tl-seq s${i % 2}`} />
+                    <text x={q.x + 8} y={seqTop + SEQ_H / 2 + 4.5} className="tl-seq-label">
+                      {q.label}
                     </text>
                   </g>
                 ))}
@@ -199,7 +218,7 @@ export function TimelineView() {
                       height={STRIP}
                       rx={2}
                       fill={color(l.scene.id)}
-                      className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""}`}
+                      className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""} ${alone && !l.scene.characters.includes(alone) ? "off" : ""}`}
                       tabIndex={0}
                       role="button"
                       aria-label={`Scène ${l.scene.index + 1} ${l.scene.heading}`}
@@ -215,7 +234,7 @@ export function TimelineView() {
                 {beats.map((b) => {
                   const l = pos.get(b.scenes[0]);
                   return l ? (
-                    <path key={b.id} d={`M${l.x + 1} ${stripTop - 2} l5 -7 l-10 0 z`} className="tl-beat">
+                    <path key={b.id} d={`M${Math.max(6, l.x + 1)} ${stripTop - 2} l5 -7 l-10 0 z`} className="tl-beat">
                       <title>{b.title}</title>
                     </path>
                   ) : null;
@@ -224,24 +243,30 @@ export function TimelineView() {
             </svg>
           </div>
           <div className="tl-body">
-            <ul className={hover ? "tl-names hovering" : "tl-names"} style={{ width: label }} aria-label="Personnages">
+            <ul className={`tl-names${hover ? " hovering" : ""}${alone ? " isolating" : ""}`} style={{ width: label }} aria-label="Personnages">
               {characters.map((c) => (
-                <li key={c.name} className={present.has(c.name) ? "on" : undefined} style={{ height: ROW }}>
-                  <span className="tl-name">{c.label}</span>
-                  <span className="tl-name-n" title={`${c.n} scènes`}>
-                    {c.n}
-                  </span>
+                <li key={c.name} className={[present.has(c.name) && "on", alone === c.name && "alone"].filter(Boolean).join(" ") || undefined} style={{ height: ROW }}>
+                  <button
+                    type="button"
+                    aria-pressed={alone === c.name}
+                    title={alone === c.name ? "Revoir tous les personnages" : `Isoler ${c.label}`}
+                    onClick={() => setAlone(alone === c.name ? null : c.name)}
+                    onKeyDown={(e) => e.key === "Escape" && setAlone(null)}
+                  >
+                    <span className="tl-name">{c.label}</span>
+                    <span className="tl-name-n">{c.n}</span>
+                  </button>
                 </li>
               ))}
             </ul>
-            <svg width={svgW} height={bodyH} aria-hidden="true">
-              <g transform={`translate(${PAD},0)`}>
+            <svg width={svgW} height={bodyH} aria-hidden="true" className="tl-tracks" onPointerDown={grab} onPointerMove={slide} onPointerUp={release} onPointerCancel={release}>
+              <g>
                 {shown && pos.get(shown.id) && <rect x={pos.get(shown.id)!.x} y={0} width={pos.get(shown.id)!.w} height={bodyH} className="tl-column" />}
                 {grid(bodyH)}
                 {characters.map((c, i) => {
                   const y = ROW * i;
                   return (
-                    <g key={c.name}>
+                    <g key={c.name} className={alone && alone !== c.name ? "tl-row off" : "tl-row"}>
                       <line x1={0} x2={width} y1={y + ROW / 2} y2={y + ROW / 2} className="tl-track" />
                       {layout
                         .filter((l) => l.scene.characters.includes(c.name))
@@ -256,6 +281,11 @@ export function TimelineView() {
           </div>
         </div>
       </div>
+      {part && !hover && (
+        <div className="timeline-info" style={{ left: part.left, top: part.top }}>
+          <strong>{part.title}</strong>
+        </div>
+      )}
       <div aria-live="polite">
         {shown && hover && (
           <div className="timeline-info" style={{ left: hover.left, top: hover.top }}>
