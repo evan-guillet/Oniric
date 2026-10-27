@@ -7650,14 +7650,21 @@ button[aria-expanded="true"] .stats-chevron {
   align-self: flex-start;
   margin-top: 10px;
 }
+/* The gauge stands at the same place on every row: the share after it takes a fixed width, aligned right. */
 .stats-share {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
+}
+.stats-share-n {
+  flex: none;
+  width: 7ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .stats-share-bar {
-  width: 48px;
+  width: 140px;
   height: 4px;
   border-radius: 999px;
   background: var(--panel-2);

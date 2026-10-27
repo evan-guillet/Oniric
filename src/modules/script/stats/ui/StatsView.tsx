@@ -212,7 +212,7 @@ function CharacterTable({ characters, totalDialogue }: { characters: ReturnType<
         ))}
       </div>
       {characters.length > TOP && (
-        <button type="button" className="btn small stats-more" onClick={() => setAll(!all)}>
+        <button type="button" className="btn small text stats-more" onClick={() => setAll(!all)}>
           {all ? "Afficher moins" : "Afficher plus"}
         </button>
       )}
@@ -268,7 +268,7 @@ function PlaceTable({ places }: { places: ReturnType<typeof placeStats> }) {
         ))}
       </div>
       {places.length > TOP && (
-        <button type="button" className="btn small stats-more" onClick={() => setAll(!all)}>
+        <button type="button" className="btn small text stats-more" onClick={() => setAll(!all)}>
           {all ? "Afficher moins" : "Afficher plus"}
         </button>
       )}
@@ -296,7 +296,7 @@ function ShareTable({ title, shares }: { title: string; shares: Share[] }) {
               <span className="stats-share-bar" aria-hidden="true">
                 <span style={{ width: `${p[i]}%` }} />
               </span>
-              {shareLabel(p[i])}
+              <span className="stats-share-n">{shareLabel(p[i])}</span>
             </span>
           </div>
         ))}
