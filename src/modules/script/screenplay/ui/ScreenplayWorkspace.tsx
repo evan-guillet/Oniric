@@ -116,7 +116,7 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
  * annotate the text, so they leave the preview; the information can be filled in with the preview beside it.
  */
 type Panel = "scenes" | "notes" | "info";
-/** Tabs over the scenes: pressed again, a tab brings the scenes back. */
+/** The panel's tabs: one is always chosen, and pressing it again keeps it. */
 const PANEL_TABS: SegmentedOption<Panel>[] = [
   { id: "scenes", label: "Scènes", hint: "Les actes, les séquences et les scènes, dans l'ordre du script", icon: ListTree },
   { id: "notes", label: "Notes", hint: "Les notes à la place des scènes", icon: StickyNote },
@@ -163,9 +163,9 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       // Not remembered: it still applies until the project is closed.
     }
   };
-  /** A panel's tab shows it in place of the others; Notes or Informations pressed again bring the scenes back. */
-  const togglePanel = (p: Panel) => {
-    const next = panel === p ? "scenes" : p;
+  /** A panel's tab shows it in place of the others; pressed again, it stays. */
+  const showPanel = (next: Panel) => {
+    if (next === panel) return;
     setPanel(next);
     if (next === "notes") setPreview(false);
     if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
@@ -672,7 +672,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               label="Panneau"
               options={PANEL_TABS}
               value={panel}
-              onChange={togglePanel}
+              onChange={showPanel}
               compact
             />
           </div>,
