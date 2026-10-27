@@ -1,24 +1,26 @@
-import { Archive, ArrowLeft, MapPin, Plus, ScanSearch, Shapes, UserRound, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Archive, ArrowLeft, Pencil, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
-import { Dialog, useBackdropClose } from "../../../../ui-kit/Dialog";
+import { Dialog } from "../../../../ui-kit/Dialog";
 import { EmptyState } from "../../../../ui-kit/Form";
 import { MediaImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
-import { addAlias, createEntries, createEntry, loadEntries, loadTypes, type Entry } from "../application/bible";
+import { createEntry, loadEntries, loadTypes, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
-import { appearances, detect, triage, type Candidate } from "../domain/appearances";
+import { appearances, detect, triage } from "../domain/appearances";
 import { firstSentence, fold, type EntryType } from "../domain/types";
 import { EntryEditor } from "./EntryEditor";
-import { TypeEditor } from "./TypeEditor";
+import { TypeDialog } from "./TypeEditor";
 import { iconOf } from "./typeIcons";
-
 import { Select } from "../../../../ui-kit/Select";
-/** Where one is in the Bible: the categories, one category's entries, or a tool. The open entry sits over it. */
-type View = { kind: "home" } | { kind: "type"; id: string } | { kind: "detect" } | { kind: "types"; startNew?: boolean };
+
+/** Where one is in the Bible: the categories, or one category's entries. The open entry takes their place. */
+type View = { kind: "home" } | { kind: "type"; id: string };
+/** The type being made or changed in its modal: a new one, or a custom type. */
+type TypeEdit = { type?: EntryType };
 
 type Sort = "name" | "recent" | "presence";
 /** Scenes where an entry appears: how many, and the index of the first one (-1 when none). */
@@ -29,6 +31,45 @@ type Category = { id: string; title: string; name: string; type?: EntryType };
 /** « Le Cimetière des navires » sorts under C: the leading article is ignored. */
 const sortKey = (name: string) => fold(name).replace(/^(l['’]\s*|(le|la|les|un|une|des)\s+)/, "");
 const byName = (a: Entry, b: Entry) => sortKey(a.name).localeCompare(sortKey(b.name), "fr");
+
+/**
+ * A character or a location of the screenplay without an entry, found as one writes [BIB-03]. It shows as a card
+ * with the « Détecté » badge and becomes an entry once opened. The doubtful names (roles, likely duplicates,
+ * parts of a location) are left out.
+ */
+const DETECTED = "detected:";
+const isDetected = (e: Entry) => e.id.startsWith(DETECTED);
+function detectedEntries(texts: ReturnType<typeof sceneTexts>, entries: Entry[]): Entry[] {
+  const refs = entries.map((e) => ({ id: e.id, type: e.type, name: e.name, aliases: e.aliases }));
+  return triage(detect(texts, refs), refs)
+    .filter((c) => c.doubt === null)
+    .map((c) => ({
+      id: DETECTED + c.key,
+      type: c.type,
+      name: c.name,
+      aliases: [],
+      summary: "",
+      content: "",
+      fields: {},
+      tags: [],
+      links: [],
+      status: "validated",
+      image: null,
+      gallery: [],
+      notes: "",
+      createdAt: "",
+      updatedAt: "",
+      archivedAt: null,
+    }));
+}
+
+function DetectedBadge() {
+  return (
+    <span className="badge detected" title="Trouvé dans le scénario : la fiche se crée en l'ouvrant">
+      Détecté
+    </span>
+  );
+}
 
 /** The types in their order, then the removed types whose entries still show, under their raw id. */
 function categoriesOf(types: EntryType[], entries: Entry[]): Category[] {
@@ -43,17 +84,21 @@ function categoriesOf(types: EntryType[], entries: Entry[]): Category[] {
 export function BibleView({ selected, onSelected, home }: { selected: string | null; onSelected: (id: string | null) => void; home: number }) {
   const { session, notify, headerActions, setTrail } = useProject();
   const loaded = useLive(loadEntries, ["bible_entry"]);
-  const entries = loaded ?? [];
+  const saved = loaded ?? [];
   const types = useLive(loadTypes, ["bible_type"]) ?? [];
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
   const [view, setView] = useState<View>({ kind: "home" });
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState<string | null>(null);
+  const [typeEdit, setTypeEdit] = useState<TypeEdit | null>(null);
   const [sort, setSort] = useState<Sort>("name");
   const scenes = useScenes(session);
+  const texts = useMemo(() => sceneTexts(scenes), [scenes]);
+  // Not while the entries are still being read: every name would show as detected.
+  const detected = useMemo(() => (loaded ? detectedEntries(texts, loaded) : []), [texts, loaded]);
+  const entries = useMemo(() => [...saved, ...detected], [saved, detected]);
   const presence = useMemo(() => {
-    const texts = sceneTexts(scenes);
     const index = new Map(scenes.map((s) => [s.id, s.index]));
     const out = new Map<string, Presence>();
     for (const e of entries) {
@@ -61,7 +106,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
       out.set(e.id, { count: ids.length, first: ids.length ? Math.min(...ids.map((id) => index.get(id) ?? 0)) : -1 });
     }
     return out;
-  }, [scenes, entries]);
+  }, [scenes, texts, entries]);
   const categories = categoriesOf(types, entries);
   const category = view.kind === "type" ? categories.find((c) => c.id === view.id) : undefined;
 
@@ -83,7 +128,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     setOpenId(selected);
     landing.current = true;
   }, [selected]);
-  const current = openId ? entries.find((e) => e.id === openId) : undefined;
+  const current = openId ? saved.find((e) => e.id === openId) : undefined;
   useEffect(() => {
     if (!current || !landing.current) return;
     landing.current = false;
@@ -93,28 +138,38 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
   // Below the categories, the header says where one is; « Bible » or Escape goes back up.
   const inType = view.kind === "type" ? entries.filter((e) => e.type === view.id) : [];
   const shown = inType.filter((e) => !!e.archivedAt === archived);
-  const here =
-    view.kind === "type"
-      ? { label: category?.title ?? view.id, count: shown.length }
-      : view.kind === "detect"
-        ? { label: "Détecter" }
-        : view.kind === "types"
-          ? { label: "Types de fiches" }
-          : null;
-  const hereKey = here ? `${view.kind}:${here.label}:${"count" in here ? here.count : ""}` : null;
+  // An open entry adds its name after its category, which then leads back to the list.
+  const typeStep = view.kind === "type" ? { label: category?.title ?? view.id, count: shown.length } : null;
+  const trail = current
+    ? [...(typeStep ? [{ label: typeStep.label, onClick: () => close() }] : []), { label: current.name }]
+    : typeStep
+      ? [typeStep]
+      : null;
+  const trailKey = trail ? JSON.stringify(trail.map((t) => [t.label, "count" in t ? t.count : ""])) : null;
   useEffect(() => {
-    if (!here) return setTrail(null);
-    setTrail([{ label: "Bible", onClick: () => go({ kind: "home" }) }, here]);
-  }, [hereKey, setTrail]);
+    if (!trail) return setTrail(null);
+    setTrail([
+      {
+        label: "Bible",
+        onClick: () => {
+          close();
+          go({ kind: "home" });
+        },
+      },
+      ...trail,
+    ]);
+  }, [trailKey, setTrail]);
+  // Escape goes up one level: from the entry to the list it was opened from, from a category to the home.
   useEffect(() => {
-    if (view.kind === "home") return;
+    if (view.kind === "home" && !current) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, dialog, [role=dialog], [role=menu]")) return;
-      go({ kind: "home" });
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, dialog, [role=dialog], [role=menu], .ProseMirror")) return;
+      if (current) close();
+      else go({ kind: "home" });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.kind]);
+  }, [view.kind, !!current]);
   useEffect(() => () => setTrail(null), [setTrail]);
 
   // Coming back up, the focus goes to the category one left; going down, to its first card.
@@ -132,9 +187,20 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
   const found = view.kind === "home" && search ? entries.filter((e) => !e.archivedAt && matches(e)) : [];
   const visible = view.kind === "type" ? shown.filter(matches) : found;
   const archivedHere = inType.filter((e) => e.archivedAt).length;
+  const customType = category?.type && !category.type.builtin ? category.type : undefined;
   const newEntry = () => setCreating(view.kind === "type" && category ? view.id : "character");
 
-  const open = (id: string) => {
+  const open = async (id: string) => {
+    const found = entries.find((e) => e.id === id);
+    if (found && isDetected(found)) {
+      // A detected card becomes an entry as it opens.
+      try {
+        id = await createEntry(found.type, found.name);
+      } catch (e) {
+        notify({ text: describeError(e), tone: "error" });
+        return;
+      }
+    }
     setOpenId(id);
     onSelected(id);
   };
@@ -144,7 +210,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
       const id = await createEntry(type, name);
       setCreating(null);
       if (view.kind !== "type" || view.id !== type) go({ kind: "type", id: type });
-      open(id);
+      void open(id);
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -154,7 +220,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     setOpenId(null);
     onSelected(null);
   };
-  const browsing = view.kind === "home" || view.kind === "type";
+  const browsing = !current;
   const noMatch = !!search && visible.length === 0;
 
   // When the entry closes, however it closed (button, Escape, deletion), the focus goes back to its card,
@@ -174,9 +240,6 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     });
   }, [current?.id]);
 
-  // Détecter and Types de fiches are switches: pressed again, they go back to the categories.
-  const tool = (kind: "detect" | "types") => go(view.kind === kind ? { kind: "home" } : { kind });
-
   return (
     <div className="view bible-view">
       {headerActions &&
@@ -192,14 +255,6 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 aria-label={category ? `Rechercher dans ${category.title}` : "Rechercher une fiche"}
               />
             )}
-            <button type="button" className={view.kind === "detect" ? "btn on" : "btn"} aria-pressed={view.kind === "detect"} onClick={() => tool("detect")}>
-              <ScanSearch aria-hidden="true" />
-              Détecter
-            </button>
-            <button type="button" className={view.kind === "types" ? "btn on" : "btn"} aria-pressed={view.kind === "types"} onClick={() => tool("types")}>
-              <Shapes aria-hidden="true" />
-              Types de fiches
-            </button>
             <button type="button" className="btn primary" onClick={newEntry}>
               <Plus aria-hidden="true" />
               Nouvelle fiche
@@ -208,26 +263,37 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
           headerActions,
         )}
       <main className={browsing && entries.length > 0 ? "view-main wide" : "view-main"}>
-        {view.kind === "detect" && <Detection entries={entries} onCreated={() => go({ kind: "home" })} />}
-        {view.kind === "types" && <TypeEditor types={types} startNew={view.startNew} />}
-        {view.kind === "home" && entries.length > 0 && (
+        {current && (
+          <>
+            <div className="bible-bar">
+              <button type="button" className="btn ghost" onClick={close}>
+                <ArrowLeft aria-hidden="true" />
+                Retour
+              </button>
+            </div>
+            <div className="entry-page">
+              <EntryEditor key={current.id} entry={current} entries={saved} types={types} />
+            </div>
+          </>
+        )}
+        {browsing && view.kind === "home" && entries.length > 0 && (
           <>
             {search ? (
-              <EntrySections entries={found} categories={categories} presence={presence} onOpen={open} onCategory={(id) => go({ kind: "type", id })} />
+              <EntrySections entries={found} categories={categories} presence={presence} onOpen={(id) => void open(id)} onCategory={(id) => go({ kind: "type", id })} />
             ) : (
               <CategoryCards
                 categories={categories}
                 entries={entries}
                 presence={presence}
                 onOpen={(id) => go({ kind: "type", id })}
-                onOpenEntry={open}
+                onOpenEntry={(id) => void open(id)}
                 onCreate={setCreating}
-                onNewType={() => go({ kind: "types", startNew: true })}
+                onNewType={() => setTypeEdit({})}
               />
             )}
           </>
         )}
-        {view.kind === "type" && (
+        {browsing && view.kind === "type" && (
           <>
             <div className="bible-bar">
               <button type="button" className="btn ghost" onClick={() => go({ kind: "home" })}>
@@ -235,6 +301,12 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 Retour
               </button>
               <div className="bible-bar-tools">
+                {customType && (
+                  <button type="button" className="btn small" onClick={() => setTypeEdit({ type: customType })}>
+                    <Pencil aria-hidden="true" />
+                    Modifier le type
+                  </button>
+                )}
                 <label className="bible-sort">
                   <span>Trier par</span>
                   <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
@@ -252,7 +324,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 )}
               </div>
             </div>
-            <EntryCards entries={visible} types={types} presence={presence} sort={sort} level={2} onOpen={open} />
+            <EntryCards entries={visible} types={types} presence={presence} sort={sort} level={2} onOpen={(id) => void open(id)} />
             {shown.length === 0 && <p className="entry-cards-empty muted">{archived ? "Aucune fiche archivée ici." : "Pas encore de fiche ici."}</p>}
           </>
         )}
@@ -263,7 +335,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
           </p>
         )}
         {/* Not while the cards are still being read: an empty Bible would flash before them. */}
-        {browsing && loaded?.length === 0 && (
+        {browsing && loaded?.length === 0 && detected.length === 0 && (
           <EmptyState title="La bible du film">
             <p className="muted">
               Personnages, lieux, objets, véhicules, événements… Tout ce qui fait le monde du film. Dans le scénario et les documents, tapez{" "}
@@ -274,54 +346,25 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 <Plus aria-hidden="true" />
                 Nouvelle fiche
               </button>
-              <button type="button" className="btn" onClick={() => go({ kind: "detect" })}>
-                <ScanSearch aria-hidden="true" />
-                Détecter les personnages et les lieux
-              </button>
             </p>
-            {session.editor === null && <p className="muted small">Le scénario se charge…</p>}
+            <p className="muted small">
+              {session.editor === null ? "Le scénario se charge…" : "Les personnages et les lieux du scénario apparaîtront ici d'eux-mêmes."}
+            </p>
           </EmptyState>
         )}
       </main>
-      {current && (
-        <EntryModal name={current.name} onClose={close}>
-          <EntryEditor key={current.id} entry={current} entries={entries} types={types} />
-        </EntryModal>
-      )}
       {creating !== null && <NewEntryDialog types={types} type={creating} onCancel={() => setCreating(null)} onCreate={create} />}
+      {typeEdit && (
+        <TypeDialog
+          type={typeEdit.type}
+          types={types}
+          onClose={(id) => {
+            setTypeEdit(null);
+            if (id && !typeEdit.type) notify({ text: "Type créé : il attend sa première fiche, sous « Sans fiche encore »." });
+          }}
+        />
+      )}
     </div>
-  );
-}
-
-/** An entry over the cards, on the native <dialog>: Escape, the close button or a click outside closes it. */
-function EntryModal({ name, onClose, children }: { name: string; onClose: () => void; children: ReactNode }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const backdrop = useBackdropClose(onClose);
-  useEffect(() => {
-    const d = ref.current!;
-    if (!d.open) d.showModal();
-    // showModal focuses the close button, the first in the dialog; the name is what one edits first.
-    d.querySelector<HTMLElement>(".entry-name-input")?.focus();
-    return () => d.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className="dialog entry-modal"
-      aria-label={`Fiche ${name}`}
-      onCancel={(e) => {
-        // A dialog opened from the entry (history, deletion) cancels on its own.
-        if (e.target !== e.currentTarget) return;
-        e.preventDefault();
-        onClose();
-      }}
-      {...backdrop}
-    >
-      <button type="button" className="entry-modal-close" aria-label="Fermer la fiche" title="Fermer (Échap)" onClick={onClose}>
-        <X aria-hidden="true" />
-      </button>
-      <div className="entry-modal-body">{children}</div>
-    </dialog>
   );
 }
 
@@ -372,8 +415,8 @@ const LISTED = 4;
 
 /**
  * The home of the Bible: the entries last changed, to pick up where one left off; then one card per category
- * listing its most present entries, each opening at once; then the categories still empty, each a button that
- * makes their first entry, and « Nouveau type ».
+ * listing its most present entries, each opening at once, and « Nouveau type » as the last card; then the
+ * categories still empty, each a button that makes their first entry.
  */
 function CategoryCards({
   categories,
@@ -397,7 +440,7 @@ function CategoryCards({
   const empty = cards.filter((c) => c.entries.length === 0);
   const categoryOf = new Map(categories.map((c) => [c.id, c]));
   const recent = entries
-    .filter((e) => !e.archivedAt)
+    .filter((e) => !e.archivedAt && !isDetected(e))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 4);
   return (
@@ -470,6 +513,7 @@ function CategoryCards({
                           <button type="button" className="type-card-entry" onClick={() => onOpenEntry(e.id)}>
                             {pictured && <Avatar entry={e} />}
                             <span className="type-card-entry-name">{e.name}</span>
+                            {isDetected(e) && <DetectedBadge />}
                             {counted && (
                               <span className="type-card-entry-where" title={k === 1 ? "1 scène" : `${k} scènes`}>
                                 {k} sc.
@@ -488,16 +532,24 @@ function CategoryCards({
               </li>
             );
           })}
+          <li className="type-card-new-item">
+            <button type="button" className="type-card-new" onClick={onNewType}>
+              <span className="type-card-new-label">
+                <Plus aria-hidden="true" />
+                Nouveau type
+              </span>
+              <span className="type-card-new-hint">Planète, sortilège, recette… avec ses propres champs</span>
+            </button>
+          </li>
         </ul>
       </section>
 
-      <section className="bible-home-part" aria-labelledby={empty.length > 0 ? "bible-empty" : undefined}>
-        {empty.length > 0 && (
+      {empty.length > 0 && (
+        <section className="bible-home-part" aria-labelledby="bible-empty">
           <h2 id="bible-empty" className="bible-home-label">
             Sans fiche encore
           </h2>
-        )}
-        <ul className="type-pills">
+          <ul className="type-pills">
           {empty.map((c) => {
             const Icon = iconOf(c.type);
             return (
@@ -510,14 +562,9 @@ function CategoryCards({
               </li>
             );
           })}
-          <li>
-            <button type="button" className="type-pill new" onClick={onNewType}>
-              <Plus aria-hidden="true" />
-              Nouveau type
-            </button>
-          </li>
-        </ul>
-      </section>
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -589,7 +636,7 @@ function EntryCards({
       {[...entries].sort(order).map((e) => {
         const Icon = iconOf(types.find((t) => t.id === e.type));
         const where = presenceLabel(e.type, presence.get(e.id));
-        const meta = where || e.status !== "validated";
+        const meta = where || e.status !== "validated" || isDetected(e);
         // The button holds only the name, a heading of the grid; the summary and the meta describe it.
         // Its ::after spreads over the whole card, so the card still opens on a click anywhere.
         const described = [e.summary && `entry-summary-${e.id}`, meta && `entry-meta-${e.id}`].filter(Boolean).join(" ");
@@ -614,6 +661,7 @@ function EntryCards({
                 {where && <span className={where === "Aucune scène" ? "entry-card-where none" : "entry-card-where"}>{where}</span>}
                 {e.status === "idea" && <span className="badge st-draft">Idée</span>}
                 {e.status === "abandoned" && <span className="badge st-todo">Abandonné</span>}
+                {isDetected(e) && <DetectedBadge />}
               </span>
             )}
           </li>
@@ -669,122 +717,4 @@ function NewEntryDialog({
       </form>
     </Dialog>
   );
-}
-
-const DOUBT_LABEL = { duplicate: "Doublon probable", sublocation: "Sous-lieu", generic: "Rôle sans nom" } as const;
-
-/** Names of the screenplay without an entry, by group; the doubtful ones start unchecked and say why. */
-function Detection({ entries, onCreated }: { entries: Entry[]; onCreated: () => void }) {
-  const { session, notify } = useProject();
-  const scenes = useScenes(session);
-  const candidates = useMemo(() => {
-    const refs = entries.map((e) => ({ id: e.id, type: e.type, name: e.name, aliases: e.aliases }));
-    return triage(detect(sceneTexts(scenes), refs), refs);
-  }, [scenes, entries]);
-  // Only the boxes the user changed; the others follow their doubt.
-  const [picked, setPicked] = useState<Map<string, boolean>>(new Map());
-  const [busy, setBusy] = useState(false);
-  const isChecked = (c: Candidate) => picked.get(c.key) ?? c.doubt === null;
-  const set = (list: Candidate[], value: boolean) => setPicked((p) => new Map([...p, ...list.map((c) => [c.key, value] as const)]));
-  const chosen = candidates.filter(isChecked);
-  const groups = [
-    { id: "character", title: "Personnages", icon: UserRound, items: candidates.filter((c) => c.type === "character") },
-    { id: "location", title: "Lieux", icon: MapPin, items: candidates.filter((c) => c.type === "location") },
-  ].filter((g) => g.items.length > 0);
-
-  const create = async () => {
-    setBusy(true);
-    try {
-      await createEntries(chosen.map((c) => ({ type: c.type, name: c.name })));
-      notify({ text: chosen.length === 1 ? "1 fiche créée." : `${chosen.length} fiches créées.` });
-      onCreated();
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    } finally {
-      setBusy(false);
-    }
-  };
-  const alias = async (c: Candidate, entryId: string) => {
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return;
-    try {
-      await addAlias(entry, c.name);
-      notify({ text: `« ${c.name} » est maintenant un autre nom de « ${entry.name} ».` });
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    }
-  };
-
-  return (
-    <section className="panel detect">
-      <h2>Détecter les personnages et les lieux</h2>
-      <p className="muted">Les noms des répliques et les lieux des en-têtes de scène qui n'ont pas encore de fiche. Les noms douteux restent décochés.</p>
-      {candidates.length === 0 ? (
-        <p>Tous les personnages et les lieux du scénario ont déjà une fiche.</p>
-      ) : (
-        <>
-          {groups.map((g) => {
-            const on = g.items.filter(isChecked).length;
-            return (
-              <fieldset key={g.id} className="detect-group">
-                <legend className="detect-group-head">
-                  <GroupCheck all={on === g.items.length} some={on > 0} onChange={(v) => set(g.items, v)} label={`Tout cocher : ${g.title}`} />
-                  <g.icon aria-hidden="true" />
-                  <span>{g.title}</span>
-                  <span className="entry-section-count">
-                    {on} / {g.items.length}
-                  </span>
-                </legend>
-                <ul className="detect-list">
-                  {g.items.map((c) => {
-                    const dup = c.doubt?.kind === "duplicate" ? c.doubt.of : null;
-                    return (
-                    <li key={c.key} className={c.doubt ? "detect-item doubtful" : "detect-item"}>
-                      <label className="choice">
-                        <input type="checkbox" checked={isChecked(c)} onChange={(e) => set([c], e.target.checked)} />
-                        <span className="detect-name">{c.name}</span>
-                      </label>
-                      {c.doubt && (
-                        <span className="detect-doubt">
-                          <span className="badge st-todo">{DOUBT_LABEL[c.doubt.kind]}</span>
-                          {c.doubt.kind === "duplicate" && (
-                            <>
-                              <span className="muted small">de « {dup!.name} »</span>
-                              <button type="button" className="btn ghost small" onClick={() => void alias(c, dup!.id)}>
-                                Ajouter comme autre nom
-                              </button>
-                            </>
-                          )}
-                          {c.doubt.kind === "sublocation" && <span className="muted small">de « {c.doubt.of} »</span>}
-                        </span>
-                      )}
-                    </li>
-                    );
-                  })}
-                </ul>
-              </fieldset>
-            );
-          })}
-          <div className="detect-foot">
-            <button type="button" className="btn primary" disabled={chosen.length === 0 || busy} onClick={() => void create()}>
-              {chosen.length === 1 ? "Créer 1 fiche" : `Créer ${chosen.length} fiches`}
-            </button>
-            <span className="muted small" aria-live="polite">
-              {chosen.length === 0 ? "Aucun coché" : chosen.length === 1 ? "1 coché" : `${chosen.length} cochés`} sur{" "}
-              {candidates.length === 1 ? "1 nom trouvé" : `${candidates.length} noms trouvés`}
-            </span>
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-/** « Tout cocher » for a group: half-filled when only some of its names are checked. */
-function GroupCheck({ all, some, onChange, label }: { all: boolean; some: boolean; onChange: (v: boolean) => void; label: string }) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = some && !all;
-  }, [all, some]);
-  return <input ref={ref} type="checkbox" checked={all} onChange={() => onChange(!all)} aria-label={label} />;
 }

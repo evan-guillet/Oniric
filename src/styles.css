@@ -2123,6 +2123,17 @@ h4 {
   border-color: var(--accent-line);
   background: var(--accent-soft);
 }
+.badge.detected {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.type-card-entry .badge {
+  flex: none;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+}
 .badge.beat {
   color: var(--plot);
   border-color: var(--plot-line);
@@ -2229,7 +2240,6 @@ h4 {
 .version-list,
 .cut-list,
 .ref-list,
-.type-list,
 .format-list,
 .check-list,
 .rel-list,
@@ -2241,7 +2251,6 @@ h4 {
 }
 .version-list li,
 .cut-list li,
-.type-list li,
 .format-list li,
 .rel-list li,
 .elsewhere li,
@@ -2255,7 +2264,6 @@ h4 {
 }
 .version-list li:last-child,
 .cut-list li:last-child,
-.type-list li:last-child,
 .format-list li:last-child,
 .rel-list li:last-child,
 .elsewhere li:last-child,
@@ -3366,7 +3374,55 @@ h4 {
   text-underline-offset: 3px;
 }
 
-/* The categories still empty, and « Nouveau type »: dashed pills that make the first entry */
+/* « Nouveau type »: the last card of the grid, dashed, in the accent */
+.type-card-new {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+  padding: 16px;
+  border: 1px dashed var(--accent-line);
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out;
+}
+.type-card-new-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.type-card-new-label svg {
+  width: 17px;
+  height: 17px;
+}
+.type-card-new-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.type-card-new:hover {
+  border-style: solid;
+  background: var(--accent-soft);
+}
+.type-card-new:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.type-card-new:active {
+  scale: 0.99;
+}
+
+/* The categories still empty: dashed pills that make the first entry */
 .type-pills {
   list-style: none;
   margin: 0;
@@ -3407,19 +3463,10 @@ h4 {
   background: var(--panel);
   color: var(--ink);
 }
-.type-pill.new {
-  border-color: var(--accent-line);
-  color: var(--accent);
-}
-.type-pill.new svg {
-  color: var(--accent);
-}
-.type-pill.new:hover {
-  background: var(--accent-soft);
-}
 @media (prefers-reduced-motion: reduce) {
   .recent-entry,
   .type-card,
+  .type-card-new,
   .type-pill {
     transition: none;
   }
@@ -3533,73 +3580,6 @@ h4 {
 }
 .entry-card-meta .badge {
   margin-left: auto;
-}
-/* Detection: a group per kind of name, the doubtful ones dimmed with their reason, the button always in view. */
-.detect-group {
-  margin: 16px 0 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-.detect-group-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--line);
-  font-size: 14px;
-  font-weight: 600;
-}
-.detect-group-head svg {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-}
-.detect-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.detect-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  min-height: 36px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--line);
-}
-.detect-item .choice {
-  min-width: 0;
-}
-.detect-name {
-  overflow-wrap: anywhere;
-}
-.detect-item.doubtful .detect-name {
-  color: var(--ink-2);
-}
-.detect-doubt {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-.detect-foot {
-  position: sticky;
-  /* The scroll area keeps its 48px bottom padding: the bar sticks to its visible edge. */
-  bottom: -48px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  margin: 16px -20px -18px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--panel);
 }
 .empty-actions {
   display: flex;
@@ -3727,65 +3707,9 @@ h4 {
 .entry-image-remove:hover {
   background: var(--danger);
 }
-/* An entry opens over the cards. */
-.dialog.entry-modal {
-  width: min(1000px, calc(100vw - 48px));
-  max-width: none;
-  max-height: calc(100vh - 48px);
-  padding: 0;
-  overflow: hidden;
-}
-.dialog.entry-modal[open] {
-  display: flex;
-  flex-direction: column;
-}
-.entry-modal-body {
-  overflow: auto;
-  padding: 28px 32px 32px;
+/* An entry opens in place of the cards, as a page, under « Retour ». */
+.entry-page {
   container: entry / inline-size;
-}
-.entry-modal .entry {
-  max-width: none;
-}
-.entry-modal .entry-title {
-  padding-right: 36px;
-}
-.entry-modal > .toasts {
-  position: static;
-  max-width: none;
-  justify-items: end;
-}
-.entry-modal > .toasts:not(:empty) {
-  padding: 10px 32px 14px;
-  border-top: 1px solid var(--line);
-  background: var(--panel-2);
-}
-.entry-modal > .toasts .toast {
-  box-shadow: none;
-}
-.entry-modal-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.entry-modal-close:hover {
-  background: var(--sunken);
-  color: var(--ink);
-}
-.entry-modal-close svg {
-  width: 18px;
-  height: 18px;
 }
 .entry-title {
   display: grid;
@@ -3973,24 +3897,12 @@ h4 {
 }
 .type-form {
   display: grid;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+  gap: 14px;
+  justify-items: start;
 }
-.type-list-icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: var(--sunken);
-  color: var(--ink-2);
-}
-.type-list-icon svg {
-  width: 15px;
-  height: 15px;
+.type-form > .field,
+.type-form > .fields-table {
+  justify-self: stretch;
 }
 /* The icon of a custom type: a grid of choices, the chosen one in the accent. */
 .icon-picker {
