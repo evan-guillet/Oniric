@@ -501,8 +501,15 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     };
     measure();
     desk.addEventListener("scroll", onScroll, { passive: true });
+    // The text is laid out after the first measure (fonts, format, scenes loading): measured then, every scene
+    // stood at the same height and the pin named the last one. Measure again whenever the layout settles.
+    const resized = new ResizeObserver(onScroll);
+    resized.observe(desk);
+    const text = mountRef.current?.querySelector<HTMLElement>(":scope > .ProseMirror");
+    if (text) resized.observe(text);
     return () => {
       desk.removeEventListener("scroll", onScroll);
+      resized.disconnect();
       cancelAnimationFrame(frame);
     };
   }, [body, display.cards, sceneCount]);
