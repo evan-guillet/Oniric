@@ -1,19 +1,46 @@
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import { lineHeightIn, type FormatLanguage, type ScreenplayFormat } from "../domain/formats";
 import type { TitlePage } from "../domain/titlePage";
-import type { Pagination } from "../domain/types";
+import type { LaidBlock, Pagination, PageLine } from "../domain/types";
+import type { SceneNumbers } from "../application/sceneNumbers";
 
 /** Pages built from the computed layout: each line sits at its row and never re-wraps. */
 export const PrintPages = memo(function PrintPages({
   pagination,
   format,
   titlePage,
+  blocks,
+  sceneNumbers = "none",
 }: {
   pagination: Pagination;
   format: ScreenplayFormat;
   titlePage?: TitlePage | null;
+  /** The laid elements, to number each scene as the scene list does. */
+  blocks?: LaidBlock[];
+  sceneNumbers?: SceneNumbers;
 }) {
   const lh = lineHeightIn(format);
+  // A heading split over two pages is numbered once, on its first line.
+  const numbered = new Set<number>();
+  const sceneNumber = (line: PageLine): number | null => {
+    if (sceneNumbers === "none" || !blocks || line.type !== "scene_heading" || line.kind !== "text" || numbered.has(line.blockIndex)) return null;
+    numbered.add(line.blockIndex);
+    return blocks[line.blockIndex].sceneIndex + 1;
+  };
+  const numberAt = (top: string, n: number) => (
+    <>
+      {sceneNumbers !== "right" && (
+        <div className="pl scene-no" style={{ top, right: `${format.page.width - format.margins.left + 0.3}in` }}>
+          {n}
+        </div>
+      )}
+      {sceneNumbers !== "left" && (
+        <div className="pl scene-no" style={{ top, left: `${format.page.width - format.margins.right + 0.3}in` }}>
+          {n}
+        </div>
+      )}
+    </>
+  );
   return (
     <div className="print-pages">
       {titlePage && <PrintTitlePage page={titlePage} format={format} />}
@@ -24,15 +51,18 @@ export const PrintPages = memo(function PrintPages({
               {page.number}.
             </div>
           )}
-          {page.lines.map((line, i) => (
-            <div
-              key={i}
-              className={`el el-${line.type} pl`}
-              style={{ top: `${format.margins.top + line.row * lh}in`, left: `${format.margins.left}in` }}
-            >
-              {line.text}
-            </div>
-          ))}
+          {page.lines.map((line, i) => {
+            const top = `${format.margins.top + line.row * lh}in`;
+            const n = sceneNumber(line);
+            return (
+              <Fragment key={i}>
+                <div className={`el el-${line.type} pl`} style={{ top, left: `${format.margins.left}in` }}>
+                  {line.text}
+                </div>
+                {n !== null && numberAt(top, n)}
+              </Fragment>
+            );
+          })}
         </section>
       ))}
     </div>

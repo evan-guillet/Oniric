@@ -2,6 +2,7 @@ import { BookOpen, ChartColumn, ChevronRight, History, Layers, NotebookPen, PenL
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { db, query } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
+import { useWritingPrefs } from "../../../core/writingPrefs";
 import { loadEntries } from "../../script/bible/application/bible";
 import { sceneTexts } from "../../script/bible/application/sceneTexts";
 import { detect, triage } from "../../script/bible/domain/appearances";
@@ -280,6 +281,7 @@ function formatTime(minutes: number): string {
 /** The words written in the Scénario these last four weeks, from the writing journal. */
 function Activity() {
   const journal = useLive(readJournal, ["project_setting"]);
+  const goal = useWritingPrefs().dailyGoal;
   const [ref, width] = useWidth();
   const [hover, setHover] = useState<number | null>(null);
   const today = new Date();
@@ -287,7 +289,7 @@ function Activity() {
   const values = days.map((d) => dayWords(journal, d));
   const minutes = (d: Date) => journal?.[dayKey(d)]?.minutes ?? 0;
   const week = days.slice(-7);
-  const max = Math.max(1, ...values);
+  const max = Math.max(1, goal, ...values);
   const empty = values.every((v) => v === 0);
 
   const slot = width / DAYS;
@@ -303,7 +305,15 @@ function Activity() {
         <dl className="dash-figures">
           <div>
             <dt>Aujourd'hui</dt>
-            <dd>{plural(values[DAYS - 1], "mot")}</dd>
+            <dd>
+              {goal > 0 ? (
+                <>
+                  {num.format(values[DAYS - 1])} <span className="dash-goal-of">/ {plural(goal, "mot")}</span>
+                </>
+              ) : (
+                plural(values[DAYS - 1], "mot")
+              )}
+            </dd>
           </div>
           <div>
             <dt>7 derniers jours</dt>
@@ -322,11 +332,12 @@ function Activity() {
           {width > 0 && (
             <svg width={width} height={CHART_H + 22} role="img" aria-label={`Mots écrits par jour sur quatre semaines : ${num.format(total)} au total`}>
               <line x1={0} x2={width} y1={CHART_H + 0.5} y2={CHART_H + 0.5} className="dash-baseline" />
+              {goal > 0 && <line x1={0} x2={width} y1={Math.round(CHART_H - h(goal)) + 0.5} y2={Math.round(CHART_H - h(goal)) + 0.5} className="dash-goal" />}
               {days.map((d, i) => {
                 const x = slot * i + (slot - barW) / 2;
                 const bh = h(values[i]);
                 return (
-                  <g key={i} className={["dash-col", values[i] > 0 ? "has" : "", shown === i ? "on" : "", i === DAYS - 1 ? "today" : ""].join(" ")}>
+                  <g key={i} className={["dash-col", values[i] > 0 ? "has" : "", goal > 0 && values[i] >= goal ? "met" : "", shown === i ? "on" : "", i === DAYS - 1 ? "today" : ""].join(" ")}>
                     <rect x={slot * i} y={0} width={slot} height={CHART_H + 22} className="dash-hit" onMouseEnter={() => setHover(i)} />
                     <rect x={x} y={CHART_H - bh} width={barW} height={bh} rx={Math.min(3, barW / 2)} className="dash-bar" />
                     {(i % 7 === 0 || i === DAYS - 1) && (
@@ -345,6 +356,7 @@ function Activity() {
           {shown === null ? (
             <>
               {plural(total, "mot écrit", "mots écrits")} sur quatre semaines
+              {goal > 0 && <> · objectif atteint {plural(values.filter((v) => v >= goal).length, "jour")}, pointillé à {plural(goal, "mot")}</>}
             </>
           ) : (
             <>

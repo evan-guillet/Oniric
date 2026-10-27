@@ -960,15 +960,27 @@ kbd {
 .settings-pane-head {
   flex: none;
   display: flex;
-  align-items: center;
-  height: 52px;
-  padding: 0 12px 0 32px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px 16px 18px 40px;
   border-bottom: 1px solid var(--line);
+}
+.settings-pane-title {
+  flex: 1;
+  min-width: 0;
+  max-width: 680px;
+  margin-inline: auto;
 }
 .settings-pane-head h1 {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.settings-pane-head p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .settings-close {
   display: grid;
@@ -994,17 +1006,418 @@ kbd {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 28px 32px 40px;
+  padding: 24px 40px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 .settings-pane-body > * {
-  max-width: 720px;
+  width: 100%;
+  max-width: 680px;
   margin-inline: auto;
 }
-.settings-pane-body .settings-section {
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+}
+.settings-nav-foot {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* A settings page: titled groups, each a framed run of rows; what a setting does on the left, its control on the right */
+.set-group {
+  display: grid;
+  gap: 8px;
+}
+.set-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.dialog .set-group-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.set-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 56px;
+  padding: 12px 16px;
+}
+.set-row + .set-row {
+  border-top: 1px solid var(--line);
+}
+.set-row.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+.set-row-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+.set-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--ink);
+}
+label.set-row-title {
+  cursor: pointer;
+}
+.set-row-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.set-row-control {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.set-row-control > input:not([type="checkbox"]),
+.set-row-control > textarea {
+  width: 280px;
+}
+.set-row-control > textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+.set-row-control > .select {
+  min-width: 220px;
+}
+.set-row.stack .set-row-control {
+  justify-content: flex-start;
+}
+.set-note {
+  margin-block: 0;
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.set-badge {
+  height: 18px;
+  padding: 0 7px;
+  font-size: 11px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+/* A file path on one line, cut at its start rather than its end */
+.set-path {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+/* On and off */
+input.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background-color 140ms ease-out;
+}
+input.switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 18, 27, 0.25);
+  transition: translate 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+input.switch:checked {
+  background: var(--accent);
+}
+input.switch:checked::before {
+  translate: 14px 0;
+}
+input.switch:hover:not(:disabled):not(:checked) {
+  background: var(--muted);
+}
+input.switch:checked:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+input.switch:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+input.switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* A number followed by its unit, in one field */
+.unit-field {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--control-r);
+  background: var(--panel);
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.unit-field:hover {
+  border-color: var(--control-line-hover);
+}
+.unit-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.unit-field {
+  width: 132px;
+}
+.unit-field input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  padding: 0 4px 0 11px;
   border: none;
   background: none;
-  padding: 0;
-  gap: 16px;
+  box-shadow: none;
+  outline: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.unit-field input::-webkit-inner-spin-button {
+  display: none;
+}
+.unit-field > span {
+  padding-right: 11px;
+  color: var(--muted);
+}
+
+/* Where the backups of this project stand, above their settings */
+.set-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--ok-line);
+  border-radius: var(--radius-lg);
+  background: var(--ok-soft);
+}
+.set-status > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ok);
+}
+.set-status-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.set-status-text strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.set-status-text span {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+/* The profile as the title page prints it: the author in the middle, the contact at the bottom left */
+.profile-sheet {
+  display: grid;
+  gap: 28px;
+  margin: 16px auto 12px;
+  width: min(100% - 32px, 420px);
+  padding: 28px 32px 24px;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: var(--sheet-shadow);
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.profile-sheet-by {
+  text-align: center;
+}
+.profile-sheet-contact {
+  white-space: pre-line;
+}
+.profile-sheet .muted {
+  font-family: var(--ui-font);
+}
+.set-card > .set-note {
+  padding: 0 16px 14px;
+  text-align: center;
+}
+
+/* Shortcuts: what the keys do, then the keys */
+.set-row.shortcut {
+  min-height: 44px;
+  padding-block: 8px;
+}
+.set-row.shortcut .set-row-help {
+  flex: 1;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.keys {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.keys kbd {
+  min-width: 22px;
+  font-size: 11.5px;
+  line-height: 18px;
+}
+.keys-or {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Scene numbers: four sheets seen from afar, the chosen one outlined */
+.numbers-choice {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.numbers-option {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.numbers-option:hover {
+  border-color: var(--line-strong);
+}
+.numbers-option.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--ink);
+}
+.numbers-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.numbers-option:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.numbers-preview {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 8.5 / 7;
+  padding: 10px 6px;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.np-heading {
+  display: grid;
+  grid-template-columns: 14px 1fr 14px;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+}
+.np-num {
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  color: var(--accent);
+}
+.np-num.off {
+  visibility: hidden;
+}
+.np-line {
+  display: block;
+  height: 3px;
+  margin-inline: 17px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper-ink) 18%, transparent);
+}
+.np-heading .np-line {
+  margin: 0;
+}
+.np-line.np-head {
+  background: color-mix(in srgb, var(--paper-ink) 55%, transparent);
+}
+.np-line.short {
+  margin-right: 40%;
+}
+.np-line.dlg {
+  margin-inline: 34%;
+}
+
+/* About */
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.about-head > div {
+  display: grid;
+  gap: 2px;
+}
+.about-head strong {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.about-head span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.about-logo {
+  border-radius: 10px;
 }
 .dialog::backdrop {
   background: var(--backdrop);
@@ -2344,7 +2757,6 @@ h4 {
 .version-list,
 .cut-list,
 .ref-list,
-.format-list,
 .check-list,
 .rel-list,
 .elsewhere,
@@ -2355,7 +2767,6 @@ h4 {
 }
 .version-list li,
 .cut-list li,
-.format-list li,
 .rel-list li,
 .elsewhere li,
 .idea-list li {
@@ -2368,7 +2779,6 @@ h4 {
 }
 .version-list li:last-child,
 .cut-list li:last-child,
-.format-list li:last-child,
 .rel-list li:last-child,
 .elsewhere li:last-child,
 .idea-list li:last-child {
@@ -2376,15 +2786,9 @@ h4 {
 }
 .version-list li > span:first-child,
 .cut-list li > span:first-child,
-.elsewhere li > span:first-child,
-.format-list li > span:first-child {
+.elsewhere li > span:first-child {
   flex: 1;
   min-width: 0;
-}
-/* A provided format: its name, and under it what it is for */
-.format-list-name {
-  display: grid;
-  gap: 1px;
 }
 .history-text {
   display: block;
@@ -6142,29 +6546,6 @@ h4 {
 }
 
 /* Settings */
-.settings > * {
-  max-width: 880px;
-}
-.settings > h2 {
-  font-size: 18px;
-  letter-spacing: -0.015em;
-  margin-bottom: 16px;
-}
-.settings-section {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  padding: 18px 20px;
-  margin-bottom: 16px;
-  display: grid;
-  gap: 12px;
-}
-.settings-section > h3 {
-  margin: 0;
-}
-.settings-section p {
-  margin: 0;
-}
 .theme-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8030,6 +8411,19 @@ button[aria-expanded="true"] .stats-chevron {
 }
 .dash-col.has .dash-bar {
   fill: var(--series-1);
+}
+.dash-col.met .dash-bar {
+  fill: var(--ok);
+}
+/* The daily goal set in the settings, across the chart */
+.dash-goal {
+  stroke: var(--ok);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.dash-goal-of {
+  color: var(--muted);
+  font-weight: 500;
 }
 .dash-col.on .dash-bar {
   fill: var(--muted);

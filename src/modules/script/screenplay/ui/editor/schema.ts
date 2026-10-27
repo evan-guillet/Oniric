@@ -67,9 +67,15 @@ export function docFromBlocks(blocks: ScriptBlock[]): PMNode {
   );
 }
 
-export function blocksFromDoc(doc: PMNode): ScriptBlock[] {
+/** The elements of the screenplay; `numbered` gives each scene heading the number of its scene in the list. */
+export function blocksFromDoc(doc: PMNode, numbered = false): ScriptBlock[] {
   const out: ScriptBlock[] = [];
-  doc.forEach((scene) => scene.forEach((b) => out.push({ type: b.type.name as ElementType, text: b.textContent })));
+  doc.forEach((scene, _o, i) =>
+    scene.forEach((b, _p, k) => {
+      const type = b.type.name as ElementType;
+      out.push(numbered && k === 0 && type === "scene_heading" ? { type, text: b.textContent, sceneNumber: i + 1 } : { type, text: b.textContent });
+    }),
+  );
   return out;
 }
 

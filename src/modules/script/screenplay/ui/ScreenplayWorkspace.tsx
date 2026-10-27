@@ -20,6 +20,7 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
+import { useWritingPrefs } from "../../../../core/writingPrefs";
 import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
 import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
@@ -33,6 +34,7 @@ import {
   readProjectFormat,
 } from "../application/formatSettings";
 import { SaveScheduler } from "../application/saveScheduler";
+import { useSceneNumbers } from "../application/sceneNumbers";
 import { SceneStore } from "../application/sceneStore";
 import {
   readTitlePage,
@@ -257,6 +259,25 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   useEffect(() => {
     if (active) requestAnimationFrame(() => editorRef.current?.focus());
   }, [active]);
+
+  // The writing preferences, changed in the settings, apply at once.
+  const prefs = useWritingPrefs();
+  const typewriter = prefs.typewriter && body === "editor";
+  useEffect(() => {
+    editorRef.current?.refreshPrefs();
+  }, [prefs, format]);
+  useEffect(() => {
+    editorRef.current?.setTypewriter(typewriter ? deskRef.current : null);
+  }, [typewriter, format]);
+  const sceneNumbers = useSceneNumbers();
+  // The format chosen in the settings for this project lays the pages out anew.
+  const savedFormat = useLive(readProjectFormat, ["project_setting"]);
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!savedFormat || !editor || JSON.stringify(savedFormat) === JSON.stringify(editor.currentFormat)) return;
+    setFormat(savedFormat);
+    editor.setFormat(savedFormat);
+  }, [savedFormat]);
 
   // The title page, edited in the side panel and saved as it is typed.
   const [titlePage, setTitlePage] = useState<TitleDraft | null>(null);
@@ -606,6 +627,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                 className="mount"
                 style={{
                   padding: `${format.margins.top}in ${format.margins.right}in 0 ${format.margins.left}in`,
+                  // Room under the last line, so that it too can stand in the middle of the desk.
+                  paddingBottom: typewriter ? "45vh" : undefined,
                 }}
               />
               <ElementBar
@@ -621,6 +644,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                 pagination={snap.pagination}
                 format={format}
                 titlePage={printedTitle}
+                blocks={snap.blocks}
+                sceneNumbers={sceneNumbers}
               />
             </div>
           )}

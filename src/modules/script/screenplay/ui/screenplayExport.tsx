@@ -3,10 +3,12 @@ import { unwrap } from "../../../../core/db/client";
 import { writeFdx } from "../../../../interop/fdx/write";
 import { writeFountain } from "../../../../interop/fountain/write";
 import type { ProjectApi } from "../../../project/ui/projectContext";
+import { readSceneNumbers } from "../application/sceneNumbers";
 import { readTitlePage } from "../application/titlePageSettings";
 import { formatCss, type ScreenplayFormat } from "../domain/formats";
 import { hasContent } from "../domain/titlePage";
 import type { Pagination } from "../domain/types";
+import type { LaidBlock } from "../domain/types";
 import { blocksFromDoc } from "./editor/schema";
 import { PrintPages } from "./PrintPages";
 
@@ -15,14 +17,14 @@ export async function exportScreenplayPdf(api: Pick<ProjectApi, "session" | "pri
   const editor = api.session.editor;
   if (!editor) return;
   const f = other ?? editor.currentFormat;
-  const pagination: Pagination = other ? editor.paginationFor(other).pagination : editor.snapshot.pagination;
-  const tp = await readTitlePage();
+  const { pagination, blocks }: { pagination: Pagination; blocks: LaidBlock[] } = other ? editor.paginationFor(other) : editor.snapshot;
+  const [tp, numbers] = await Promise.all([readTitlePage(), readSceneNumbers()]);
   const title = (withTitle ?? hasContent(tp)) ? tp : null;
   await api.printPdf(
     `${api.project.title} (${f.paper}).pdf`,
     <div className="fmt">
       <style>{formatCss(f, false)}</style>
-      <PrintPages pagination={pagination} format={f} titlePage={title} />
+      <PrintPages pagination={pagination} format={f} titlePage={title} blocks={blocks} sceneNumbers={numbers} />
     </div>,
     { width: f.page.width, height: f.page.height },
   );
@@ -33,8 +35,8 @@ export async function exportScreenplayText(api: Pick<ProjectApi, "session" | "pr
   const editor = api.session.editor;
   if (!editor) return null;
   await api.session.flush();
-  const blocks = blocksFromDoc(editor.doc);
-  const tp = await readTitlePage();
+  const [tp, numbers] = await Promise.all([readTitlePage(), readSceneNumbers()]);
+  const blocks = blocksFromDoc(editor.doc, numbers !== "none");
   const page = hasContent(tp) ? tp : null;
   const contents = kind === "fountain" ? writeFountain(blocks, api.project.title, page) : writeFdx(blocks, page, editor.currentFormat.language === "fr");
   return unwrap(await commands.exportText(`${api.project.title}.${kind}`, contents));

@@ -4,4 +4,6 @@ import type { ElementType } from "./formats";
 export interface ScriptBlock {
   type: ElementType;
   text: string;
+  /** Printed beside a scene heading when the script numbers its scenes. */
+  sceneNumber?: number;
 }

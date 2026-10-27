@@ -54,7 +54,7 @@ export const MENTIONS: { id: MentionId; label: string; text: (c: MentionContext)
   { id: "custom", label: "Autre mention…", text: () => "" },
 ];
 
-export function emptyTitlePage(title: string, profile?: { name?: string; email?: string; phone?: string; address?: string }): TitlePage {
+export function emptyTitlePage(title: string, profile?: { name?: string; email?: string; phone?: string; address?: string; agent?: string }): TitlePage {
   return {
     title,
     subtitle: "",
@@ -62,7 +62,7 @@ export function emptyTitlePage(title: string, profile?: { name?: string; email?:
     basedOn: "",
     version: "",
     date: "",
-    contact: [profile?.name, profile?.address, profile?.phone, profile?.email].filter(Boolean).join("\n"),
+    contact: [profile?.name, profile?.address, profile?.phone, profile?.email, profile?.agent].filter(Boolean).join("\n"),
     notes: "",
     include: false,
     mention: "none",

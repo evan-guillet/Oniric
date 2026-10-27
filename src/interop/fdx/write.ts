@@ -16,9 +16,10 @@ const TYPES: Record<ElementType, string> = {
 
 const UPPER: ElementType[] = ["scene_heading", "character", "transition", "shot"];
 
-function paragraph(type: string, text: string, alignment?: string): string {
+function paragraph(type: string, text: string, alignment?: string, number?: number): string {
   const align = alignment ? ` Alignment="${alignment}"` : "";
-  return `    <Paragraph${align} Type="${type}">\n      <Text>${escapeXml(text)}</Text>\n    </Paragraph>`;
+  const num = number !== undefined ? ` Number="${number}"` : "";
+  return `    <Paragraph${align}${num} Type="${type}">\n      <Text>${escapeXml(text)}</Text>\n    </Paragraph>`;
 }
 
 function titlePageXml(p: TitlePage, french: boolean): string {
@@ -53,7 +54,7 @@ function titlePageXml(p: TitlePage, french: boolean): string {
 export function writeFdx(blocks: ScriptBlock[], titlePage: TitlePage | null, french = true): string {
   const body = blocks
     .filter((b) => b.text.length > 0 || b.type === "scene_heading")
-    .map((b) => paragraph(TYPES[b.type], UPPER.includes(b.type) ? b.text.toLocaleUpperCase("fr") : b.text.replace(/\n/g, " ")))
+    .map((b) => paragraph(TYPES[b.type], UPPER.includes(b.type) ? b.text.toLocaleUpperCase("fr") : b.text.replace(/\n/g, " "), undefined, b.sceneNumber))
     .join("\n");
   return [
     '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>',

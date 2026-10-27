@@ -39,7 +39,8 @@ export function writeFountain(blocks: ScriptBlock[], title?: string, page?: Titl
     switch (b.type) {
       case "scene_heading": {
         const h = text.toLocaleUpperCase("fr");
-        out.push(HEADING.test(h) ? h : `.${h}`);
+        const n = b.sceneNumber !== undefined ? ` #${b.sceneNumber}#` : "";
+        out.push((HEADING.test(h) ? h : `.${h}`) + n);
         break;
       }
       case "character": {

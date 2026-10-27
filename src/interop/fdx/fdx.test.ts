@@ -87,4 +87,10 @@ describe("writeFdx", () => {
     expect(back.titlePage?.authors).toBe("Evan");
     expect(back.titlePage?.contact).toBe("evan@example.org");
   });
+
+  it("numbers the scene headings it is given a number for", () => {
+    const xml = writeFdx([{ type: "scene_heading", text: "INT. TOIT – AUBE", sceneNumber: 12 }, { type: "action", text: "Rien." }], null);
+    expect(xml).toContain(`<Paragraph Number="12" Type="Scene Heading">`);
+    expect(xml).not.toMatch(/Number="\d+" Type="Action"/);
+  });
 });

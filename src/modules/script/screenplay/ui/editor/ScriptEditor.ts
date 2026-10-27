@@ -9,6 +9,7 @@ import { Measurer } from "./measure";
 import { currentType, elementInputRules, placeholderPlugin, sceneNormalizer, screenplayKeymap, setType, typographyPlugin } from "./keymap";
 import { pageDecorations } from "./pageDecorations";
 import { newScene, schema, sceneFromStored } from "./schema";
+import { frenchTypography, getWritingPrefs } from "../../../../../core/writingPrefs";
 
 const pagesKey = new PluginKey<DecorationSet>("pages");
 
@@ -65,6 +66,10 @@ export class ScriptEditor {
   private headings: string[] = [];
   private stats!: LayoutStats;
   private keyDownAt = 0;
+  /** The desk that scrolls, when the line being typed is held in its middle. */
+  private typewriter: HTMLElement | null = null;
+  /** The last selection came from the keyboard, not from a click: only typing moves the desk. */
+  private byKey = false;
   readonly latencies: number[] = [];
 
   constructor(
@@ -76,9 +81,10 @@ export class ScriptEditor {
     this.measurer = new Measurer(format);
     this.view = new EditorView(mount, {
       state: this.createState(doc),
-      attributes: { spellcheck: "false", "aria-label": "Scénario", role: "textbox", "aria-multiline": "true" },
+      attributes: () => this.attributes(),
       dispatchTransaction: (tr) => {
         this.view.updateState(this.view.state.apply(tr));
+        if (this.byKey && (tr.docChanged || tr.selectionSet)) this.centerCaret();
         if (tr.docChanged) {
           this.relayout();
           this.hooks.onDocChange(this.view.state.doc);
@@ -89,6 +95,11 @@ export class ScriptEditor {
       handleDOMEvents: {
         keydown: () => {
           this.keyDownAt = performance.now();
+          this.byKey = true;
+          return false;
+        },
+        mousedown: () => {
+          this.byKey = false;
           return false;
         },
       },
@@ -104,11 +115,38 @@ export class ScriptEditor {
         history(),
         ...screenplayKeymap(),
         elementInputRules,
-        typographyPlugin(() => this.format.language === "fr"),
+        typographyPlugin(() => frenchTypography(getWritingPrefs(), this.format.language)),
         sceneNormalizer,
         placeholderPlugin((t) => this.hooks.hint(t)),
         pagesPlugin,
       ],
+    });
+  }
+
+  private attributes(): Record<string, string> {
+    const spell = getWritingPrefs().spellcheck;
+    return { spellcheck: spell ? "true" : "false", lang: this.format.language, "aria-label": "Scénario", role: "textbox", "aria-multiline": "true" };
+  }
+
+  /** Reads the writing preferences again (spelling, typography). */
+  refreshPrefs(): void {
+    this.view.setProps({ attributes: () => this.attributes() });
+  }
+
+  /** Holds the line being typed in the middle of `desk`, or stops with null. */
+  setTypewriter(desk: HTMLElement | null): void {
+    this.typewriter = desk;
+    if (desk && this.view.hasFocus()) this.centerCaret();
+  }
+
+  private centerCaret(): void {
+    const desk = this.typewriter;
+    if (!desk) return;
+    requestAnimationFrame(() => {
+      if (this.view.isDestroyed) return;
+      const at = this.view.coordsAtPos(this.view.state.selection.head);
+      const box = desk.getBoundingClientRect();
+      desk.scrollTop += (at.top + at.bottom) / 2 - (box.top + box.height / 2);
     });
   }
 
@@ -124,6 +162,7 @@ export class ScriptEditor {
     this.measurer.dispose();
     this.format = format;
     this.measurer = new Measurer(format);
+    this.refreshPrefs();
     this.relayout();
   }
 

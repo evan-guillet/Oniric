@@ -62,6 +62,12 @@ describe("writeFountain", () => {
     expect(back.blocks).toEqual(script);
   });
 
+  it("writes scene numbers after the heading, and reads them away", () => {
+    const text = writeFountain([{ type: "scene_heading", text: "INT. CUISINE – NUIT", sceneNumber: 4 }]);
+    expect(text).toBe("INT. CUISINE – NUIT #4#\n");
+    expect(parseFountain(text).blocks).toEqual([{ type: "scene_heading", text: "INT. CUISINE – NUIT" }]);
+  });
+
   it("writes character names in capitals", () => {
     const text = writeFountain([
       { type: "character", text: "Marie (o.s.)" },
