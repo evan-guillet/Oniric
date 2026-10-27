@@ -15,6 +15,8 @@ const SEQ_H = 28;
 const BEAT_GAP = 10;
 const STRIP = 40;
 const GUTTER = 24;
+/** The width of a scrollbar, as styles.css draws it. */
+const SCROLLBAR = 10;
 
 const ACT_FONT = "600 13px";
 const SEQ_FONT = "500 12.5px";
@@ -61,7 +63,11 @@ export function TimelineView() {
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
   const viewRef = useRef<HTMLDivElement>(null);
+  // Three panes, so that no scrollbar runs along the head or the names: the tracks scroll sideways and carry the
+  // head with them, the names scroll up and down and carry the tracks.
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const namesRef = useRef<HTMLUListElement>(null);
   const [room, setRoom] = useState(0);
   useEffect(() => {
     if (!scroller) return;
@@ -105,7 +111,7 @@ export function TimelineView() {
   // The largest scale at which the stretched timeline still fits the window; past the floor, it scrolls.
   const layout = useMemo(() => {
     const lengths = new Map(scenes.map((s) => [s.id, s.eighths]));
-    const fits = room - label - GUTTER;
+    const fits = room - GUTTER;
     const total = (k: number) => [...stretch(lengths, outline, k).values()].reduce((a, b) => a + b, 0);
     let perPage = 8;
     if (room > 0 && total(8) < fits) {
@@ -125,7 +131,7 @@ export function TimelineView() {
       page += s.eighths / 8;
       return item;
     });
-  }, [scenes, outline, room, label, pages]);
+  }, [scenes, outline, room, pages]);
 
   if (!story) return <div className="view pad muted">Chargement…</div>;
 
@@ -158,6 +164,8 @@ export function TimelineView() {
   const shown = hover ? pos.get(hover.id)?.scene : undefined;
   const present = new Set(shown?.characters ?? []);
   const svgW = Math.ceil(width + GUTTER);
+  // A sideways scrollbar shortens the tracks: the names get as much room below, so both reach their last row together.
+  const wide = svgW > room;
 
   const picked = only ? [...acts, ...seqs].find((p) => p.id === only) : undefined;
   const within = picked ? new Set(picked.scenes) : null;
@@ -210,126 +218,142 @@ export function TimelineView() {
 
   return (
     <div className="view timeline-view" ref={viewRef} onKeyDown={letGo}>
-      <div className="timeline-scroll" ref={setScroller}>
-        <div className="tl-sheet" style={{ width: label + svgW }}>
-          <div className="tl-head">
-            <div className="tl-corner" style={{ width: label, height: headH }}>
-              <span style={{ top: 0, height: RULER }}>Pages</span>
-              {acts.length > 0 && <span style={{ top: actTop, height: ACT_H }}>Actes</span>}
-              {seqs.length > 0 && <span style={{ top: seqTop, height: SEQ_H }}>Séquences</span>}
-              <span style={{ top: stripTop, height: STRIP }}>Scènes</span>
-            </div>
-            <svg width={svgW} height={headH} aria-label="Chronologie des scènes">
-              {grid(headH)}
-              {ticks.slice(1).map((p) => (
-                <text key={p} x={pageX(p) + 4} y={17} className="tl-tick">
-                  p. {p}
-                </text>
-              ))}
-              {[
-                { parts: acts, top: actTop, h: ACT_H, kind: "act", inset: 9, rx: 5 },
-                { parts: seqs, top: seqTop, h: SEQ_H, kind: "seq", inset: 8, rx: 4 },
-              ].map(({ parts, top, h, kind, inset, rx }) =>
-                parts.map((p, i) => (
-                  <g
-                    key={p.id}
-                    className={`tl-part${only === p.id ? " picked" : ""}${within && !p.scenes.some((id) => within.has(id)) ? " off" : ""}`}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={only === p.id}
-                    aria-label={only === p.id ? `${p.title}, revoir toute l'histoire` : `Isoler ${p.title}`}
-                    onClick={() => pick(p.id)}
-                    onKeyDown={pickKey(p.id)}
-                  >
-                    <rect x={p.x + 1} y={top + 3} width={Math.max(2, p.w - 2)} height={h - 6} rx={rx} className={`tl-${kind} ${kind[0]}${i % 2}`} />
-                    <text x={p.x + inset} y={top + h / 2 + 4.5} className={`tl-${kind}-label`}>
-                      {p.title}
-                    </text>
-                  </g>
-                )),
-              )}
-              {layout.map((l) => {
-                const status = story.meta.get(l.scene.id)?.status;
-                return (
-                  <rect
-                    key={l.scene.id}
-                    x={l.x + 0.5}
-                    y={stripTop}
-                    width={Math.max(1, l.w - 1)}
-                    height={STRIP}
-                    rx={2}
-                    fill={color(l.scene.id)}
-                    className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""} ${faded(l.scene.id, l.scene.characters) ? "off" : ""}`}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Scène ${l.scene.index + 1} ${l.scene.heading}`}
-                    onMouseEnter={point(l.scene.id)}
-                    onMouseLeave={() => setHover(null)}
-                    onFocus={point(l.scene.id)}
-                    onBlur={() => setHover(null)}
-                    onClick={() => openScene(l.scene.id)}
-                    onKeyDown={(e) => e.key === "Enter" && openScene(l.scene.id)}
-                  />
-                );
-              })}
-              {beats.map((b) => {
-                const l = pos.get(b.scenes[0]);
-                return l ? (
-                  <path key={b.id} d={`M${Math.max(6, l.x + 1)} ${stripTop - 2} l5 -7 l-10 0 z`} className="tl-beat">
-                    <title>{b.title}</title>
-                  </path>
-                ) : null;
-              })}
-            </svg>
-          </div>
-          <div className="tl-body">
-            <ul className={`tl-names${hover ? " hovering" : ""}${alone || cast ? " isolating" : ""}`} style={{ width: label }} aria-label="Personnages">
-              {characters.map((c) => (
-                <li
-                  key={c.name}
-                  className={[present.has(c.name) && "on", alone === c.name && "alone", (alone ? alone === c.name : !cast || cast.has(c.name)) && "kept"].filter(Boolean).join(" ") || undefined}
-                  style={{ height: ROW }}
+      <div className="tl-head">
+        <div
+          className="tl-head-port"
+          ref={headRef}
+          onScroll={(e) => scroller && (scroller.scrollLeft = e.currentTarget.scrollLeft)}
+          onWheel={(e) => scroller && (scroller.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX)}
+        >
+          <svg width={svgW} height={headH} aria-label="Chronologie des scènes">
+            {grid(headH)}
+            {ticks.slice(1).map((p) => (
+              <text key={p} x={pageX(p) + 4} y={17} className="tl-tick">
+                p. {p}
+              </text>
+            ))}
+            {[
+              { parts: acts, top: actTop, h: ACT_H, kind: "act", inset: 9, rx: 5 },
+              { parts: seqs, top: seqTop, h: SEQ_H, kind: "seq", inset: 8, rx: 4 },
+            ].map(({ parts, top, h, kind, inset, rx }) =>
+              parts.map((p, i) => (
+                <g
+                  key={p.id}
+                  className={`tl-part${only === p.id ? " picked" : ""}${within && !p.scenes.some((id) => within.has(id)) ? " off" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={only === p.id}
+                  aria-label={only === p.id ? `${p.title}, revoir toute l'histoire` : `Isoler ${p.title}`}
+                  onClick={() => pick(p.id)}
+                  onKeyDown={pickKey(p.id)}
                 >
-                  <button
-                    type="button"
-                    aria-pressed={alone === c.name}
-                    title={alone === c.name ? "Revoir tous les personnages" : `Isoler ${c.label}`}
-                    onClick={() => setAlone(alone === c.name ? null : c.name)}
-                  >
-                    <span className="tl-name">{c.label}</span>
-                    <span className="tl-name-n">{c.n}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <svg width={svgW} height={bodyH} aria-hidden="true" className="tl-tracks" onPointerDown={grab} onPointerMove={slide} onPointerUp={release} onPointerCancel={release}>
-              {shown && pos.get(shown.id) && <rect x={pos.get(shown.id)!.x} y={0} width={pos.get(shown.id)!.w} height={bodyH} className="tl-column" />}
-              {grid(bodyH)}
-              {characters.map((c, i) => {
-                const y = ROW * i;
-                const out = (alone !== null && alone !== c.name) || (cast !== null && !cast.has(c.name));
-                return (
-                  <g key={c.name} className={out ? "tl-row off" : "tl-row"}>
-                    <line x1={0} x2={width} y1={y + ROW / 2} y2={y + ROW / 2} className="tl-track" />
-                    {layout
-                      .filter((l) => l.scene.characters.includes(c.name))
-                      .map((l) => (
-                        <rect
-                          key={l.scene.id}
-                          x={l.x + 0.5}
-                          y={y + 6}
-                          width={Math.max(2, l.w - 1)}
-                          height={ROW - 12}
-                          rx={2}
-                          className={`tl-presence${hover?.id === l.scene.id ? " on" : ""}${within && !within.has(l.scene.id) ? " off" : ""}`}
-                        />
-                      ))}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
+                  <rect x={p.x + 1} y={top + 3} width={Math.max(2, p.w - 2)} height={h - 6} rx={rx} className={`tl-${kind} ${kind[0]}${i % 2}`} />
+                  <text x={p.x + inset} y={top + h / 2 + 4.5} className={`tl-${kind}-label`}>
+                    {p.title}
+                  </text>
+                </g>
+              )),
+            )}
+            {layout.map((l) => {
+              const status = story.meta.get(l.scene.id)?.status;
+              return (
+                <rect
+                  key={l.scene.id}
+                  x={l.x + 0.5}
+                  y={stripTop}
+                  width={Math.max(1, l.w - 1)}
+                  height={STRIP}
+                  rx={2}
+                  fill={color(l.scene.id)}
+                  className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""} ${faded(l.scene.id, l.scene.characters) ? "off" : ""}`}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Scène ${l.scene.index + 1} ${l.scene.heading}`}
+                  onMouseEnter={point(l.scene.id)}
+                  onMouseLeave={() => setHover(null)}
+                  onFocus={point(l.scene.id)}
+                  onBlur={() => setHover(null)}
+                  onClick={() => openScene(l.scene.id)}
+                  onKeyDown={(e) => e.key === "Enter" && openScene(l.scene.id)}
+                />
+              );
+            })}
+            {beats.map((b) => {
+              const l = pos.get(b.scenes[0]);
+              return l ? (
+                <path key={b.id} d={`M${Math.max(6, l.x + 1)} ${stripTop - 2} l5 -7 l-10 0 z`} className="tl-beat">
+                  <title>{b.title}</title>
+                </path>
+              ) : null;
+            })}
+          </svg>
         </div>
+        <div className="tl-corner" style={{ width: label, height: headH }}>
+          <span style={{ top: 0, height: RULER }}>Pages</span>
+          {acts.length > 0 && <span style={{ top: actTop, height: ACT_H }}>Actes</span>}
+          {seqs.length > 0 && <span style={{ top: seqTop, height: SEQ_H }}>Séquences</span>}
+          <span style={{ top: stripTop, height: STRIP }}>Scènes</span>
+        </div>
+      </div>
+      <div className="tl-body">
+        <div
+          className="tl-tracks-port"
+          ref={setScroller}
+          onScroll={(e) => headRef.current && (headRef.current.scrollLeft = e.currentTarget.scrollLeft)}
+          onWheel={(e) => !e.shiftKey && namesRef.current?.scrollBy({ top: e.deltaY })}
+        >
+          <svg width={svgW} height={bodyH} aria-hidden="true" className="tl-tracks" onPointerDown={grab} onPointerMove={slide} onPointerUp={release} onPointerCancel={release}>
+            {shown && pos.get(shown.id) && <rect x={pos.get(shown.id)!.x} y={0} width={pos.get(shown.id)!.w} height={bodyH} className="tl-column" />}
+            {grid(bodyH)}
+            {characters.map((c, i) => {
+              const y = ROW * i;
+              const out = (alone !== null && alone !== c.name) || (cast !== null && !cast.has(c.name));
+              return (
+                <g key={c.name} className={out ? "tl-row off" : "tl-row"}>
+                  <line x1={0} x2={width} y1={y + ROW / 2} y2={y + ROW / 2} className="tl-track" />
+                  {layout
+                    .filter((l) => l.scene.characters.includes(c.name))
+                    .map((l) => (
+                      <rect
+                        key={l.scene.id}
+                        x={l.x + 0.5}
+                        y={y + 6}
+                        width={Math.max(2, l.w - 1)}
+                        height={ROW - 12}
+                        rx={2}
+                        className={`tl-presence${hover?.id === l.scene.id ? " on" : ""}${within && !within.has(l.scene.id) ? " off" : ""}`}
+                      />
+                    ))}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+        <ul
+          ref={namesRef}
+          className={`tl-names${hover ? " hovering" : ""}${alone || cast ? " isolating" : ""}`}
+          style={{ width: label + SCROLLBAR, paddingBottom: wide ? SCROLLBAR : 0 }}
+          aria-label="Personnages"
+          onScroll={(e) => scroller && (scroller.scrollTop = e.currentTarget.scrollTop)}
+        >
+          {characters.map((c) => (
+            <li
+              key={c.name}
+              className={[present.has(c.name) && "on", alone === c.name && "alone", (alone ? alone === c.name : !cast || cast.has(c.name)) && "kept"].filter(Boolean).join(" ") || undefined}
+              style={{ height: ROW }}
+            >
+              <button
+                type="button"
+                aria-pressed={alone === c.name}
+                title={alone === c.name ? "Revoir tous les personnages" : `Isoler ${c.label}`}
+                onClick={() => setAlone(alone === c.name ? null : c.name)}
+              >
+                <span className="tl-name">{c.label}</span>
+                <span className="tl-name-n">{c.n}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
       <div aria-live="polite">
         {shown && hover && (

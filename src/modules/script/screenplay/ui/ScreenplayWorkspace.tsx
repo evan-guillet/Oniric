@@ -5,6 +5,7 @@ import {
   BookOpen,
   Eye,
   FileText,
+  ListTree,
   Pencil,
   Plus,
   StickyNote,
@@ -116,7 +117,8 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
  */
 type Panel = "scenes" | "notes" | "info";
 /** Tabs over the scenes: pressed again, a tab brings the scenes back. */
-const PANEL_TABS: SegmentedOption<Exclude<Panel, "scenes">>[] = [
+const PANEL_TABS: SegmentedOption<Panel>[] = [
+  { id: "scenes", label: "Scènes", hint: "Les actes, les séquences et les scènes, dans l'ordre du script", icon: ListTree },
   { id: "notes", label: "Notes", hint: "Les notes à la place des scènes", icon: StickyNote },
   { id: "info", label: "Informations", hint: "Titre, auteurs, contact, mention : ce qu'imprime la page de titre", icon: FileText },
 ];
@@ -161,8 +163,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       // Not remembered: it still applies until the project is closed.
     }
   };
-  /** A panel's tab shows it in place of the scenes; pressed again, the scenes come back. */
-  const togglePanel = (p: Exclude<Panel, "scenes">) => {
+  /** A panel's tab shows it in place of the others; Notes or Informations pressed again bring the scenes back. */
+  const togglePanel = (p: Panel) => {
     const next = panel === p ? "scenes" : p;
     setPanel(next);
     if (next === "notes") setPreview(false);
@@ -669,7 +671,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             <Segmented
               label="Panneau"
               options={PANEL_TABS}
-              value={panel === "scenes" ? null : panel}
+              value={panel}
               onChange={togglePanel}
               compact
             />

@@ -80,13 +80,9 @@ export function StatsView() {
 
       <CharacterTable characters={characters} totalDialogue={characters.reduce((n, c) => n + c.words, 0)} />
 
-      <div className="stats-columns">
-        <PlaceTable places={places} />
-        <div className="stats-stack">
-          <ShareTable title="Intérieur et extérieur" shares={headingShares(statScenes, "intExt")} />
-          <ShareTable title="Moments de la journée" shares={headingShares(statScenes, "time")} />
-        </div>
-      </div>
+      <PlaceTable places={places} />
+      <ShareTable title="Intérieur et extérieur" shares={headingShares(statScenes, "intExt")} />
+      <ShareTable title="Moments de la journée" shares={headingShares(statScenes, "time")} />
     </div>
   );
 }

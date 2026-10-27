@@ -1913,18 +1913,31 @@ kbd {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-/* Above an outlined list: the scene count, unfold all, fold all; it stays in view, the act heads stick under it */
+/* Above an outlined list: the scene count, unfold all, fold all. The list scrolls under it on its own, so the
+   scrollbar starts below the band; the act heads stick to the top of the list. */
+.sidebar:has(> .scene-list .scene-list-tools) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .scene-list:has(.scene-list-tools) {
-  --tools-h: 36px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.scene-list:has(.scene-list-tools) > ol {
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
 }
 .scene-list-tools {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 2px;
-  height: var(--tools-h);
+  height: 36px;
   padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
@@ -2028,7 +2041,7 @@ kbd {
 }
 .scene-list .outline-part.part-act > .outline-head {
   position: sticky;
-  top: var(--tools-h, 0px);
+  top: 0;
   z-index: 1;
   background: var(--panel);
 }
@@ -4899,38 +4912,45 @@ h4 {
   flex-direction: column;
   overflow: hidden;
 }
-.timeline-scroll {
-  flex: 1;
-  overflow: auto;
-}
-.tl-sheet {
-  min-width: 100%;
-  padding-bottom: 16px;
-}
-.tl-sheet svg {
+/* Head and names stay put; the scrollbars run only along the tracks: sideways under them, up and down beside the names. */
+.timeline-view svg {
   display: block;
   flex: none;
 }
 .tl-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: flex;
+  flex: none;
+  overflow: hidden;
+  scrollbar-gutter: stable;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
+.tl-head-port {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
 .tl-body {
   display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.tl-tracks-port {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .tl-corner,
 .tl-names {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  order: 1;
+  position: relative;
   flex: none;
   border-left: 1px solid var(--line);
   background: var(--panel);
+}
+.tl-names {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .tl-corner span {
   position: absolute;
@@ -7599,22 +7619,6 @@ button[aria-expanded="true"] .stats-chevron {
   height: 100%;
   border-radius: 999px;
   background: var(--muted);
-}
-.stats-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-}
-.stats-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-@media (max-width: 1180px) {
-  .stats-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 /* « Déplacer vers… »: the whole outline as a list to pick from, grouped by act, then the place in it. */
 .move-dialog .dialog-body {
