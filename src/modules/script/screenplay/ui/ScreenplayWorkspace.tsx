@@ -1,6 +1,7 @@
 import {
   Archive,
   ArchiveRestore,
+  ChevronRight,
   BookOpen,
   Eye,
   FileText,
@@ -837,11 +838,9 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
   // `resolved` holds « archivée »: the note leaves the list, its passage stays marked.
-  const archivedCount = notes.filter((n) => n.resolved).length;
-  const showArchives = archives && archivedCount > 0;
-  const shown = notes
-    .filter((n) => n.resolved === showArchives)
-    .sort((a, b) => order(a) - order(b));
+  const sorted = [...notes].sort((a, b) => order(a) - order(b));
+  const open = sorted.filter((n) => !n.resolved);
+  const archived = sorted.filter((n) => n.resolved);
 
   const add = async () => {
     const range = editor?.selectionRange();
@@ -873,7 +872,6 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
         ],
       );
       editor.addMark(range.from, range.to, schema.marks.note.create({ id }));
-      setArchives(false);
       setEditing(id);
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -895,107 +893,101 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
       ],
     ).catch((e) => notify({ text: describeError(e), tone: "error" }));
 
-  return (
-    <div className="notes-panel">
-      {archivedCount > 0 && (
-        <div className="notes-head">
+  const card = (n: NoteRow) => {
+    const span = spans.get(n.id);
+    const isEditing = editing === n.id;
+    return (
+      <li key={n.id} className={n.resolved ? "note resolved" : "note"}>
+        <div className="note-top">
           <button
             type="button"
-            className={showArchives ? "btn small on" : "btn small"}
-            aria-pressed={showArchives}
-            onClick={() => setArchives(!showArchives)}
+            className="note-quote"
+            disabled={!span}
+            onClick={() => span && editor?.reveal(span.from, span.to)}
+            title={
+              span ? "Afficher le passage" : "Le passage a été supprimé"
+            }
           >
-            <Archive aria-hidden="true" />
-            Archivées
-            <span className="btn-count">{archivedCount}</span>
+            « {span?.text ?? n.quote} »
+            {!span && (
+              <span className="badge warn">passage supprimé</span>
+            )}
           </button>
+          <MoreMenu
+            label="Actions sur la note"
+            items={[
+              {
+                label: "Modifier",
+                icon: Pencil,
+                onClick: () => setEditing(n.id),
+              },
+              n.resolved
+                ? {
+                    label: "Désarchiver",
+                    icon: ArchiveRestore,
+                    onClick: () => void update(n.id, { resolved: 0 }),
+                  }
+                : {
+                    label: "Archiver",
+                    icon: Archive,
+                    hint: "Range la note sous la liste, dans « Archivées », sans l'effacer.",
+                    onClick: () => void update(n.id, { resolved: 1 }),
+                  },
+              {
+                label: "Supprimer",
+                icon: Trash2,
+                danger: true,
+                onClick: () => {
+                  editor?.removeMarkById("note", n.id);
+                  void update(n.id, { deleted_at: nowIso() });
+                },
+              },
+            ]}
+          />
         </div>
-      )}
+        {isEditing ? (
+          <NoteBody
+            value={n.body}
+            onDone={(body) => {
+              setEditing(null);
+              if (body !== n.body) void update(n.id, { body });
+            }}
+          />
+        ) : n.body.trim() ? (
+          <p className="note-body">{n.body}</p>
+        ) : (
+          <p className="note-body muted">Note vide</p>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <div className="notes-panel">
       <ul className="notes">
         {/* The next note, as a card still to fill: it says where the note will go. */}
-        {!showArchives && (
-          <li>
-            <button type="button" className="note-new" onClick={() => void add()}>
-              <span className="note-new-label">
-                <Plus aria-hidden="true" />
-                Créer une note
-              </span>
-              <span className="note-new-hint">Sur le passage sélectionné, ou la ligne du curseur</span>
-            </button>
-          </li>
-        )}
-        {shown.map((n) => {
-          const span = spans.get(n.id);
-          const isEditing = editing === n.id;
-          return (
-            <li key={n.id} className={n.resolved ? "note resolved" : "note"}>
-              <div className="note-top">
-                <button
-                  type="button"
-                  className="note-quote"
-                  disabled={!span}
-                  onClick={() => span && editor?.reveal(span.from, span.to)}
-                  title={
-                    span ? "Afficher le passage" : "Le passage a été supprimé"
-                  }
-                >
-                  « {span?.text ?? n.quote} »
-                  {!span && (
-                    <span className="badge warn">passage supprimé</span>
-                  )}
-                </button>
-                <MoreMenu
-                  label="Actions sur la note"
-                  items={[
-                    {
-                      label: "Modifier",
-                      icon: Pencil,
-                      onClick: () => setEditing(n.id),
-                    },
-                    n.resolved
-                      ? {
-                          label: "Désarchiver",
-                          icon: ArchiveRestore,
-                          onClick: () => {
-                            if (archivedCount === 1) setArchives(false);
-                            void update(n.id, { resolved: 0 });
-                          },
-                        }
-                      : {
-                          label: "Archiver",
-                          icon: Archive,
-                          hint: "Retire la note de la liste sans l'effacer. Pour la revoir : « Archivées ».",
-                          onClick: () => void update(n.id, { resolved: 1 }),
-                        },
-                    {
-                      label: "Supprimer",
-                      icon: Trash2,
-                      danger: true,
-                      onClick: () => {
-                        editor?.removeMarkById("note", n.id);
-                        void update(n.id, { deleted_at: nowIso() });
-                      },
-                    },
-                  ]}
-                />
-              </div>
-              {isEditing ? (
-                <NoteBody
-                  value={n.body}
-                  onDone={(body) => {
-                    setEditing(null);
-                    if (body !== n.body) void update(n.id, { body });
-                  }}
-                />
-              ) : n.body.trim() ? (
-                <p className="note-body">{n.body}</p>
-              ) : (
-                <p className="note-body muted">Note vide</p>
-              )}
-            </li>
-          );
-        })}
+        <li>
+          <button type="button" className="note-new" onClick={() => void add()}>
+            <span className="note-new-label">
+              <Plus aria-hidden="true" />
+              Créer une note
+            </span>
+            <span className="note-new-hint">Sur le passage sélectionné, ou la ligne du curseur</span>
+          </button>
+        </li>
+        {open.map(card)}
       </ul>
+      {/* The archived notes, folded under the others. */}
+      {archived.length > 0 && (
+        <section className="notes-archived">
+          <button type="button" className="notes-archived-toggle" aria-expanded={archives} onClick={() => setArchives(!archives)}>
+            <ChevronRight className="notes-archived-chevron" aria-hidden="true" />
+            Archivées
+            <span className="notes-archived-count">{archived.length}</span>
+          </button>
+          {archives && <ul className="notes">{archived.map(card)}</ul>}
+        </section>
+      )}
     </div>
   );
 }
