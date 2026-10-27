@@ -8,6 +8,7 @@ import {
   ListTree,
   Pencil,
   Plus,
+  RotateCcw,
   StickyNote,
   Trash2,
   X,
@@ -25,7 +26,7 @@ import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
 import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
-import { readProfile } from "../../../project/application/profile";
+import { readProfile, useProfile, type Profile } from "../../../project/application/profile";
 import { useProject } from "../../../project/ui/projectContext";
 import { bibleIndex } from "../../bible/application/bible";
 import { wikiPlugin } from "../../bible/ui/wikiPlugin";
@@ -44,8 +45,10 @@ import {
 } from "../application/titlePageSettings";
 import { formatCss, type ScreenplayFormat } from "../domain/formats";
 import {
+  contactValue,
   emptyTitlePage,
   hasContent,
+  type ContactKey,
   MENTIONS,
   resolveTitlePage,
   type MentionId,
@@ -281,6 +284,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
   // The title page, edited in the side panel and saved as it is typed.
   const [titlePage, setTitlePage] = useState<TitleDraft | null>(null);
+  // The contact follows the profile as it is changed in the settings, field by field, unless the script sets its own.
+  const profile = useProfile();
   const titleTimer = useRef<number | undefined>(undefined);
   const titlePending = useRef<TitlePage | null>(null);
   useEffect(() => {
@@ -525,7 +530,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     [story, sceneInfos, currentId],
   );
 
-  const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto);
+  const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto, profile);
   // The preview prints the information as it is being typed, saved or not.
   const printedTitle = hasContent(shownTitle) ? shownTitle : null;
 
@@ -550,7 +555,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             <NotesPanel editor={editorRef.current} />
           )}
           {panel === "info" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
+            <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
           )}
         </aside>
 
@@ -717,20 +722,39 @@ interface TitleDraft {
 }
 
 /** The script's information, in the side panel: what the title page prints, seen with « Aperçu ». */
+/** The contact fields of the panel, in the order they print, with what they hold when the profile leaves them empty. */
+const CONTACT_FIELDS: { key: ContactKey; label: string; placeholder: string; type?: string; rows?: number }[] = [
+  { key: "name", label: "Nom", placeholder: "Prénom Nom" },
+  { key: "address", label: "Adresse", placeholder: "Rue, code postal, ville", rows: 2 },
+  { key: "phone", label: "Téléphone", placeholder: "06 12 34 56 78", type: "tel" },
+  { key: "email", label: "E-mail", placeholder: "nom@exemple.fr", type: "email" },
+  { key: "agent", label: "Agent", placeholder: "Agence, nom, téléphone", rows: 2 },
+];
+
 function TitlePagePanel({
   page,
+  profile,
   onChange,
 }: {
   page: TitlePage;
+  profile: Profile | null;
   onChange: (p: TitlePage) => void;
 }) {
-  const { ask } = useProject();
+  const { ask, openSettings } = useProject();
+  // A field typed back to the profile's value follows the profile again.
+  const setContact = (k: ContactKey, value: string) => {
+    const fields = { ...page.contactFields };
+    if (value === (profile?.[k] ?? "")) delete fields[k];
+    else fields[k] = value;
+    set({ contactFields: fields });
+  };
+  const own = (k: ContactKey) => k in page.contactFields && page.contactFields[k] !== (profile?.[k] ?? "");
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const [added, setAdded] = useState(-1);
   const names = page.authors.split("\n");
   const setNames = (n: string[]) => set({ authors: n.join("\n") });
   const field = (
-    k: "title" | "subtitle" | "basedOn" | "contact",
+    k: "title" | "subtitle" | "basedOn",
     label: string,
     rows = 1,
     placeholder?: string,
@@ -796,7 +820,52 @@ function TitlePagePanel({
         </button>
       </fieldset>
       {field("basedOn", "D'après", 1, "D'après le roman de…")}
-      {field("contact", "Contact", 5, "Nom, agent, téléphone, e-mail")}
+      <fieldset className="field contact-fields">
+        <legend>Contact</legend>
+        <p className="contact-from">
+          <span>Repris de votre profil ; un champ changé ici ne vaut que pour ce script.</span>
+          <button type="button" className="btn small text" onClick={() => openSettings("profile")}>
+            Modifier le profil
+          </button>
+        </p>
+        {CONTACT_FIELDS.map((f) => {
+          const id = `title-contact-${f.key}`;
+          const value = contactValue(page, profile, f.key);
+          return (
+            <div key={f.key} className="contact-field">
+              <div className="contact-field-head">
+                <label htmlFor={id}>{f.label}</label>
+                {own(f.key) && (
+                  <button
+                    type="button"
+                    className="btn small text contact-reset"
+                    title={profile?.[f.key].trim() ? `Reprendre « ${profile[f.key].trim().split("\n")[0]} »` : "Reprendre le profil, vide pour ce champ"}
+                    onClick={() => setContact(f.key, profile?.[f.key] ?? "")}
+                  >
+                    <RotateCcw aria-hidden="true" />
+                    Reprendre le profil
+                  </button>
+                )}
+              </div>
+              {f.rows ? (
+                <textarea id={id} rows={f.rows} value={value} placeholder={f.placeholder} onChange={(e) => setContact(f.key, e.target.value)} />
+              ) : (
+                <input id={id} type={f.type ?? "text"} value={value} placeholder={f.placeholder} spellCheck={false} onChange={(e) => setContact(f.key, e.target.value)} />
+              )}
+            </div>
+          );
+        })}
+        <div className="contact-field">
+          <label htmlFor="title-contact-more">Autres lignes</label>
+          <textarea
+            id="title-contact-more"
+            rows={2}
+            value={page.contact}
+            placeholder="Production, site, dépôt…"
+            onChange={(e) => set({ contact: e.target.value })}
+          />
+        </div>
+      </fieldset>
       <label className="field">
         <span>Mentions</span>
         <Select value={page.mention} onChange={(e) => set({ mention: e.target.value as MentionId })}>

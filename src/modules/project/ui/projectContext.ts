@@ -38,6 +38,8 @@ export interface ProjectApi {
   printPdf: (fileName: string, content: ReactNode, page: { width: number; height: number; css?: string }) => Promise<void>;
   /** The right end of the view header, where the current view puts its own buttons (through a portal). */
   headerActions: HTMLElement | null;
+  /** Opens the settings, on `page` when given. */
+  openSettings: (page?: SettingsPage) => void;
   /** Opens the project's import or export window, on `section` when given. */
   transfer: (mode: TransferMode, section?: TransferSection) => void;
   /** Where the user is inside the current view, from the view itself down; the last crumb becomes the header title. Null for the view's top. */
@@ -61,3 +63,15 @@ export function useProject(): ProjectApi {
   if (!api) throw new Error("useProject hors d'un projet");
   return api;
 }
+
+/** The pages of the settings window. */
+export type SettingsPage =
+  | "profile"
+  | "appearance"
+  | "writing"
+  | "formats"
+  | "backups"
+  | "shortcuts"
+  | "script"
+  | "parts"
+  | "about";

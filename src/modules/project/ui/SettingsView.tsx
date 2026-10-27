@@ -53,7 +53,7 @@ import {
   type FormatLanguage,
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
-import { ProjectContext } from "./projectContext";
+import { ProjectContext, type SettingsPage } from "./projectContext";
 
 import { Select } from "../../../ui-kit/Select";
 export const PARTS_HIDDEN_SETTING = "parts_hidden";
@@ -78,16 +78,7 @@ const sizeLabel = (b: number) =>
     ? `${(b / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo`
     : `${Math.max(1, Math.round(b / 1e3))} Ko`;
 
-type PageId =
-  | "profile"
-  | "appearance"
-  | "writing"
-  | "formats"
-  | "backups"
-  | "shortcuts"
-  | "script"
-  | "parts"
-  | "about";
+type PageId = SettingsPage;
 
 interface Page {
   id: PageId;
@@ -104,7 +95,7 @@ const PAGES: Record<PageId, Page> = {
     id: "profile",
     label: "Profil",
     icon: UserRound,
-    lead: "Votre nom et vos coordonnées, repris sur la page de titre de chaque nouveau script.",
+    lead: "Votre nom et vos coordonnées, repris sur la page de titre de chaque script.",
     keywords: "nom auteur e-mail téléphone adresse agent contact page de titre",
   },
   appearance: {
@@ -140,7 +131,7 @@ const PAGES: Record<PageId, Page> = {
     label: "Raccourcis clavier",
     icon: Keyboard,
     lead: "Tout ce qui se fait au clavier, vue par vue.",
-    keywords: "touches clavier ctrl tab entrée palette éléments",
+    keywords: "touches clavier ctrl tab entrée palette éléments aide",
   },
   script: {
     id: "script",
@@ -182,10 +173,13 @@ const fold = (x: string) =>
  * screen too, without the pages of the project.
  */
 export function SettingsDialog({
+  page: initialPage = "profile",
   onClose,
   notify: notifyProp,
   onOpenProject,
 }: {
+  /** The page it opens on. */
+  page?: PageId;
   onClose: () => void;
   notify?: Notify;
   onOpenProject?: (dir: string) => void;
@@ -194,7 +188,7 @@ export function SettingsDialog({
   const notify = ctx?.notify ?? notifyProp ?? (() => {});
   const ref = useRef<HTMLDialogElement>(null);
   const backdrop = useBackdropClose(onClose);
-  const [page, setPage] = useState<PageId>("profile");
+  const [page, setPage] = useState<PageId>(initialPage);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -495,8 +489,8 @@ function ProfileSettings({ notify }: { notify: Notify }) {
           </div>
         </div>
         <p className="set-note">
-          Seuls les nouveaux scripts reprennent ce profil. Celui d'un script commencé se modifie dans Scénario,
-          onglet « Informations ». Le profil reste sur ce PC.
+          Chaque script suit ce profil, sauf les champs changés dans Scénario, onglet « Informations », qui ne
+          valent que pour lui. Le profil reste sur ce PC.
         </p>
       </Group>
     </>
@@ -1160,6 +1154,7 @@ function ShortcutSettings() {
       title: "Partout",
       rows: [
         ["Ctrl+K", "Palette de commandes : aller à une vue, une scène, une fiche, une action"],
+        ["Ctrl+/", "Voir ces raccourcis"],
         ["Échap", "Fermer le dialogue ou le menu ouvert"],
       ],
     },

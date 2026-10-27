@@ -8,6 +8,7 @@ import {
   type TitleAuto,
   type TitlePage,
 } from "../domain/titlePage";
+import { readProfile } from "../../../project/application/profile";
 import { readProjectFormat } from "./formatSettings";
 import { readSetting, writeSetting } from "./settings";
 
@@ -19,8 +20,8 @@ export async function readTitlePageRaw(): Promise<TitlePage | null> {
 
 /** The title page as it prints today. */
 export async function readTitlePage(): Promise<TitlePage | null> {
-  const [p, auto] = await Promise.all([readTitlePageRaw(), titleAuto()]);
-  return p ? resolveTitlePage(p, auto) : null;
+  const [p, auto, profile] = await Promise.all([readTitlePageRaw(), titleAuto(), readProfile()]);
+  return p ? resolveTitlePage(p, auto, profile) : null;
 }
 
 /** The version in progress (the name the next freeze proposes) and today's date, in the screenplay's language. */

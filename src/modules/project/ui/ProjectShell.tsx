@@ -25,6 +25,7 @@ import {
   FileText,
   History,
   Images,
+  Keyboard,
   Layers,
   LayoutDashboard,
   LayoutPanelTop,
@@ -92,6 +93,7 @@ import {
   type ProjectApi,
   type TransferMode,
   type TransferSection,
+  type SettingsPage,
   type ViewId,
 } from "./projectContext";
 import { PARTS_HIDDEN_SETTING, SettingsDialog } from "./SettingsView";
@@ -201,7 +203,8 @@ export function ProjectShell({
   const [view, setView] = useState<ViewId>("dashboard");
   const [entry, setEntry] = useState<string | null>(null);
   const [bibleHome, setBibleHome] = useState(0);
-  const [settings, setSettings] = useState(false);
+  // The settings window and the page it opens on.
+  const [settings, setSettings] = useState<SettingsPage | null>(null);
   const [promptReq, setPromptReq] = useState<PromptRequest | null>(null);
   const [print, setPrint] = useState<{
     content: ReactNode;
@@ -326,6 +329,7 @@ export function ProjectShell({
       headerActions,
       transfer,
       setTrail,
+      openSettings: (page: SettingsPage = "profile") => setSettings(page),
     }),
     [
       project,
@@ -390,11 +394,18 @@ export function ProjectShell({
     setView(id);
   }, []);
 
-  // Ctrl+K opens the palette from anywhere in the project, unless a dialog is already open.
+  // Ctrl+K opens the palette from anywhere in the project, unless a dialog is already open; Ctrl+/ the shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
-      if (e.key.toLowerCase() !== "k") return;
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (e.key === "/" || e.code === "Slash") {
+        if (document.querySelector("dialog[open]:not(.palette)")) return;
+        e.preventDefault();
+        setPalette(false);
+        setSettings("shortcuts");
+        return;
+      }
+      if (e.shiftKey || e.key.toLowerCase() !== "k") return;
       if (document.querySelector("dialog[open]:not(.palette)")) return;
       e.preventDefault();
       setPalette((p) => !p);
@@ -439,7 +450,8 @@ export function ProjectShell({
       action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
       action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
       { ...action("folder", "Ouvrir le dossier du projet", FolderOpen, () => void commands.reveal(project.dir, true), "explorateur disque emplacement fichiers"), detail: project.dir },
-      action("settings", "Réglages", Settings, () => setSettings(true), "préférences options"),
+      action("settings", "Réglages", Settings, () => setSettings("profile"), "préférences options"),
+      action("shortcuts", "Raccourcis clavier", Keyboard, () => setSettings("shortcuts"), "touches aide clavier"),
       action("light", "Thème clair", Sun, () => void setThemePreference("light"), "apparence jour"),
       action("dark", "Thème sombre", Moon, () => void setThemePreference("dark"), "apparence nuit"),
       action("system", "Thème du système", Monitor, () => void setThemePreference("system"), "apparence windows"),
@@ -645,34 +657,37 @@ export function ProjectShell({
               );
             })}
           </div>
-          <ul className="shell-nav-foot">
-            <li>
-              <button
-                type="button"
-                className="nav-link"
-                title={`Thème ${THEME_LABEL[theme].toLowerCase()} : passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
-                onClick={() => void setThemePreference(THEME_NEXT[theme])}
-              >
-                {theme === "dark" ? (
-                  <Moon aria-hidden="true" />
-                ) : (
-                  <Sun aria-hidden="true" />
-                )}
-                <span>{THEME_LABEL[theme]}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                className="nav-link"
-                title="Réglages"
-                onClick={() => setSettings(true)}
-              >
-                <Settings aria-hidden="true" />
-                <span>Réglages</span>
-              </button>
-            </li>
-          </ul>
+          {/* Settings fill the foot; the shortcuts and the theme, used now and then, sit beside them as icons. */}
+          <div className="shell-nav-foot">
+            <button
+              type="button"
+              className="nav-link"
+              title="Réglages"
+              onClick={() => setSettings("profile")}
+            >
+              <Settings aria-hidden="true" />
+              <span>Réglages</span>
+            </button>
+            <button
+              type="button"
+              className="nav-icon-btn"
+              aria-label="Raccourcis clavier"
+              aria-keyshortcuts="Control+/"
+              title="Raccourcis clavier (Ctrl /)"
+              onClick={() => setSettings("shortcuts")}
+            >
+              <Keyboard aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="nav-icon-btn"
+              aria-label={`Passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
+              title={`Passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
+              onClick={() => void setThemePreference(THEME_NEXT[theme])}
+            >
+              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            </button>
+          </div>
         </nav>
 
         <div className="shell-panel">
@@ -708,7 +723,7 @@ export function ProjectShell({
           {print.content}
         </div>
       )}
-      {settings && <SettingsDialog onClose={() => setSettings(false)} />}
+      {settings && <SettingsDialog page={settings} onClose={() => setSettings(null)} />}
       {transferReq && (
         <TransferDialog
           mode={transferReq.mode}
@@ -910,7 +925,7 @@ function NavButton({
         .filter(Boolean)
         .join(" ")}
       aria-current={on ? "page" : undefined}
-      title={item.label}
+      title={item.later ? `${item.label} · arrive en ${item.later}` : item.label}
       onClick={onClick}
     >
       <Icon aria-hidden="true" />

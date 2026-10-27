@@ -77,6 +77,7 @@ describe("writeFdx", () => {
       basedOn: "",
       version: "V2",
       date: "",
+      contactFields: {},
       contact: "evan@example.org",
       notes: "",
       include: true,

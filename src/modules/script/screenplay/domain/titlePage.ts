@@ -12,6 +12,9 @@ export interface TitlePage {
   version: string;
   /** Filled in when the page prints: the day it prints. */
   date: string;
+  /** The contact fields this script sets itself: a field left out follows the profile, an empty one prints nothing. */
+  contactFields: Partial<Contact>;
+  /** More lines under the contact; an older or imported title page keeps its whole contact here. */
   contact: string;
   /** The mention as typed, used when `mention` is « custom ». */
   notes: string;
@@ -22,6 +25,16 @@ export interface TitlePage {
 }
 
 export const TITLE_PAGE_SETTING = "title_page";
+
+/** The contact at the bottom left of the page, field by field, in the order it prints. */
+export const CONTACT_KEYS = ["name", "address", "phone", "email", "agent"] as const;
+export type ContactKey = (typeof CONTACT_KEYS)[number];
+export type Contact = Record<ContactKey, string>;
+
+/** A field of the contact as the script shows it: its own value, or the profile's. */
+export function contactValue(p: TitlePage, profile: Partial<Contact> | null | undefined, k: ContactKey): string {
+  return p.contactFields[k] ?? profile?.[k] ?? "";
+}
 
 /** What the project says about the automatic fields. */
 export interface TitleAuto {
@@ -54,7 +67,7 @@ export const MENTIONS: { id: MentionId; label: string; text: (c: MentionContext)
   { id: "custom", label: "Autre mention…", text: () => "" },
 ];
 
-export function emptyTitlePage(title: string, profile?: { name?: string; email?: string; phone?: string; address?: string; agent?: string }): TitlePage {
+export function emptyTitlePage(title: string, profile?: Partial<Contact>): TitlePage {
   return {
     title,
     subtitle: "",
@@ -62,26 +75,43 @@ export function emptyTitlePage(title: string, profile?: { name?: string; email?:
     basedOn: "",
     version: "",
     date: "",
-    contact: [profile?.name, profile?.address, profile?.phone, profile?.email, profile?.agent].filter(Boolean).join("\n"),
+    contactFields: {},
+    contact: "",
     notes: "",
     include: false,
     mention: "none",
   };
 }
 
-/** A title page saved before the subtitle and the mentions: a mention typed then stays as typed. */
+/**
+ * A title page saved before the subtitle and the mentions: a mention typed then stays as typed. One saved before the
+ * contact fields, or imported with a contact, prints that contact as it was, without the profile added to it.
+ */
 export function normalizeTitlePage(raw: Partial<TitlePage> & { title?: string }): TitlePage {
   const p = { ...emptyTitlePage(raw.title ?? ""), ...raw };
-  return { ...p, mention: raw.mention ?? (raw.notes?.trim() ? "custom" : "none") };
+  const contactFields = raw.contactFields ?? (raw.contact?.trim() ? Object.fromEntries(CONTACT_KEYS.map((k) => [k, ""])) : {});
+  return { ...p, contactFields, mention: raw.mention ?? (raw.notes?.trim() ? "custom" : "none") };
 }
 
-/** The page as it prints: the version and date from the project, the authors without empty lines, the mention written out. */
-export function resolveTitlePage(p: TitlePage, auto: TitleAuto | null, year = new Date().getFullYear()): TitlePage {
+/**
+ * The page as it prints: the version and date from the project, the contact completed from the profile, the authors
+ * without empty lines, the mention written out.
+ */
+export function resolveTitlePage(
+  p: TitlePage,
+  auto: TitleAuto | null,
+  profile?: Partial<Contact> | null,
+  year = new Date().getFullYear(),
+): TitlePage {
   const mention = MENTIONS.find((m) => m.id === p.mention);
   const authors = p.authors.split("\n").map((a) => a.trim()).filter(Boolean).join("\n");
   return {
     ...p,
     authors,
+    contact: [...CONTACT_KEYS.map((k) => contactValue(p, profile, k)), p.contact]
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .join("\n"),
     version: auto?.version ?? p.version,
     date: auto?.date ?? p.date,
     notes: p.mention === "custom" || !mention ? p.notes : mention.text({ year, authors }),

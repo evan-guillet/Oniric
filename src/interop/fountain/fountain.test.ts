@@ -98,6 +98,7 @@ describe("Fountain title page", () => {
       basedOn: "D'après une nouvelle",
       version: "V2",
       date: "21/10/2026",
+      contactFields: {},
       contact: "evan@example.org\n06 00 00 00 00",
       notes: "",
       include: true,
