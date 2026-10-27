@@ -4,7 +4,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { commands } from "../../../bindings";
 import { describeError } from "../../../core/errors";
 import { Dialog } from "../../../ui-kit/Dialog";
-import { FORMATS } from "../../script/screenplay/domain/formats";
+import { FORMATS, groupFormats } from "../../script/screenplay/domain/formats";
+import { Select } from "../../../ui-kit/Select";
 
 export function NewProjectDialog({
   onCancel,
@@ -80,18 +81,21 @@ export function NewProjectDialog({
           />
         </label>
 
-        <fieldset className="field">
-          <legend>{t("newProject.format")}</legend>
-          <div className="choices">
-            {FORMATS.map((f) => (
-              <label key={f.id} className="choice">
-                <input type="radio" name="format" value={f.id} checked={formatId === f.id} onChange={() => setFormatId(f.id)} />
-                {f.name}
-              </label>
+        <label className="field">
+          <span>{t("newProject.format")}</span>
+          <Select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
+            {groupFormats(FORMATS).map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.formats.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
-          </div>
-          <small className="muted">{t("newProject.formatHelp")}</small>
-        </fieldset>
+          </Select>
+          <small className="muted">{FORMATS.find((f) => f.id === formatId)?.help}</small>
+        </label>
 
         <label className="field">
           <span>{t("newProject.location")}</span>

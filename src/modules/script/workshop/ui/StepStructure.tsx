@@ -61,10 +61,18 @@ export function StepStructure() {
         <Help>Un modèle ne contraint rien : il propose des points clés à placer. Changer de modèle ne perd rien, les points remplis restent proposés.</Help>
         <div className="input-row">
           <Select value={model.id} onChange={(e) => w.set("structure.model", e.target.value)} aria-label="Modèle de structure">
-            {MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
+            {[
+              { label: "Films", models: MODELS.filter((m) => m.parts.length > 0 && m.kind !== "tv") },
+              { label: "Séries", models: MODELS.filter((m) => m.kind === "tv") },
+              { label: "Sans modèle", models: MODELS.filter((m) => m.parts.length === 0) },
+            ].map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
           {model.parts.length > 0 && (

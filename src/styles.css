@@ -2269,6 +2269,11 @@ h4 {
   flex: 1;
   min-width: 0;
 }
+/* A provided format: its name, and under it what it is for */
+.format-list-name {
+  display: grid;
+  gap: 1px;
+}
 .history-text {
   display: block;
   white-space: pre-wrap;
@@ -6133,24 +6138,6 @@ h4 {
 .theme-option-text {
   display: grid;
   gap: 1px;
-}
-.scroll-options {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.scroll-option {
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 10px;
-  padding: 12px;
-}
-.scroll-option-icon {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  color: var(--muted);
-}
-.scroll-option.on .scroll-option-icon {
-  color: var(--accent);
 }
 /* Small picture of the app in each theme; fixed colors, since it shows the other theme too */
 .theme-preview {

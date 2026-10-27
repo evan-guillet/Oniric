@@ -17,6 +17,8 @@ export interface ModelPart {
 export interface StructureModel {
   id: string;
   name: string;
+  /** A film by default; an episode of a series for « tv ». */
+  kind?: "film" | "tv";
   parts: ModelPart[];
   beats: ModelBeat[];
 }
@@ -105,6 +107,120 @@ export const MODELS: StructureModel[] = [
       b("f", "F — Le pire", 0.625, "Tout s'effondre ; fin de l'acte II."),
       b("g", "G — Nouvelle tension", 0.75, "Le dernier combat se prépare."),
       b("h", "H — Résolution", 0.875, "Le climax et le dénouement."),
+    ],
+  },
+  {
+    id: "four-acts",
+    name: "Quatre actes",
+    parts: [
+      { title: "Acte I", share: 0.25 },
+      { title: "Acte II", share: 0.25 },
+      { title: "Acte III", share: 0.25 },
+      { title: "Acte IV", share: 0.25 },
+    ],
+    beats: [
+      b("setup", "Exposition", 0.03, "Le monde du personnage et ce qui lui manque."),
+      b("inciting", "Incident déclencheur", 0.1, "L'événement qui lance l'histoire."),
+      b("turn1", "Premier tournant", 0.25, "Le personnage s'engage. Fin de l'acte I."),
+      b("midpoint", "Point médian", 0.5, "Le retournement qui change la quête. Fin de l'acte II."),
+      b("turn2", "Second tournant", 0.75, "La crise : tout semble perdu. Fin de l'acte III."),
+      b("climax", "Climax", 0.9, "L'affrontement décisif."),
+      b("resolution", "Dénouement", 0.98, "Le nouvel équilibre."),
+    ],
+  },
+  {
+    id: "freytag",
+    name: "La pyramide de Freytag (cinq actes)",
+    parts: [
+      { title: "Exposition", share: 0.15 },
+      { title: "Action montante", share: 0.25 },
+      { title: "Climax", share: 0.2 },
+      { title: "Action descendante", share: 0.25 },
+      { title: "Dénouement", share: 0.15 },
+    ],
+    beats: [
+      b("exposition", "Exposition", 0.02, "Les personnages, le lieu, la situation de départ."),
+      b("exciting", "Élément perturbateur", 0.15, "Le conflit s'installe et la tension commence à monter."),
+      b("rising", "Complications", 0.3, "Les obstacles s'enchaînent, les enjeux grandissent."),
+      b("climax", "Climax", 0.5, "Le sommet de la pyramide : le moment où tout bascule."),
+      b("tragic", "Retournement", 0.6, "Les conséquences du climax se retournent contre le héros."),
+      b("suspense", "Dernier suspense", 0.8, "Un ultime espoir, ou une ultime menace, avant la fin."),
+      b("catastrophe", "Dénouement", 0.95, "La catastrophe ou la résolution : le conflit est tranché."),
+    ],
+  },
+  {
+    id: "story-circle",
+    name: "Le cercle de Dan Harmon",
+    parts: [
+      { title: "Le monde connu", share: 0.25 },
+      { title: "La descente", share: 0.25 },
+      { title: "La remontée", share: 0.25 },
+      { title: "Le retour", share: 0.25 },
+    ],
+    beats: [
+      b("you", "1. Un personnage", 0.0, "Dans sa zone de confort."),
+      b("need", "2. Un besoin", 0.125, "Il veut quelque chose."),
+      b("go", "3. Il part", 0.25, "Il entre dans une situation inconnue."),
+      b("search", "4. Il cherche", 0.375, "Il s'adapte, apprend les règles."),
+      b("find", "5. Il trouve", 0.5, "Il obtient ce qu'il voulait."),
+      b("take", "6. Il paie", 0.625, "Il en paie le prix fort."),
+      b("return", "7. Il revient", 0.75, "Il rentre dans son monde."),
+      b("change", "8. Il a changé", 0.875, "Ce qu'il a vécu l'a transformé."),
+    ],
+  },
+  {
+    id: "hauge",
+    name: "Les six étapes de Michael Hauge",
+    parts: [
+      { title: "La mise en place", share: 0.1 },
+      { title: "La nouvelle situation", share: 0.15 },
+      { title: "Les progrès", share: 0.25 },
+      { title: "Complications et enjeux", share: 0.25 },
+      { title: "L'ultime effort", share: 0.15 },
+      { title: "Les suites", share: 0.1 },
+    ],
+    beats: [
+      b("opportunity", "L'occasion", 0.1, "Ce qui fait entrer le héros dans une nouvelle situation."),
+      b("change", "Le changement de plan", 0.25, "Le désir devient un but visible et précis."),
+      b("no-return", "Le point de non-retour", 0.5, "Le héros s'engage totalement, il ne peut plus reculer."),
+      b("setback", "Le revers majeur", 0.75, "Tout semble perdu."),
+      b("climax", "Le climax", 0.9, "L'affrontement final avec le plus grand obstacle."),
+      b("aftermath", "Les suites", 0.98, "La nouvelle vie du héros, transformé."),
+    ],
+  },
+  {
+    id: "drama-hour",
+    name: "Série d'une heure : teaser et cinq actes",
+    kind: "tv",
+    parts: [
+      { title: "Teaser", share: 0.06 },
+      ...Array.from({ length: 5 }, (_, i) => ({ title: `Acte ${["I", "II", "III", "IV", "V"][i]}`, share: 0.188 })),
+    ],
+    beats: [
+      b("teaser", "Teaser", 0.0, "Une accroche avant le générique : le problème de l'épisode."),
+      b("act1", "Fin de l'acte I", 0.25, "L'intrigue de l'épisode est lancée, avant la première coupure."),
+      b("act2", "Fin de l'acte II", 0.44, "Une complication qui donne envie de rester après la pub."),
+      b("act3", "Fin de l'acte III", 0.62, "Le grand retournement de l'épisode."),
+      b("act4", "Fin de l'acte IV", 0.81, "Le pire : tout semble perdu."),
+      b("act5", "Résolution", 0.97, "L'intrigue se dénoue, une porte s'ouvre vers l'épisode suivant."),
+    ],
+  },
+  {
+    id: "sitcom",
+    name: "Sitcom : cold open, deux actes et tag",
+    kind: "tv",
+    parts: [
+      { title: "Cold open", share: 0.1 },
+      { title: "Acte I", share: 0.42 },
+      { title: "Acte II", share: 0.42 },
+      { title: "Tag", share: 0.06 },
+    ],
+    beats: [
+      b("cold-open", "Cold open", 0.0, "Une scène drôle avant le générique, parfois sans lien avec l'intrigue."),
+      b("problem", "Le problème", 0.14, "Ce que le héros veut ou doit régler dans l'épisode."),
+      b("act-break", "La fin de l'acte I", 0.5, "La situation empire : le plan du héros se retourne contre lui."),
+      b("resolution", "La résolution", 0.88, "Tout rentre dans l'ordre, ou presque."),
+      b("tag", "Tag", 0.96, "Une dernière blague après l'intrigue, souvent pendant le générique."),
     ],
   },
   { id: "free", name: "Structure libre", parts: [], beats: [] },

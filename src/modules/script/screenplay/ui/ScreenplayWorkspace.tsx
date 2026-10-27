@@ -18,7 +18,6 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
-import { getScrollPreference, onScrollPreference } from "../../../../core/scrollPreference";
 import { useChoice } from "../../../../ui-kit/Dialog";
 import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
@@ -95,97 +94,6 @@ function sceneStart(scene: HTMLElement, cards: boolean): number {
   const heading = scene.firstElementChild as HTMLElement | null;
   if (!heading) return top;
   return heading.getBoundingClientRect().top + parseFloat(getComputedStyle(heading).paddingTop);
-}
-
-/**
- * The wheel moves the desk one scene per notch, its start brought level with the pin. A scene taller than the
- * desk is read through first, by most of a screen per notch. Notches given during the glide add up; a touchpad's
- * stream of small steps counts as a notch once it adds up to one, at most every 220ms. The keyboard, the
- * scrollbar and Ctrl + wheel are left as they are.
- */
-function snapWheel(desk: HTMLElement, mount: HTMLElement): () => void {
-  let target: number | null = null;
-  let frame = 0;
-  let pending = 0;
-  let lastStep = 0;
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  const glide = (to: number) => {
-    target = to;
-    cancelAnimationFrame(frame);
-    if (reduce.matches) {
-      desk.scrollTop = to;
-      target = null;
-      return;
-    }
-    const from = desk.scrollTop;
-    const start = performance.now();
-    const length = 280;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / length);
-      desk.scrollTop = from + (to - from) * (1 - Math.pow(1 - t, 3));
-      if (t < 1) frame = requestAnimationFrame(tick);
-      else target = null;
-    };
-    frame = requestAnimationFrame(tick);
-  };
-
-  const step = (dir: 1 | -1) => {
-    const cards = desk.classList.contains("display-cards");
-    const scenes = mount.querySelectorAll<HTMLElement>(":scope > .ProseMirror > .scene");
-    const view = desk.clientHeight - parseFloat(getComputedStyle(desk).paddingTop);
-    const max = desk.scrollHeight - desk.clientHeight;
-    const from = target ?? desk.scrollTop;
-    // Every scene's start as the scroll position that brings it level with the pin.
-    const line = desk.getBoundingClientRect().top + parseFloat(getComputedStyle(desk).paddingTop) + PIN_TOP;
-    const stops = [...scenes].map((s) => Math.max(0, Math.round(desk.scrollTop + sceneStart(s, cards) - line)));
-    const page = Math.round(view * 0.8);
-    let to: number;
-    if (dir > 0) {
-      const next = stops.find((s) => s > from + 1) ?? max;
-      to = next - from > page + 24 ? from + page : next;
-    } else {
-      const prev = [...stops].reverse().find((s) => s < from - 1) ?? 0;
-      to = from - prev > page + 24 ? from - page : prev;
-    }
-    glide(Math.max(0, Math.min(max, to)));
-  };
-
-  const onWheel = (e: WheelEvent) => {
-    if (e.ctrlKey || e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    e.preventDefault();
-    const dir = e.deltaY > 0 ? 1 : -1;
-    const now = performance.now();
-    // A mouse notch is one step; a touchpad's small deltas count as one once they add up to a notch.
-    const delta = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
-    if (Math.abs(delta) >= 50) {
-      pending = 0;
-      lastStep = now;
-      step(dir);
-      return;
-    }
-    if (Math.sign(pending) !== dir) pending = 0;
-    pending += delta;
-    if (Math.abs(pending) >= 50 && now - lastStep > 220) {
-      pending = 0;
-      lastStep = now;
-      step(dir);
-    }
-  };
-  // Grabbing the scrollbar or typing stops the glide where it is.
-  const stop = () => {
-    cancelAnimationFrame(frame);
-    target = null;
-  };
-  desk.addEventListener("wheel", onWheel, { passive: false });
-  desk.addEventListener("pointerdown", stop);
-  desk.addEventListener("keydown", stop);
-  return () => {
-    stop();
-    desk.removeEventListener("wheel", onWheel);
-    desk.removeEventListener("pointerdown", stop);
-    desk.removeEventListener("keydown", stop);
-  };
 }
 
 /** Each scene's colour from the Tableau, and the scene of the cursor outlined, by the id its node carries. */
@@ -569,17 +477,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       cancelAnimationFrame(frame);
     };
   }, [body, display.cards, sceneCount]);
-
-  // Réglages › Défilement: the wheel goes scene by scene, or freely.
-  const [scrolling, setScrolling] = useState(getScrollPreference);
-  useEffect(() => onScrollPreference(setScrolling), []);
-  useEffect(() => {
-    const desk = deskRef.current;
-    const mount = mountRef.current;
-    if (!desk || !mount || body !== "editor" || scrolling !== "snap") return;
-    return snapWheel(desk, mount);
-    // The mount only shows once the format is read.
-  }, [body, scrolling, !!format]);
   const pin = useMemo(() => {
     for (const g of groups)
       for (const q of g.sequences)

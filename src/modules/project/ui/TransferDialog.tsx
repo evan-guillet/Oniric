@@ -7,6 +7,7 @@ import { describeError } from "../../../core/errors";
 import { Dialog } from "../../../ui-kit/Dialog";
 import { exportBible } from "../../script/bible/application/bible";
 import { availableFormats } from "../../script/screenplay/application/formatSettings";
+import { groupFormats } from "../../script/screenplay/domain/formats";
 import { readTitlePage } from "../../script/screenplay/application/titlePageSettings";
 import { hasContent } from "../../script/screenplay/domain/titlePage";
 import { exportScreenplayPdf, exportScreenplayText } from "../../script/screenplay/ui/screenplayExport";
@@ -170,11 +171,15 @@ export function TransferDialog({
               <label className="field">
                 <span>Mise en page</span>
                 <Select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
-                  {formats.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                      {x.id === currentFormat.id ? " (actuel)" : ""}
-                    </option>
+                  {groupFormats(formats).map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.formats.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.name}
+                          {x.id === currentFormat.id ? " (actuel)" : ""}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </Select>
               </label>

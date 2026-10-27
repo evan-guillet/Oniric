@@ -1,4 +1,4 @@
-import { ELEMENT_TYPES, formatCss, type ElementType, type ScreenplayFormat } from "../../domain/formats";
+import { ELEMENT_TYPES, formatCss, spacingOf, type ElementType, type ScreenplayFormat } from "../../domain/formats";
 
 /**
  * Lets the browser engine wrap each element in a hidden box styled exactly like the editor and the printed page,
@@ -28,7 +28,7 @@ export class Measurer {
       this.boxes.set(type, p);
     }
     document.body.appendChild(this.root);
-    this.lineHeightPx = parseFloat(getComputedStyle(this.boxes.get("action")!).lineHeight);
+    this.lineHeightPx = parseFloat(getComputedStyle(this.boxes.get("action")!).lineHeight) / spacingOf(format.elements.action);
   }
 
   lineStarts(type: ElementType, text: string): number[] {
@@ -41,14 +41,16 @@ export class Measurer {
     p.textContent = text;
     const node = p.firstChild as Text;
     const box = p.getBoundingClientRect();
-    const lines = Math.round(box.height / this.lineHeightPx);
+    // A double-spaced element's lines are twice as tall.
+    const lineHeight = this.lineHeightPx * spacingOf(this.format.elements[type]);
+    const lines = Math.round(box.height / lineHeight);
     const starts = [0];
     const lineOf = (i: number) => {
       this.range.setStart(node, i);
       this.range.setEnd(node, i + 1);
       const rects = this.range.getClientRects();
       const rect = rects.length > 0 ? rects[0] : this.range.getBoundingClientRect();
-      return Math.floor((rect.top - box.top + this.lineHeightPx / 2) / this.lineHeightPx);
+      return Math.floor((rect.top - box.top + lineHeight / 2) / lineHeight);
     };
     for (let k = 1; k < lines; k++) {
       let lo = starts[k - 1] + 1;

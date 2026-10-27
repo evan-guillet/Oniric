@@ -2,15 +2,12 @@ import {
   DatabaseBackup,
   LayoutGrid,
   Palette,
-  MoveVertical,
   Ruler,
-  ScrollText,
   Search,
-  StretchVertical,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { commands, type BackupState, type Settings } from "../../../bindings";
@@ -23,12 +20,6 @@ import {
   setThemePreference,
   type ThemePreference,
 } from "../../../core/theme";
-import {
-  getScrollPreference,
-  onScrollPreference,
-  setScrollPreference,
-  type ScrollPreference,
-} from "../../../core/scrollPreference";
 import { uuidv7 } from "../../../core/ids";
 import { Dialog, useBackdropClose } from "../../../ui-kit/Dialog";
 import { Labeled } from "../../../ui-kit/Form";
@@ -44,6 +35,8 @@ import {
 import {
   ELEMENT_TYPES,
   FORMATS,
+  FORMAT_KINDS,
+  type FormatLanguage,
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext } from "./projectContext";
@@ -69,7 +62,7 @@ const sizeLabel = (b: number) =>
     ? `${(b / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo`
     : `${Math.max(1, Math.round(b / 1e3))} Ko`;
 
-type PageId = "appearance" | "writing" | "backups" | "formats" | "parts";
+type PageId = "appearance" | "backups" | "formats" | "parts";
 
 interface Page {
   id: PageId;
@@ -88,12 +81,6 @@ const GROUPS: { label: string; pages: Page[]; projectOnly?: boolean }[] = [
         label: "Apparence",
         icon: Palette,
         keywords: "thème clair sombre système couleurs",
-      },
-      {
-        id: "writing",
-        label: "Scénario",
-        icon: ScrollText,
-        keywords: "défilement molette cranté fluide scène",
       },
       {
         id: "backups",
@@ -236,7 +223,6 @@ export function SettingsDialog({
         </header>
         <div className="settings-pane-body settings">
           {page === "appearance" && <AppearanceSettings notify={notify} />}
-          {page === "writing" && <WritingSettings notify={notify} />}
           {page === "backups" && (
             <BackupSettings
               notify={notify}
@@ -294,65 +280,6 @@ function AppearanceSettings({ notify }: { notify: Notify }) {
                 <ThemeMiniature tone={o.id} />
               )}
             </span>
-            <span className="theme-option-text">
-              <strong>{o.label}</strong>
-              <span className="muted small">{o.help}</span>
-            </span>
-          </label>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-const SCROLLS: { id: ScrollPreference; label: string; help: string; icon: LucideIcon }[] = [
-  {
-    id: "snap",
-    label: "Cranté",
-    help: "Un cran de molette, une scène : son début vient se placer en haut",
-    icon: StretchVertical,
-  },
-  {
-    id: "smooth",
-    label: "Fluide",
-    help: "La molette défile librement, ligne à ligne",
-    icon: MoveVertical,
-  },
-];
-
-function WritingSettings({ notify }: { notify: Notify }) {
-  const [scroll, setScroll] = useState(getScrollPreference);
-  useEffect(() => onScrollPreference(setScroll), []);
-  const choose = (p: ScrollPreference) =>
-    setScrollPreference(p).catch((e) =>
-      notify({ text: describeError(e), tone: "error" }),
-    );
-  return (
-    <section className="settings-section">
-      <h3>Défilement</h3>
-      <p className="muted">
-        Comment la molette parcourt le scénario. Une scène plus haute que
-        l'écran se lit d'abord en entier, cran après cran. Le clavier et la
-        barre de défilement restent libres.
-      </p>
-      <div
-        className="theme-options scroll-options"
-        role="radiogroup"
-        aria-label="Défilement"
-      >
-        {SCROLLS.map((o) => (
-          <label
-            key={o.id}
-            className={`theme-option scroll-option${scroll === o.id ? " on" : ""}`}
-          >
-            <input
-              type="radio"
-              name="scroll"
-              value={o.id}
-              checked={scroll === o.id}
-              onChange={() => void choose(o.id)}
-            />
-            <o.icon className="scroll-option-icon" aria-hidden="true" />
             <span className="theme-option-text">
               <strong>{o.label}</strong>
               <span className="muted small">{o.help}</span>
@@ -618,15 +545,21 @@ function FormatSettings({ notify }: { notify: Notify }) {
   return (
     <section className="settings-section">
       <p className="muted">
-        Vos formats personnalisés, proposés dans tous les projets. Un projet
-        garde son format même ouvert sur un autre PC.
+        Les formats fournis reprennent les modèles de Final Draft ; dupliquez-en
+        un pour l'ajuster. Un projet garde son format même ouvert sur un autre
+        PC.
       </p>
-      <ul className="format-list">
-        {FORMATS.map((f) => (
-          <li key={f.id}>
-            <span>{f.name}</span>
-            <span className="muted small">fourni</span>
-            <button
+      {FORMAT_KINDS.map((k) => (
+        <Fragment key={k.id}>
+          <h4>{k.label}</h4>
+          <ul className="format-list">
+            {FORMATS.filter((f) => (f.kind ?? "film") === k.id).map((f) => (
+              <li key={f.id}>
+                <span className="format-list-name">
+                  {f.name}
+                  {f.help && <span className="muted small">{f.help}</span>}
+                </span>
+                <button
               type="button"
               className="btn small"
               onClick={() =>
@@ -639,8 +572,14 @@ function FormatSettings({ notify }: { notify: Notify }) {
             >
               Dupliquer
             </button>
-          </li>
-        ))}
+              </li>
+            ))}
+          </ul>
+        </Fragment>
+      ))}
+      <h4>Mes formats</h4>
+      {library.length === 0 && <p className="muted small">Dupliquez un format fourni pour en faire le vôtre.</p>}
+      <ul className="format-list">
         {library.map((f) => (
           <li key={f.id}>
             <span>{f.name}</span>
@@ -762,10 +701,12 @@ function FormatEditor({
           <Labeled label="Langue">
             <Select
               value={f.language}
-              onChange={(e) => set({ language: e.target.value as "fr" | "en" })}
+              onChange={(e) => set({ language: e.target.value as FormatLanguage })}
             >
               <option value="fr">Français</option>
               <option value="en">Anglais</option>
+              <option value="de">Allemand</option>
+              <option value="es">Espagnol</option>
             </Select>
           </Labeled>
           <Num

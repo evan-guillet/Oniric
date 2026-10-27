@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { US_FORMAT, linesPerPage, type ElementType } from "./formats";
+import { MULTICAM_FORMAT, US_FORMAT, linesPerPage, type ElementType } from "./formats";
 import { paginate } from "./paginate";
 import type { LaidBlock } from "./types";
 
@@ -95,5 +95,14 @@ describe("paginate", () => {
     const p = paginate(blocks, US_FORMAT);
     expect(performance.now() - t0).toBeLessThan(50);
     expect(p.pages.length).toBeGreaterThan(100);
+  });
+  it("gives each line of double-spaced dialogue two rows, and splits it by rows", () => {
+    const short = paginate([block("character", 1), block("dialogue", 3), block("action", 1)], MULTICAM_FORMAT);
+    expect(short.pages[0].lines.map((l) => l.row)).toEqual([0, 1, 3, 5, 8]);
+    const long = paginate([block("action", L - 9), block("character", 1), block("dialogue", 10)], MULTICAM_FORMAT);
+    const first = long.pages[0];
+    expect(first.lines.filter((l) => l.type === "dialogue" && l.kind === "text").length).toBe(3);
+    expect(first.usedRows).toBeLessThanOrEqual(L);
+    expect(long.pages[1].lines[0].kind).toBe("contd");
   });
 });

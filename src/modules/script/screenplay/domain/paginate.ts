@@ -1,4 +1,4 @@
-import { linesPerPage, type ElementType, type ScreenplayFormat } from "./formats";
+import { linesPerPage, spacingOf, type ElementType, type ScreenplayFormat } from "./formats";
 import type { LaidBlock, Page, PageStart, Pagination } from "./types";
 
 const SENTENCE_END = /[.!?…:;]["»”)]?$/;
@@ -16,6 +16,7 @@ interface LineRef {
 /**
  * Pure page-breaking: receives elements already split into lines and applies the screenplay rules
  * (heading kept with what follows, dialogue split with MORE / CONT'D, at least two lines on each side of a split).
+ * A line of a double-spaced element takes two rows.
  */
 export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Pagination {
   const L = linesPerPage(format);
@@ -31,6 +32,8 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
     const s = blocks[blockIndex].sceneIndex;
     sceneRows[s] = (sceneRows[s] ?? 0) + rows;
   };
+  /** Rows taken by each line of block `i`. */
+  const step = (i: number) => spacingOf(format.elements[blocks[i].type]);
   const spaceBefore = (i: number) => (y === 0 ? 0 : format.elements[blocks[i].type].spaceBefore);
   const skipSpace = (i: number) => {
     const s = spaceBefore(i);
@@ -39,8 +42,8 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
   };
   const putLine = (i: number, k: number) => {
     page.lines.push({ row: y, type: blocks[i].type, text: lineText(blocks[i], k), kind: "text", blockIndex: i });
-    y++;
-    addRows(i, 1);
+    y += step(i);
+    addRows(i, step(i));
   };
   const putLabel = (i: number, type: ElementType, text: string, kind: "more" | "contd") => {
     page.lines.push({ row: y, type, text, kind, blockIndex: i });
@@ -57,11 +60,19 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
   const endsSentence = (r: LineRef) =>
     r.line === blocks[r.block].lineStarts.length - 1 || SENTENCE_END.test(lineText(blocks[r.block], r.line));
 
+  const rowsFrom = (refs: LineRef[], from: number) => refs.slice(from).reduce((n, r) => n + step(r.block), 0);
+  /** How many lines from `from` fit in `avail` rows. */
+  const fit = (refs: LineRef[], from: number, avail: number): number => {
+    let k = 0;
+    for (let used = 0; from + k < refs.length && used + step(refs[from + k].block) <= avail; k++) used += step(refs[from + k].block);
+    return k;
+  };
+
   /** Number of lines to keep on the current page, or 0 when no acceptable split exists. */
   const chooseSplit = (refs: LineRef[], from: number, avail: number): number => {
     const rest = refs.length - from;
     let fallback = 0;
-    for (let k = Math.min(avail, rest - 2); k >= 2; k--) {
+    for (let k = Math.min(fit(refs, from, avail), rest - 2); k >= 2; k--) {
       const last = refs[from + k - 1];
       if (blocks[last.block].type === "parenthetical") continue;
       if (endsSentence(last)) return k;
@@ -78,15 +89,14 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
     let pos = 0;
     while (pos < refs.length) {
       const space = pos === 0 ? spaceBefore(i) : 0;
-      const rest = refs.length - pos;
-      if (y + space + rest <= L) {
+      if (y + space + rowsFrom(refs, pos) <= L) {
         if (pos === 0) skipSpace(i);
         for (; pos < refs.length; pos++) putLine(i, refs[pos].line);
         return;
       }
       const avail = L - y - space;
       let k = chooseSplit(refs, pos, avail);
-      if (k === 0 && y === 0) k = Math.max(1, avail);
+      if (k === 0 && y === 0) k = Math.max(1, fit(refs, pos, avail));
       if (k === 0) {
         newPage(i, offsetOf(refs[pos]), false, null);
         continue;
@@ -100,6 +110,7 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
   const placeDialogue = (c: number, members: number[]) => {
     const refs = members.flatMap(lineRefs);
     const nameLines = blocks[c].lineStarts.length;
+    const nameRows = nameLines * step(c);
     const name = blocks[c].text.trim();
     let pos = 0;
     let headerPlaced = false;
@@ -109,9 +120,9 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
       headerPlaced = true;
     };
     while (true) {
-      const header = headerPlaced ? 0 : spaceBefore(c) + nameLines;
+      const header = headerPlaced ? 0 : spaceBefore(c) + nameRows;
       const rest = refs.length - pos;
-      if (y + header + rest <= L) {
+      if (y + header + rowsFrom(refs, pos) <= L) {
         if (!headerPlaced) putHeader();
         for (; pos < refs.length; pos++) putLine(refs[pos].block, refs[pos].line);
         return;
@@ -119,7 +130,7 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
       const avail = L - y - header - 1;
       let k = chooseSplit(refs, pos, avail);
       const freshPage = headerPlaced ? y <= 1 : y === 0;
-      if (k === 0 && freshPage) k = Math.max(1, Math.min(avail, rest - 1));
+      if (k === 0 && freshPage) k = Math.max(1, Math.min(fit(refs, pos, avail), rest - 1));
       if (k === 0) {
         newPage(c, 0, false, null);
         continue;
@@ -136,6 +147,7 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
   while (i < blocks.length) {
     const b = blocks[i];
     const lines = b.lineStarts.length;
+    const rows = lines * step(i);
     if (b.type === "character") {
       const members: number[] = [];
       let j = i + 1;
@@ -151,12 +163,12 @@ export function paginate(blocks: LaidBlock[], format: ScreenplayFormat): Paginat
         const nextSpace = format.elements[next.type].spaceBefore;
         if (next.type === "character") {
           const dialogue = blocks[i + 2] && blocks[i + 2].type !== "character" ? blocks[i + 2].lineStarts.length : 0;
-          keep = nextSpace + next.lineStarts.length + Math.min(2, dialogue);
+          keep = nextSpace + next.lineStarts.length * step(i + 1) + Math.min(2, dialogue) * (dialogue > 0 ? step(i + 2) : 1);
         } else {
-          keep = nextSpace + Math.min(2, next.lineStarts.length);
+          keep = nextSpace + Math.min(2, next.lineStarts.length) * step(i + 1);
         }
       }
-      if (y > 0 && y + spaceBefore(i) + lines + keep > L) newPage(i, 0, false, null);
+      if (y > 0 && y + spaceBefore(i) + rows + keep > L) newPage(i, 0, false, null);
       skipSpace(i);
       for (let k = 0; k < lines; k++) putLine(i, k);
       i++;

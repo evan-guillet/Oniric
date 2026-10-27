@@ -1,3 +1,5 @@
+import type { FormatLanguage } from "./formats";
+
 /** The title page of the screenplay [EDT-06]. */
 export interface TitlePage {
   title: string;
@@ -86,8 +88,10 @@ export function resolveTitlePage(p: TitlePage, auto: TitleAuto | null, year = ne
   };
 }
 
-export function formatTitleDate(d: Date, language: "fr" | "en"): string {
-  return new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "long", year: "numeric" }).format(d);
+const LOCALES: Record<FormatLanguage, string> = { fr: "fr-FR", en: "en-US", de: "de-DE", es: "es-ES" };
+
+export function formatTitleDate(d: Date, language: FormatLanguage): string {
+  return new Intl.DateTimeFormat(LOCALES[language], { day: "numeric", month: "long", year: "numeric" }).format(d);
 }
 
 export function hasContent(p: TitlePage | null): p is TitlePage {

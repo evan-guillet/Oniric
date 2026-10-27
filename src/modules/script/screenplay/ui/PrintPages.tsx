@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { lineHeightIn, type ScreenplayFormat } from "../domain/formats";
+import { lineHeightIn, type FormatLanguage, type ScreenplayFormat } from "../domain/formats";
 import type { TitlePage } from "../domain/titlePage";
 import type { Pagination } from "../domain/types";
 
@@ -39,6 +39,8 @@ export const PrintPages = memo(function PrintPages({
   );
 });
 
+const WRITTEN_BY: Record<FormatLanguage, string> = { fr: "Écrit par", en: "Written by", de: "Geschrieben von", es: "Escrito por" };
+
 /**
  * Title in capitals a third of the way down, the subtitle and the authors under it; at the bottom, side by side,
  * the contact on the left and the version, date and mention on the right, each growing upwards from the margin.
@@ -73,7 +75,7 @@ export function PrintTitlePage({ page, format }: { page: TitlePage; format: Scre
   if (page.subtitle.trim()) row = subtitleRow + lines(page.subtitle);
   const authorsRow = row + 2;
   if (page.authors.trim()) row = authorsRow + 2 + lines(page.authors);
-  const by = format.language === "fr" ? "Écrit par" : "Written by";
+  const by = WRITTEN_BY[format.language];
   return (
     <section className="print-page title-page" style={{ width: `${format.page.width}in`, height: `${format.page.height}in` }}>
       {block({ top: third }, page.title, "center", true)}
