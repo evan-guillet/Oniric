@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Minus, Plus } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent } from "react";
 import { useLive } from "../../../../core/db/live";
 import { useProject } from "../../../project/ui/projectContext";
@@ -9,12 +10,15 @@ import { numberedParts, sceneLabel } from "../domain/outline";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline } from "../application/story";
 
 const ROW = 30;
-const RULER = 26;
+/** Room above the acts, for the outline of the one picked. */
+const HEAD_PAD = 6;
 const ACT_H = 30;
 const SEQ_H = 28;
 const BEAT_GAP = 10;
 const STRIP = 40;
-const GUTTER = 24;
+/** The zoom runs from the whole story in the window (1) to twelve times as wide. */
+const ZOOM_MAX = 12;
+const ZOOM_STEP = 1.2;
 /** The width of a scrollbar, as styles.css draws it. */
 const SCROLLBAR = 10;
 
@@ -80,6 +84,9 @@ export function TimelineView() {
   const [alone, setAlone] = useState<string | null>(null);
   const [only, setOnly] = useState<string | null>(null);
   const drag = useRef<{ x: number; left: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  // The point of the story under the pointer when the zoom changed, put back under it once laid out anew.
+  const anchor = useRef<{ id: string; frac: number; px: number } | null>(null);
 
   const characters = useMemo(() => {
     const count = new Map<string, number>();
@@ -108,30 +115,71 @@ export function TimelineView() {
   }, [story, scenes]);
 
   const pages = scenes.reduce((n, s) => n + s.eighths, 0) / 8;
-  // The largest scale at which the stretched timeline still fits the window; past the floor, it scrolls.
+  // The zoom sets the whole timeline's width: at 100 %, the window's, or what the narrowest scenes and the whole titles
+  // need when that is more. The scale is the largest that stays within it, and the scenes then widen to fill it exactly,
+  // so the last one ends on the edge.
   const layout = useMemo(() => {
     const lengths = new Map(scenes.map((s) => [s.id, s.eighths]));
-    const fits = room - GUTTER;
-    const total = (k: number) => [...stretch(lengths, outline, k).values()].reduce((a, b) => a + b, 0);
-    let perPage = 8;
-    if (room > 0 && total(8) < fits) {
-      let hi = Math.max(8, fits / Math.max(1, pages));
+    const sum = (w: Map<string, number>) => [...w.values()].reduce((a, b) => a + b, 0);
+    const total = (k: number) => sum(stretch(lengths, outline, k));
+    const least = 0.25;
+    const target = Math.max(room, total(least)) * zoom;
+    let perPage = room > 0 ? least : 40;
+    if (room > 0) {
+      let hi = Math.max(8, target / Math.max(1, pages));
+      for (let i = 0; i < 24 && total(hi) < target; i++) hi *= 2;
       for (let i = 0; i < 24; i++) {
         const mid = (perPage + hi) / 2;
-        if (total(mid) <= fits) perPage = mid;
+        if (total(mid) <= target) perPage = mid;
         else hi = mid;
       }
-    } else if (room === 0) perPage = 40;
+    }
     const w = stretch(lengths, outline, perPage);
+    const k = room > 0 ? Math.max(1, target / Math.max(1, sum(w))) : 1;
     let x = 0;
-    let page = 0;
     return scenes.map((s) => {
-      const item = { scene: s, x, w: w.get(s.id) ?? 6, page };
+      const item = { scene: s, x, w: (w.get(s.id) ?? 6) * k };
       x += item.w;
-      page += s.eighths / 8;
       return item;
     });
-  }, [scenes, outline, room, pages]);
+  }, [scenes, outline, room, pages, zoom]);
+
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    if (!a || !scroller) return;
+    anchor.current = null;
+    const l = layout.find((it) => it.scene.id === a.id);
+    if (l) scroller.scrollLeft = l.x + a.frac * l.w - a.px;
+  }, [layout, scroller]);
+
+  /** Zooms to `next`, keeping still the point `px` pixels into the tracks (their middle by default). */
+  const zoomTo = (next: number, px?: number) => {
+    const z = Math.min(ZOOM_MAX, Math.max(1, Math.round(next * 100) / 100));
+    if (z === zoom) return;
+    if (scroller && layout.length) {
+      const at = Math.min(scroller.clientWidth, Math.max(0, px ?? scroller.clientWidth / 2));
+      const x = scroller.scrollLeft + at;
+      const l = layout.find((it) => x < it.x + it.w) ?? layout[layout.length - 1];
+      anchor.current = { id: l.scene.id, frac: l.w > 0 ? Math.min(1, (x - l.x) / l.w) : 0, px: at };
+    }
+    setZoom(z);
+  };
+  const zoomRef = useRef({ zoomTo, zoom });
+  zoomRef.current = { zoomTo, zoom };
+  // Ctrl + wheel zooms sideways only, around the pointer, over the head as over the tracks.
+  const ready = story !== null;
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el || !ready) return;
+    const wheel = (e: WheelEvent) => {
+      if (!e.ctrlKey || !scroller) return;
+      e.preventDefault();
+      const { zoomTo, zoom } = zoomRef.current;
+      zoomTo(zoom * Math.exp(-e.deltaY * 0.002), e.clientX - scroller.getBoundingClientRect().left);
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [ready, scroller]);
 
   if (!story) return <div className="view pad muted">Chargement…</div>;
 
@@ -143,27 +191,19 @@ export function TimelineView() {
   };
   const acts = outline.flatMap((g) => (g.act ? [extent(g.act)] : [])).filter((a) => !!a);
   const seqs = outline.flatMap((g) => g.sequences.map(extent)).filter((s) => !!s);
-  const actTop = RULER;
+  const actTop = HEAD_PAD;
   const seqTop = actTop + (acts.length ? ACT_H : 0);
   const stripTop = seqTop + (seqs.length ? SEQ_H : 0) + BEAT_GAP;
   const headH = stripTop + STRIP + 12;
   const bodyH = ROW * characters.length + 12;
 
-  // A page mark falls inside the scene it belongs to, wherever the stretching has put that scene.
-  const pageX = (p: number) => {
-    const l = layout.find((it) => p < it.page + it.scene.eighths / 8) ?? layout[layout.length - 1];
-    if (!l) return 0;
-    const len = l.scene.eighths / 8;
-    return l.x + (len > 0 ? Math.min(1, (p - l.page) / len) : 0) * l.w;
-  };
   const beats = story.beats.filter((b) => b.scenes.length > 0);
-  const step = pages <= 12 ? 1 : pages <= 40 ? 5 : 10;
-  const ticks = Array.from({ length: Math.floor(pages / step) + 1 }, (_, i) => i * step);
   const actLines = acts.slice(1).map((a) => a.x);
   const color = (id: string) => story.meta.get(id)?.color ?? "var(--accent)";
   const shown = hover ? pos.get(hover.id)?.scene : undefined;
   const present = new Set(shown?.characters ?? []);
-  const svgW = Math.ceil(width + GUTTER);
+  // At the window's width, the tracks fill it to the pixel; wider, they scroll.
+  const svgW = room > 0 && width <= room + 0.5 ? room : Math.ceil(width);
   // A sideways scrollbar shortens the tracks: the names get as much room below, so both reach their last row together.
   const wide = svgW > room;
 
@@ -207,9 +247,6 @@ export function TimelineView() {
 
   const grid = (h: number) => (
     <>
-      {ticks.map((p) => (
-        <line key={`p${p}`} x1={pageX(p)} x2={pageX(p)} y1={0} y2={h} className="tl-grid" />
-      ))}
       {actLines.map((x) => (
         <line key={`a${x}`} x1={x} x2={x} y1={0} y2={h} className="tl-act-line" />
       ))}
@@ -227,11 +264,6 @@ export function TimelineView() {
         >
           <svg width={svgW} height={headH} aria-label="Chronologie des scènes">
             {grid(headH)}
-            {ticks.slice(1).map((p) => (
-              <text key={p} x={pageX(p) + 4} y={17} className="tl-tick">
-                p. {p}
-              </text>
-            ))}
             {[
               { parts: acts, top: actTop, h: ACT_H, kind: "act", inset: 9, rx: 5 },
               { parts: seqs, top: seqTop, h: SEQ_H, kind: "seq", inset: 8, rx: 4 },
@@ -289,7 +321,6 @@ export function TimelineView() {
           </svg>
         </div>
         <div className="tl-corner" style={{ width: label, height: headH }}>
-          <span style={{ top: 0, height: RULER }}>Pages</span>
           {acts.length > 0 && <span style={{ top: actTop, height: ACT_H }}>Actes</span>}
           {seqs.length > 0 && <span style={{ top: seqTop, height: SEQ_H }}>Séquences</span>}
           <span style={{ top: stripTop, height: STRIP }}>Scènes</span>
@@ -354,6 +385,17 @@ export function TimelineView() {
             </li>
           ))}
         </ul>
+        <div className="canvas-tools tl-tools" role="toolbar" aria-label="Zoom de la chronologie" style={{ right: label + SCROLLBAR + 16, bottom: 16 + (wide ? SCROLLBAR : 0) }}>
+          <button type="button" aria-label="Dézoomer" title="Dézoomer (Ctrl + molette)" disabled={zoom <= 1} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
+            <Minus aria-hidden="true" />
+          </button>
+          <button type="button" className="canvas-pct" title="Toute l'histoire dans la fenêtre" onClick={() => zoomTo(1)}>
+            {Math.round(zoom * 100)} %
+          </button>
+          <button type="button" aria-label="Zoomer" title="Zoomer (Ctrl + molette)" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
+            <Plus aria-hidden="true" />
+          </button>
+        </div>
       </div>
       <div aria-live="polite">
         {shown && hover && (
