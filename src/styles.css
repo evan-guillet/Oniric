@@ -1434,6 +1434,12 @@ kbd {
 .shell-nav-parts > section + section {
   border-top: 1px solid var(--line);
 }
+/* The dashboard, alone above the sections. */
+.shell-nav-parts > .nav-home {
+  margin: 0 -10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
 .shell-nav h2 {
   margin: 0;
   font: inherit;
@@ -1548,7 +1554,8 @@ kbd {
   padding-left: 8px;
   padding-right: 8px;
 }
-.shell-nav.rail .shell-nav-parts > section {
+.shell-nav.rail .shell-nav-parts > section,
+.shell-nav.rail .shell-nav-parts > .nav-home {
   margin: 0 -8px;
   padding: 6px 8px;
 }
@@ -7763,4 +7770,373 @@ button[aria-expanded="true"] .stats-chevron {
 .canvas-tools button:active:not(:disabled),
 .scene-list .scene-list-tools button:active:not(:disabled) {
   background: var(--control-press);
+}
+
+/* Dashboard: the sections of the Statistiques, the scene to resume first, then what waits and the writing side by side. */
+.dash-view {
+  --main-max: 1040px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.dash-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .dash-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+/* The scene to resume */
+.dash-resume {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 20px;
+}
+.dash-resume-text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-resume-where {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.dash-resume-where > span + span::before {
+  content: "·";
+  margin: 0 8px;
+  color: var(--line-strong);
+}
+.dash-resume-where .auto-num {
+  font-variant-numeric: tabular-nums;
+}
+.dash-resume-slug {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.dash-resume-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 72ch;
+  margin: 6px 0 0;
+  color: var(--ink-2);
+}
+.dash-resume-text > .dash-resume-excerpt:first-child {
+  margin: 0;
+}
+.dash-resume-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.dash-resume-page {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 760px) {
+  .dash-resume {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dash-resume-side {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* What waits: groups of rows, each opening what it names */
+.dash-list {
+  margin-top: 8px;
+}
+.dash-group + .dash-group {
+  border-top: 1px solid var(--line);
+}
+.dash-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.dash-group-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.dash-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+}
+.dash-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.dash-row:hover {
+  background: var(--sunken);
+}
+.dash-row:active {
+  background: var(--nav-on);
+}
+.dash-row:focus-visible,
+.dash-view-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.dash-row .stats-dot {
+  flex: none;
+}
+.dash-row-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-row-meta {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-row-go {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+.dash-dot-detected {
+  background: var(--accent);
+}
+.dash-more {
+  padding: 2px 8px 0 25px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.dash-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--ink-2);
+}
+
+/* Writing of the last four weeks */
+.dash-activity {
+  margin-top: 8px;
+  padding: 0 0 14px;
+  overflow: hidden;
+}
+.dash-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.dash-figures > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-right: 1px solid var(--line);
+  min-width: 0;
+}
+.dash-figures > div:last-child {
+  border-right: none;
+}
+.dash-figures dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-figures dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 1380px) {
+  .dash-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-figures > div:nth-child(2n) {
+    border-right: none;
+  }
+  .dash-figures > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+}
+.dash-chart {
+  position: relative;
+  margin: 0 16px;
+}
+.dash-chart svg {
+  display: block;
+  overflow: visible;
+}
+.dash-baseline {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.dash-hit {
+  fill: transparent;
+}
+.dash-bar {
+  fill: var(--line);
+  transition: fill 120ms ease-out;
+}
+.dash-col.has .dash-bar {
+  fill: var(--series-1);
+}
+.dash-col.on .dash-bar {
+  fill: var(--muted);
+}
+.dash-col.has.on .dash-bar {
+  fill: color-mix(in srgb, var(--series-1), var(--ink) 25%);
+}
+.dash-tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-col.today .dash-tick {
+  fill: var(--ink-2);
+  font-weight: 500;
+}
+.dash-chart-empty {
+  position: absolute;
+  inset: 0 0 22px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+  pointer-events: none;
+}
+.dash-readout {
+  min-height: 18px;
+  margin: 10px 16px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-readout strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+.dash-readout strong::first-letter {
+  text-transform: uppercase;
+}
+
+/* The other views, each with what it holds */
+.dash-views {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.dash-views li + li {
+  border-top: 1px solid var(--line);
+}
+.dash-view-row {
+  display: grid;
+  grid-template-columns: 16px 140px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.dash-view-row:hover {
+  background: var(--sunken);
+}
+.dash-view-row:active {
+  background: var(--nav-on);
+}
+.dash-view-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.dash-view-row:hover .dash-view-icon {
+  color: var(--ink);
+}
+.dash-view-label {
+  font-weight: 500;
+}
+.dash-view-detail {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-view-row .dash-steps {
+  width: 96px;
+  margin: 0;
+}
+.dash-view-row > .dash-row-go {
+  grid-column: 5;
+}
+.dash-bar,
+.dash-tick {
+  pointer-events: none;
 }

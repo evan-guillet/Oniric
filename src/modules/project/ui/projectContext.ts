@@ -5,6 +5,7 @@ import type { ToastMessage } from "../../../ui-kit/Toast";
 import type { ScriptSession } from "../../script/screenplay/application/scriptSession";
 
 export type ViewId =
+  | "dashboard"
   | "workshop"
   | "bible"
   | "script"

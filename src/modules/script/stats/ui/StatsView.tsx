@@ -87,7 +87,7 @@ export function StatsView() {
   );
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
+export function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div className="stats-tile">
       <span>{label}</span>
@@ -97,7 +97,7 @@ function Tile({ label, value }: { label: string; value: string }) {
 }
 
 /** How far the scenes are, by status: one bar in the colors of the states. */
-function Progress({ counts, total }: { counts: number[]; total: number }) {
+export function Progress({ counts, total }: { counts: number[]; total: number }) {
   const none = total - counts.reduce((a, b) => a + b, 0);
   const parts = [...SCENE_STATUSES.map((s, i) => ({ id: s.id, label: s.label, n: counts[i] })), { id: "none", label: "Sans statut", n: none }].filter((p) => p.n > 0);
   return (

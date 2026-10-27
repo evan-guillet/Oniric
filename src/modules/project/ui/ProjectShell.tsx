@@ -26,6 +26,7 @@ import {
   History,
   Images,
   Layers,
+  LayoutDashboard,
   LayoutPanelTop,
   ListChecks,
   LogOut,
@@ -83,6 +84,7 @@ import { StatsView } from "../../script/stats/ui/StatsView";
 import { StructureView } from "../../script/views/ui/StructureView";
 import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
+import { DashboardView, lastSceneKey } from "./DashboardView";
 import { LaterView } from "./LaterView";
 import {
   ProjectContext,
@@ -110,6 +112,9 @@ interface NavItem {
   /** Other words the palette finds it by. */
   keywords?: string;
 }
+
+/** The first page of a project, above the parts. */
+const DASHBOARD: NavItem = { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, keywords: "accueil aperçu reprendre avancement" };
 
 export const NAV: { part: string; label: string; items: NavItem[] }[] = [
   {
@@ -193,7 +198,7 @@ export function ProjectShell({
   onClose: () => void;
 }) {
   const session = useMemo(() => new ScriptSession(), []);
-  const [view, setView] = useState<ViewId>("script");
+  const [view, setView] = useState<ViewId>("dashboard");
   const [entry, setEntry] = useState<string | null>(null);
   const [bibleHome, setBibleHome] = useState(0);
   const [settings, setSettings] = useState(false);
@@ -340,6 +345,27 @@ export function ProjectShell({
   useBackupWatch(notify);
   useWritingJournal(session);
 
+  // The scene the cursor is in while writing: the dashboard opens it again.
+  useEffect(() => {
+    if (view !== "script") return;
+    const key = lastSceneKey(project.id);
+    let last: string | null = null;
+    const stop = session.subscribeState(() => {
+      const index = session.snapshot?.sceneIndex;
+      const id = index === undefined ? undefined : (session.editor?.doc.maybeChild(index)?.attrs.id as string | undefined);
+      if (!id || id === last) return;
+      last = id;
+      try {
+        localStorage.setItem(key, id);
+      } catch {
+        // Not remembered: the dashboard offers the first scene.
+      }
+    });
+    return () => {
+      stop();
+    };
+  }, [view, session, project.id]);
+
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
@@ -378,6 +404,15 @@ export function ProjectShell({
   }, []);
 
   const paletteItems = useMemo((): PaletteItem[] => {
+    const dashboard: PaletteItem = {
+      id: "view-dashboard",
+      group: "Vues",
+      label: DASHBOARD.label,
+      detail: "Projet",
+      icon: DASHBOARD.icon,
+      keywords: DASHBOARD.keywords,
+      run: () => goView("dashboard"),
+    };
     const views = NAV.filter((g) => !hiddenParts.includes(g.part)).flatMap(
       (g) =>
         g.items.map((item) => ({
@@ -399,6 +434,7 @@ export function ProjectShell({
       keywords?: string,
     ): PaletteItem => ({ id, group: "Actions", label, icon, run, keywords });
     return [
+      dashboard,
       ...views,
       action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
       action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
@@ -562,6 +598,11 @@ export function ProjectShell({
             onChange={(e) => void importBibleFile(e.target.files?.[0])}
           />
           <div className="shell-nav-parts">
+            <ul className="nav-home">
+              <li>
+                <NavButton item={DASHBOARD} on={view === "dashboard"} onClick={() => goView("dashboard")} />
+              </li>
+            </ul>
             {NAV.filter((g) => !hiddenParts.includes(g.part)).map((g) => {
               // A folded section still shows the view one is on.
               const open = railed || !foldedParts.includes(g.part);
@@ -646,6 +687,7 @@ export function ProjectShell({
             <div className="view-host" hidden={view !== "script"}>
               <ScreenplayWorkspace active={view === "script"} />
             </div>
+            {view === "dashboard" && <DashboardView />}
             {view === "workshop" && <WorkshopView />}
             {view === "bible" && (
               <BibleView selected={entry} onSelected={setEntry} home={bibleHome} />
@@ -904,7 +946,7 @@ function ViewHeader({
     ["bible_entry"],
   );
   const group = NAV.find((g) => g.items.some((i) => i.id === view));
-  const label = group?.items.find((i) => i.id === view)?.label ?? "Réglages";
+  const label = view === "dashboard" ? DASHBOARD.label : (group?.items.find((i) => i.id === view)?.label ?? "Réglages");
   const viewCount = SCENE_VIEWS.has(view)
     ? session.snapshot?.headings.length
     : view === "bible"
