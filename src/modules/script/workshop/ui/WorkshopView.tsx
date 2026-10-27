@@ -1,17 +1,18 @@
-import { ChevronRight } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
 import { formatMinutes } from "../../screenplay/domain/duration";
 import { setField, useFields } from "../application/workshop";
-import { STEPS, type StepStatus } from "../domain/steps";
+import { STEPS, type Step, type StepStatus } from "../domain/steps";
 import { Help, WorkshopContext, type Workshop } from "./fields";
 import { StepCharacters } from "./StepCharacters";
 import { StepDocuments } from "./StepDocuments";
 import { StepPreparation } from "./StepPreparation";
 import { StepStructure } from "./StepStructure";
 
+import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { Select } from "../../../../ui-kit/Select";
 const STATUS_LABEL: Record<StepStatus, string> = { empty: "À faire", started: "Commencée", done: "Terminée" };
 
@@ -74,44 +75,45 @@ export function WorkshopView() {
   if (!stored) return <p className="muted view-pad">Chargement…</p>;
   const current = STEPS.find((s) => s.n === step) ?? STEPS[0];
   const status = (n: number) => workshop.get<StepStatus>(`step.${n}.status`, "empty");
+  const ready = STEPS.filter((s) => s.ready);
+  const later = STEPS.filter((s) => !s.ready);
 
   return (
     <WorkshopContext.Provider value={workshop}>
       <div className="view split">
         <nav className="view-side steps" aria-label="Étapes de l'atelier">
-          <ol>
-            {STEPS.filter((s) => !hidden.includes(s.n)).map((s) => (
-              <li key={s.n}>
-                <button type="button" className={s.n === step ? "step-link on" : "step-link"} onClick={() => setStep(s.n)} aria-current={s.n === step ? "step" : undefined}>
-                  <span className={`step-dot ${status(s.n)}`} aria-hidden="true" />
-                  <span>
-                    {s.n}. {s.title}
-                    {!s.ready && <span className="muted tiny"> (v2.0)</span>}
-                  </span>
-                </button>
-              </li>
+          <div className="steps-head">
+            <p className="steps-count">
+              <strong>{ready.filter((s) => status(s.n) === "done").length}</strong> sur {ready.length} terminées
+            </p>
+            <CheckMenu
+              label="Affichage"
+              icon={Eye}
+              items={[
+                { id: "help", label: "Aide", hint: "Les explications sous chaque étape", checked: workshop.help },
+                ...STEPS.map((s) => ({ id: String(s.n), label: `${s.n}. ${s.title}`, checked: !hidden.includes(s.n) })),
+              ]}
+              onToggle={(id) => {
+                if (id === "help") workshop.set("ui.help", !workshop.help);
+                else {
+                  const n = Number(id);
+                  workshop.set("ui.hidden", hidden.includes(n) ? hidden.filter((x) => x !== n) : [...hidden, n]);
+                }
+              }}
+            />
+          </div>
+          <div className="steps-bar" aria-hidden="true">
+            {ready.map((s) => (
+              <span key={s.n} className={status(s.n)} />
             ))}
-          </ol>
-          <label className="choice small">
-            <input type="checkbox" checked={workshop.help} onChange={(e) => workshop.set("ui.help", e.target.checked)} />
-            Afficher l'aide
-          </label>
-          <details className="small">
-            <summary>
-              <ChevronRight aria-hidden="true" />
-              Étapes affichées
-            </summary>
-            {STEPS.map((s) => (
-              <label key={s.n} className="choice">
-                <input
-                  type="checkbox"
-                  checked={!hidden.includes(s.n)}
-                  onChange={(e) => workshop.set("ui.hidden", e.target.checked ? hidden.filter((x) => x !== s.n) : [...hidden, s.n])}
-                />
-                {s.n}. {s.title}
-              </label>
-            ))}
-          </details>
+          </div>
+          <StepList steps={ready.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
+          {later.some((s) => !hidden.includes(s.n)) && (
+            <>
+              <p className="steps-group">Version 2.0</p>
+              <StepList steps={later.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
+            </>
+          )}
         </nav>
         <main className="view-main workshop">
           <header className="step-head">
@@ -180,5 +182,27 @@ function StepLater({ n }: { n: number }) {
         )}
       </section>
     </div>
+  );
+}
+
+/** Steps as a thread: each number in its marker, the marker telling where the step stands. */
+function StepList({ steps, step, status, onPick }: { steps: Step[]; step: number; status: (n: number) => StepStatus; onPick: (n: number) => void }) {
+  return (
+    <ol className="step-list">
+      {steps.map((s) => {
+        const st = s.ready ? status(s.n) : "later";
+        return (
+          <li key={s.n} className={st}>
+            <button type="button" className={s.n === step ? "step-link on" : "step-link"} onClick={() => onPick(s.n)} aria-current={s.n === step ? "step" : undefined}>
+              <span className="step-mark" aria-hidden="true">
+                {st === "done" ? <Check /> : s.n}
+              </span>
+              <span className="step-title">{s.title}</span>
+              {st !== "later" && <span className="visually-hidden">, {STATUS_LABEL[st]}</span>}
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

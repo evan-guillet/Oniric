@@ -483,7 +483,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         if (q.scenes.includes(topScene)) {
           if (!g.act && !q.sequence) return null;
           const color = story?.acts.find((a) => a.id === g.act?.id)?.color;
-          return { act: g.act, sequence: q.sequence, color: color && /^#[0-9a-f]{3,8}$/i.test(color) ? color : null };
+          return {
+            act: g.act,
+            sequence: q.sequence,
+            color: color && /^#[0-9a-f]{3,8}$/i.test(color) ? color : null,
+            // Where the scene stands in its sequence.
+            at: q.scenes.indexOf(topScene),
+            count: q.scenes.length,
+          };
         }
     return null;
   }, [groups, topScene, story]);
@@ -519,7 +526,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             <NotesPanel editor={editorRef.current} />
           )}
           {panel === "info" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} onChange={editTitle} previewing={preview} onPreview={togglePreview} />
+            <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
           )}
         </aside>
 
@@ -554,15 +561,27 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                 }
               >
                 {pin.act && (
-                  <span className="story-pin-part">
+                  <span className="story-pin-part story-pin-act">
                     <span className="story-pin-num">{pin.act.num}</span>
-                    {pin.act.title && <span className="story-pin-title act">{pin.act.title}</span>}
+                    {pin.act.title && <span className="story-pin-title">{pin.act.title}</span>}
                   </span>
                 )}
                 {pin.sequence && (
-                  <span className="story-pin-part">
+                  <span className="story-pin-part story-pin-seq">
                     <span className="story-pin-num">{pin.sequence.num}</span>
                     {pin.sequence.title && <span className="story-pin-title">{pin.sequence.title}</span>}
+                    <span className="story-pin-steps">
+                      <span className="story-pin-count">
+                        Scène {pin.at + 1} sur {pin.count}
+                      </span>
+                      {pin.count <= 16 && pin.count > 1 && (
+                        <span className="story-pin-dots">
+                          {Array.from({ length: pin.count }, (_, i) => (
+                            <span key={i} className={i < pin.at ? "past" : i === pin.at ? "now" : undefined} />
+                          ))}
+                        </span>
+                      )}
+                    </span>
                   </span>
                 )}
               </div>
@@ -635,15 +654,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               ]}
               onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
             />
-            <span className="bar-sep" aria-hidden="true" />
-            <Segmented
-              label="Panneau"
-              options={PANEL_TABS}
-              value={panel === "scenes" ? null : panel}
-              onChange={togglePanel}
-              compact
-            />
-            <span className="bar-sep" aria-hidden="true" />
             <button
               type="button"
               className={preview ? "btn on" : "btn"}
@@ -654,6 +664,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               <BookOpen aria-hidden="true" />
               <span>Aperçu</span>
             </button>
+            <span className="bar-sep" aria-hidden="true" />
+            <Segmented
+              label="Panneau"
+              options={PANEL_TABS}
+              value={panel === "scenes" ? null : panel}
+              onChange={togglePanel}
+              compact
+            />
           </div>,
           headerActions,
         )}
@@ -674,13 +692,9 @@ interface TitleDraft {
 function TitlePagePanel({
   page,
   onChange,
-  previewing,
-  onPreview,
 }: {
   page: TitlePage;
   onChange: (p: TitlePage) => void;
-  previewing: boolean;
-  onPreview: () => void;
 }) {
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const [added, setAdded] = useState(-1);
@@ -709,15 +723,6 @@ function TitlePagePanel({
   const custom = page.mention === "custom";
   return (
     <div className="side-form form">
-      <div className="info-head">
-        <p>Imprimées sur la page de titre, en tête du PDF et des exports.</p>
-        {!previewing && (
-          <button type="button" className="btn ghost small" onClick={onPreview}>
-            <BookOpen aria-hidden="true" />
-            Voir l'aperçu
-          </button>
-        )}
-      </div>
       {field("title", "Titre")}
       {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
       <fieldset className="field">
@@ -892,16 +897,8 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
 
   return (
     <div className="notes-panel">
-      <div className="notes-head">
-        <button
-          type="button"
-          className="btn small primary"
-          onClick={() => void add()}
-        >
-          <Plus aria-hidden="true" />
-          Créer une note
-        </button>
-        {archivedCount > 0 && (
+      {archivedCount > 0 && (
+        <div className="notes-head">
           <button
             type="button"
             className={showArchives ? "btn small on" : "btn small"}
@@ -912,14 +909,21 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
             Archivées
             <span className="btn-count">{archivedCount}</span>
           </button>
-        )}
-      </div>
-      {shown.length === 0 && (
-        <p className="muted small">
-          Aucune note. Sélectionnez un passage puis « Créer une note ».
-        </p>
+        </div>
       )}
       <ul className="notes">
+        {/* The next note, as a card still to fill: it says where the note will go. */}
+        {!showArchives && (
+          <li>
+            <button type="button" className="note-new" onClick={() => void add()}>
+              <span className="note-new-label">
+                <Plus aria-hidden="true" />
+                Créer une note
+              </span>
+              <span className="note-new-hint">Sur le passage sélectionné, ou la ligne du curseur</span>
+            </button>
+          </li>
+        )}
         {shown.map((n) => {
           const span = spans.get(n.id);
           const isEditing = editing === n.id;

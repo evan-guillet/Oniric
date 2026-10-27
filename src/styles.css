@@ -2567,22 +2567,79 @@ h4 {
   text-underline-offset: 3px;
 }
 
-/* Workshop */
-.steps ol {
+/* Workshop: progress and display on top, then the steps as a numbered thread */
+.view-side.steps {
+  gap: 0;
+  padding: 14px 12px 20px;
+}
+.steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 2px;
+}
+.steps-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.steps-count strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.steps-bar {
+  display: flex;
+  gap: 3px;
+  margin: 10px 2px 14px;
+}
+.steps-bar span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background-color 200ms ease-out;
+}
+.steps-bar .started {
+  background: var(--warning-dot);
+}
+.steps-bar .done {
+  background: var(--ok-dot);
+}
+.step-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 1px;
+  gap: 2px;
+}
+.step-list li {
+  position: relative;
+}
+/* The thread, from one marker to the next; green once the step above it is done */
+.step-list li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: calc(50% + 11px);
+  bottom: calc(-50% + 9px);
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.step-list li.done:not(:last-child)::after {
+  background: var(--ok-line);
 }
 .step-link {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 32px;
+  min-height: 36px;
   text-align: left;
-  padding: 5px 10px;
+  padding: 6px 10px;
   border: none;
   border-radius: var(--radius);
   background: none;
@@ -2598,53 +2655,70 @@ h4 {
   color: var(--ink);
   font-weight: 500;
 }
-.step-dot {
+.step-title {
+  min-width: 0;
+}
+.step-mark {
+  position: relative;
+  z-index: 1;
   flex: none;
-  width: 12px;
-  height: 12px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1.5px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out;
 }
-.step-dot.started {
+.step-link.on .step-mark {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.started .step-mark {
   border-color: var(--warning-dot);
-  background: conic-gradient(var(--warning-dot) 0 50%, transparent 0);
+  background: var(--warning-soft);
+  color: var(--warning);
 }
-.step-dot.done {
+.done .step-mark {
   border-color: var(--ok-dot);
   background: var(--ok-dot);
-  box-shadow: inset 0 0 0 2px var(--panel);
+  color: var(--accent-ink);
 }
-.steps > .choice,
-.steps > details {
-  padding: 0 10px;
+.step-mark svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 3;
 }
-.steps > .choice {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+.later .step-mark {
+  border-style: dashed;
+  background: var(--panel);
 }
-.steps details summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  list-style: none;
-  cursor: pointer;
+.later .step-link:not(.on) {
   color: var(--muted);
-  padding: 4px 0;
 }
-.steps details summary::-webkit-details-marker {
-  display: none;
+.steps-group {
+  margin: 18px 12px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.steps details summary svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 160ms ease-out;
-}
-.steps details[open] summary svg {
-  transform: rotate(90deg);
-}
-.steps details .choice {
-  padding: 3px 0;
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .step-head {
   display: flex;
@@ -5697,8 +5771,53 @@ h4 {
 .notes-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 6px;
+}
+/* « Créer une note »: a card of the list's shape, its outline dashed until it is written */
+.note-new {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed var(--warning-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+.note-new-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--warning);
+}
+.note-new-label svg {
+  width: 15px;
+  height: 15px;
+}
+.note-new-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.note-new:hover {
+  border-style: solid;
+  background: var(--warning-soft);
+  color: var(--ink);
+}
+.note-new:active {
+  scale: 0.99;
+}
+.note-new:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .notes {
   list-style: none;
@@ -6281,36 +6400,114 @@ h4 {
   pointer-events: none;
 }
 /* Its top, set inline: level with the first scene, then 28px under the top of the desk */
+/* A thread in the act's colour, a node on it for the act (filled) and the sequence (ringed), and where the scene
+   stands in its sequence. */
 .story-pin {
+  --pin: var(--act, var(--muted));
   position: absolute;
   top: 28px;
   display: grid;
-  gap: 10px;
+  gap: 14px;
   width: max-content;
-  padding: 2px 12px 2px 0;
-  border-right: 2px solid color-mix(in srgb, var(--act, var(--line-strong)) 70%, var(--line-strong));
+  padding: 0 16px 0 0;
   text-align: right;
   font: 12px/1.35 var(--ui-font);
   animation: pin-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.story-pin::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 0;
+  right: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pin) 55%, transparent) 60%,
+    transparent
+  );
+}
 .story-pin-part {
+  position: relative;
   display: grid;
-  gap: 1px;
+  gap: 2px;
+}
+.story-pin-part::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: -17px;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--pin);
+  box-shadow: 0 0 0 3px var(--panel);
+}
+.story-pin-seq::after {
+  top: 4px;
+  right: -16px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--pin);
+  background: var(--panel);
 }
 .story-pin-num {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
 .story-pin-title {
   color: var(--ink-2);
   font-weight: 500;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
-.story-pin-title.act {
+.story-pin-act > .story-pin-title {
   color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.story-pin-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 7px;
+  margin-top: 4px;
+}
+.story-pin-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.story-pin-dots {
+  display: flex;
+  gap: 3px;
+}
+.story-pin-dots > span {
+  width: 5px;
+  height: 5px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  transition:
+    width 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 200ms ease;
+}
+.story-pin-dots > .past {
+  border-color: transparent;
+  background: var(--line-strong);
+}
+.story-pin-dots > .now {
+  width: 12px;
+  border-color: transparent;
+  background: var(--pin);
 }
 @keyframes pin-in {
   from {
@@ -6325,6 +6522,8 @@ h4 {
 }
 @media (prefers-reduced-motion: reduce) {
   .story-pin,
+  .story-pin-dots > span,
+  .note-new,
   .desk.display-cards .scene-gap,
   .desk.display-cards .scene-gap::after,
   .scene-gap-add {
@@ -6624,23 +6823,6 @@ h4 {
 .side-form {
   padding: 14px 16px 24px;
   gap: 12px;
-}
-/* What the information is for, and the way to see it printed. */
-.info-head {
-  display: grid;
-  justify-items: start;
-  gap: 6px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-}
-.info-head p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-.info-head .btn {
-  margin-left: -8px;
 }
 /* Authors, one field each; « Plus » adds one under the last */
 .name-list {
