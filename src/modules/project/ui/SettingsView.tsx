@@ -2,8 +2,11 @@ import {
   DatabaseBackup,
   LayoutGrid,
   Palette,
+  MoveVertical,
   Ruler,
+  ScrollText,
   Search,
+  StretchVertical,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -20,6 +23,12 @@ import {
   setThemePreference,
   type ThemePreference,
 } from "../../../core/theme";
+import {
+  getScrollPreference,
+  onScrollPreference,
+  setScrollPreference,
+  type ScrollPreference,
+} from "../../../core/scrollPreference";
 import { uuidv7 } from "../../../core/ids";
 import { Dialog, useBackdropClose } from "../../../ui-kit/Dialog";
 import { Labeled } from "../../../ui-kit/Form";
@@ -60,7 +69,7 @@ const sizeLabel = (b: number) =>
     ? `${(b / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo`
     : `${Math.max(1, Math.round(b / 1e3))} Ko`;
 
-type PageId = "appearance" | "backups" | "formats" | "parts";
+type PageId = "appearance" | "writing" | "backups" | "formats" | "parts";
 
 interface Page {
   id: PageId;
@@ -79,6 +88,12 @@ const GROUPS: { label: string; pages: Page[]; projectOnly?: boolean }[] = [
         label: "Apparence",
         icon: Palette,
         keywords: "thème clair sombre système couleurs",
+      },
+      {
+        id: "writing",
+        label: "Scénario",
+        icon: ScrollText,
+        keywords: "défilement molette cranté fluide scène",
       },
       {
         id: "backups",
@@ -221,6 +236,7 @@ export function SettingsDialog({
         </header>
         <div className="settings-pane-body settings">
           {page === "appearance" && <AppearanceSettings notify={notify} />}
+          {page === "writing" && <WritingSettings notify={notify} />}
           {page === "backups" && (
             <BackupSettings
               notify={notify}
@@ -278,6 +294,65 @@ function AppearanceSettings({ notify }: { notify: Notify }) {
                 <ThemeMiniature tone={o.id} />
               )}
             </span>
+            <span className="theme-option-text">
+              <strong>{o.label}</strong>
+              <span className="muted small">{o.help}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const SCROLLS: { id: ScrollPreference; label: string; help: string; icon: LucideIcon }[] = [
+  {
+    id: "snap",
+    label: "Cranté",
+    help: "Un cran de molette, une scène : son début vient se placer en haut",
+    icon: StretchVertical,
+  },
+  {
+    id: "smooth",
+    label: "Fluide",
+    help: "La molette défile librement, ligne à ligne",
+    icon: MoveVertical,
+  },
+];
+
+function WritingSettings({ notify }: { notify: Notify }) {
+  const [scroll, setScroll] = useState(getScrollPreference);
+  useEffect(() => onScrollPreference(setScroll), []);
+  const choose = (p: ScrollPreference) =>
+    setScrollPreference(p).catch((e) =>
+      notify({ text: describeError(e), tone: "error" }),
+    );
+  return (
+    <section className="settings-section">
+      <h3>Défilement</h3>
+      <p className="muted">
+        Comment la molette parcourt le scénario. Une scène plus haute que
+        l'écran se lit d'abord en entier, cran après cran. Le clavier et la
+        barre de défilement restent libres.
+      </p>
+      <div
+        className="theme-options scroll-options"
+        role="radiogroup"
+        aria-label="Défilement"
+      >
+        {SCROLLS.map((o) => (
+          <label
+            key={o.id}
+            className={`theme-option scroll-option${scroll === o.id ? " on" : ""}`}
+          >
+            <input
+              type="radio"
+              name="scroll"
+              value={o.id}
+              checked={scroll === o.id}
+              onChange={() => void choose(o.id)}
+            />
+            <o.icon className="scroll-option-icon" aria-hidden="true" />
             <span className="theme-option-text">
               <strong>{o.label}</strong>
               <span className="muted small">{o.help}</span>

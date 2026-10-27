@@ -215,7 +215,15 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
             {search ? (
               <EntrySections entries={found} categories={categories} presence={presence} onOpen={open} onCategory={(id) => go({ kind: "type", id })} />
             ) : (
-              <CategoryCards categories={categories} entries={entries} presence={presence} onOpen={(id) => go({ kind: "type", id })} onNewType={() => go({ kind: "types", startNew: true })} />
+              <CategoryCards
+                categories={categories}
+                entries={entries}
+                presence={presence}
+                onOpen={(id) => go({ kind: "type", id })}
+                onOpenEntry={open}
+                onCreate={setCreating}
+                onNewType={() => go({ kind: "types", startNew: true })}
+              />
             )}
           </>
         )}
@@ -324,70 +332,193 @@ function presenceLabel(type: string, p: Presence | undefined): string | null {
   return p.count === 1 ? "1 scène" : `${p.count} scènes`;
 }
 
-/** « Nyra Solenne, Tamsin Kreel, Oren Vasq et 11 autres »: the most present first where the screenplay counts them. */
-function namesPreview(type: string, entries: Entry[], presence: Map<string, Presence>): string {
+/** The entries of a type, the most present first where the screenplay counts them, else by name. */
+function ranked(type: string, entries: Entry[], presence: Map<string, Presence>): Entry[] {
   const counted = type === "character" || type === "location";
-  const names = [...entries]
-    .sort((a, b) => (counted ? (presence.get(b.id)?.count ?? 0) - (presence.get(a.id)?.count ?? 0) : 0) || byName(a, b))
-    .map((e) => e.name);
-  const head = names.slice(0, 3).join(", ");
-  const rest = names.length - 3;
-  return rest > 0 ? `${head} et ${rest} ${rest === 1 ? "autre" : "autres"}` : head;
+  return [...entries].sort((a, b) => (counted ? (presence.get(b.id)?.count ?? 0) - (presence.get(a.id)?.count ?? 0) : 0) || byName(a, b));
 }
 
-/** The home of the Bible: one card per category, with its count and its first names; the empty ones come last, quieter, then the card that makes a new type. */
+const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
+/** « il y a 5 minutes », « hier », « il y a 3 semaines ». */
+function since(iso: string): string {
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["second", 60],
+    ["minute", 60],
+    ["hour", 24],
+    ["day", 7],
+    ["week", 4.35],
+    ["month", 12],
+    ["year", Infinity],
+  ];
+  let v = (Date.parse(iso) - Date.now()) / 1000;
+  for (const [unit, size] of steps) {
+    if (Math.round(Math.abs(v)) < size) return unit === "second" ? "à l'instant" : relative.format(Math.round(v), unit);
+    v /= size;
+  }
+  return "";
+}
+
+/** An entry's picture, or the first letter of its name. */
+function Avatar({ entry }: { entry: Entry }) {
+  return (
+    <span className={entry.image ? "bible-avatar photo" : "bible-avatar"} aria-hidden="true">
+      {entry.image ? <MediaImage path={entry.image} alt="" /> : sortKey(entry.name).charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
+
+/** How many entries a category's card lists before « Voir les N ». */
+const LISTED = 4;
+
+/**
+ * The home of the Bible: the entries last changed, to pick up where one left off; then one card per category
+ * listing its most present entries, each opening at once; then the categories still empty, each a button that
+ * makes their first entry, and « Nouveau type ».
+ */
 function CategoryCards({
   categories,
   entries,
   presence,
   onOpen,
+  onOpenEntry,
+  onCreate,
   onNewType,
 }: {
   categories: Category[];
   entries: Entry[];
   presence: Map<string, Presence>;
   onOpen: (id: string) => void;
+  onOpenEntry: (id: string) => void;
+  onCreate: (type: string) => void;
   onNewType: () => void;
 }) {
-  const cards = categories
-    .map((c) => ({ ...c, entries: entries.filter((e) => e.type === c.id && !e.archivedAt) }))
-    .sort((a, b) => Number(b.entries.length > 0) - Number(a.entries.length > 0));
+  const cards = categories.map((c) => ({ ...c, entries: entries.filter((e) => e.type === c.id && !e.archivedAt) }));
+  const full = cards.filter((c) => c.entries.length > 0);
+  const empty = cards.filter((c) => c.entries.length === 0);
+  const categoryOf = new Map(categories.map((c) => [c.id, c]));
+  const recent = entries
+    .filter((e) => !e.archivedAt)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 4);
   return (
-    <ul className="type-cards">
-      {cards.map((c) => {
-        const Icon = iconOf(c.type);
-        const n = c.entries.length;
-        return (
-          <li key={c.id} className={n ? "type-card" : "type-card empty"}>
-            <span className="type-card-icon">
-              <Icon aria-hidden="true" />
-            </span>
-            <h2 className="type-card-head">
-              <button type="button" className="type-card-open" data-type={c.id} aria-describedby={`type-names-${c.id}`} onClick={() => onOpen(c.id)}>
-                {c.title}
-              </button>
-              {n > 0 && <span className="type-card-count">{n}</span>}
-            </h2>
-            <span id={`type-names-${c.id}`} className="type-card-names">
-              {n ? namesPreview(c.id, c.entries, presence) : "Aucune fiche"}
-            </span>
-          </li>
-        );
-      })}
-      <li className="type-card new">
-        <span className="type-card-icon">
-          <Plus aria-hidden="true" />
-        </span>
-        <h2 className="type-card-head">
-          <button type="button" className="type-card-open" aria-describedby="type-new-hint" onClick={onNewType}>
-            Nouveau type
-          </button>
+    <div className="bible-home">
+      {recent.length > 0 && (
+        <section className="bible-home-part" aria-labelledby="bible-recent">
+          <h2 id="bible-recent" className="bible-home-label">
+            Modifiées récemment
+          </h2>
+          <ul className="recent-entries">
+            {recent.map((e) => {
+              const c = categoryOf.get(e.type);
+              const Icon = iconOf(c?.type);
+              return (
+                <li key={e.id}>
+                  <button type="button" className="recent-entry" onClick={() => onOpenEntry(e.id)}>
+                    {e.image ? (
+                      <Avatar entry={e} />
+                    ) : (
+                      <span className="recent-entry-icon" aria-hidden="true">
+                        <Icon />
+                      </span>
+                    )}
+                    <span className="recent-entry-text">
+                      <span className="recent-entry-name">{e.name}</span>
+                      <span className="recent-entry-meta">
+                        <span>
+                          {c?.name ?? e.type} · {since(e.updatedAt)}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="bible-home-part" aria-labelledby="bible-types">
+        <h2 id="bible-types" className="bible-home-label">
+          Par type
         </h2>
-        <span id="type-new-hint" className="type-card-names">
-          Planètes, sortilèges, recettes… avec son icône et ses champs
-        </span>
-      </li>
-    </ul>
+        <ul className="type-cards">
+          {full.map((c) => {
+            const Icon = iconOf(c.type);
+            const n = c.entries.length;
+            const counted = c.id === "character" || c.id === "location";
+            const listed = ranked(c.id, c.entries, presence).slice(0, LISTED);
+            // Pictures only where some entry has one: letters alone would read as bullets.
+            const pictured = listed.some((e) => e.image);
+            return (
+              <li key={c.id} className="type-card">
+                <div className="type-card-top">
+                  <span className="type-card-icon">
+                    <Icon aria-hidden="true" />
+                  </span>
+                  <h3 className="type-card-head">
+                    <button type="button" className="type-card-open" data-type={c.id} onClick={() => onOpen(c.id)}>
+                      {c.title}
+                    </button>
+                  </h3>
+                  <span className="type-card-count">{n}</span>
+                </div>
+                <ul className="type-card-entries">
+                  {listed.map((e) => {
+                      const k = presence.get(e.id)?.count ?? 0;
+                      return (
+                        <li key={e.id}>
+                          <button type="button" className="type-card-entry" onClick={() => onOpenEntry(e.id)}>
+                            {pictured && <Avatar entry={e} />}
+                            <span className="type-card-entry-name">{e.name}</span>
+                            {counted && (
+                              <span className="type-card-entry-where" title={k === 1 ? "1 scène" : `${k} scènes`}>
+                                {k} sc.
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                </ul>
+                {n > LISTED && (
+                  <button type="button" className="type-card-more" onClick={() => onOpen(c.id)}>
+                    Voir les {n}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="bible-home-part" aria-labelledby={empty.length > 0 ? "bible-empty" : undefined}>
+        {empty.length > 0 && (
+          <h2 id="bible-empty" className="bible-home-label">
+            Sans fiche encore
+          </h2>
+        )}
+        <ul className="type-pills">
+          {empty.map((c) => {
+            const Icon = iconOf(c.type);
+            return (
+              <li key={c.id}>
+                <button type="button" className="type-pill" title={`Créer une première fiche : ${c.name}`} onClick={() => onCreate(c.id)}>
+                  <Icon aria-hidden="true" />
+                  {c.title}
+                  <Plus className="type-pill-add" aria-hidden="true" />
+                </button>
+              </li>
+            );
+          })}
+          <li>
+            <button type="button" className="type-pill new" onClick={onNewType}>
+              <Plus aria-hidden="true" />
+              Nouveau type
+            </button>
+          </li>
+        </ul>
+      </section>
+    </div>
   );
 }
 
