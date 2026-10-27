@@ -266,7 +266,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
         {current && (
           <>
             <div className="bible-bar">
-              <button type="button" className="btn ghost" onClick={close}>
+              <button type="button" className="btn text" onClick={close}>
                 <ArrowLeft aria-hidden="true" />
                 Retour
               </button>
@@ -296,7 +296,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
         {browsing && view.kind === "type" && (
           <>
             <div className="bible-bar">
-              <button type="button" className="btn ghost" onClick={() => go({ kind: "home" })}>
+              <button type="button" className="btn text" onClick={() => go({ kind: "home" })}>
                 <ArrowLeft aria-hidden="true" />
                 Retour
               </button>

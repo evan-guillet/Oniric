@@ -15,6 +15,9 @@
     "noRecent": "Aucun projet pour l'instant. Créez-en un pour commencer à écrire.",
     "unavailable": "introuvable (dossier déplacé ou supprimé)",
     "forget": "Retirer de la liste",
+    "forgetAsk": "Retirer « {{title}} » des projets récents ?",
+    "forgetText": "Le projet reste sur le disque ; « Ouvrir un projet… » le retrouve.",
+    "forgetConfirm": "Retirer",
     "openedAt": "ouvert le {{date}}",
     "openDialogTitle": "Ouvrir un projet Oniric",
     "projectFile": "Projet Oniric"

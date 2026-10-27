@@ -21,7 +21,7 @@ import {
   type ThemePreference,
 } from "../../../core/theme";
 import { uuidv7 } from "../../../core/ids";
-import { Dialog, useBackdropClose } from "../../../ui-kit/Dialog";
+import { confirmRemoval, Dialog, useBackdropClose, useChoice } from "../../../ui-kit/Dialog";
 import { Labeled } from "../../../ui-kit/Form";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import {
@@ -526,6 +526,7 @@ const inch = (c: number) => c / CM;
 
 function FormatSettings({ notify }: { notify: Notify }) {
   const { t } = useTranslation();
+  const [choice, ask] = useChoice();
   const [library, setLibrary] = useState<ScreenplayFormat[] | null>(null);
   const [editing, setEditing] = useState<ScreenplayFormat | null>(null);
   useEffect(() => {
@@ -594,13 +595,17 @@ function FormatSettings({ notify }: { notify: Notify }) {
             <button
               type="button"
               className="btn ghost small"
-              onClick={() => void persist(library.filter((x) => x.id !== f.id))}
+              onClick={async () => {
+                if (await confirmRemoval(ask, { title: `Supprimer le format « ${f.name} » ?`, text: "Il quitte la liste des formats de scénario." }))
+                  await persist(library.filter((x) => x.id !== f.id));
+              }}
             >
               Supprimer
             </button>
           </li>
         ))}
       </ul>
+      {choice}
       {editing && (
         <FormatEditor
           format={editing}

@@ -6,6 +6,7 @@ import { commands, type RecentProject, type StartupReport } from "../../../bindi
 import { unwrap } from "../../../core/db/client";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import { projectDirOf } from "../application/projects";
+import { confirmRemoval, useChoice } from "../../../ui-kit/Dialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 import { SettingsDialog } from "./SettingsView";
 
@@ -27,6 +28,7 @@ export function Home({
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [creating, setCreating] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [choice, ask] = useChoice();
 
   const refresh = async () => setRecent(unwrap(await commands.recentList()));
   useEffect(() => {
@@ -38,7 +40,8 @@ export function Home({
     if (typeof file === "string") onOpen(projectDirOf(file));
   };
 
-  const forget = async (path: string) => {
+  const forget = async (path: string, title: string) => {
+    if (!(await confirmRemoval(ask, { title: t("home.forgetAsk", { title }), text: t("home.forgetText"), label: t("home.forgetConfirm") }))) return;
     unwrap(await commands.recentForget(path));
     await refresh();
   };
@@ -87,7 +90,7 @@ export function Home({
                   <span className="recent-path">{r.available ? r.path : `${r.path} — ${t("home.unavailable")}`}</span>
                   <span className="recent-date">{t("home.openedAt", { date: dateFormat.format(new Date(r.openedAt)) })}</span>
                 </button>
-                <button type="button" className="btn ghost icon-only recent-forget" aria-label={`${t("home.forget")} : ${r.title}`} title={t("home.forget")} onClick={() => void forget(r.path)}>
+                <button type="button" className="btn ghost icon-only recent-forget" aria-label={`${t("home.forget")} : ${r.title}`} title={t("home.forget")} onClick={() => void forget(r.path, r.title)}>
                   <X aria-hidden="true" />
                 </button>
               </li>
@@ -96,6 +99,7 @@ export function Home({
         )}
       </section>
 
+      {choice}
       <footer className="home-foot">
         <span className="muted">
           {startup && t("app.version", { version: startup.version })}

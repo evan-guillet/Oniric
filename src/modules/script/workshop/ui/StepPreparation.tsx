@@ -1,9 +1,11 @@
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { uuidv7 } from "../../../../core/ids";
+import { confirmRemoval } from "../../../../ui-kit/Dialog";
 import { Chips, TagInput } from "../../../../ui-kit/Form";
 import { wordCount } from "../../../../ui-kit/RichText";
 import { GENRE_CODES, GENRES, TONES } from "../domain/steps";
+import { useProject } from "../../../project/ui/projectContext";
 import { Help, useWorkshop, WText } from "./fields";
 
 interface Idea {
@@ -62,6 +64,7 @@ function ToneNotches({ left, right, value, onChange }: { left: string; right: st
 /** Step 1: idea, premise, theme, genre, tone, genre codes, references (specification, 5.1). */
 export function StepPreparation() {
   const w = useWorkshop();
+  const { ask } = useProject();
   const ideas = w.get<Idea[]>("prep.ideas", []);
   const retained = w.get<string>("prep.idea_retained", "");
   const genres = w.get<string[]>("prep.genres", []);
@@ -92,7 +95,11 @@ export function StepPreparation() {
                 <span>{idea.text}</span>
               </label>
               {idea.id === retained && <span className="badge">retenue</span>}
-              <button type="button" className="btn ghost small" aria-label="Retirer l'idée" onClick={() => w.set("prep.ideas", ideas.filter((x) => x.id !== idea.id))}>
+              <button type="button" className="btn ghost small" aria-label="Retirer l'idée"
+                onClick={async () => {
+                  if (await confirmRemoval(ask, { title: "Retirer cette idée ?", text: `« ${idea.text} »`, label: "Retirer" })) w.set("prep.ideas", ideas.filter((x) => x.id !== idea.id));
+                }}
+              >
                 <X aria-hidden="true" />
               </button>
             </li>
@@ -191,7 +198,14 @@ export function StepPreparation() {
                   />
                 </td>
                 <td>
-                  <button type="button" className="btn ghost small" aria-label="Retirer" onClick={() => w.set("prep.references", refs.filter((_, k) => k !== i))}>
+                  <button type="button" className="btn ghost small" aria-label="Retirer"
+                    onClick={async () => {
+                      const filled = r.title.trim() || r.note.trim();
+                      if (filled && !(await confirmRemoval(ask, { title: `Retirer ${r.title.trim() ? `« ${r.title.trim()} »` : "cette référence"} ?`, text: "Elle quitte vos références, avec ce que vous y prenez.", label: "Retirer" })))
+                        return;
+                      w.set("prep.references", refs.filter((x) => x.id !== r.id));
+                    }}
+                  >
                     <X aria-hidden="true" />
                   </button>
                 </td>

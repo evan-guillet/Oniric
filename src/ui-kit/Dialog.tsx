@@ -94,6 +94,14 @@ export interface ChoiceRequest {
   cancel?: string;
 }
 
+/** Every deletion goes through here: a dialog that names what goes, resolving true once the red button is pressed. */
+export async function confirmRemoval(
+  ask: (r: ChoiceRequest) => Promise<string | null>,
+  { title, text, label = "Supprimer" }: { title: string; text: ReactNode; label?: string },
+) {
+  return (await ask({ title, text: typeof text === "string" ? <p>{text}</p> : text, cancel: "Annuler", choices: [{ label, value: "y", danger: true }] })) === "y";
+}
+
 /** `ask({...})` shows a dialog and resolves with the chosen value, or null when cancelled. */
 export function useChoice(): [ReactNode, (r: ChoiceRequest) => Promise<string | null>] {
   const [request, setRequest] = useState<(ChoiceRequest & { resolve: (v: string | null) => void }) | null>(null);

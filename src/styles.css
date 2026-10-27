@@ -283,6 +283,30 @@ svg.lucide {
 .btn.ghost:hover:not(:disabled) svg {
   color: var(--ink);
 }
+/* A text button: no box at rest nor under the pointer; the label brightens and is underlined. */
+.btn.text,
+.btn.small.text {
+  padding: 0;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+.btn.text svg {
+  color: var(--ink-2);
+}
+.btn.text:hover:not(:disabled),
+.btn.text:active:not(:disabled) {
+  border-color: transparent;
+  background: none;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.btn.text:hover:not(:disabled) svg {
+  color: var(--ink);
+}
 .btn.danger.ghost {
   color: var(--danger);
 }
@@ -3065,9 +3089,6 @@ h4 {
   gap: 12px;
   margin-bottom: 20px;
 }
-.bible-bar > .btn.ghost:first-child {
-  margin-left: -12px;
-}
 .bible-bar-tools {
   display: flex;
   align-items: center;
@@ -3816,11 +3837,6 @@ h4 {
 /* An empty Notes or Galerie is only this button. */
 .entry-fold {
   justify-self: start;
-  margin-left: -10px;
-  color: var(--ink-2);
-}
-.entry-fold svg {
-  color: var(--ink-2);
 }
 .entry-saved {
   display: inline-flex;
@@ -3925,7 +3941,6 @@ h4 {
 }
 .entry-refs-more {
   justify-self: start;
-  margin-left: -10px;
 }
 .ref-list li {
   padding: 3px 0;

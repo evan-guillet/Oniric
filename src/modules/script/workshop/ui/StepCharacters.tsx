@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { useDebounced } from "../../../../ui-kit/Form";
+import { confirmRemoval } from "../../../../ui-kit/Dialog";
 import { useProject } from "../../../project/ui/projectContext";
 import { addRelation, createEntry, deleteRelation, loadEntries, loadRelations, setEntryField, type Entry } from "../../bible/application/bible";
 import { loadStory, STORY_TABLES } from "../../views/application/story";
@@ -18,7 +19,7 @@ interface Secondary {
 /** Step 2: protagonist, opposition, secondary characters, relationship map [PER-01 to PER-05]. */
 export function StepCharacters() {
   const w = useWorkshop();
-  const { notify, openEntry, prompt } = useProject();
+  const { notify, ask, openEntry, prompt } = useProject();
   const entries = useLive(loadEntries, ["bible_entry"]) ?? [];
   const characters = entries.filter((e) => e.type === "character" && !e.archivedAt);
   const protagonist = characters.find((c) => c.id === w.get("char.protagonist", ""));
@@ -110,7 +111,12 @@ export function StepCharacters() {
                     </Select>
                   </td>
                   <td>
-                    <button type="button" className="btn ghost small" aria-label="Retirer" onClick={() => w.set("char.secondary", secondary.filter((_, k) => k !== i))}>
+                    <button type="button" className="btn ghost small" aria-label="Retirer"
+                      onClick={async () => {
+                        if (await confirmRemoval(ask, { title: `Retirer ${e?.name ? `« ${e.name} »` : "ce personnage"} des personnages secondaires ?`, text: "Sa fiche reste dans la Bible.", label: "Retirer" }))
+                          w.set("char.secondary", secondary.filter((x) => x !== s));
+                      }}
+                    >
                       <X aria-hidden="true" />
                     </button>
                   </td>
@@ -192,7 +198,7 @@ const KIND_COLORS: Record<string, string> = {
 };
 
 function RelationMap({ characters }: { characters: Entry[] }) {
-  const { notify } = useProject();
+  const { notify, ask } = useProject();
   const relations = useLive(loadRelations, ["relation"]) ?? [];
   const story = useLive(loadStory, [...STORY_TABLES]);
   const [act, setAct] = useState<string>("");
@@ -261,7 +267,12 @@ function RelationMap({ characters }: { characters: Entry[] }) {
               <span className="dot" style={{ background: KIND_COLORS[r.kind] }} /> {name(r.fromId)} — {r.kind.toLowerCase()} — {name(r.toId)}
               {r.note && <span className="muted small"> · {r.note}</span>}
               {r.actId && <span className="muted small"> · dès {acts.find((a) => a.id === r.actId)?.title}</span>}
-              <button type="button" className="btn ghost tiny" aria-label="Retirer la relation" onClick={() => void deleteRelation(r.id)}>
+              <button type="button" className="btn ghost tiny" aria-label="Retirer la relation"
+                onClick={async () => {
+                  if (await confirmRemoval(ask, { title: "Retirer la relation ?", text: `${name(r.fromId)} — ${r.kind.toLowerCase()} — ${name(r.toId)}`, label: "Retirer" }))
+                    await deleteRelation(r.id);
+                }}
+              >
                 <X aria-hidden="true" />
               </button>
             </li>

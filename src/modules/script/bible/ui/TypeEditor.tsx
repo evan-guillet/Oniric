@@ -6,7 +6,7 @@ import { deleteType, saveType } from "../application/bible";
 import { FIELD_KINDS, fieldKey, pluralize, type EntryType, type FieldDef, type FieldKind } from "../domain/types";
 import { TYPE_ICONS } from "./typeIcons";
 
-import { Dialog } from "../../../../ui-kit/Dialog";
+import { confirmRemoval, Dialog } from "../../../../ui-kit/Dialog";
 import { Select } from "../../../../ui-kit/Select";
 
 /**
@@ -137,7 +137,12 @@ export function TypeDialog({ type, types, onClose }: { type?: EntryType; types: 
                   <button type="button" className="btn ghost small" disabled={i === fields.length - 1} onClick={() => move(i, 1)} aria-label="Descendre">
                     <ArrowDown aria-hidden="true" />
                   </button>
-                  <button type="button" className="btn ghost small" onClick={() => setFields(fields.filter((_, k) => k !== i))} aria-label="Retirer le champ">
+                  <button type="button" className="btn ghost small" onClick={async () => {
+                      if (!f.label.trim() || (await confirmRemoval(ask, { title: `Retirer le champ « ${f.label.trim()} » ?`, text: "Il disparaît des fiches de ce type une fois le type enregistré.", label: "Retirer" })))
+                        setFields((cur) => cur.filter((x) => x !== f));
+                    }}
+                    aria-label="Retirer le champ"
+                  >
                     <X aria-hidden="true" />
                   </button>
                 </td>

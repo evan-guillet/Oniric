@@ -19,7 +19,7 @@ import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
-import { useChoice } from "../../../../ui-kit/Dialog";
+import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
 import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
@@ -697,6 +697,7 @@ function TitlePagePanel({
   page: TitlePage;
   onChange: (p: TitlePage) => void;
 }) {
+  const { ask } = useProject();
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const [added, setAdded] = useState(-1);
   const names = page.authors.split("\n");
@@ -744,7 +745,10 @@ function TitlePagePanel({
                   className="btn ghost small icon-only"
                   aria-label={`Retirer ${n.trim() || `l'auteur ${i + 1}`}`}
                   title="Retirer"
-                  onClick={() => setNames(names.filter((_m, j) => j !== i))}
+                  onClick={async () => {
+                    if (n.trim() && !(await confirmRemoval(ask, { title: `Retirer « ${n.trim()} » des auteurs ?`, text: "Son nom quitte la page de titre.", label: "Retirer" }))) return;
+                    setNames(names.filter((_m, j) => j !== i));
+                  }}
                 >
                   <X aria-hidden="true" />
                 </button>
@@ -821,7 +825,7 @@ async function loadNotes(): Promise<NoteRow[]> {
 
 /** Margin notes anchored to a passage of the screenplay [EDT-07]. */
 function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
-  const { session, notify } = useProject();
+  const { session, notify, ask } = useProject();
   const notes = useLive(loadNotes, ["note"]);
   const [archives, setArchives] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -937,7 +941,8 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
                 label: "Supprimer",
                 icon: Trash2,
                 danger: true,
-                onClick: () => {
+                onClick: async () => {
+                  if (!(await confirmRemoval(ask, { title: "Supprimer la note ?", text: "Elle quitte le scénario et la liste des notes." }))) return;
                   editor?.removeMarkById("note", n.id);
                   void update(n.id, { deleted_at: nowIso() });
                 },

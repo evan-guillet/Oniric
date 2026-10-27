@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useLive } from "../../../../core/db/live";
 import type { EntryStatus } from "../../../../core/db/schema";
-import { Dialog } from "../../../../ui-kit/Dialog";
+import { confirmRemoval, Dialog } from "../../../../ui-kit/Dialog";
 import { Labeled, TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { RichText, richSchema } from "../../../../ui-kit/RichText";
@@ -26,7 +26,7 @@ const SAVE_LABEL: Record<Exclude<SaveState, "idle">, string> = { pending: "Modif
 
 /** Edits one entry; changes are saved a moment after the last one [BIB-01]. */
 export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: Entry[]; types: EntryType[] }) {
-  const { notify, openScene, openEntry, session } = useProject();
+  const { notify, ask, openScene, openEntry, session } = useProject();
   const [draft, setDraft] = useState(entry);
   const saved = useRef(entry);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,9 +105,10 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
     }
   };
 
-  // No confirmation: the notice offers to bring the entry back, with the edits saved just before.
+  // Confirmed first; the notice still offers to bring the entry back, with the edits saved just before.
   const remove = async () => {
     const { id, name } = latest.current;
+    if (!(await confirmRemoval(ask, { title: `Supprimer « ${name || "Sans nom"} » ?`, text: "La fiche et tout ce qu'elle contient quittent la Bible." }))) return;
     try {
       await flush();
       await deleteEntry(id);
@@ -185,7 +186,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
               <textarea rows={3} value={draft.notes} onChange={(e) => update({ notes: e.target.value })} onBlur={() => void flush()} autoFocus={!draft.notes} />
             </Labeled>
           ) : (
-            <button type="button" className="btn ghost small entry-fold" onClick={() => setNotesOpen(true)}>
+            <button type="button" className="btn small text entry-fold" onClick={() => setNotesOpen(true)}>
               <Plus aria-hidden="true" />
               Notes
             </button>
@@ -211,7 +212,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                   ))}
                 </ul>
                 {seen.size > SCENES_SHOWN && (
-                  <button type="button" className="btn ghost small entry-refs-more" aria-expanded={allScenes} onClick={() => setAllScenes(!allScenes)}>
+                  <button type="button" className="btn small text entry-refs-more" aria-expanded={allScenes} onClick={() => setAllScenes(!allScenes)}>
                     {allScenes ? "Voir moins" : `Voir les ${seen.size} scènes`}
                   </button>
                 )}
@@ -245,7 +246,14 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                 {draft.gallery.map((p) => (
                   <figure key={p}>
                     <MediaImage path={p} alt="" />
-                    <button type="button" className="btn ghost small" onClick={() => update({ gallery: draft.gallery.filter((x) => x !== p) })}>
+                    <button
+                      type="button"
+                      className="btn ghost small"
+                      onClick={async () => {
+                        if (await confirmRemoval(ask, { title: "Retirer cette image ?", text: "Elle quitte la galerie de la fiche.", label: "Retirer" }))
+                          update({ gallery: latest.current.gallery.filter((x) => x !== p) });
+                      }}
+                    >
                       Retirer
                     </button>
                   </figure>
@@ -256,7 +264,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
               </div>
             </div>
           ) : (
-            <button type="button" className="btn ghost small entry-fold" onClick={() => void addImages()}>
+            <button type="button" className="btn small text entry-fold" onClick={() => void addImages()}>
               <Plus aria-hidden="true" />
               Galerie
             </button>
@@ -368,7 +376,7 @@ function FieldInput({
 
 /** The image frame is the button: empty it invites to choose an image, filled it offers to change or remove it. */
 function ImageFrame({ path, onChange }: { path: string | null; onChange: (p: string | null) => void }) {
-  const { notify } = useProject();
+  const { notify, ask } = useProject();
   return (
     <div className={path ? "entry-image filled" : "entry-image"}>
       <button
@@ -391,7 +399,11 @@ function ImageFrame({ path, onChange }: { path: string | null; onChange: (p: str
         </span>
       </button>
       {path && (
-        <button type="button" className="entry-image-remove" aria-label="Retirer l'image" title="Retirer l'image" onClick={() => onChange(null)}>
+        <button type="button" className="entry-image-remove" aria-label="Retirer l'image" title="Retirer l'image"
+          onClick={async () => {
+            if (await confirmRemoval(ask, { title: "Retirer l'image ?", text: "La fiche n'aura plus d'image.", label: "Retirer" })) onChange(null);
+          }}
+        >
           <X aria-hidden="true" />
         </button>
       )}
