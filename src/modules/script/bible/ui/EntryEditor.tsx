@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Copy, History, ImagePlus, Plus, X } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, History, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { useLive } from "../../../../core/db/live";
@@ -146,7 +146,8 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
             {/* The occasional actions wait in « ⋯ »; only Supprimer, which can be undone, stays in view. */}
             <span className="entry-actions">
               {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{SAVE_LABEL[saveState]}</span>}
-              <button type="button" className="btn ghost small danger" onClick={() => void remove()}>
+              <button type="button" className="btn small danger filled" onClick={() => void remove()}>
+                <Trash2 aria-hidden="true" />
                 Supprimer
               </button>
               <MoreMenu

@@ -276,10 +276,39 @@ svg.lucide {
   box-shadow: none;
 }
 .btn.ghost:hover:not(:disabled) {
-  background: var(--hover);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--ink) 11%, transparent);
+  color: var(--ink);
+}
+.btn.ghost:hover:not(:disabled) svg {
+  color: var(--ink);
 }
 .btn.danger.ghost {
   color: var(--danger);
+}
+.btn.danger.ghost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.btn.danger svg,
+.btn.danger:hover:not(:disabled) svg {
+  color: currentColor;
+}
+/* A destructive action that stays in view: red at rest, solid red under the pointer. */
+.btn.danger.filled {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+  color: var(--danger);
+  box-shadow: none;
+}
+.btn.danger.filled:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-dot), #000 18%);
+  border-color: color-mix(in srgb, var(--danger-dot), #000 18%);
+  color: #fff;
+}
+.btn.danger.filled:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-dot), #000 30%);
+  border-color: color-mix(in srgb, var(--danger-dot), #000 30%);
 }
 .btn.on,
 .btn.on:hover:not(:disabled) {
@@ -3036,6 +3065,9 @@ h4 {
   gap: 12px;
   margin-bottom: 20px;
 }
+.bible-bar > .btn.ghost:first-child {
+  margin-left: -12px;
+}
 .bible-bar-tools {
   display: flex;
   align-items: center;
@@ -3784,7 +3816,10 @@ h4 {
 /* An empty Notes or Galerie is only this button. */
 .entry-fold {
   justify-self: start;
-  margin-left: -8px;
+  margin-left: -10px;
+  color: var(--ink-2);
+}
+.entry-fold svg {
   color: var(--ink-2);
 }
 .entry-saved {
@@ -3890,7 +3925,7 @@ h4 {
 }
 .entry-refs-more {
   justify-self: start;
-  margin-left: -8px;
+  margin-left: -10px;
 }
 .ref-list li {
   padding: 3px 0;
