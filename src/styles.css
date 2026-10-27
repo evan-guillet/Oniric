@@ -51,6 +51,14 @@
   --radius-lg: 10px;
   --control-h: 32px;
   --control-r: 8px;
+  /* The states every control shares. A boxed one (button, list, menu button) takes a firmer border under the pointer
+     and sinks pressed; a boxless one (ghost, icon, « ⋯ ») is highlighted, a shade deeper pressed. */
+  --control-line-hover: color-mix(in srgb, var(--line-strong), var(--muted) 30%);
+  --control-hover: color-mix(in srgb, var(--ink) 11%, transparent);
+  --control-press: color-mix(in srgb, var(--ink) 16%, transparent);
+  --accent-press: color-mix(in srgb, var(--accent-hover), #000 14%);
+  --danger-solid: color-mix(in srgb, var(--danger-dot), #000 18%);
+  --danger-press: color-mix(in srgb, var(--danger-dot), #000 32%);
   --seg-track: #f0f0f3;
   --seg-on: #ffffff;
   --shadow-sm: 0 1px 2px rgba(16, 18, 27, 0.05);
@@ -224,7 +232,7 @@ svg.lucide {
   transition: color 120ms ease-out;
 }
 .btn:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--line-strong), var(--muted) 30%);
+  border-color: var(--control-line-hover);
   background: var(--panel-2);
   color: var(--ink);
 }
@@ -262,13 +270,28 @@ svg.lucide {
 .btn.primary:hover:not(:disabled) svg {
   color: currentColor;
 }
+.btn.primary:active:not(:disabled) {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+  box-shadow: none;
+}
+/* A destructive action looks the same wherever it is, in a modal or on a fiche: red on a red tint at rest, solid red
+   with white text under the pointer, deeper pressed. */
 .btn.danger {
-  color: var(--danger);
+  background: var(--danger-soft);
   border-color: var(--danger-line);
+  color: var(--danger);
+  box-shadow: none;
 }
 .btn.danger:hover:not(:disabled) {
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: var(--danger-solid);
+  border-color: var(--danger-solid);
+  color: #fff;
+}
+.btn.danger:active:not(:disabled) {
+  background: var(--danger-press);
+  border-color: var(--danger-press);
+  color: #fff;
 }
 .btn.ghost {
   border-color: transparent;
@@ -277,8 +300,11 @@ svg.lucide {
 }
 .btn.ghost:hover:not(:disabled) {
   border-color: transparent;
-  background: color-mix(in srgb, var(--ink) 11%, transparent);
+  background: var(--control-hover);
   color: var(--ink);
+}
+.btn.ghost:active:not(:disabled) {
+  background: var(--control-press);
 }
 .btn.ghost:hover:not(:disabled) svg {
   color: var(--ink);
@@ -307,38 +333,34 @@ svg.lucide {
 .btn.text:hover:not(:disabled) svg {
   color: var(--ink);
 }
+/* A minor destructive action in a row (« Retirer »): red text without a box, the red tint under the pointer. */
 .btn.danger.ghost {
+  border-color: transparent;
+  background: transparent;
   color: var(--danger);
 }
 .btn.danger.ghost:hover:not(:disabled) {
+  border-color: transparent;
   background: var(--danger-soft);
+  color: var(--danger);
+}
+.btn.danger.ghost:active:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--danger-dot) 24%, transparent);
   color: var(--danger);
 }
 .btn.danger svg,
 .btn.danger:hover:not(:disabled) svg {
   color: currentColor;
 }
-/* A destructive action that stays in view: red at rest, solid red under the pointer. */
-.btn.danger.filled {
-  background: var(--danger-soft);
-  border-color: var(--danger-line);
-  color: var(--danger);
-  box-shadow: none;
-}
-.btn.danger.filled:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger-dot), #000 18%);
-  border-color: color-mix(in srgb, var(--danger-dot), #000 18%);
-  color: #fff;
-}
-.btn.danger.filled:active:not(:disabled) {
-  background: color-mix(in srgb, var(--danger-dot), #000 30%);
-  border-color: color-mix(in srgb, var(--danger-dot), #000 30%);
-}
 .btn.on,
 .btn.on:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent-line);
   color: var(--accent);
+}
+.btn.on:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-soft), var(--accent) 12%);
 }
 .btn.on svg,
 .btn.on:hover:not(:disabled) svg {
@@ -436,23 +458,30 @@ textarea {
 .select.on .select-caret {
   rotate: 180deg;
 }
-.select:hover:not(:disabled, .on) {
+.select:hover:not(:disabled),
+.select.on {
+  border-color: var(--control-line-hover);
   background-color: var(--panel-2);
+}
+.select:active:not(:disabled) {
+  background-color: var(--nav-on);
+  box-shadow: none;
 }
 .select:disabled {
   cursor: default;
   opacity: 0.5;
 }
 input:hover,
-.select:hover:not(:disabled),
 textarea:hover {
   border-color: var(--muted);
 }
 .select:focus {
   outline: none;
 }
-.select:focus-visible,
-.select.on,
+.select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 input:focus,
 textarea:focus {
   outline: none;
@@ -954,7 +983,7 @@ kbd {
   cursor: pointer;
 }
 .settings-close:hover {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .settings-close svg {
@@ -1110,7 +1139,7 @@ kbd {
   padding: 0;
 }
 .toast-close:hover {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .toast-close svg {
@@ -1209,7 +1238,7 @@ kbd {
     color 120ms ease-out;
 }
 .nav-icon-btn:hover {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .nav-icon-btn svg {
@@ -1957,6 +1986,7 @@ kbd {
   color: var(--muted);
 }
 .scene-list .scene-list-tools button:hover:not(:disabled) {
+  background: var(--control-hover);
   color: var(--ink);
 }
 .scene-list .scene-list-tools button:disabled {
@@ -2041,7 +2071,8 @@ kbd {
 }
 .scene-list .outline-part.part-act > .outline-head {
   position: sticky;
-  top: 0;
+  /* Up over the list's own top padding, so no scene shows between the band and the head. */
+  top: -10px;
   z-index: 1;
   background: var(--panel);
 }
@@ -2479,8 +2510,10 @@ h4 {
     background-color 120ms ease-out,
     border-color 120ms ease-out;
 }
-.chip:hover {
+.chip:hover:not(.on) {
+  border-color: var(--control-line-hover);
   background: var(--panel-2);
+  color: var(--ink);
 }
 .chip.on {
   background: var(--accent-soft);
@@ -4096,7 +4129,7 @@ h4 {
   height: 15px;
 }
 .head-add:hover {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 /* The act title reads as the column heading, a step above its sequences. */
@@ -4186,12 +4219,12 @@ h4 {
 }
 .more-btn:hover,
 .more-btn.on {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .more-btn:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 .more-menu {
   min-width: 160px;
@@ -4412,7 +4445,7 @@ h4 {
   height: 15px;
 }
 .head-fold:hover {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .head-fold:focus-visible {
@@ -4829,7 +4862,7 @@ h4 {
     color 120ms ease-out;
 }
 .canvas-tools button:hover:not(:disabled) {
-  background: var(--hover);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .canvas-tools button:disabled {
@@ -5460,7 +5493,7 @@ h4 {
 .vr-pick .select:hover:not(:disabled),
 .vr-pick .select.on {
   border-color: transparent;
-  background-color: var(--hover);
+  background-color: var(--control-hover);
   box-shadow: none;
 }
 .vr-pick .select-caret {
@@ -5969,7 +6002,7 @@ h4 {
   cursor: pointer;
 }
 .notes-archived-toggle:hover {
-  background: var(--panel-2);
+  background: var(--control-hover);
   color: var(--ink);
 }
 .notes-archived-toggle:focus-visible {
@@ -6279,20 +6312,23 @@ h4 {
 .check-menu-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   height: 34px;
-  padding: 0 8px 0 10px;
-  border: 1px solid var(--line);
+  padding: 0 9px 0 12px;
+  border: 1px solid var(--line-strong);
   border-radius: 9px;
   background: var(--panel);
   color: var(--ink-2);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition:
     background-color 120ms ease-out,
-    border-color 120ms ease-out;
+    border-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 .check-menu-btn svg {
   width: 16px;
@@ -6306,8 +6342,21 @@ h4 {
 }
 .check-menu-btn:hover:not(:disabled),
 .check-menu-btn.on {
-  background: var(--hover);
-  border-color: var(--line-strong);
+  border-color: var(--control-line-hover);
+  background: var(--panel-2);
+  color: var(--ink);
+}
+.check-menu-btn:hover:not(:disabled) svg,
+.check-menu-btn.on svg {
+  color: var(--ink-2);
+}
+.check-menu-btn:active:not(:disabled) {
+  background: var(--nav-on);
+  box-shadow: none;
+}
+.check-menu-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .check-menu-btn.on .check-menu-caret {
   rotate: 180deg;
@@ -7695,4 +7744,16 @@ button[aria-expanded="true"] .stats-chevron {
 }
 .move-opt:has(input:checked) .move-title {
   font-weight: 500;
+}
+
+/* Boxless icon buttons pressed: a shade deeper than their highlight. Last, so it wins over their hover. */
+.settings-close:active,
+.toast-close:active,
+.nav-icon-btn:active,
+.head-add:active,
+.head-fold:active,
+.more-btn:active,
+.canvas-tools button:active:not(:disabled),
+.scene-list .scene-list-tools button:active:not(:disabled) {
+  background: var(--control-press);
 }
