@@ -591,7 +591,10 @@ export function ProjectShell({
           >
             <Search aria-hidden="true" />
             <span>Rechercher</span>
-            <kbd aria-hidden="true">Ctrl K</kbd>
+            <span className="nav-keys" aria-hidden="true">
+              <kbd>Ctrl</kbd>
+              <kbd>K</kbd>
+            </span>
           </button>
           <input
             ref={fileRef}
@@ -636,8 +639,11 @@ export function ProjectShell({
                         )
                       }
                     >
+                      <span>{g.label}</span>
                       <ChevronDown aria-hidden="true" />
-                      {g.label}
+                      {g.items.every((item) => item.later) && (
+                        <span className="nav-part-later">À venir</span>
+                      )}
                     </button>
                   </h2>
                   {shown.length > 0 && (

@@ -1794,24 +1794,22 @@ input.switch:disabled {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
-/* « Rechercher » looks like the field it opens: the palette, Ctrl+K. */
+/* « Rechercher » is a row like the views under it; its keys say it opens the palette, Ctrl+K. */
 .nav-link.nav-search {
   flex: none;
-  height: 34px;
-  margin-bottom: 10px;
-  border-radius: var(--control-r);
-  background: var(--panel);
-  box-shadow: 0 0 0 1px var(--line-strong);
-  color: var(--muted);
 }
-.nav-link.nav-search:hover {
-  box-shadow: 0 0 0 1px var(--muted);
-  color: var(--ink-2);
-}
-.nav-search kbd {
+.nav-keys {
   flex: none;
-  font: inherit;
-  font-size: 11px;
+  display: flex;
+  gap: 3px;
+}
+.nav-keys kbd {
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  line-height: 15px;
+  border-color: var(--line);
+  border-bottom-color: var(--line-strong);
   color: var(--muted);
 }
 .nav-link.later {
@@ -1824,66 +1822,73 @@ input.switch:disabled {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-/* The version a view arrives in: plain figures, quieter than the name, without a box to repeat down the list. */
+/* The version a view arrives in: the section already says « À venir », so the figure only shows on the row one points at. */
 .nav-later {
   font-weight: 500;
   line-height: 16px;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
 }
-/* The sections, a line between each, scroll between the search and the foot. */
+.nav-link:is(:hover, :focus-visible) .nav-later {
+  opacity: 1;
+}
+/* The dashboard, then the sections, scroll between the search and the foot; space alone parts them, no line. */
 .shell-nav-parts {
   flex: 1;
   min-height: 0;
   overflow: auto;
   margin: 0 -10px;
-  padding: 0 10px;
-  border-top: 1px solid var(--line);
+  padding: 1px 10px 8px;
 }
 .shell-nav-parts > section {
-  margin: 0 -10px;
-  padding: 8px 10px 10px;
-}
-.shell-nav-parts > section + section {
-  border-top: 1px solid var(--line);
-}
-/* The dashboard, alone above the sections. */
-.shell-nav-parts > .nav-home {
-  margin: 0 -10px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
+  padding-top: 16px;
 }
 .shell-nav h2 {
   margin: 0;
   font: inherit;
 }
+/* A section's name in plain words; its chevron shows when pointed at, or when the section is folded. */
 .nav-part {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
-  height: 28px;
-  padding: 0 8px;
+  height: 26px;
+  padding: 0 10px;
   border: none;
   border-radius: var(--radius);
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
+  transition: color 120ms ease-out;
 }
 .nav-part:hover {
   color: var(--ink-2);
 }
 .nav-part svg {
+  flex: none;
   width: 13px;
   height: 13px;
-  transition: transform 120ms ease-out;
+  opacity: 0;
+  transition:
+    transform 120ms ease-out,
+    opacity 120ms ease-out;
+}
+.nav-part:is(:hover, :focus-visible) svg,
+.nav-part[aria-expanded="false"] svg {
+  opacity: 1;
 }
 .nav-part[aria-expanded="false"] svg {
   transform: rotate(-90deg);
+}
+.nav-part-later {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--hint);
 }
 /* One row: « Réglages » fills it, the shortcuts and the theme follow as icons. */
 .shell-nav .shell-nav-foot {
@@ -1891,9 +1896,7 @@ input.switch:disabled {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin: 0 -10px;
-  padding: 8px 10px 0;
-  border-top: 1px solid var(--line);
+  padding-top: 8px;
 }
 .shell-nav-foot .nav-link {
   flex: 1;
@@ -1938,15 +1941,6 @@ input.switch:disabled {
 .shell-nav.rail .shell-nav-top:has(.nav-rail-toggle:not([hidden]):is(:hover, :focus-visible)) .shell-brand img {
   opacity: 0;
 }
-/* Folded, the search is an icon like the others. */
-.shell-nav.rail .nav-link.nav-search,
-.shell-nav.rail .nav-link.nav-search:hover {
-  box-shadow: none;
-  background: none;
-}
-.shell-nav.rail .nav-link.nav-search:hover {
-  background: var(--hover);
-}
 .shell-nav.rail .shell-brand {
   flex: none;
   width: 40px;
@@ -1957,7 +1951,7 @@ input.switch:disabled {
 .shell-nav.rail .shell-brand-chevron,
 .shell-nav.rail .nav-later,
 .shell-nav.rail .nav-value,
-.shell-nav.rail .nav-search kbd {
+.shell-nav.rail .nav-keys {
   display: none;
 }
 .shell-nav.rail .nav-link {
@@ -1978,16 +1972,21 @@ input.switch:disabled {
 .shell-nav.rail .shell-nav-foot .nav-icon-btn {
   width: 100%;
 }
-.shell-nav.rail .shell-nav-parts,
-.shell-nav.rail .shell-nav-foot {
+.shell-nav.rail .shell-nav-parts {
   margin: 0 -8px;
   padding-left: 8px;
   padding-right: 8px;
 }
-.shell-nav.rail .shell-nav-parts > section,
-.shell-nav.rail .shell-nav-parts > .nav-home {
-  margin: 0 -8px;
-  padding: 6px 8px;
+/* Folded, a short line stands for each section's name. */
+.shell-nav.rail .shell-nav-parts > section {
+  padding-top: 0;
+}
+.shell-nav.rail .shell-nav-parts > section::before {
+  content: "";
+  display: block;
+  width: 20px;
+  margin: 10px auto;
+  border-top: 1px solid var(--line-strong);
 }
 .shell-nav.rail h2 {
   position: absolute;
