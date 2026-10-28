@@ -755,12 +755,11 @@
     "count_other": "{{n}} scenes"
   },
   "versions": {
-    "thread": "Version history",
     "live": "In progress",
     "copyHash": "Copy the fingerprint",
     "removeFromList": "Remove from the list",
     "cuts": "Cut scenes",
-    "cutsNote": "A scene deleted from the screenplay waits here before being erased.",
+    "cutsNote": "A scene deleted from the screenplay waits here. Put back, it takes its place again; deleted for good, it only remains in the frozen versions.",
     "reinstate": "Put back",
     "firstTitle": "Keep track of every stage of the screenplay",
     "firstWhen": "Good moments: before a big rewrite, before sending the screenplay to someone, at the end of a draft.",
@@ -847,7 +846,15 @@
     "layout": "Text layout",
     "unified": "Unified",
     "split": "Side by side",
-    "removedLine": "Removed line"
+    "removedLine": "Removed line",
+    "sections": "Versions sections",
+    "versionsIntro": "Each frozen version is a dated copy of the screenplay, kept in the project’s “versions” folder. Nothing changes it afterwards: compare it with the current text, or go back to it.",
+    "compare": "Compare",
+    "noneYet": "No frozen version yet",
+    "noneYetText": "Freeze the current version before a big rewrite or before sending it out: you’ll then see what changed since.",
+    "cutsEmpty": "No cut scenes",
+    "moreLines_one": "{{n}} more line",
+    "moreLines_other": "{{n}} more lines"
   },
   "bible": {
     "types": {
