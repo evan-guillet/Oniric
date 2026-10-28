@@ -5621,357 +5621,24 @@ h4 {
 }
 
 /*
- * Versions: the versions themselves, as a thread; one level down, the changes between two of them, laid out like a code
- * review, and the scenes cut from the screenplay, waiting to be put back.
+ * Versions, on one screen: the header asks which two versions and holds « Figer »; the text of what changed fills the
+ * page; the panel on the right shows one thing at a time, as in the Scénario: the scenes, the versions, the cut scenes.
  */
 .versions-view {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-
-/* The versions and the cut scenes read as one centred column, on the same ground as the comparison. */
-.vr-main.versions,
-.vr-main.cuts {
-  background: var(--sunken);
-}
-.vr-page {
-  max-width: 760px;
-  margin-inline: auto;
-  padding: 28px 32px 56px;
-}
-/* What the tab holds, said once at its top. */
-.vr-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0 0 20px;
-  padding: 11px 14px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-}
-.vr-banner svg {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-  color: var(--accent);
-}
-.vr-banner p {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.vr-thread {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.vr-stop {
-  position: relative;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-  padding-bottom: 10px;
-}
-.vr-stop:not(:last-child)::before {
-  content: "";
-  position: absolute;
-  left: 13.5px;
-  top: 40px;
-  bottom: 4px;
-  width: 1px;
-  background: var(--line-strong);
-}
-.vr-node {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  margin-top: 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  color: var(--muted);
-}
-.vr-node svg {
-  width: 14px;
-  height: 14px;
-}
-.vr-stop.current .vr-node {
-  border-color: var(--ok-line);
-  background: var(--ok-soft);
-  color: var(--ok);
-}
-.vr-stop.base .vr-node {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.vr-stop-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 12px 12px 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
-}
-.vr-stop.base .vr-stop-card {
-  border-color: var(--accent-line);
-}
-.vr-stop-text {
-  flex: 1;
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.vr-stop-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.vr-stop-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.vr-stop-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 14px;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-.vr-stop-meta > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.vr-stop-actions {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.vr-hash {
-  padding: 0 5px;
-  border: none;
-  border-radius: 4px;
-  background: none;
-  color: var(--hint);
-  font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 11.5px;
-  line-height: 18px;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease-out,
-    color 120ms ease-out;
-}
-.vr-hash:hover {
-  background: var(--hover);
-  color: var(--ink-2);
-}
-.vr-hash:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-.vr-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--ok);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-.vr-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--ok-dot);
-}
-.vr-role {
-  flex: none;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-/* Nothing yet: a quiet box that says what would be here. */
-.vr-empty {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 36px 24px 32px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-lg);
-  text-align: center;
-}
-.vr-empty p {
-  max-width: 48ch;
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-.vr-empty .vr-empty-title {
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-}
-.vr-empty .btn {
-  margin-top: 10px;
-}
-.vr-empty-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  margin-bottom: 6px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  color: var(--muted);
-}
-.vr-empty-icon svg {
-  width: 17px;
-  height: 17px;
-}
-
-/* A cut scene: its heading, when it went and the way back, then the start of its text as on the page. */
-.vr-cut-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.vr-cut {
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  box-shadow: var(--shadow-sm);
-  overflow: clip;
-}
-.vr-cut-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 8px 8px 8px 16px;
-}
-.vr-cut-head .vr-slug {
-  flex: 1;
-  font-size: 12px;
-}
-.vr-cut-date {
-  flex: none;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.vr-cut-text {
-  padding: 12px 16px 14px 16px;
-  border-top: 1px solid var(--line);
-  color: var(--ink-2);
-  font-family: "Courier Prime", "Courier New", monospace;
-  font-size: 12.5px;
-  line-height: 1.6;
-}
-.vr-cut-line {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.vr-cut-line.character {
-  margin-top: 6px;
-  padding-left: 18ch;
-  text-transform: uppercase;
-}
-.vr-cut-line.parenthetical {
-  padding-left: 14ch;
-}
-.vr-cut-line.dialogue {
-  padding-left: 9ch;
-  padding-right: 9ch;
-}
-.vr-cut-line.action + .vr-cut-line.action,
-.vr-cut-line.dialogue + .vr-cut-line.action,
-.vr-cut-line.transition {
-  margin-top: 6px;
-}
-.vr-cut-more {
-  margin: 8px 0 0;
-  color: var(--hint);
-  font-family: var(--ui-font);
-  font-size: 12px;
-}
-
-.vr-slug {
-  grid-column: 1 / -1;
-  padding-right: 6px;
-  line-height: 1.4;
-  white-space: normal;
-}
-.vr-cut > .vr-stop-meta {
-  white-space: nowrap;
-}
-.vr-cut-back {
-  margin-left: 4px;
-}
-.vr-cut .more-btn {
-  grid-column: 3;
-}
-.vr-slug {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-}
-
 .vr-main {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
-/* The text on the left, the list of the scenes on the right, all the height long; nothing above them but the header. */
 .vr-compare {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 264px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   height: 100%;
-}
-.vr-compare.solo {
-  grid-template-columns: minmax(0, 1fr);
 }
 .vr-col {
   min-width: 0;
@@ -5991,57 +5658,11 @@ h4 {
   background: var(--sunken);
 }
 
-/*
- * The header of the changes, on one line: how much changed, the two versions, what the list shows, then a rule and the
- * way to the versions and the cut scenes. Short of room, the scene and page counts go first, then the words of the way.
- */
-.vr-head {
-  gap: 8px 12px;
-}
-.vr-summary {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  white-space: nowrap;
-}
-.vr-summary-title {
-  color: var(--ink);
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.vr-summary > .vr-linestat {
-  font-size: 13px;
-  font-weight: 600;
-}
-.vr-summary-sums {
-  display: inline-flex;
-  gap: 14px;
-  margin-left: 4px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-.vr-summary-sums > span {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.vr-delta {
-  padding: 0 5px;
-  border-radius: 4px;
-  background: var(--seg-track);
-  color: var(--ink-2);
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 17px;
-}
+/* The question, in the header: the reference, an arrow, the compared version. */
 .vr-pair {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .header-tools .vr-pair .select {
   max-width: 200px;
@@ -6052,43 +5673,256 @@ h4 {
   height: 14px;
   color: var(--hint);
 }
-.vr-list-tools {
+
+/* The panel: its tabs on top, the width of the panel, then what they show, scrolling on its own. */
+.vr-side {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
 }
-.vr-hsep {
-  align-self: center;
-  width: 1px;
-  height: 20px;
-  background: var(--line);
+.vr-side-tabs {
+  flex: none;
+  padding: 12px 12px 8px;
 }
-@media (max-width: 1760px) {
-  .vr-head .vr-summary-sums {
-    display: none;
-  }
+.vr-side-tabs .segmented {
+  display: flex;
+  width: 100%;
 }
-/* When the header takes two lines, the rule would end the first one: it goes. */
-@media (max-width: 1280px) {
-  .vr-hsep {
-    display: none;
-  }
+.vr-side-tabs .seg {
+  flex: 1;
+  justify-content: center;
+  padding-inline: 6px;
 }
-@media (max-width: 1480px) {
-  .vr-nav .vr-nav-label,
-  .vr-nav .vr-cuts-n {
-    display: none;
-  }
-  .header-tools .vr-nav {
-    width: 34px;
-    padding-inline: 0;
-    justify-content: center;
-  }
-}
-.vr-cuts-n {
+.seg-n {
   color: var(--hint);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.seg.on .seg-n {
+  color: var(--muted);
+}
+.vr-pane {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 12px 24px;
+}
+.vr-pane-empty {
+  margin: 12px 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.vr-pane-note {
+  margin: 16px 4px 0;
+  color: var(--hint);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The versions, a thread: a 22px node each, joined by a rule; a frozen one is a button that makes it the reference. */
+.vr-thread {
+  margin: 0;
+  padding: 4px 0 0;
+  list-style: none;
+}
+.vr-stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding-bottom: 4px;
+}
+.vr-stop:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 10.5px;
+  top: 32px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--line);
+}
+.vr-node {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--muted);
+}
+.vr-node svg {
+  width: 11px;
+  height: 11px;
+}
+.vr-stop.current .vr-node {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.vr-stop.base .vr-node {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.vr-stop-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.vr-stop-body {
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+button.vr-stop-body:hover {
+  background: var(--hover);
+}
+.vr-stop.base .vr-stop-body {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+button.vr-stop-body:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.vr-stop > .more-btn {
+  margin-top: 8px;
+}
+.vr-stop-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.vr-stop-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vr-stop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.vr-stop-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.vr-delta {
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--seg-track);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.vr-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ok);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.vr-live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ok-dot);
+}
+.vr-role {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+/* A cut scene: its heading and « ⋯ », the first line of its text, when it went and the way back. */
+.vr-cut-list {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.vr-cut {
+  display: grid;
+  gap: 6px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.vr-cut-top,
+.vr-cut-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.vr-cut-line {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vr-cut-date {
+  color: var(--hint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vr-slug {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
 
 .vr-linestat {
   display: inline-flex;
@@ -6109,21 +5943,47 @@ h4 {
 
 /* The touched scenes, one line each; the one at the top of the text is lit. */
 .vr-tree {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-left: 1px solid var(--line);
 }
-/* What the list shows, as a real button: its name and count, opening the choice. */
-.vr-filter-btn {
-  min-width: 168px;
-  justify-content: flex-start;
-  gap: 8px;
-  padding-inline: 10px 8px;
-}
-.vr-filter-btn > svg:first-child {
+/* What the list shows as quiet text that opens the choice, how much changed, and folding everything. */
+.vr-tree-head {
   flex: none;
-  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 12px 4px 20px;
+  font-size: 12.5px;
+}
+.vr-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 26px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.vr-filter:hover,
+.vr-filter.on {
+  background: var(--control-hover);
+}
+.vr-filter:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.vr-filter.set {
+  color: var(--accent);
 }
 .vr-filter-name {
   min-width: 0;
@@ -6133,37 +5993,29 @@ h4 {
 }
 .vr-filter-n {
   color: var(--hint);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.vr-filter-btn .vr-filter-caret {
-  width: 14px;
-  height: 14px;
-  margin-left: auto;
+.vr-filter-caret {
+  flex: none;
+  width: 13px;
+  height: 13px;
   color: var(--muted);
   transition: transform 160ms ease-out;
 }
-.vr-filter-btn.on .vr-filter-caret {
+.vr-filter.on .vr-filter-caret {
   transform: rotate(180deg);
 }
-.vr-filter-btn.set {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.vr-filter-btn.set > svg:first-child,
-.vr-filter-btn.set .vr-filter-n {
-  color: var(--accent);
-}
-.vr-fold-all {
-  flex: none;
-  width: 34px;
+.vr-tree-head .vr-linestat {
+  margin-left: auto;
+  font-weight: 600;
 }
 .vr-tree-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
   margin: 0;
-  padding: 8px 8px 24px;
+  padding: 2px 8px 24px;
   list-style: none;
 }
 .vr-tree-item {
@@ -6633,24 +6485,18 @@ h4 {
 
 @media (max-width: 1100px) {
   .vr-compare {
-    grid-template-columns: minmax(0, 1fr) 232px;
+    grid-template-columns: minmax(0, 1fr) 264px;
   }
 }
-/* Too narrow for two columns: the list goes, the text keeps the width. */
+/* Too narrow for two columns: the panel goes under the text, on a third of the height. */
 @media (max-width: 760px) {
   .vr-compare {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
   }
-  .vr-tree {
-    display: none;
-  }
-}
-@media (max-width: 960px) {
-  .vr-page {
-    padding-inline: 16px;
-  }
-  .vr-stop-card {
-    flex-wrap: wrap;
+  .vr-side {
+    border-left: none;
+    border-top: 1px solid var(--line);
   }
 }
 

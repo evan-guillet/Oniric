@@ -5,6 +5,8 @@ export interface SegmentedOption<T extends string> {
   label: string;
   icon?: LucideIcon;
   hint?: string;
+  /** A number after the label, left out at zero. */
+  count?: number;
 }
 
 /** A choice among a few views, pressed buttons in one track: the chosen one is a small surface set in it. */
@@ -40,6 +42,7 @@ export function Segmented<T extends string>({
         >
           {o.icon && <o.icon aria-hidden="true" />}
           <span>{o.label}</span>
+          {!!o.count && <span className="seg-n">{o.count}</span>}
         </button>
       ))}
     </div>

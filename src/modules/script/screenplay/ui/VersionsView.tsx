@@ -1,9 +1,10 @@
-import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, GitCompareArrows, History, Info, ListFilter, Lock, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, PenLine, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { FloatingMenu, MoreMenu } from "../../../../ui-kit/MoreMenu";
+import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { diffLines, diffScenes, foldLines, lineStats, type DiffLine, type LineSide, type SceneDiff } from "../domain/diff";
 import { formatById, lineHeightIn, type ElementStyle, type ScreenplayFormat } from "../domain/formats";
@@ -92,20 +93,21 @@ const kindOne = (k: Kind) => t(`versions.kind.${k}`);
 const kindMany = (k: Kind) => t(`versions.kinds.${k}`);
 const KINDS: Exclude<Kind, "same">[] = ["changed", "added", "removed", "moved"];
 
-/** What changed first; the versions themselves, and the cut scenes, one level down. */
-type Page = "changes" | "versions" | "cuts";
+/** What the panel on the right shows: the touched scenes, the versions, or the cut scenes. */
+type Pane = "scenes" | "versions" | "cuts";
 
 /**
- * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06]. The section opens on what changed
- * since the latest frozen version; the header's « Historique » and « Scènes coupées » lead to the rest.
+ * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06], on one screen. The header asks the
+ * question (which two versions) and holds the one act (freeze); the text of what changed fills the page; the panel on
+ * the right shows one thing at a time, as in the Scénario: the touched scenes, the versions, or the cut scenes.
  */
 export function VersionsView() {
-  const { session, project, notify, prompt, ask, headerActions, setTrail } = useProject();
+  const { session, project, notify, prompt, ask, headerActions } = useProject();
   const loaded = useLive(listVersions, ["script_version"]);
   const versions = loaded ?? [];
   const cuts = useLive(cutScenes, ["scene"]) ?? [];
   const format = useScriptFormat();
-  const [page, setPage] = useState<Page>("changes");
+  const [pane, setPane] = useState<Pane>("scenes");
   const [base, setBase] = useState("");
   const [head, setHead] = useState(CURRENT);
   const [cmp, setCmp] = useState<Comparison | null>(null);
@@ -137,9 +139,12 @@ export function VersionsView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, head, format]);
 
+  // Without a frozen version there is nothing to compare: the panel opens on the versions.
+  const shownPane: Pane = versions.length === 0 && pane === "scenes" ? "versions" : pane;
+
   // The current version's size, measured again each time the versions show.
   useEffect(() => {
-    if (page !== "versions") return;
+    if (shownPane !== "versions") return;
     let live = true;
     load(CURRENT)
       .then((v) => live && setNow(v))
@@ -148,26 +153,7 @@ export function VersionsView() {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, format, loaded]);
-
-  // One level down, the header names the page and leads back to the changes; so does Escape.
-  useEffect(() => {
-    if (page === "changes") return setTrail(null);
-    setTrail([
-      { label: t("nav.views.versions"), onClick: () => setPage("changes") },
-      page === "versions" ? { label: t("versions.history"), count: versions.length } : { label: t("versions.cuts"), count: cuts.length },
-    ]);
-  }, [page, versions.length, cuts.length, setTrail]);
-  useEffect(() => () => setTrail(null), [setTrail]);
-  useEffect(() => {
-    if (page === "changes") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, dialog, [role=dialog], [role=menu], [role=listbox]")) return;
-      setPage("changes");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [page]);
+  }, [shownPane, format, loaded]);
 
   const freeze = async () => {
     const name = await prompt(t("versions.freeze"), t("versions.name"), `V${versions.length + 1}`);
@@ -224,63 +210,89 @@ export function VersionsView() {
   };
 
   const label = (file: string) => (file === CURRENT ? t("versions.current") : (versions.find((v) => v.file === file)?.name ?? file));
-  // From the list of versions: what changed since this one, in the current text.
+  // A version picked in the panel becomes the reference, compared with the current text.
   const compareFrom = (file: string) => {
     setBase(file);
     setHead(CURRENT);
-    setPage("changes");
   };
 
-  // The way to the versions and to the cut scenes, at the end of the header of the changes.
-  const nav = (
+  const options = (
     <>
-      <button type="button" className="btn vr-nav" title={t("versions.historyHint")} aria-label={t("versions.history")} onClick={() => setPage("versions")}>
-        <History aria-hidden="true" />
-        <span className="vr-nav-label">{t("versions.history")}</span>
-      </button>
-      <button type="button" className="btn vr-nav" title={t("versions.cutsHint")} aria-label={t("versions.cuts")} onClick={() => setPage("cuts")}>
-        <Scissors aria-hidden="true" />
-        <span className="vr-nav-label">{t("versions.cuts")}</span>
-        {cuts.length > 0 && <span className="vr-cuts-n">{cuts.length}</span>}
-      </button>
+      <option value={CURRENT}>{t("versions.current")}</option>
+      {versions.map((v) => (
+        <option key={v.id} value={v.file}>
+          {v.name}
+        </option>
+      ))}
     </>
+  );
+  const panes: SegmentedOption<Pane>[] = [
+    ...(versions.length > 0 ? [{ id: "scenes" as const, label: t("versions.paneScenes"), hint: t("versions.paneScenesHint") }] : []),
+    { id: "versions", label: t("nav.views.versions"), count: versions.length, hint: t("versions.historyHint") },
+    { id: "cuts", label: t("versions.paneCuts"), count: cuts.length, hint: t("versions.cutsHint") },
+  ];
+  const side = (scenes: ReactNode) => (
+    <aside className="vr-side" aria-label={t("versions.panel")}>
+      <div className="vr-side-tabs">
+        <Segmented label={t("versions.panel")} options={panes} value={shownPane} onChange={setPane} />
+      </div>
+      {shownPane === "scenes" ? (
+        scenes
+      ) : shownPane === "versions" ? (
+        <VersionPane versions={versions} now={now} base={base} onCompare={compareFrom} onRestore={restore} onRemove={remove} />
+      ) : (
+        <CutPane cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
+      )}
+    </aside>
   );
 
   return (
     <div className="view versions-view">
-      {headerActions && page === "changes" && loaded && versions.length === 0 && createPortal(<div className="header-tools">{nav}</div>, headerActions)}
+      {headerActions &&
+        loaded &&
+        versions.length > 0 &&
+        createPortal(
+          <div className="header-tools">
+            <div className="vr-pair" role="group" aria-label={t("versions.pair")}>
+              <Select value={base} onChange={(e) => setBase(e.target.value)} aria-label={t("versions.reference")} title={t("versions.reference")}>
+                {options}
+              </Select>
+              <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
+              <Select value={head} onChange={(e) => setHead(e.target.value)} aria-label={t("versions.compared")} title={t("versions.compared")}>
+                {options}
+              </Select>
+            </div>
+            <button type="button" className="btn primary" onClick={() => void freeze()}>
+              <Lock aria-hidden="true" />
+              {t("versions.freezeShort")}
+            </button>
+          </div>,
+          headerActions,
+        )}
 
-      <main className={`vr-main ${page}`} aria-label={page === "versions" ? t("versions.history") : page === "cuts" ? t("versions.cuts") : t("nav.views.versions")}>
+      <main className="vr-main" aria-label={t("nav.views.versions")}>
         {/* Nothing while the versions are being read, so the first-version page does not flash before them. */}
-        {!loaded ? null : page === "changes" ? (
-          versions.length === 0 ? (
-            <FirstVersion onFreeze={() => void freeze()} />
-          ) : (
-            <Compare
-              nav={nav}
-              format={format ?? formatById(null)}
-              versions={versions}
-              base={base}
-              head={head}
-              cmp={cmp}
-              label={label}
-              onBase={setBase}
-              onHead={setHead}
-              onSwap={() => {
-                setBase(head);
-                setHead(base);
-              }}
-              cutIds={new Set(cuts.map((c) => c.id))}
-              onReinstate={(id) => {
-                const c = cuts.find((x) => x.id === id);
-                if (c) reinstateCut(c);
-              }}
-            />
-          )
-        ) : page === "versions" ? (
-          <VersionList versions={versions} now={now} base={base} onCompare={compareFrom} onRestore={restore} onRemove={remove} onFreeze={() => void freeze()} />
+        {!loaded ? null : versions.length === 0 ? (
+          <div className="vr-compare">
+            <div className="vr-col">
+              <FirstVersion onFreeze={() => void freeze()} />
+            </div>
+            {side(null)}
+          </div>
         ) : (
-          <CutList cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
+          <Compare
+            format={format ?? formatById(null)}
+            base={base}
+            head={head}
+            cmp={cmp}
+            label={label}
+            side={side}
+            cutIds={new Set(cuts.map((c) => c.id))}
+            onReinstate={(id) => {
+              const c = cuts.find((x) => x.id === id);
+              if (c) reinstateCut(c);
+            }}
+          />
         )}
       </main>
     </div>
@@ -289,15 +301,14 @@ export function VersionsView() {
 
 const delta = (before: number, after: number) => after !== before && <span className="vr-delta">{signed(after - before)}</span>;
 
-/** The versions as a thread, newest first under the current one, each with what it holds and what it can do. */
-function VersionList({
+/** The versions as a thread, the current one on top; picking a frozen one compares the current text with it. */
+function VersionPane({
   versions,
   now,
   base,
   onCompare,
   onRestore,
   onRemove,
-  onFreeze,
 }: {
   versions: VersionRow[];
   now: VersionFile | null;
@@ -305,123 +316,71 @@ function VersionList({
   onCompare: (file: string) => void;
   onRestore: (v: VersionRow) => void;
   onRemove: (v: VersionRow) => void;
-  onFreeze: () => void;
 }) {
   const { notify } = useProject();
   const newest = versions[0];
   return (
-    <div className="vr-page">
-      <Banner>{t("versions.versionsIntro")}</Banner>
+    <div className="vr-pane">
       <ol className="vr-thread">
         <li className="vr-stop current">
           <span className="vr-node" aria-hidden="true">
             <PenLine />
           </span>
-          <div className="vr-stop-card">
-            <div className="vr-stop-text">
-              <span className="vr-stop-title">
-                <span className="vr-stop-name">{t("versions.current")}</span>
-                <span className="vr-live">{t("versions.live")}</span>
-              </span>
-              <span className="vr-stop-meta">
-                {now ? (
-                  <>
-                    <span title={newest ? t("versions.wasIn", { n: newest.pages, name: newest.name }) : undefined}>
-                      {plural("versions.pages", now.pages)}
-                      {newest && delta(newest.pages, now.pages)}
-                    </span>
-                    <span title={newest ? t("versions.wasIn", { n: newest.scenes, name: newest.name }) : undefined}>
-                      {plural("sceneList.count", now.scenes.length)}
-                      {newest && delta(newest.scenes, now.scenes.length)}
-                    </span>
-                  </>
-                ) : (
-                  t("versions.savedAsTyped")
-                )}
-              </span>
-            </div>
-            <div className="vr-stop-actions">
-              {newest && (
-                <button type="button" className="btn small" title={t("versions.seeSince", { name: newest.name })} onClick={() => onCompare(newest.file)}>
-                  <GitCompareArrows aria-hidden="true" />
-                  {t("versions.changes")}
-                </button>
+          <div className="vr-stop-body">
+            <span className="vr-stop-title">
+              <span className="vr-stop-name">{t("versions.current")}</span>
+              <span className="vr-live">{t("versions.live")}</span>
+            </span>
+            <span className="vr-stop-meta">
+              {now ? (
+                <>
+                  <span title={newest ? t("versions.wasIn", { n: newest.pages, name: newest.name }) : undefined}>
+                    {plural("versions.pages", now.pages)}
+                    {newest && delta(newest.pages, now.pages)}
+                  </span>
+                  <span title={newest ? t("versions.wasIn", { n: newest.scenes, name: newest.name }) : undefined}>
+                    {plural("sceneList.count", now.scenes.length)}
+                    {newest && delta(newest.scenes, now.scenes.length)}
+                  </span>
+                </>
+              ) : (
+                t("versions.savedAsTyped")
               )}
-              <button type="button" className="btn primary small" onClick={onFreeze}>
-                <Lock aria-hidden="true" />
-                {t("versions.freezeShort")}
-              </button>
-            </div>
+            </span>
           </div>
         </li>
-        {versions.map((v, i) => {
-          const older = versions[i + 1];
-          return (
-            <li key={v.id} className={`vr-stop${v.file === base ? " base" : ""}`}>
-              <span className="vr-node" aria-hidden="true">
-                <Lock />
+        {versions.map((v) => (
+          <li key={v.id} className={`vr-stop${v.file === base ? " base" : ""}`}>
+            <span className="vr-node" aria-hidden="true">
+              <Lock />
+            </span>
+            <button type="button" className="vr-stop-body" aria-pressed={v.file === base} title={t("versions.seeSince", { name: v.name })} onClick={() => onCompare(v.file)}>
+              <span className="vr-stop-title">
+                <span className="vr-stop-name">{v.name}</span>
+                {v.file === base && <span className="vr-role">{t("versions.reference")}</span>}
               </span>
-              <div className="vr-stop-card">
-                <div className="vr-stop-text">
-                  <span className="vr-stop-title">
-                    <span className="vr-stop-name">{v.name}</span>
-                    {v.file === base && <span className="vr-role">{t("versions.reference")}</span>}
-                  </span>
-                  <span className="vr-stop-meta">
-                    <span>{dateFormat.format(new Date(v.createdAt))}</span>
-                    <span title={older ? t("versions.wasIn", { n: older.pages, name: older.name }) : undefined}>
-                      {plural("versions.pages", v.pages)}
-                      {older && delta(older.pages, v.pages)}
-                    </span>
-                    <span title={older ? t("versions.wasIn", { n: older.scenes, name: older.name }) : undefined}>
-                      {plural("sceneList.count", v.scenes)}
-                      {older && delta(older.scenes, v.scenes)}
-                    </span>
-                    <button
-                      type="button"
-                      className="vr-hash"
-                      title={t("versions.copyHash")}
-                      aria-label={`${t("versions.copyHash")} ${v.sha256.slice(0, 8)}`}
-                      onClick={() => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: t("versions.hashCopied") }))}
-                    >
-                      {v.sha256.slice(0, 8)}
-                    </button>
-                  </span>
-                </div>
-                <div className="vr-stop-actions">
-                  <button type="button" className="btn small" title={t("versions.seeSince", { name: v.name })} onClick={() => onCompare(v.file)}>
-                    <GitCompareArrows aria-hidden="true" />
-                    {t("versions.compare")}
-                  </button>
-                  <MoreMenu
-                    label={t("versions.actionsFor", { name: v.name })}
-                    items={[
-                      { label: t("versions.restore"), icon: Undo2, onClick: () => onRestore(v) },
-                      { label: t("versions.removeFromList"), icon: X, danger: true, onClick: () => onRemove(v) },
-                    ]}
-                  />
-                </div>
-              </div>
-            </li>
-          );
-        })}
+              <span className="vr-stop-meta">
+                <span title={dateFormat.format(new Date(v.createdAt))}>{shortDate(v.createdAt)}</span>
+                <span>{plural("versions.pages", v.pages)}</span>
+                <span>{plural("sceneList.count", v.scenes)}</span>
+              </span>
+            </button>
+            <MoreMenu
+              label={t("versions.actionsFor", { name: v.name })}
+              items={[
+                { label: t("versions.restore"), icon: Undo2, onClick: () => onRestore(v) },
+                {
+                  label: `${t("versions.copyHash")} · ${v.sha256.slice(0, 8)}`,
+                  icon: Copy,
+                  onClick: () => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: t("versions.hashCopied") })),
+                },
+                { label: t("versions.removeFromList"), icon: X, danger: true, onClick: () => onRemove(v) },
+              ]}
+            />
+          </li>
+        ))}
       </ol>
-      {versions.length === 0 && (
-        <div className="vr-empty">
-          <p className="vr-empty-title">{t("versions.noneYet")}</p>
-          <p>{t("versions.noneYetText")}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** What a tab holds and how it behaves, said once at its top. */
-function Banner({ children }: { children: ReactNode }) {
-  return (
-    <div className="vr-banner" role="note">
-      <Info aria-hidden="true" />
-      <p>{children}</p>
+      <p className="vr-pane-note">{t("versions.versionsIntro")}</p>
     </div>
   );
 }
@@ -438,58 +397,42 @@ function cutExcerpt(content: string): { kind: string; text: string }[] {
     return [];
   }
 }
-const EXCERPT = 4;
 
-/** The cut scenes, newest first, each with the start of its text and the way back. */
-function CutList({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate: (c: CutScene) => void; onPurge: (c: CutScene) => void }) {
-  if (cuts.length === 0)
-    return (
-      <div className="vr-page">
-        <div className="vr-empty">
-          <span className="vr-empty-icon" aria-hidden="true">
-            <Scissors />
-          </span>
-          <p className="vr-empty-title">{t("versions.cutsEmpty")}</p>
-          <p>{t("versions.cutsNote")}</p>
-        </div>
-      </div>
-    );
+/** The cut scenes, newest first: the heading, the start of the text, when it went and the way back. */
+function CutPane({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate: (c: CutScene) => void; onPurge: (c: CutScene) => void }) {
   return (
-    <div className="vr-page">
-      <Banner>{t("versions.cutsNote")}</Banner>
-      <ul className="vr-cut-list">
-        {cuts.map((c) => {
-          const lines = cutExcerpt(c.content);
-          const heading = c.heading || t("dash.noHeading");
-          return (
-            <li key={c.id} className="vr-cut">
-              <header className="vr-cut-head">
-                <span className="vr-slug" title={heading}>
-                  {heading}
-                </span>
-                <span className="vr-cut-date" title={t("versions.cutOn", { date: dateFormat.format(new Date(c.deletedAt)) })}>
-                  {shortDate(c.deletedAt)}
-                </span>
-                <button type="button" className="btn small" onClick={() => onReinstate(c)}>
-                  <Undo2 aria-hidden="true" />
-                  {t("versions.reinstate")}
-                </button>
-                <MoreMenu label={t("versions.cutActions", { heading })} items={[{ label: t("versions.purge"), icon: Trash2, danger: true, onClick: () => onPurge(c) }]} />
-              </header>
-              {lines.length > 0 && (
-                <div className="vr-cut-text">
-                  {lines.slice(0, EXCERPT).map((l, i) => (
-                    <p key={i} className={`vr-cut-line ${l.kind}`}>
-                      {l.text}
-                    </p>
-                  ))}
-                  {lines.length > EXCERPT && <p className="vr-cut-more">{plural("versions.moreLines", lines.length - EXCERPT)}</p>}
+    <div className="vr-pane">
+      {cuts.length === 0 ? (
+        <p className="vr-pane-empty">{t("versions.cutsEmpty")}</p>
+      ) : (
+        <ul className="vr-cut-list">
+          {cuts.map((c) => {
+            const first = cutExcerpt(c.content)[0];
+            const heading = c.heading || t("dash.noHeading");
+            return (
+              <li key={c.id} className="vr-cut">
+                <div className="vr-cut-top">
+                  <span className="vr-slug" title={heading}>
+                    {heading}
+                  </span>
+                  <MoreMenu label={t("versions.cutActions", { heading })} items={[{ label: t("versions.purge"), icon: Trash2, danger: true, onClick: () => onPurge(c) }]} />
                 </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                {first && <p className="vr-cut-line">{first.text}</p>}
+                <div className="vr-cut-foot">
+                  <span className="vr-cut-date" title={t("versions.cutOn", { date: dateFormat.format(new Date(c.deletedAt)) })}>
+                    {shortDate(c.deletedAt)}
+                  </span>
+                  <button type="button" className="btn small" onClick={() => onReinstate(c)}>
+                    <Undo2 aria-hidden="true" />
+                    {t("versions.reinstate")}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="vr-pane-note">{t("versions.cutsNote")}</p>
     </div>
   );
 }
@@ -534,38 +477,30 @@ function FirstVersion({ onFreeze }: { onFreeze: () => void }) {
 type Filter = "changes" | Kind | "all";
 
 /**
- * The comparison, laid out like a code review: each touched scene's text, the identical lines folded away, the list of
- * the scenes on the right; which two versions and how much changed between them are in the header.
+ * The comparison, laid out like a code review: each touched scene's text, the identical lines folded away; its list of
+ * scenes goes to the panel on the right, which the page gives it through `side`.
  */
 function Compare({
-  nav,
   format,
-  versions,
   base,
   head,
   cmp,
   label,
-  onBase,
-  onHead,
-  onSwap,
+  side,
   cutIds,
   onReinstate,
 }: {
-  /** The way to the versions and to the cut scenes, at the end of the header. */
-  nav: ReactNode;
   format: ScreenplayFormat;
-  versions: VersionRow[];
   base: string;
   head: string;
   cmp: Comparison | null;
   label: (file: string) => string;
-  onBase: (file: string) => void;
-  onHead: (file: string) => void;
-  onSwap: () => void;
+  /** The panel on the right, given what its « Scènes » tab shows. */
+  side: (scenes: ReactNode) => ReactNode;
   cutIds: Set<string>;
   onReinstate: (id: string) => void;
 }) {
-  const { openScene, headerActions } = useProject();
+  const { openScene } = useProject();
   const [filter, setFilter] = useState<Filter>("changes");
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
@@ -579,52 +514,21 @@ function Compare({
     setActive("");
   }, [base, head]);
 
-  const options = (
-    <>
-      <option value={CURRENT}>{t("versions.current")}</option>
-      {versions.map((v) => (
-        <option key={v.id} value={v.file}>
-          {v.name}
-        </option>
-      ))}
-    </>
-  );
   const ready = !!cmp && base !== head;
   const touched = ready ? cmp.scenes.filter((s) => s.diff.kind !== "same") : [];
-  // Everything about the comparison is in the header, on one line: how much changed, between which versions, what the list shows.
-  const pair = (
-    <div className="vr-pair" role="group" aria-label={t("versions.pair")}>
-      <Select value={base} onChange={(e) => onBase(e.target.value)} aria-label={t("versions.reference")} title={t("versions.reference")}>
-        {options}
-      </Select>
-      <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
-      <Select value={head} onChange={(e) => onHead(e.target.value)} aria-label={t("versions.compared")} title={t("versions.compared")}>
-        {options}
-      </Select>
-      <button type="button" className="more-btn vr-swap" aria-label={t("versions.swap")} title={t("versions.swap")} onClick={onSwap}>
-        <ArrowLeftRight aria-hidden="true" />
-      </button>
+  const layout = (main: ReactNode, scenes: ReactNode) => (
+    <div className="vr-compare">
+      {main}
+      {side(scenes)}
     </div>
   );
-  const layout = (main: ReactNode, summary?: ReactNode, listTools?: ReactNode, list?: ReactNode) => (
-    <div className={`vr-compare${list ? "" : " solo"}`}>
-      {headerActions &&
-        createPortal(
-          <div className="header-tools vr-head">
-            {summary}
-            {pair}
-            {listTools}
-            <span className="vr-hsep" aria-hidden="true" />
-            {nav}
-          </div>,
-          headerActions,
-        )}
-      {main}
-      {list}
+  const quiet = (text: string) => (
+    <div className="vr-pane">
+      <p className="vr-pane-empty">{text}</p>
     </div>
   );
 
-  if (base === head) return layout(<p className="vr-note">{t("versions.chooseTwo")}</p>);
+  if (base === head) return layout(<p className="vr-note">{t("versions.chooseTwo")}</p>, quiet(t("versions.chooseTwo")));
   if (!cmp)
     return layout(
       <div className="vr-loading" aria-label={t("versions.comparing")}>
@@ -632,6 +536,7 @@ function Compare({
         <span />
         <span />
       </div>,
+      null,
     );
 
   if (touched.length === 0)
@@ -644,16 +549,13 @@ function Compare({
           <p>{t("versions.same", { head: label(head), base: label(base) })}</p>
         </div>
       </div>,
-      <span className="vr-summary">
-        <span className="vr-summary-title">{t("versions.nothingSince", { name: label(base) })}</span>
-      </span>,
+      quiet(t("versions.nothingSince", { name: label(base) })),
     );
 
   const count = (k: Kind) => cmp.scenes.filter((s) => s.diff.kind === k).length;
   const totals = touched.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
   const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || t("dash.noHeading");
-  const shown = cmp.scenes
-    .filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter));
+  const shown = cmp.scenes.filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter));
   const setIn = (set: Set<string>, key: string, on: boolean) => {
     const next = new Set(set);
     if (on) next.add(key);
@@ -709,58 +611,45 @@ function Compare({
         />
       ))}
     </div>,
-    <span className="vr-summary">
-      <span className="vr-summary-title">{plural("versions.changedCount", touched.length)}</span>
-      <LineStat added={totals.added} removed={totals.removed} />
-      <span className="vr-summary-sums">
-        <span title={t("versions.wasIn", { n: cmp.base.scenes.length, name: label(base) })}>
-          {plural("sceneList.count", cmp.head.scenes.length)}
-          {delta(cmp.base.scenes.length, cmp.head.scenes.length)}
-        </span>
-        <span title={t("versions.wasIn", { n: cmp.base.pages, name: label(base) })}>
-          {plural("versions.pages", cmp.head.pages)}
-          {delta(cmp.base.pages, cmp.head.pages)}
-        </span>
-      </span>
-    </span>,
-    <div className="vr-list-tools">
-      <button
-        ref={filterButton}
-        type="button"
-        className={`btn vr-filter-btn${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
-        title={t("versions.shownScenes")}
-        aria-haspopup="menu"
-        aria-expanded={!!menuAt}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
-        }}
-      >
-        <ListFilter aria-hidden="true" />
-        <span className="vr-filter-name">{filterName(filter)}</span>
-        <span className="vr-filter-n">{shown.length}</span>
-        <ChevronDown aria-hidden="true" className="vr-filter-caret" />
-      </button>
-      {menuAt && (
-        <FloatingMenu
-          anchor={filterButton}
-          style={{ top: menuAt.top, left: menuAt.left }}
-          onClose={() => setMenuAt(null)}
-          items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
-        />
-      )}
-      <button
-        type="button"
-        className="btn icon-only vr-fold-all"
-        disabled={shown.length === 0}
-        aria-label={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
-        title={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
-        onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
-      >
-        {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
-      </button>
-    </div>,
     <nav className="vr-tree" aria-label={t("versions.tree")}>
+      {/* What the list shows and how much changed, on one quiet line above it. */}
+      <div className="vr-tree-head">
+        <button
+          ref={filterButton}
+          type="button"
+          className={`vr-filter${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
+          title={t("versions.shownScenes")}
+          aria-haspopup="menu"
+          aria-expanded={!!menuAt}
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
+          }}
+        >
+          <span className="vr-filter-name">{filterName(filter)}</span>
+          <span className="vr-filter-n">{shown.length}</span>
+          <ChevronDown aria-hidden="true" className="vr-filter-caret" />
+        </button>
+        {menuAt && (
+          <FloatingMenu
+            anchor={filterButton}
+            style={{ top: menuAt.top, left: menuAt.left }}
+            onClose={() => setMenuAt(null)}
+            items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
+          />
+        )}
+        <LineStat added={totals.added} removed={totals.removed} />
+        <button
+          type="button"
+          className="more-btn"
+          disabled={shown.length === 0}
+          aria-label={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
+          title={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
+          onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
+        >
+          {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
+        </button>
+      </div>
       <ul className="vr-tree-list">
         {shown.map((s) => (
           <li key={s.key}>
