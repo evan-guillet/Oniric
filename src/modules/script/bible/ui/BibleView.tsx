@@ -16,7 +16,7 @@ import { EntryEditor } from "./EntryEditor";
 import { TypeDialog } from "./TypeEditor";
 import { iconOf } from "./typeIcons";
 import { Select } from "../../../../ui-kit/Select";
-import { plural, relativeFormat, t } from "../../../../core/i18n";
+import { plural, t } from "../../../../core/i18n";
 
 /** Where one is in the Bible: the categories, or one category's entries. The open entry takes their place. */
 type View = { kind: "home" } | { kind: "type"; id: string };
@@ -179,7 +179,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     const was = lastView.current;
     lastView.current = view;
     requestAnimationFrame(() => {
-      if (view.kind === "home" && was.kind === "type") document.querySelector<HTMLElement>(`.type-card-open[data-type="${CSS.escape(was.id)}"]`)?.focus();
+      if (view.kind === "home" && was.kind === "type") document.querySelector<HTMLElement>(`.type-card[data-type="${CSS.escape(was.id)}"]`)?.focus();
       if (view.kind === "type") (document.querySelector<HTMLElement>(".entry-card-open") ?? document.querySelector<HTMLElement>(".header-tools .btn.primary"))?.focus();
     });
   }, [view]);
@@ -285,9 +285,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
               <CategoryCards
                 categories={categories}
                 entries={entries}
-                presence={presence}
                 onOpen={(id) => go({ kind: "type", id })}
-                onOpenEntry={(id) => void open(id)}
                 onCreate={setCreating}
                 onNewType={() => setTypeEdit({})}
               />
@@ -375,173 +373,50 @@ function presenceLabel(type: string, p: Presence | undefined): string | null {
   return plural("sceneList.count", p.count);
 }
 
-/** The entries of a type, the most present first where the screenplay counts them, else by name. */
-function ranked(type: string, entries: Entry[], presence: Map<string, Presence>): Entry[] {
-  const counted = type === "character" || type === "location";
-  return [...entries].sort((a, b) => (counted ? (presence.get(b.id)?.count ?? 0) - (presence.get(a.id)?.count ?? 0) : 0) || byName(a, b));
-}
-
-/** « il y a 5 minutes », « hier », « il y a 3 semaines ». */
-function since(iso: string): string {
-  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["second", 60],
-    ["minute", 60],
-    ["hour", 24],
-    ["day", 7],
-    ["week", 4.35],
-    ["month", 12],
-    ["year", Infinity],
-  ];
-  let v = (Date.parse(iso) - Date.now()) / 1000;
-  for (const [unit, size] of steps) {
-    if (Math.round(Math.abs(v)) < size) return unit === "second" ? t("bible.justNow") : relativeFormat({ numeric: "auto" }).format(Math.round(v), unit);
-    v /= size;
-  }
-  return "";
-}
-
-/** An entry's picture, or the first letter of its name. */
-function Avatar({ entry }: { entry: Entry }) {
-  return (
-    <span className={entry.image ? "bible-avatar photo" : "bible-avatar"} aria-hidden="true">
-      {entry.image ? <MediaImage path={entry.image} alt="" /> : sortKey(entry.name).charAt(0).toUpperCase() || "?"}
-    </span>
-  );
-}
-
-/** How many entries a category's card lists before « Voir les N ». */
-const LISTED = 4;
-
 /**
- * The home of the Bible: the entries last changed, to pick up where one left off; then one card per category
- * listing its most present entries, each opening at once, and « Nouveau type » as the last card; then the
- * categories still empty, each a button that makes their first entry.
+ * The home of the Bible: one card per category, its name and how many entries it holds, opening the category, and
+ * « Nouveau type » as the last card; then the categories still empty, each a button that makes their first entry.
  */
 function CategoryCards({
   categories,
   entries,
-  presence,
   onOpen,
-  onOpenEntry,
   onCreate,
   onNewType,
 }: {
   categories: Category[];
   entries: Entry[];
-  presence: Map<string, Presence>;
   onOpen: (id: string) => void;
-  onOpenEntry: (id: string) => void;
   onCreate: (type: string) => void;
   onNewType: () => void;
 }) {
-  const cards = categories.map((c) => ({ ...c, entries: entries.filter((e) => e.type === c.id && !e.archivedAt) }));
-  const full = cards.filter((c) => c.entries.length > 0);
-  const empty = cards.filter((c) => c.entries.length === 0);
-  const categoryOf = new Map(categories.map((c) => [c.id, c]));
-  const recent = entries
-    .filter((e) => !e.archivedAt && !isDetected(e))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 4);
+  const cards = categories.map((c) => ({ ...c, n: entries.filter((e) => e.type === c.id && !e.archivedAt).length }));
+  const full = cards.filter((c) => c.n > 0);
+  const empty = cards.filter((c) => c.n === 0);
   return (
     <div className="bible-home">
-      {recent.length > 0 && (
-        <section className="bible-home-part" aria-labelledby="bible-recent">
-          <h2 id="bible-recent" className="bible-home-label">
-            {t("bible.recent")}
-          </h2>
-          <ul className="recent-entries">
-            {recent.map((e) => {
-              const c = categoryOf.get(e.type);
-              const Icon = iconOf(c?.type);
-              return (
-                <li key={e.id}>
-                  <button type="button" className="recent-entry" onClick={() => onOpenEntry(e.id)}>
-                    {e.image ? (
-                      <Avatar entry={e} />
-                    ) : (
-                      <span className="recent-entry-icon" aria-hidden="true">
-                        <Icon />
-                      </span>
-                    )}
-                    <span className="recent-entry-text">
-                      <span className="recent-entry-name">{e.name}</span>
-                      <span className="recent-entry-meta">
-                        <span>
-                          {c?.name ?? e.type} · {since(e.updatedAt)}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      <section className="bible-home-part" aria-labelledby="bible-types">
-        <h2 id="bible-types" className="bible-home-label">
-          {t("bible.byType")}
-        </h2>
-        <ul className="type-cards">
-          {full.map((c) => {
-            const Icon = iconOf(c.type);
-            const n = c.entries.length;
-            const counted = c.id === "character" || c.id === "location";
-            const listed = ranked(c.id, c.entries, presence).slice(0, LISTED);
-            // Pictures only where some entry has one: letters alone would read as bullets.
-            const pictured = listed.some((e) => e.image);
-            return (
-              <li key={c.id} className="type-card">
-                <div className="type-card-top">
-                  <span className="type-card-icon">
-                    <Icon aria-hidden="true" />
-                  </span>
-                  <h3 className="type-card-head">
-                    <button type="button" className="type-card-open" data-type={c.id} onClick={() => onOpen(c.id)}>
-                      {c.title}
-                    </button>
-                  </h3>
-                  <span className="type-card-count">{n}</span>
-                </div>
-                <ul className="type-card-entries">
-                  {listed.map((e) => {
-                      const k = presence.get(e.id)?.count ?? 0;
-                      return (
-                        <li key={e.id}>
-                          <button type="button" className="type-card-entry" onClick={() => onOpenEntry(e.id)}>
-                            {pictured && <Avatar entry={e} />}
-                            <span className="type-card-entry-name">{e.name}</span>
-                            {isDetected(e) && <DetectedBadge />}
-                            {counted && (
-                              <span className="type-card-entry-where" title={plural("sceneList.count", k)}>
-                                {t("bible.scenesShort", { n: k })}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                </ul>
-                {n > LISTED && (
-                  <button type="button" className="type-card-more" onClick={() => onOpen(c.id)}>
-                    {t("bible.seeAll", { n })}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-          <li className="type-card-new-item">
-            <button type="button" className="type-card-new" onClick={onNewType}>
-              <span className="type-card-new-label">
-                <Plus aria-hidden="true" />
-                {t("bible.newType")}
-              </span>
-              <span className="type-card-new-hint">{t("bible.newTypeHint")}</span>
-            </button>
-          </li>
-        </ul>
-      </section>
+      <ul className="type-cards">
+        {full.map((c) => {
+          const Icon = iconOf(c.type);
+          return (
+            <li key={c.id}>
+              <button type="button" className="type-card" data-type={c.id} onClick={() => onOpen(c.id)}>
+                <span className="type-card-icon">
+                  <Icon aria-hidden="true" />
+                </span>
+                <span className="type-card-name">{c.title}</span>
+                <span className="type-card-count">{c.n}</span>
+              </button>
+            </li>
+          );
+        })}
+        <li>
+          <button type="button" className="type-card-new" title={t("bible.newTypeHint")} onClick={onNewType}>
+            <Plus aria-hidden="true" />
+            {t("bible.newType")}
+          </button>
+        </li>
+      </ul>
 
       {empty.length > 0 && (
         <section className="bible-home-part" aria-labelledby="bible-empty">
