@@ -1,5 +1,5 @@
 import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, GitCompareArrows, Info, ListFilter, Lock, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
@@ -7,7 +7,7 @@ import { FloatingMenu, MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { diffLines, diffScenes, foldLines, lineStats, type DiffLine, type LineSide, type SceneDiff } from "../domain/diff";
-import { formatById } from "../domain/formats";
+import { formatById, lineHeightIn, type ElementStyle, type ScreenplayFormat } from "../domain/formats";
 import { useScriptFormat } from "../application/formatSettings";
 import {
   cutScenes,
@@ -45,6 +45,8 @@ interface ComparedScene {
   /** Place of the scene in the compared version, or in the reference one when it was removed. */
   number: number;
   lines: DiffLine[];
+  /** The kind of element each line is, in the reference version and in the compared one. */
+  types: { left: string[]; right: string[] };
   added: number;
   removed: number;
 }
@@ -55,7 +57,22 @@ interface Comparison {
   scenes: ComparedScene[];
 }
 
+/** One element per line of a scene's text, in order: its kind, read from the stored elements. */
+function blockTypes(v: VersionFile): Map<string, string[]> {
+  return new Map(
+    v.scenes.map((s) => {
+      try {
+        return [s.id, (JSON.parse(s.content) as { type: string }[]).map((b) => b.type)];
+      } catch {
+        return [s.id, []];
+      }
+    }),
+  );
+}
+
 function compareVersions(base: VersionFile, head: VersionFile): Comparison {
+  const leftTypes = blockTypes(base);
+  const rightTypes = blockTypes(head);
   const left = versionScenes(base);
   const right = versionScenes(head);
   const leftAt = new Map(left.map((s, i) => [s.id, i + 1]));
@@ -63,7 +80,8 @@ function compareVersions(base: VersionFile, head: VersionFile): Comparison {
   const scenes = diffScenes(left, right).map((d, i) => {
     const lines = diffLines(d.left?.text ?? "", d.right?.text ?? "");
     const number = d.right ? (rightAt.get(d.right.id) ?? 0) : (leftAt.get(d.left!.id) ?? 0);
-    return { key: `${(d.right ?? d.left)!.id}-${i}`, diff: d, number, lines, ...lineStats(lines) };
+    const types = { left: (d.left && leftTypes.get(d.left.id)) || [], right: (d.right && rightTypes.get(d.right.id)) || [] };
+    return { key: `${(d.right ?? d.left)!.id}-${i}`, diff: d, number, lines, types, ...lineStats(lines) };
   });
   return { base, head, scenes };
 }
@@ -223,6 +241,7 @@ export function VersionsView() {
             <FirstVersion onFreeze={() => void freeze()} />
           ) : (
             <Compare
+              format={format ?? formatById(null)}
               versions={versions}
               base={base}
               head={head}
@@ -513,6 +532,7 @@ function store(key: string, value: string) {
  * each touched scene's text, the identical lines folded away, and the list of them on the right.
  */
 function Compare({
+  format,
   versions,
   base,
   head,
@@ -524,6 +544,7 @@ function Compare({
   cutIds,
   onReinstate,
 }: {
+  format: ScreenplayFormat;
   versions: VersionRow[];
   base: string;
   head: string;
@@ -652,26 +673,26 @@ function Compare({
   const lit = shown.some((s) => s.key === active) ? active : shown[0]?.key;
 
   return (
-    <div className="vr-compare">
-      {bar(
-        <>
-          <span className="vr-summary-title">{plural("versions.changedCount", touched.length)}</span>
-          <LineStat added={totals.added} removed={totals.removed} />
-          <span className="vr-summary-sums">
-            <span title={t("versions.wasIn", { n: cmp.base.scenes.length, name: label(base) })}>
-              {plural("sceneList.count", cmp.head.scenes.length)}
-              {delta(cmp.base.scenes.length, cmp.head.scenes.length)}
+    <div className="vr-compare with-tree">
+      <div className="vr-col">
+        {bar(
+          <>
+            <span className="vr-summary-title">{plural("versions.changedCount", touched.length)}</span>
+            <LineStat added={totals.added} removed={totals.removed} />
+            <span className="vr-summary-sums">
+              <span title={t("versions.wasIn", { n: cmp.base.scenes.length, name: label(base) })}>
+                {plural("sceneList.count", cmp.head.scenes.length)}
+                {delta(cmp.base.scenes.length, cmp.head.scenes.length)}
+              </span>
+              <span title={t("versions.wasIn", { n: cmp.base.pages, name: label(base) })}>
+                {plural("versions.pages", cmp.head.pages)}
+                {delta(cmp.base.pages, cmp.head.pages)}
+              </span>
             </span>
-            <span title={t("versions.wasIn", { n: cmp.base.pages, name: label(base) })}>
-              {plural("versions.pages", cmp.head.pages)}
-              {delta(cmp.base.pages, cmp.head.pages)}
-            </span>
-          </span>
-        </>,
-      )}
+          </>,
+        )}
 
-      <div className="vr-body">
-        <div className="vr-files" ref={scroller} onScroll={onScroll}>
+        <div className="vr-files" ref={scroller} onScroll={onScroll} style={pageWidth(format)}>
           {shown.map((s) => (
             <SceneFile
               key={s.key}
@@ -683,61 +704,62 @@ function Compare({
               onReview={(on) => review(s.key, on)}
               onOpen={head === CURRENT && s.diff.right ? () => openScene(s.diff.right!.id) : undefined}
               onReinstate={head === CURRENT && s.diff.kind === "removed" && cutIds.has(s.diff.left!.id) ? () => onReinstate(s.diff.left!.id) : undefined}
+              format={format}
             />
           ))}
         </div>
-
-        <nav className="vr-tree" aria-label={t("versions.tree")}>
-            <div className="vr-tree-head">
-              <button
-                ref={filterButton}
-                type="button"
-                className={`btn vr-filter-btn${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
-                title={t("versions.shownScenes")}
-                aria-haspopup="menu"
-                aria-expanded={!!menuAt}
-                onClick={(e) => {
-                  const r = e.currentTarget.getBoundingClientRect();
-                  setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
-                }}
-              >
-                <ListFilter aria-hidden="true" />
-                <span className="vr-filter-name">{filterName(filter)}</span>
-                <span className="vr-filter-n">{shown.length}</span>
-                <ChevronDown aria-hidden="true" className="vr-filter-caret" />
-              </button>
-              {menuAt && (
-                <FloatingMenu
-                  anchor={filterButton}
-                  style={{ top: menuAt.top, left: menuAt.left }}
-                  onClose={() => setMenuAt(null)}
-                  items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
-                />
-              )}
-              <button
-                type="button"
-                className="btn icon-only vr-fold-all"
-                disabled={shown.length === 0}
-                aria-label={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
-                title={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
-                onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
-              >
-                {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
-              </button>
-            </div>
-            <ul className="vr-tree-list">
-              {shown.map((s) => (
-                <li key={s.key}>
-                  <button type="button" className={`vr-tree-item${s.key === lit ? " on" : ""}`} aria-current={s.key === lit || undefined} title={heading(s)} onClick={() => goTo(s.key)}>
-                    {reviewed.has(s.key) ? <Check className="vr-tree-done" aria-label={t("versions.reviewed")} /> : <span className={`vr-dot ${s.diff.kind}`} aria-hidden="true" />}
-                    <span className="vr-tree-name">{heading(s)}</span>
-                    <span className="vr-tree-num">{s.number}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
       </div>
+
+      <nav className="vr-tree" aria-label={t("versions.tree")}>
+        <div className="vr-tree-head">
+          <button
+            ref={filterButton}
+            type="button"
+            className={`btn vr-filter-btn${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
+            title={t("versions.shownScenes")}
+            aria-haspopup="menu"
+            aria-expanded={!!menuAt}
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
+            }}
+          >
+            <ListFilter aria-hidden="true" />
+            <span className="vr-filter-name">{filterName(filter)}</span>
+            <span className="vr-filter-n">{shown.length}</span>
+            <ChevronDown aria-hidden="true" className="vr-filter-caret" />
+          </button>
+          {menuAt && (
+            <FloatingMenu
+              anchor={filterButton}
+              style={{ top: menuAt.top, left: menuAt.left }}
+              onClose={() => setMenuAt(null)}
+              items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
+            />
+          )}
+          <button
+            type="button"
+            className="btn icon-only vr-fold-all"
+            disabled={shown.length === 0}
+            aria-label={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
+            title={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
+            onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
+          >
+            {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
+          </button>
+        </div>
+        <ul className="vr-tree-list">
+          {shown.map((s) => (
+            <li key={s.key}>
+              <button type="button" className={`vr-tree-item${s.key === lit ? " on" : ""}`} aria-current={s.key === lit || undefined} title={heading(s)} onClick={() => goTo(s.key)}>
+                {reviewed.has(s.key) ? <Check className="vr-tree-done" aria-label={t("versions.reviewed")} /> : <span className={`vr-dot ${s.diff.kind}`} aria-hidden="true" />}
+                <span className="vr-tree-name">{heading(s)}</span>
+                <span className="vr-tree-num">{s.number}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }
@@ -749,6 +771,28 @@ function LineStat({ added, removed }: { added: number; removed: number }) {
       <span className={removed ? "vr-minus" : "vr-none"}>−{removed}</span>
     </span>
   );
+}
+
+/** The width of the text on the page, as in the Scénario's cards, and the font of the format. */
+function pageWidth(f: ScreenplayFormat): CSSProperties {
+  const lh = lineHeightIn(f);
+  return {
+    "--vr-text": `${f.page.width - f.margins.left - f.margins.right}in`,
+    "--lh": `${lh}in`,
+  } as CSSProperties;
+}
+
+/** An element laid out as in the editor: its indent, width, alignment, case and style. */
+function elementStyle(s: ElementStyle, lh: number): CSSProperties {
+  return {
+    marginLeft: `${s.indent}in`,
+    width: `${s.width}in`,
+    textAlign: s.align,
+    textTransform: s.uppercase ? "uppercase" : undefined,
+    fontStyle: s.italic ? "italic" : undefined,
+    textDecoration: s.underline ? "underline" : undefined,
+    lineHeight: `${lh * (s.spacing ?? 1)}in`,
+  };
 }
 
 /** A line of the unified text: kept, taken out (from the reference) or put in (in the compared version). */
@@ -793,7 +837,9 @@ function SceneFile({
   onReview,
   onOpen,
   onReinstate,
+  format,
 }: {
+  format: ScreenplayFormat;
   scene: ComparedScene;
   heading: string;
   open: boolean;
@@ -820,8 +866,9 @@ function SceneFile({
       </button>
     );
   };
-  const body = (render: (lines: DiffLine[]) => ReactNode) =>
-    hunks.map((h, i) => (h.kind === "fold" && !unfolded.has(i) ? fold(i, h.lines.length) : <Fragment key={i}>{render(h.lines)}</Fragment>));
+  const lh = lineHeightIn(format);
+  const body = (render: (lines: DiffLine[], first: boolean) => ReactNode) =>
+    hunks.map((h, i) => (h.kind === "fold" && !unfolded.has(i) ? fold(i, h.lines.length) : <Fragment key={i}>{render(h.lines, i === 0 || (hunks[i - 1].kind === "fold" && !unfolded.has(i - 1)))}</Fragment>));
 
   return (
     <section className={`vr-file ${kind}${reviewed ? " reviewed" : ""}`} data-key={scene.key} aria-label={heading}>
@@ -848,19 +895,25 @@ function SceneFile({
         </span>
       </header>
       {open && kind === "moved" && <div className="vr-split-note">{t("versions.moved")}</div>}
-      {open && (
-        <div className="vr-unified" role="table" aria-label={heading}>
-          {body((lines) =>
-            unify(lines).map((r, k) => (
-              <div key={k} className={`vr-row ${r.tone}`} role="row">
-                <span className={`vr-ln ${r.tone}`} role="cell" aria-label={r.tone === "del" ? t("versions.removedLine") : undefined}>
-                  {r.tone === "del" ? "−" : r.side.n}
-                </span>
-                <span className={`vr-code ${r.tone}`} role="cell">
-                  <LineText side={r.side} marked={r.marked} />
-                </span>
-              </div>
-            )),
+      {open && scene.lines.length > 0 && (
+        <div className="vr-script" role="table" aria-label={heading} style={{ fontFamily: `"${format.fontFamily}", monospace`, fontSize: `${format.fontSizePt}pt` }}>
+          {body((lines, first) =>
+            unify(lines).map((r, k, rows) => {
+              const type = (r.tone === "del" ? scene.types.left : scene.types.right)[r.side.n - 1] ?? "action";
+              const el = format.elements[type as keyof ScreenplayFormat["elements"]] ?? format.elements.action;
+              // The space the page leaves above the element; none at the top or under a fold, nor between a line and its rewrite.
+              const tight = (first && k === 0) || (r.tone === "ins" && r.marked && rows[k - 1]?.tone === "del");
+              return (
+                <div key={k} className={`vr-line ${r.tone}`} role="row" style={tight ? undefined : { paddingTop: `${el.spaceBefore * lh}in` }}>
+                  <span className="vr-ln" role="cell" aria-label={r.tone === "del" ? t("versions.removedLine") : undefined}>
+                    {r.tone === "del" ? "−" : r.side.n}
+                  </span>
+                  <span className="vr-el" role="cell" style={elementStyle(el, lh)}>
+                    <LineText side={r.side} marked={r.marked} />
+                  </span>
+                </div>
+              );
+            }),
           )}
         </div>
       )}

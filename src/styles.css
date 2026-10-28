@@ -5969,6 +5969,24 @@ h4 {
   flex-direction: column;
   height: 100%;
 }
+/* With scenes to go through: the bar heads the text only, the list runs the full height on the right. */
+.vr-compare.with-tree {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 264px;
+}
+.vr-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  container-type: inline-size;
+}
+/* Short of room, the bar keeps to one line, level with the head of the list: the counts of scenes and pages go first. */
+@container (max-width: 820px) {
+  .vr-col .vr-summary-sums {
+    display: none;
+  }
+}
 
 /* The bar: how much changed on the left, which two versions and how to lay them out on the right. */
 .vr-toolbar {
@@ -6075,13 +6093,6 @@ h4 {
   color: var(--hint);
 }
 
-.vr-body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 264px;
-}
-
 /* The touched scenes, one line each; the one at the top of the text is lit. */
 .vr-tree {
   display: flex;
@@ -6094,7 +6105,9 @@ h4 {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 10px 8px 12px;
+  min-height: 46px;
+  padding: 5px 10px 5px 12px;
+  border-bottom: 1px solid var(--line);
 }
 /* What the list shows, as a real button: its name and count, opening the choice. */
 .vr-filter-btn {
@@ -6146,7 +6159,7 @@ h4 {
   min-height: 0;
   overflow: auto;
   margin: 0;
-  padding: 0 8px 24px;
+  padding: 8px 8px 24px;
   list-style: none;
 }
 .vr-tree-item {
@@ -6227,11 +6240,15 @@ h4 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 24px 48px;
+  padding: 16px 16px 48px;
   background: var(--sunken);
 }
+/* Each scene is as wide as its card in the Scénario: the text at its printed width, a margin either side for the line numbers. */
 .vr-file {
+  --vr-gutter: 0.6in;
   flex: none;
+  width: calc(var(--vr-text, 6in) + 2 * var(--vr-gutter));
+  margin-inline: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -6357,9 +6374,6 @@ h4 {
 .vr-unified {
   grid-template-columns: 52px minmax(0, 1fr);
 }
-.vr-row {
-  display: contents;
-}
 .vr-ln {
   padding: 2px 12px 2px 0;
   color: var(--hint);
@@ -6390,15 +6404,62 @@ h4 {
 .vr-ln.ins {
   color: var(--ok);
 }
-.vr-code.del mark {
+.vr-code.del mark,
+.vr-line.del mark {
   background: var(--danger-line);
   color: var(--ink);
   border-radius: 3px;
 }
-.vr-code.ins mark {
+.vr-code.ins mark,
+.vr-line.ins mark {
   background: var(--ok-line);
   color: var(--ink);
   border-radius: 3px;
+}
+
+/* The text laid out as in the Scénario: each element at its indent and width, the format's spacing above it. */
+.vr-script {
+  padding: 0.14in 0 0.2in;
+  color: var(--ink);
+  line-height: var(--lh);
+  font-kerning: none;
+  font-variant-ligatures: none;
+}
+.vr-line {
+  display: grid;
+  grid-template-columns: var(--vr-gutter) minmax(0, 1fr);
+  padding-right: var(--vr-gutter);
+}
+.vr-line.del {
+  background: var(--danger-soft);
+}
+.vr-line.ins {
+  background: var(--ok-soft);
+}
+.vr-line .vr-ln {
+  padding: 0 16px 0 0;
+  line-height: var(--lh);
+}
+.vr-line.del .vr-ln {
+  color: var(--danger);
+  font-weight: 600;
+}
+.vr-line.ins .vr-ln {
+  color: var(--ok);
+}
+.vr-el {
+  display: block;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.vr-script .vr-fold {
+  width: 100%;
+  grid-template-columns: var(--vr-gutter) minmax(0, 1fr);
+  margin-block: 4px;
+}
+.vr-script .vr-fold-label {
+  padding-right: var(--vr-gutter);
 }
 
 /* Identical lines folded away: a quiet row that opens them, upwards, downwards or both ways between changes. */
@@ -6570,14 +6631,11 @@ h4 {
   .vr-tree {
     display: none;
   }
-  .vr-body {
+  .vr-compare.with-tree {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 960px) {
-  .vr-files {
-    padding-inline: 16px;
-  }
   .vr-page {
     padding-inline: 16px;
   }
