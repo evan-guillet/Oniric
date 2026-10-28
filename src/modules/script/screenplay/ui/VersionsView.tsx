@@ -1,10 +1,10 @@
-import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Columns2, GitCompareArrows, ListFilter, Lock, PanelLeft, PenLine, Rows2, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Columns2, GitCompareArrows, Info, ListFilter, Lock, PanelRight, PenLine, Rows2, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { FloatingMenu, MoreMenu } from "../../../../ui-kit/MoreMenu";
-import { Segmented } from "../../../../ui-kit/Segmented";
+import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { diffLines, diffScenes, foldLines, lineStats, type DiffLine, type LineSide, type SceneDiff } from "../domain/diff";
 import { formatById } from "../domain/formats";
@@ -81,7 +81,7 @@ const TAB_KEY = "oniric.versions.tab";
 
 /**
  * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06], one at a time behind three
- * tabs: what changed between two versions, the versions themselves, and the scenes cut from the screenplay.
+ * tabs in the header: what changed between two versions, the versions themselves, and the scenes cut from the screenplay.
  */
 export function VersionsView() {
   const { session, project, notify, prompt, ask, headerActions } = useProject();
@@ -94,7 +94,6 @@ export function VersionsView() {
   const [head, setHead] = useState(CURRENT);
   const [cmp, setCmp] = useState<Comparison | null>(null);
   const [now, setNow] = useState<VersionFile | null>(null);
-  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // The reference follows the latest frozen version, so that freezing leaves nothing to compare.
   const latest = versions[0]?.file ?? "";
@@ -138,14 +137,6 @@ export function VersionsView() {
   const open = (next: Tab) => {
     store(TAB_KEY, next);
     setTab(next);
-  };
-  const onTabKey = (e: KeyboardEvent, i: number) => {
-    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    const to = step ? (i + step + TABS.length) % TABS.length : e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : -1;
-    if (to < 0) return;
-    e.preventDefault();
-    open(TABS[to]);
-    tabs.current[to]?.focus();
   };
 
   const freeze = async () => {
@@ -209,51 +200,27 @@ export function VersionsView() {
     setHead(CURRENT);
     open("changes");
   };
-  const touched = cmp && base !== head ? cmp.scenes.filter((s) => s.diff.kind !== "same").length : null;
-  const counts: Record<Tab, number | null> = { changes: touched, versions: loaded ? versions.length : null, cuts: cuts.length };
-  const names: Record<Tab, string> = { changes: t("versions.changes"), versions: t("nav.views.versions"), cuts: t("versions.cuts") };
+  const sections: SegmentedOption<Tab>[] = [
+    { id: "changes", label: t("versions.changes"), icon: GitCompareArrows, hint: t("versions.changesHint") },
+    { id: "versions", label: t("nav.views.versions"), icon: Lock, hint: t("versions.versionsHint") },
+    { id: "cuts", label: t("versions.cuts"), icon: Scissors, hint: t("versions.cutsHint") },
+  ];
 
   return (
     <div className="view versions-view">
       {headerActions &&
         createPortal(
           <div className="header-tools">
-            <button type="button" className="btn primary" onClick={() => void freeze()}>
-              <Lock aria-hidden="true" />
-              {t("versions.freeze")}
-            </button>
+            <Segmented label={t("versions.sections")} options={sections} value={tab} onChange={open} compact />
           </div>,
           headerActions,
         )}
 
-      <div className="vr-tabs" role="tablist" aria-label={t("versions.sections")}>
-        {TABS.map((id, i) => (
-          <button
-            key={id}
-            ref={(el) => {
-              tabs.current[i] = el;
-            }}
-            id={`vr-tab-${id}`}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            aria-controls="vr-panel"
-            tabIndex={tab === id ? 0 : -1}
-            className={`vr-tab${tab === id ? " on" : ""}`}
-            onClick={() => open(id)}
-            onKeyDown={(e) => onTabKey(e, i)}
-          >
-            {names[id]}
-            {!!counts[id] && <span className="vr-tab-n">{counts[id]}</span>}
-          </button>
-        ))}
-      </div>
-
-      <main className={`vr-main ${tab}`} id="vr-panel" role="tabpanel" aria-labelledby={`vr-tab-${tab}`}>
+      <main className={`vr-main ${tab}`} aria-label={sections.find((o) => o.id === tab)?.label}>
         {/* Nothing while the versions are being read, so the first-version page does not flash before them. */}
         {!loaded ? null : tab === "changes" ? (
           versions.length === 0 ? (
-            <FirstVersion />
+            <FirstVersion onFreeze={() => void freeze()} />
           ) : (
             <Compare
               versions={versions}
@@ -303,7 +270,7 @@ function VersionList({
   const newest = versions[0];
   return (
     <div className="vr-page">
-      <p className="vr-page-intro">{t("versions.versionsIntro")}</p>
+      <Banner>{t("versions.versionsIntro")}</Banner>
       <ol className="vr-thread">
         <li className="vr-stop current">
           <span className="vr-node" aria-hidden="true">
@@ -331,6 +298,12 @@ function VersionList({
                   t("versions.savedAsTyped")
                 )}
               </span>
+            </div>
+            <div className="vr-stop-actions">
+              <button type="button" className="btn primary small" onClick={onFreeze}>
+                <Lock aria-hidden="true" />
+                {t("versions.freezeShort")}
+              </button>
             </div>
           </div>
         </li>
@@ -390,12 +363,18 @@ function VersionList({
         <div className="vr-empty">
           <p className="vr-empty-title">{t("versions.noneYet")}</p>
           <p>{t("versions.noneYetText")}</p>
-          <button type="button" className="btn" onClick={onFreeze}>
-            <Lock aria-hidden="true" />
-            {t("versions.freeze")}
-          </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** What a tab holds and how it behaves, said once at its top. */
+function Banner({ children }: { children: ReactNode }) {
+  return (
+    <div className="vr-banner" role="note">
+      <Info aria-hidden="true" />
+      <p>{children}</p>
     </div>
   );
 }
@@ -430,7 +409,7 @@ function CutList({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate
     );
   return (
     <div className="vr-page">
-      <p className="vr-page-intro">{t("versions.cutsNote")}</p>
+      <Banner>{t("versions.cutsNote")}</Banner>
       <ul className="vr-cut-list">
         {cuts.map((c) => {
           const lines = cutExcerpt(c.content);
@@ -469,12 +448,16 @@ function CutList({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate
 }
 
 /** Before the first frozen version: what freezing does, with a glimpse of a comparison. */
-function FirstVersion() {
+function FirstVersion({ onFreeze }: { onFreeze: () => void }) {
   return (
     <div className="vr-first">
       <h2>{t("versions.firstTitle")}</h2>
       <p>{t("versions.firstText")}</p>
       <p className="vr-first-when">{t("versions.firstWhen")}</p>
+      <button type="button" className="btn primary vr-first-go" onClick={onFreeze}>
+        <Lock aria-hidden="true" />
+        {t("versions.freeze")}
+      </button>
       <figure className="vr-first-sample" aria-label={t("versions.sampleLabel")}>
         <div className="vr-file-head">
           <span className="vr-file-num">{t("versions.sceneShort", { n: 12 })}</span>
@@ -554,7 +537,7 @@ function Compare({
   const [active, setActive] = useState("");
   const [layout, setLayout] = useState<Layout>(() => stored(LAYOUT_KEY, "unified", ["unified", "split"]));
   const [tree, setTree] = useState(() => stored(TREE_KEY, window.innerWidth >= 1100 ? "1" : "0", ["1", "0"]) === "1");
-  const [menuAt, setMenuAt] = useState<{ top: number; left: number } | null>(null);
+  const [menuAt, setMenuAt] = useState<{ top: number; right: number } | null>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -577,21 +560,6 @@ function Compare({
   const touched = ready ? cmp.scenes.filter((s) => s.diff.kind !== "same") : [];
   const bar = (summary: ReactNode) => (
     <header className="vr-toolbar">
-      {touched.length > 0 && (
-        <button
-          type="button"
-          className={`more-btn vr-tree-toggle${tree ? " on" : ""}`}
-          aria-pressed={tree}
-          aria-label={t("versions.tree")}
-          title={t("versions.tree")}
-          onClick={() => {
-            store(TREE_KEY, tree ? "0" : "1");
-            setTree(!tree);
-          }}
-        >
-          <PanelLeft aria-hidden="true" />
-        </button>
-      )}
       <div className="vr-summary">{summary}</div>
       <div className="vr-toolbar-end">
         <div className="vr-pair" role="group" aria-label={t("versions.pair")}>
@@ -619,6 +587,21 @@ function Compare({
               { id: "split", label: t("versions.split"), icon: Columns2 },
             ]}
           />
+        )}
+        {touched.length > 0 && (
+          <button
+            type="button"
+            className={`more-btn vr-tree-toggle${tree ? " on" : ""}`}
+            aria-pressed={tree}
+            aria-label={t("versions.tree")}
+            title={t("versions.tree")}
+            onClick={() => {
+              store(TREE_KEY, tree ? "0" : "1");
+              setTree(!tree);
+            }}
+          >
+            <PanelRight aria-hidden="true" />
+          </button>
         )}
       </div>
     </header>
@@ -715,6 +698,25 @@ function Compare({
       )}
 
       <div className={`vr-body${tree ? "" : " no-tree"}`}>
+        <div className="vr-files" ref={scroller} onScroll={onScroll}>
+          {shown.length === 0 && <p className="vr-blank">{t("versions.noMatch", { query: search.trim() })}</p>}
+          {shown.map((s) => (
+            <SceneFile
+              key={s.key}
+              scene={s}
+              heading={heading(s)}
+              layout={layout}
+              open={!closed.has(s.key)}
+              onToggle={() => setClosed((c) => setIn(c, s.key, !c.has(s.key)))}
+              reviewed={reviewed.has(s.key)}
+              onReview={(on) => review(s.key, on)}
+              onOpen={head === CURRENT && s.diff.right ? () => openScene(s.diff.right!.id) : undefined}
+              baseLabel={label(base)}
+              headLabel={label(head)}
+            />
+          ))}
+        </div>
+
         {tree && (
           <nav className="vr-tree" aria-label={t("versions.tree")}>
             <div className="vr-tree-head">
@@ -729,7 +731,7 @@ function Compare({
                 aria-expanded={!!menuAt}
                 onClick={(e) => {
                   const r = e.currentTarget.getBoundingClientRect();
-                  setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
+                  setMenuAt(menuAt ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
                 }}
               >
                 <ListFilter aria-hidden="true" />
@@ -737,7 +739,7 @@ function Compare({
               {menuAt && (
                 <FloatingMenu
                   anchor={filterButton}
-                  style={{ top: menuAt.top, left: menuAt.left }}
+                  style={{ top: menuAt.top, right: menuAt.right }}
                   onClose={() => setMenuAt(null)}
                   items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
                 />
@@ -770,25 +772,6 @@ function Compare({
             </ul>
           </nav>
         )}
-
-        <div className="vr-files" ref={scroller} onScroll={onScroll}>
-          {shown.length === 0 && <p className="vr-blank">{t("versions.noMatch", { query: search.trim() })}</p>}
-          {shown.map((s) => (
-            <SceneFile
-              key={s.key}
-              scene={s}
-              heading={heading(s)}
-              layout={layout}
-              open={!closed.has(s.key)}
-              onToggle={() => setClosed((c) => setIn(c, s.key, !c.has(s.key)))}
-              reviewed={reviewed.has(s.key)}
-              onReview={(on) => review(s.key, on)}
-              onOpen={head === CURRENT && s.diff.right ? () => openScene(s.diff.right!.id) : undefined}
-              baseLabel={label(base)}
-              headLabel={label(head)}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );

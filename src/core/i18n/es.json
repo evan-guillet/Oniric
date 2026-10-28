@@ -854,7 +854,11 @@
     "noneYetText": "Fija la versión actual antes de una gran reescritura o de un envío: después verás qué ha cambiado.",
     "cutsEmpty": "No hay escenas cortadas",
     "moreLines_one": "{{n}} línea más",
-    "moreLines_other": "{{n}} líneas más"
+    "moreLines_other": "{{n}} líneas más",
+    "freezeShort": "Fijar",
+    "changesHint": "Qué ha cambiado entre dos versiones, escena por escena",
+    "versionsHint": "Las versiones fijadas y la versión actual",
+    "cutsHint": "Las escenas eliminadas del guion, para reintegrar"
   },
   "bible": {
     "types": {

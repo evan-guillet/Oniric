@@ -5621,78 +5621,13 @@ h4 {
 }
 
 /*
- * Versions, one thing at a time behind three tabs: the changes between two versions, laid out like a code
+ * Versions, one thing at a time behind three tabs in the header: the changes between two versions, laid out like a code
  * review; the versions themselves, as a thread; the scenes cut from the screenplay, waiting to be put back.
  */
 .versions-view {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.vr-tabs {
-  flex: none;
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  height: 40px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
-}
-.vr-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  border: none;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 120ms ease-out;
-}
-.vr-tab::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: transparent;
-  transition: background-color 120ms ease-out;
-}
-.vr-tab:hover {
-  color: var(--ink);
-}
-.vr-tab.on {
-  color: var(--ink);
-}
-.vr-tab.on::after {
-  background: var(--accent);
-}
-.vr-tab:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: -6px;
-  border-radius: 8px;
-}
-.vr-tab-n {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 4px;
-  background: var(--seg-track);
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 17px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.vr-tab.on .vr-tab-n {
-  color: var(--ink-2);
 }
 
 /* The versions and the cut scenes read as one centred column, on the same ground as the comparison. */
@@ -5705,10 +5640,27 @@ h4 {
   margin-inline: auto;
   padding: 28px 32px 56px;
 }
-.vr-page-intro {
-  max-width: 62ch;
+/* What the tab holds, said once at its top. */
+.vr-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   margin: 0 0 20px;
-  color: var(--muted);
+  padding: 11px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+.vr-banner svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--accent);
+}
+.vr-banner p {
+  margin: 0;
+  color: var(--ink-2);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -6030,7 +5982,7 @@ h4 {
   border-bottom: 1px solid var(--line);
 }
 .vr-tree-toggle {
-  margin-left: -6px;
+  margin-right: -4px;
 }
 .vr-summary {
   display: flex;
@@ -6130,7 +6082,7 @@ h4 {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 264px;
 }
 .vr-body.no-tree {
   grid-template-columns: minmax(0, 1fr);
@@ -6141,7 +6093,7 @@ h4 {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
 }
 .vr-tree-head {
   flex: none;
@@ -6620,6 +6572,9 @@ h4 {
 }
 .vr-first .vr-first-when {
   color: var(--muted);
+}
+.vr-first-go {
+  margin-top: 12px;
 }
 .vr-first-sample {
   margin: 28px 0 0;

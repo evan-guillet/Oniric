@@ -854,7 +854,11 @@
     "noneYetText": "Figez la version actuelle avant une grande réécriture ou un envoi : vous verrez ensuite ce qui a changé depuis.",
     "cutsEmpty": "Aucune scène coupée",
     "moreLines_one": "{{n}} ligne de plus",
-    "moreLines_other": "{{n}} lignes de plus"
+    "moreLines_other": "{{n}} lignes de plus",
+    "freezeShort": "Figer",
+    "changesHint": "Ce qui a changé entre deux versions, scène par scène",
+    "versionsHint": "Les versions figées, et la version actuelle",
+    "cutsHint": "Les scènes supprimées du scénario, à réintégrer"
   },
   "bible": {
     "types": {

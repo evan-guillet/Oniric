@@ -854,7 +854,11 @@
     "noneYetText": "Freeze the current version before a big rewrite or before sending it out: you’ll then see what changed since.",
     "cutsEmpty": "No cut scenes",
     "moreLines_one": "{{n}} more line",
-    "moreLines_other": "{{n}} more lines"
+    "moreLines_other": "{{n}} more lines",
+    "freezeShort": "Freeze",
+    "changesHint": "What changed between two versions, scene by scene",
+    "versionsHint": "The frozen versions, and the current one",
+    "cutsHint": "The scenes deleted from the screenplay, to put back"
   },
   "bible": {
     "types": {
