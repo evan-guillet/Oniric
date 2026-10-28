@@ -10,6 +10,7 @@ import { currentType, elementInputRules, placeholderPlugin, sceneNormalizer, scr
 import { pageDecorations } from "./pageDecorations";
 import { newScene, schema, sceneFromStored } from "./schema";
 import { frenchTypography, getWritingPrefs } from "../../../../../core/writingPrefs";
+import { t } from "../../../../../core/i18n";
 
 const pagesKey = new PluginKey<DecorationSet>("pages");
 
@@ -125,7 +126,7 @@ export class ScriptEditor {
 
   private attributes(): Record<string, string> {
     const spell = getWritingPrefs().spellcheck;
-    return { spellcheck: spell ? "true" : "false", lang: this.format.language, "aria-label": "Scénario", role: "textbox", "aria-multiline": "true" };
+    return { spellcheck: spell ? "true" : "false", lang: this.format.language, "aria-label": t("nav.views.script"), role: "textbox", "aria-multiline": "true" };
   }
 
   /** Reads the writing preferences again (spelling, typography). */

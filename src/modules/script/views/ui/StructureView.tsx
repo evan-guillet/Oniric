@@ -5,12 +5,13 @@ import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { useProject } from "../../../project/ui/projectContext";
 import { BoardView } from "./BoardView";
 import { TimelineView } from "./TimelineView";
+import { t } from "../../../../core/i18n";
 
 type Shape = "board" | "timeline";
 
-const SHAPES: SegmentedOption<Shape>[] = [
-  { id: "board", label: "Tableau", icon: SquareKanban, hint: "Les actes, séquences et scènes sur un canevas" },
-  { id: "timeline", label: "Chronologie", icon: ChartGantt, hint: "Les scènes au fil des pages, avec leurs personnages" },
+const shapes = (): SegmentedOption<Shape>[] => [
+  { id: "board", label: t("structure.board"), icon: SquareKanban, hint: t("structure.boardHint") },
+  { id: "timeline", label: t("structure.timeline"), icon: ChartGantt, hint: t("structure.timelineHint") },
 ];
 
 const SHAPE_KEY = "oniric.structure.view";
@@ -39,7 +40,7 @@ export function StructureView() {
       {headerActions &&
         createPortal(
           <div className="header-tools structure-shape">
-            <Segmented label="Affichage de la structure" options={SHAPES} value={shape} onChange={choose} compact />
+            <Segmented label={t("structure.shape")} options={shapes()} value={shape} onChange={choose} compact />
           </div>,
           headerActions,
         )}

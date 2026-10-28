@@ -7,10 +7,11 @@ import { confirmRemoval } from "../../../../ui-kit/Dialog";
 import { useProject } from "../../../project/ui/projectContext";
 import { addRelation, createEntry, deleteRelation, loadEntries, loadRelations, setEntryField, type Entry } from "../../bible/application/bible";
 import { loadStory, STORY_TABLES } from "../../views/application/story";
-import { DRAMATIC_FUNCTIONS, OPPOSITION_KINDS, RELATION_KINDS } from "../domain/steps";
+import { choiceLabel, DRAMATIC_FUNCTIONS, OPPOSITION_KINDS, RELATION_KINDS } from "../domain/steps";
 import { Help, useWorkshop, WText } from "./fields";
 
 import { Select } from "../../../../ui-kit/Select";
+import { t } from "../../../../core/i18n";
 interface Secondary {
   entryId: string;
   role: string;
@@ -28,7 +29,7 @@ export function StepCharacters() {
 
   const pickOrCreate = async (value: string, key: string) => {
     if (value === "__new") {
-      const name = await prompt("Nouveau personnage", "Nom du personnage");
+      const name = await prompt(t("chars.new"), t("chars.name"));
       if (!name?.trim()) return;
       try {
         const id = await createEntry("character", name);
@@ -41,53 +42,55 @@ export function StepCharacters() {
 
   const select = (key: string, current?: Entry) => (
     <Select value={current?.id ?? ""} onChange={(e) => void pickOrCreate(e.target.value, key)}>
-      <option value="">— Choisir un personnage de la bible —</option>
+      <option value="">{t("chars.choose")}</option>
       {characters.map((c) => (
         <option key={c.id} value={c.id}>
           {c.name}
         </option>
       ))}
-      <option value="__new">+ Nouveau personnage…</option>
+      <option value="__new">{t("chars.newOption")}</option>
     </Select>
   );
 
   return (
     <div className="step-body">
       <section className="step-section">
-        <h3>Le protagoniste</h3>
-        <Help>Le personnage dont on suit la quête. Son désir le fait agir ; son besoin, souvent caché, est ce qu'il découvre en chemin.</Help>
+        <h3>{t("chars.protagonist")}</h3>
+        <Help>{t("chars.protagonistHelp")}</Help>
         {select("char.protagonist", protagonist)}
         {protagonist && <CharacterSheet entry={protagonist} keys={["desire", "need", "flaw", "arc_start", "arc_end"]} onOpen={() => openEntry(protagonist.id)} />}
       </section>
 
       <section className="step-section">
-        <h3>L'antagoniste ou la force d'opposition</h3>
-        <Help>Ce qui s'oppose au désir du protagoniste : une personne, un groupe, la nature, la société, ou lui-même.</Help>
+        <h3>{t("chars.antagonistTitle")}</h3>
+        <Help>{t("chars.antagonistHelp")}</Help>
         <div className="grid-2">
           <label className="fld">
-            <span className="fld-label">Nature de l'opposition</span>
+            <span className="fld-label">{t("chars.oppositionKind")}</span>
             <Select value={w.get("char.opposition", "Personne")} onChange={(e) => w.set("char.opposition", e.target.value)}>
               {OPPOSITION_KINDS.map((k) => (
-                <option key={k}>{k}</option>
+                <option key={k} value={k}>
+                  {choiceLabel("oppositions", k)}
+                </option>
               ))}
             </Select>
           </label>
           {w.get("char.opposition", "Personne") === "Personne" && (
             <label className="fld">
-              <span className="fld-label">Antagoniste</span>
+              <span className="fld-label">{t("chars.antagonist")}</span>
               {select("char.antagonist", antagonist)}
             </label>
           )}
         </div>
-        <WText k="char.opposition_text" label="En quoi elle s'oppose" rows={2} />
+        <WText k="char.opposition_text" label={t("chars.oppositionText")} rows={2} />
         {antagonist && w.get("char.opposition", "Personne") === "Personne" && (
           <CharacterSheet entry={antagonist} keys={["desire", "motivations", "flaw"]} onOpen={() => openEntry(antagonist.id)} />
         )}
       </section>
 
       <section className="step-section">
-        <h3>Les personnages secondaires</h3>
-        <Help>Chacun a une fonction dramatique : le mentor guide, l'allié aide, le gardien du seuil met à l'épreuve, l'ombre incarne ce que le héros pourrait devenir…</Help>
+        <h3>{t("chars.secondary")}</h3>
+        <Help>{t("chars.secondaryHelp")}</Help>
         <table className="table compact">
           <tbody>
             {secondary.map((s, i) => {
@@ -100,20 +103,22 @@ export function StepCharacters() {
                         {e.name}
                       </button>
                     ) : (
-                      <span className="muted">(fiche supprimée)</span>
+                      <span className="muted">{t("entry.deletedEntry")}</span>
                     )}
                   </td>
                   <td>
-                    <Select value={s.role} onChange={(ev) => w.set("char.secondary", secondary.map((x, k) => (k === i ? { ...x, role: ev.target.value } : x)))} aria-label="Fonction dramatique">
+                    <Select value={s.role} onChange={(ev) => w.set("char.secondary", secondary.map((x, k) => (k === i ? { ...x, role: ev.target.value } : x)))} aria-label={t("chars.function")}>
                       {DRAMATIC_FUNCTIONS.map((f) => (
-                        <option key={f}>{f}</option>
+                        <option key={f} value={f}>
+                          {choiceLabel("functions", f)}
+                        </option>
                       ))}
                     </Select>
                   </td>
                   <td>
-                    <button type="button" className="btn ghost small" aria-label="Retirer"
+                    <button type="button" className="btn ghost small" aria-label={t("script.info.remove")}
                       onClick={async () => {
-                        if (await confirmRemoval(ask, { title: `Retirer ${e?.name ? `« ${e.name} »` : "ce personnage"} des personnages secondaires ?`, text: "Sa fiche reste dans la Bible.", label: "Retirer" }))
+                        if (await confirmRemoval(ask, { title: e?.name ? t("chars.removeNamed", { name: e.name }) : t("chars.remove"), text: t("chars.removeText"), label: t("script.info.remove") }))
                           w.set("char.secondary", secondary.filter((x) => x !== s));
                       }}
                     >
@@ -127,10 +132,10 @@ export function StepCharacters() {
         </table>
         <Select
           value=""
-          aria-label="Ajouter un personnage secondaire"
+          aria-label={t("chars.addSecondary")}
           onChange={(e) => e.target.value && w.set("char.secondary", [...secondary, { entryId: e.target.value, role: "Allié" }])}
         >
-          <option value="" hidden>+ Ajouter un personnage secondaire…</option>
+          <option value="" hidden>{t("chars.addSecondaryOption")}</option>
           {characters
             .filter((c) => c.id !== protagonist?.id && !secondary.some((s) => s.entryId === c.id))
             .map((c) => (
@@ -142,32 +147,26 @@ export function StepCharacters() {
       </section>
 
       <section className="step-section">
-        <h3>Carte des relations</h3>
-        <Help>Les liens entre personnages : famille, amour, rivalité, hiérarchie… Un lien peut ne valoir qu'à partir d'un acte, pour voir les relations évoluer.</Help>
+        <h3>{t("chars.relations")}</h3>
+        <Help>{t("chars.relationsHelp")}</Help>
         <RelationMap characters={characters} />
       </section>
     </div>
   );
 }
 
-const SHEET_LABELS: Record<string, string> = {
-  desire: "Désir (ce qu'il veut)",
-  need: "Besoin (ce dont il a vraiment besoin)",
-  flaw: "Faille",
-  arc_start: "Arc : état initial",
-  arc_end: "Arc : état final",
-  motivations: "Motivations",
-};
+/** The bible fields the sheets show; each one's name, with what it holds, is in the catalog. */
+const SHEET_KEYS = new Set(["desire", "need", "flaw", "arc_start", "arc_end", "motivations"]);
 
 /** Fields of the bible entry itself: the workshop and the bible show the same data [PER-04]. */
 function CharacterSheet({ entry, keys, onOpen }: { entry: Entry; keys: string[]; onOpen: () => void }) {
   return (
     <div className="sheet">
       {keys.map((k) => (
-        <EntryField key={`${entry.id}-${k}`} entry={entry} k={k} label={SHEET_LABELS[k] ?? k} />
+        <EntryField key={`${entry.id}-${k}`} entry={entry} k={k} label={SHEET_KEYS.has(k) ? t(`chars.sheet.${k}`) : k} />
       ))}
       <button type="button" className="btn ghost small" onClick={onOpen}>
-        Ouvrir la fiche complète de {entry.name}
+        {t("chars.openFull", { name: entry.name })}
       </button>
     </div>
   );
@@ -218,11 +217,11 @@ function RelationMap({ characters }: { characters: Entry[] }) {
   };
   const name = (id: string) => characters.find((c) => c.id === id)?.name ?? "?";
 
-  if (characters.length < 2) return <p className="muted">Créez au moins deux personnages dans la bible pour dessiner leurs relations.</p>;
+  if (characters.length < 2) return <p className="muted">{t("chars.needTwo")}</p>;
 
   return (
     <div className="relations">
-      <svg width={440} height={360} role="img" aria-label="Carte des relations entre personnages" className="relation-map">
+      <svg width={440} height={360} role="img" aria-label={t("chars.mapLabel")} className="relation-map">
         {shown.map((r) => {
           const a = at(r.fromId);
           const b = at(r.toId);
@@ -230,7 +229,7 @@ function RelationMap({ characters }: { characters: Entry[] }) {
             <g key={r.id}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={KIND_COLORS[r.kind] ?? "#888"} strokeWidth={2.5} />
               <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} className="rel-label" textAnchor="middle">
-                {r.kind}
+                {choiceLabel("relations", r.kind)}
               </text>
             </g>
           );
@@ -250,12 +249,12 @@ function RelationMap({ characters }: { characters: Entry[] }) {
       <div className="relation-side">
         {acts.length > 0 && (
           <label className="fld">
-            <span className="fld-label">Afficher les relations</span>
+            <span className="fld-label">{t("chars.showRelations")}</span>
             <Select value={act} onChange={(e) => setAct(e.target.value)}>
-              <option value="">De tout le film</option>
+              <option value="">{t("chars.wholeFilm")}</option>
               {acts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  Jusqu'à {a.title}
+                  {t("chars.until", { act: a.title })}
                 </option>
               ))}
             </Select>
@@ -264,12 +263,12 @@ function RelationMap({ characters }: { characters: Entry[] }) {
         <ul className="rel-list">
           {shown.map((r) => (
             <li key={r.id}>
-              <span className="dot" style={{ background: KIND_COLORS[r.kind] }} /> {name(r.fromId)} — {r.kind.toLowerCase()} — {name(r.toId)}
+              <span className="dot" style={{ background: KIND_COLORS[r.kind] }} /> {name(r.fromId)} — {choiceLabel("relations", r.kind).toLowerCase()} — {name(r.toId)}
               {r.note && <span className="muted small"> · {r.note}</span>}
-              {r.actId && <span className="muted small"> · dès {acts.find((a) => a.id === r.actId)?.title}</span>}
-              <button type="button" className="btn ghost tiny" aria-label="Retirer la relation"
+              {r.actId && <span className="muted small"> · {t("chars.since", { act: acts.find((a) => a.id === r.actId)?.title })}</span>}
+              <button type="button" className="btn ghost tiny" aria-label={t("chars.removeRelation")}
                 onClick={async () => {
-                  if (await confirmRemoval(ask, { title: "Retirer la relation ?", text: `${name(r.fromId)} — ${r.kind.toLowerCase()} — ${name(r.toId)}`, label: "Retirer" }))
+                  if (await confirmRemoval(ask, { title: t("chars.removeRelationAsk"), text: `${name(r.fromId)} — ${choiceLabel("relations", r.kind).toLowerCase()} — ${name(r.toId)}`, label: t("script.info.remove") }))
                     await deleteRelation(r.id);
                 }}
               >
@@ -291,40 +290,42 @@ function RelationMap({ characters }: { characters: Entry[] }) {
             }
           }}
         >
-          <Select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label="Premier personnage">
-            <option value="" hidden>Personnage…</option>
+          <Select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label={t("chars.first")}>
+            <option value="" hidden>{t("chars.characterOption")}</option>
             {characters.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </Select>
-          <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label="Nature du lien">
+          <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label={t("chars.linkKind")}>
             {RELATION_KINDS.map((k) => (
-              <option key={k}>{k}</option>
+              <option key={k} value={k}>
+                {choiceLabel("relations", k)}
+              </option>
             ))}
           </Select>
-          <Select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label="Second personnage">
-            <option value="" hidden>Personnage…</option>
+          <Select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label={t("chars.second")}>
+            <option value="" hidden>{t("chars.characterOption")}</option>
             {characters.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </Select>
-          <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Précision (frère aîné, ex-femme…)" aria-label="Précision" />
+          <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t("chars.precisionPlaceholder")} aria-label={t("chars.precision")} />
           {acts.length > 0 && (
-            <Select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label="À partir de">
-              <option value="">Dès le début</option>
+            <Select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label={t("chars.fromLabel")}>
+              <option value="">{t("chars.fromStart")}</option>
               {acts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  À partir de {a.title}
+                  {t("chars.from", { act: a.title })}
                 </option>
               ))}
             </Select>
           )}
           <button type="submit" className="btn small" disabled={!form.from || !form.to || form.from === form.to}>
-            Ajouter le lien
+            {t("chars.addLink")}
           </button>
         </form>
       </div>

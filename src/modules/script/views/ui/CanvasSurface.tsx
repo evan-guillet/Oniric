@@ -1,5 +1,6 @@
 import { Maximize, Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { t } from "../../../../core/i18n";
 
 const MIN = 0.15;
 const MAX = 1.6;
@@ -143,23 +144,23 @@ export function CanvasSurface({ children, tools, onDragEnd }: { children: ReactN
           {children}
         </div>
       </div>
-      <div className="canvas-tools" role="toolbar" aria-label="Outils du canevas">
+      <div className="canvas-tools" role="toolbar" aria-label={t("canvas.tools")}>
         {tools && (
           <>
             {tools}
             <span className="canvas-tools-sep" aria-hidden="true" />
           </>
         )}
-        <button type="button" aria-label="Dézoomer" title="Dézoomer (Ctrl + molette)" disabled={zoom <= MIN} onClick={() => zoomTo(current.current / STEP)}>
+        <button type="button" aria-label={t("canvas.zoomOut")} title={t("canvas.zoomOutTitle")} disabled={zoom <= MIN} onClick={() => zoomTo(current.current / STEP)}>
           <Minus aria-hidden="true" />
         </button>
-        <button type="button" className="canvas-pct" title="Taille réelle" onClick={() => zoomTo(1)}>
+        <button type="button" className="canvas-pct" title={t("canvas.actual")} onClick={() => zoomTo(1)}>
           {Math.round(zoom * 100)} %
         </button>
-        <button type="button" aria-label="Zoomer" title="Zoomer (Ctrl + molette)" disabled={zoom >= MAX} onClick={() => zoomTo(current.current * STEP)}>
+        <button type="button" aria-label={t("canvas.zoomIn")} title={t("canvas.zoomInTitle")} disabled={zoom >= MAX} onClick={() => zoomTo(current.current * STEP)}>
           <Plus aria-hidden="true" />
         </button>
-        <button type="button" aria-label="Tout voir" title="Tout voir" onClick={fit}>
+        <button type="button" aria-label={t("canvas.fit")} title={t("canvas.fit")} onClick={fit}>
           <Maximize aria-hidden="true" />
         </button>
       </div>

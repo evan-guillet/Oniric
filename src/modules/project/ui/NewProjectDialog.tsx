@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { commands } from "../../../bindings";
 import { describeError } from "../../../core/errors";
 import { Dialog } from "../../../ui-kit/Dialog";
-import { FORMATS, groupFormats } from "../../script/screenplay/domain/formats";
+import { FORMATS, formatHelp, formatName, groupFormats } from "../../script/screenplay/domain/formats";
 import { Select } from "../../../ui-kit/Select";
 
 export function NewProjectDialog({
@@ -88,13 +88,13 @@ export function NewProjectDialog({
               <optgroup key={g.label} label={g.label}>
                 {g.formats.map((f) => (
                   <option key={f.id} value={f.id}>
-                    {f.name}
+                    {formatName(f)}
                   </option>
                 ))}
               </optgroup>
             ))}
           </Select>
-          <small className="muted">{FORMATS.find((f) => f.id === formatId)?.help}</small>
+          <small className="muted">{formatHelp(FORMATS.find((f) => f.id === formatId) ?? FORMATS[0])}</small>
         </label>
 
         <label className="field">

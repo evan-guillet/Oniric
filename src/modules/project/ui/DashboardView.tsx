@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { db, query } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { useWritingPrefs } from "../../../core/writingPrefs";
+import { dateFormat, numberFormat, plural, t } from "../../../core/i18n";
 import { loadEntries } from "../../script/bible/application/bible";
 import { sceneTexts } from "../../script/bible/application/sceneTexts";
 import { detect, triage } from "../../script/bible/domain/appearances";
@@ -20,10 +21,9 @@ import { useFields } from "../../script/workshop/application/workshop";
 import { STEPS, type StepStatus } from "../../script/workshop/domain/steps";
 import { useProject, type ViewId } from "./projectContext";
 
-const num = new Intl.NumberFormat("fr-FR");
-const longDay = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-const shortDay = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
-const plural = (n: number, one: string, many = `${one}s`) => `${num.format(n)} ${n > 1 ? many : one}`;
+const num = { format: (n: number) => numberFormat().format(n) };
+const longDay = { format: (d: Date) => dateFormat({ weekday: "long", day: "numeric", month: "long" }).format(d) };
+const shortDay = { format: (d: Date) => dateFormat({ day: "numeric", month: "short" }).format(d) };
 
 /** Where the scene the cursor was last in is remembered, per project on this computer. */
 export const lastSceneKey = (projectId: string) => `oniric.dashboard.scene.${projectId}`;
@@ -68,12 +68,12 @@ export function DashboardView() {
       </div>
 
       <section className="stats-section" aria-labelledby="dash-progress">
-        <h2 id="dash-progress">Avancement</h2>
+        <h2 id="dash-progress">{t("dash.progress")}</h2>
         <div className="stats-card stats-tiles">
-          <Tile label="Pages" value={num.format(pages.length)} />
-          <Tile label="Durée estimée" value={formatMinutes(exactPages)} />
-          <Tile label="Scènes" value={num.format(scenes.length)} />
-          <Tile label="Mots" value={num.format(words)} />
+          <Tile label={t("dash.pages")} value={num.format(pages.length)} />
+          <Tile label={t("dash.duration")} value={formatMinutes(exactPages)} />
+          <Tile label={t("dash.scenes")} value={num.format(scenes.length)} />
+          <Tile label={t("dash.wordsTile")} value={num.format(words)} />
         </div>
         {story && scenes.length > 0 && (
           <Progress counts={SCENE_STATUSES.map((st) => scenes.filter((s) => story.meta.get(s.id)?.status === st.id).length)} total={scenes.length} />
@@ -104,11 +104,11 @@ function Resume({ scene, story, scenes, pageCount }: { scene: SceneInfo; story: 
 
   return (
     <section className="stats-section" aria-labelledby="dash-resume">
-      <h2 id="dash-resume">{empty ? "Commencer l'écriture" : "Reprendre l'écriture"}</h2>
+      <h2 id="dash-resume">{empty ? t("dash.start") : t("dash.resume")}</h2>
       <div className="stats-card dash-resume">
         <div className="dash-resume-text">
           {empty ? (
-            <p className="dash-resume-excerpt">Le scénario est encore vide. L'Atelier peut aider à poser l'idée, les personnages et la structure avant la première scène.</p>
+            <p className="dash-resume-excerpt">{t("dash.emptyScript")}</p>
           ) : (
             <>
               <p className="dash-resume-where">
@@ -117,7 +117,7 @@ function Resume({ scene, story, scenes, pageCount }: { scene: SceneInfo; story: 
                   <span key={p}>{p}</span>
                 ))}
               </p>
-              <h3 className="dash-resume-slug">{scene.heading || "(sans en-tête)"}</h3>
+              <h3 className="dash-resume-slug">{scene.heading || t("dash.noHeading")}</h3>
               {excerpt && <p className="dash-resume-excerpt">{excerpt}</p>}
             </>
           )}
@@ -125,11 +125,11 @@ function Resume({ scene, story, scenes, pageCount }: { scene: SceneInfo; story: 
         <div className="dash-resume-side">
           <button type="button" className="btn primary" onClick={() => openScene(scene.id)}>
             <PenLine aria-hidden="true" />
-            {empty ? "Écrire la première scène" : "Ouvrir la scène"}
+            {empty ? t("dash.writeFirst") : t("dash.openScene")}
           </button>
           {!empty && (
             <span className="dash-resume-page">
-              Page {num.format(scene.page)} sur {num.format(pageCount)}
+              {t("dash.pageOf", { page: num.format(scene.page), total: num.format(pageCount) })}
             </span>
           )}
         </div>
@@ -171,53 +171,53 @@ function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefi
 
   return (
     <section className="stats-section" aria-labelledby="dash-waiting">
-      <h2 id="dash-waiting">À traiter</h2>
+      <h2 id="dash-waiting">{t("dash.waiting")}</h2>
       <div className="stats-table dash-list">
-        {loading && <p className="stats-table-empty">Chargement…</p>}
+        {loading && <p className="stats-table-empty">{t("dash.loading")}</p>}
         {nothing && (
           <p className="dash-clear">
             <span className="stats-dot stats-p-done" aria-hidden="true" />
-            Rien en attente : aucune note ouverte, aucune scène à réécrire.
+            {t("dash.clear")}
           </p>
         )}
         {open.length > 0 && (
-          <Group title="Notes ouvertes" count={open.length}>
+          <Group title={t("dash.openNotes")} count={open.length}>
             {open.slice(0, SHOWN).map((n) => {
               const s = n.sceneId ? byId.get(n.sceneId) : undefined;
               return (
                 <li key={n.id}>
                   <button type="button" className="dash-row" onClick={() => (s ? openScene(s.id) : go("script"))}>
                     <span className="stats-dot stats-p-draft" aria-hidden="true" />
-                    <span className="dash-row-text">{n.quote ? `« ${n.quote} »` : n.body || "(note vide)"}</span>
+                    <span className="dash-row-text">{n.quote ? t("dash.quote", { quote: n.quote }) : n.body || t("dash.emptyNote")}</span>
                     {s && <span className="dash-row-meta">{sceneLabel(s.index + 1)}</span>}
                   </button>
                 </li>
               );
             })}
-            {open.length > SHOWN && <li className="dash-more">et {plural(open.length - SHOWN, "autre")}</li>}
+            {open.length > SHOWN && <li className="dash-more">{plural("dash.others", open.length - SHOWN)}</li>}
           </Group>
         )}
         {rewrite.length > 0 && (
-          <Group title="Scènes à réécrire" count={rewrite.length}>
+          <Group title={t("dash.rewrite")} count={rewrite.length}>
             {rewrite.slice(0, SHOWN).map((s) => (
               <li key={s.id}>
                 <button type="button" className="dash-row" onClick={() => openScene(s.id)}>
                   <span className="stats-dot stats-p-rewrite" aria-hidden="true" />
-                  <span className="dash-row-text stats-slug">{s.heading || "(sans en-tête)"}</span>
+                  <span className="dash-row-text stats-slug">{s.heading || t("dash.noHeading")}</span>
                   <span className="dash-row-meta">{sceneLabel(s.index + 1)}</span>
                 </button>
               </li>
             ))}
-            {rewrite.length > SHOWN && <li className="dash-more">et {plural(rewrite.length - SHOWN, "autre")}</li>}
+            {rewrite.length > SHOWN && <li className="dash-more">{plural("dash.others", rewrite.length - SHOWN)}</li>}
           </Group>
         )}
         {unnamed > 0 && (
-          <Group title="Sans fiche dans la Bible" count={unnamed}>
+          <Group title={t("dash.unnamedTitle")} count={unnamed}>
             <li>
               <button type="button" className="dash-row" onClick={() => go("bible")}>
                 <span className="stats-dot dash-dot-detected" aria-hidden="true" />
                 <span className="dash-row-text">
-                  {unnamed > 1 ? `${plural(unnamed, "personnage ou lieu", "personnages ou lieux")} du scénario n'ont pas encore de fiche` : "Un personnage ou un lieu du scénario n'a pas encore de fiche"}
+                  {plural("dash.unnamed", unnamed)}
                 </span>
                 <ChevronRight aria-hidden="true" className="dash-row-go" />
               </button>
@@ -274,8 +274,8 @@ function streak(journal: Journal | undefined, today: Date): number {
 
 function formatTime(minutes: number): string {
   const m = Math.round(minutes);
-  if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
+  if (m < 60) return t("dash.minutes", { m });
+  return t("dash.hours", { h: Math.floor(m / 60), m: String(m % 60).padStart(2, "0") });
 }
 
 /** The words written in the Scénario these last four weeks, from the writing journal. */
@@ -300,37 +300,37 @@ function Activity() {
 
   return (
     <section className="stats-section" aria-labelledby="dash-activity">
-      <h2 id="dash-activity">Activité d'écriture</h2>
+      <h2 id="dash-activity">{t("dash.activity")}</h2>
       <div className="stats-card dash-activity">
         <dl className="dash-figures">
           <div>
-            <dt>Aujourd'hui</dt>
+            <dt>{t("dash.today")}</dt>
             <dd>
               {goal > 0 ? (
                 <>
-                  {num.format(values[DAYS - 1])} <span className="dash-goal-of">/ {plural(goal, "mot")}</span>
+                  {num.format(values[DAYS - 1])} <span className="dash-goal-of">/ {plural("dash.words", goal)}</span>
                 </>
               ) : (
-                plural(values[DAYS - 1], "mot")
+                plural("dash.words", values[DAYS - 1])
               )}
             </dd>
           </div>
           <div>
-            <dt>7 derniers jours</dt>
-            <dd>{plural(values.slice(-7).reduce((a, b) => a + b, 0), "mot")}</dd>
+            <dt>{t("dash.week")}</dt>
+            <dd>{plural("dash.words", values.slice(-7).reduce((a, b) => a + b, 0))}</dd>
           </div>
           <div>
-            <dt>Temps sur 7 jours</dt>
+            <dt>{t("dash.weekTime")}</dt>
             <dd>{formatTime(week.reduce((n, d) => n + minutes(d), 0))}</dd>
           </div>
           <div>
-            <dt>Jours d'affilée</dt>
+            <dt>{t("dash.streak")}</dt>
             <dd>{num.format(streak(journal, today))}</dd>
           </div>
         </dl>
         <div className="dash-chart" ref={ref} onMouseLeave={() => setHover(null)}>
           {width > 0 && (
-            <svg width={width} height={CHART_H + 22} role="img" aria-label={`Mots écrits par jour sur quatre semaines : ${num.format(total)} au total`}>
+            <svg width={width} height={CHART_H + 22} role="img" aria-label={t("dash.chartLabel", { total: num.format(total) })}>
               <line x1={0} x2={width} y1={CHART_H + 0.5} y2={CHART_H + 0.5} className="dash-baseline" />
               {goal > 0 && <line x1={0} x2={width} y1={Math.round(CHART_H - h(goal)) + 0.5} y2={Math.round(CHART_H - h(goal)) + 0.5} className="dash-goal" />}
               {days.map((d, i) => {
@@ -342,7 +342,7 @@ function Activity() {
                     <rect x={x} y={CHART_H - bh} width={barW} height={bh} rx={Math.min(3, barW / 2)} className="dash-bar" />
                     {(i % 7 === 0 || i === DAYS - 1) && (
                       <text x={i === DAYS - 1 ? width : slot * i + slot / 2} y={CHART_H + 17} className="dash-tick" textAnchor={i === DAYS - 1 ? "end" : "middle"}>
-                        {i === DAYS - 1 ? "Aujourd'hui" : shortDay.format(d)}
+                        {i === DAYS - 1 ? t("dash.today") : shortDay.format(d)}
                       </text>
                     )}
                   </g>
@@ -350,18 +350,18 @@ function Activity() {
               })}
             </svg>
           )}
-          {empty && journal !== undefined && <p className="dash-chart-empty">Les mots écrits dans le Scénario s'inscriront ici, jour après jour.</p>}
+          {empty && journal !== undefined && <p className="dash-chart-empty">{t("dash.chartEmpty")}</p>}
         </div>
         <p className="dash-readout" aria-live="polite">
           {shown === null ? (
             <>
-              {plural(total, "mot écrit", "mots écrits")} sur quatre semaines
-              {goal > 0 && <> · objectif atteint {plural(values.filter((v) => v >= goal).length, "jour")}, pointillé à {plural(goal, "mot")}</>}
+              {plural("dash.written", total)}
+              {goal > 0 && <> · {t("dash.goalMet", { days: plural("dash.days", values.filter((v) => v >= goal).length), goal: plural("dash.words", goal) })}</>}
             </>
           ) : (
             <>
-              <strong>{longDay.format(days[shown])}</strong> · {plural(values[shown], "mot")}
-              {minutes(days[shown]) > 0 && <> · {formatTime(minutes(days[shown]))} d'écriture</>}
+              <strong>{longDay.format(days[shown])}</strong> · {plural("dash.words", values[shown])}
+              {minutes(days[shown]) > 0 && <> · {t("dash.writingTime", { time: formatTime(minutes(days[shown])) })}</>}
             </>
           )}
         </p>
@@ -378,7 +378,6 @@ interface Shortcut {
   steps?: StepStatus[];
 }
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long" });
 
 /** The other views of the script, each with what it holds. */
 function Shortcuts({ statScenes, story }: { statScenes: StatScene[]; story: Story | undefined }) {
@@ -397,26 +396,33 @@ function Shortcuts({ statScenes, story }: { statScenes: StatScene[]; story: Stor
   const lastVersion = versions?.[0];
 
   const rows: Shortcut[] = [
-    { view: "workshop", label: "Atelier", icon: NotebookPen, detail: `${done} sur ${ready.length} étapes terminées`, steps },
-    { view: "bible", label: "Bible", icon: BookOpen, detail: entries === undefined ? "…" : entries === 0 ? "Aucune fiche" : plural(entries, "fiche") },
+    { view: "workshop", label: t("nav.views.workshop"), icon: NotebookPen, detail: t("dash.stepsDone", { done, total: ready.length }), steps },
+    { view: "bible", label: t("nav.views.bible"), icon: BookOpen, detail: entries === undefined ? "…" : entries === 0 ? t("dash.noEntry") : plural("dash.entries", entries) },
     {
       view: "structure",
-      label: "Structure",
+      label: t("nav.views.structure"),
       icon: Layers,
-      detail: acts + sequences === 0 ? "Ni acte ni séquence" : [acts > 0 && plural(acts, "acte"), sequences > 0 && plural(sequences, "séquence")].filter(Boolean).join(" · "),
+      detail: acts + sequences === 0 ? t("dash.noAct") : [acts > 0 && plural("dash.acts", acts), sequences > 0 && plural("dash.sequences", sequences)].filter(Boolean).join(" · "),
     },
     {
       view: "versions",
-      label: "Versions",
+      label: t("nav.views.versions"),
       icon: History,
-      detail: !versions ? "…" : lastVersion ? `${plural(versions.length, "version figée", "versions figées")} · la dernière le ${dateFormat.format(new Date(lastVersion.createdAt))}` : "Aucune version figée",
+      detail: !versions
+        ? "…"
+        : lastVersion
+          ? t("dash.versionsLast", {
+              versions: plural("dash.versions", versions.length),
+              date: dateFormat({ day: "numeric", month: "long" }).format(new Date(lastVersion.createdAt)),
+            })
+          : t("dash.noVersion"),
     },
-    { view: "stats", label: "Statistiques", icon: ChartColumn, detail: `${plural(characters, "personnage qui parle", "personnages qui parlent")} · ${plural(places, "lieu", "lieux")}` },
+    { view: "stats", label: t("nav.views.stats"), icon: ChartColumn, detail: `${plural("dash.speakers", characters)} · ${plural("dash.places", places)}` },
   ];
 
   return (
     <section className="stats-section" aria-labelledby="dash-views">
-      <h2 id="dash-views">Le projet</h2>
+      <h2 id="dash-views">{t("dash.project")}</h2>
       <ul className="stats-table dash-views">
         {rows.map((r) => (
           <li key={r.view}>

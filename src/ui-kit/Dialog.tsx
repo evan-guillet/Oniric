@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { t } from "../core/i18n";
 
 export interface DialogAction {
   label: string;
@@ -97,9 +98,9 @@ export interface ChoiceRequest {
 /** Every deletion goes through here: a dialog that names what goes, resolving true once the red button is pressed. */
 export async function confirmRemoval(
   ask: (r: ChoiceRequest) => Promise<string | null>,
-  { title, text, label = "Supprimer" }: { title: string; text: ReactNode; label?: string },
+  { title, text, label = t("common.delete") }: { title: string; text: ReactNode; label?: string },
 ) {
-  return (await ask({ title, text: typeof text === "string" ? <p>{text}</p> : text, cancel: "Annuler", choices: [{ label, value: "y", danger: true }] })) === "y";
+  return (await ask({ title, text: typeof text === "string" ? <p>{text}</p> : text, cancel: t("common.cancel"), choices: [{ label, value: "y", danger: true }] })) === "y";
 }
 
 /** `ask({...})` shows a dialog and resolves with the chosen value, or null when cancelled. */

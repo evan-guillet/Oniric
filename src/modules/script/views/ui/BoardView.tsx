@@ -34,6 +34,7 @@ import {
 import { CanvasSurface } from "./CanvasSurface";
 
 import { Select } from "../../../../ui-kit/Select";
+import { plural, t } from "../../../../core/i18n";
 type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
@@ -55,7 +56,7 @@ function Grip({ label, onDragStart }: { label: string; onDragStart: (e: DragEven
 function HeadFold({ open, label, onClick }: { open: boolean; label: string; onClick: () => void }) {
   const Icon = open ? ChevronDown : ChevronRight;
   return (
-    <button type="button" className="head-fold" aria-label={`${open ? "Plier" : "Déplier"} ${label}`} title={open ? "Plier" : "Déplier"} aria-expanded={open} onClick={onClick}>
+    <button type="button" className="head-fold" aria-label={open ? t("board.foldNamed", { name: label }) : t("board.unfoldNamed", { name: label })} title={open ? t("board.fold") : t("board.unfold")} aria-expanded={open} onClick={onClick}>
       <Icon aria-hidden="true" />
     </button>
   );
@@ -139,7 +140,7 @@ export function BoardView() {
   const byId = useMemo(() => new Map(scenes.map((s) => [s.id, s])), [scenes]);
   const groups = useMemo(() => (story ? storyOutline(story, scenes.map((s) => s.id)) : []), [story, scenes]);
   const titles = useMemo(() => numberedTitles(groups), [groups]);
-  const actTitle = (g: ActGroup) => (g.act && titles.get(g.act.id)) || "Sans acte";
+  const actTitle = (g: ActGroup) => (g.act && titles.get(g.act.id)) || t("board.noAct");
   // On the board the number sits grey above the title.
   const parts = useMemo(() => numberedParts(groups), [groups]);
   const numbered = (id: string | undefined, fallback: string) => {
@@ -152,10 +153,10 @@ export function BoardView() {
       </>
     );
   };
-  if (!story) return <div className="view pad muted">Chargement…</div>;
+  if (!story) return <div className="view pad muted">{t("dash.loading")}</div>;
   const newSequence = async (g: ActGroup, beforeId: string | null = null) => {
-    const t = await prompt("Nouvelle séquence", "Titre de la séquence");
-    if (t) await addSequence(story, g.act?.id ?? null, t, "", beforeId);
+    const title = await prompt(t("board.newSequence"), t("board.sequenceTitle"));
+    if (title) await addSequence(story, g.act?.id ?? null, title, "", beforeId);
   };
   const actColor = (id: string | undefined) => (id ? story.acts.find((a) => a.id === id)?.color : null) ?? null;
 
@@ -196,7 +197,7 @@ export function BoardView() {
         text: label,
         actions: [
           {
-            label: "Annuler",
+            label: t("common.cancel"),
             onClick: async () => {
               const now = await loadStory();
               await arrange(session, now, storyOutline(previous.story, previous.order));
@@ -214,7 +215,7 @@ export function BoardView() {
     drag.current = null;
     setDropTarget(null);
     if (d?.kind !== "scene" || d.id === beforeId) return;
-    void apply(moveScene(groups, d.id, target, beforeId), "Scène déplacée : le scénario est réordonné.");
+    void apply(moveScene(groups, d.id, target, beforeId), t("board.sceneMoved"));
   };
 
   /** The sequence `id` into the act `actId`, just before the sequence `beforeSeq` or at the end. */
@@ -225,7 +226,7 @@ export function BoardView() {
     const rank = rankBetween(at > 0 ? siblings[at - 1].rank : null, at >= 0 && at < siblings.length ? siblings[at].rank : null);
     const moved = { ...story, sequences: story.sequences.map((s) => (s.id === id ? { ...s, actId, rank } : s)) };
     const next = storyOutline(moved, scenes.map((s) => s.id));
-    void apply(next, "Séquence déplacée : le scénario est réordonné.", [sequencePlace(id, actId, rank)], ["sequence"]);
+    void apply(next, t("board.seqMoved"), [sequencePlace(id, actId, rank)], ["sequence"]);
   };
 
   /** The act `id` just before the act `beforeAct`, or at the end. */
@@ -235,7 +236,7 @@ export function BoardView() {
     const at = beforeAct ? others.findIndex((a) => a.id === beforeAct) : others.length;
     const rank = rankBetween(at > 0 ? others[at - 1].rank : null, at >= 0 && at < others.length ? others[at].rank : null);
     const moved = { ...story, acts: story.acts.map((a) => (a.id === id ? { ...a, rank } : a)) };
-    void apply(storyOutline(moved, scenes.map((s) => s.id)), "Acte déplacé : le scénario est réordonné.", [actPlace(id, rank)], ["act"]);
+    void apply(storyOutline(moved, scenes.map((s) => s.id)), t("board.actMoved"), [actPlace(id, rank)], ["act"]);
   };
 
   const dropSequence = (actId: string | null, beforeSeq: string | null) => {
@@ -293,16 +294,16 @@ export function BoardView() {
   };
 
   const renameScene = async (s: SceneInfo) => {
-    const t = await prompt("Renommer la scène", "En-tête", s.heading);
-    if (t !== null) session.editor?.setSceneHeading(s.id, t.trim());
+    const heading = await prompt(t("board.renameScene"), t("board.heading"), s.heading);
+    if (heading !== null) session.editor?.setSceneHeading(s.id, heading.trim());
   };
   // The scene leaves the screenplay for the bin of cut scenes (Versions view), where it can be restored.
   const removeScene = async (id: string) => {
     const c = await ask({
-      title: "Supprimer la scène ?",
-      text: <p>La scène quitte le scénario mais reste dans la corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.</p>,
-      cancel: "Annuler",
-      choices: [{ label: "Supprimer", value: "y", danger: true }],
+      title: t("script.removeScene"),
+      text: <p>{t("board.removeSceneText")}</p>,
+      cancel: t("common.cancel"),
+      choices: [{ label: t("common.delete"), value: "y", danger: true }],
     });
     if (c !== "y") return;
     session.editor?.removeScene(id);
@@ -334,11 +335,11 @@ export function BoardView() {
         style={m.color ? ({ "--scene": m.color } as CSSProperties) : undefined}
       >
         {before}
-        <Grip label="Glisser pour déplacer la scène" onDragStart={startDrag({ kind: "scene", id }, ".card")} />
-        <button type="button" className="card-body" onClick={() => setSelected(id)} onDoubleClick={() => openScene(id)} aria-label={`Scène ${s.index + 1} ${s.heading}`}>
+        <Grip label={t("board.dragScene")} onDragStart={startDrag({ kind: "scene", id }, ".card")} />
+        <button type="button" className="card-body" onClick={() => setSelected(id)} onDoubleClick={() => openScene(id)} aria-label={`${t("palette.scene", { n: s.index + 1 })} ${s.heading}`}>
           <span className="card-top">
             <span className="card-num">{sceneLabel(s.index + 1)}</span>
-            <span className="card-heading">{s.heading || "(sans en-tête)"}</span>
+            <span className="card-heading">{s.heading || t("dash.noHeading")}</span>
           </span>
           {m.summary && <span className="card-summary">{m.summary}</span>}
           {s.characters.length > 0 && <span className="card-chars">{s.characters.map(prettyName).join(", ")}</span>}
@@ -363,12 +364,12 @@ export function BoardView() {
           </span>
         </button>
         <MoreMenu
-          label="Actions de la scène"
+          label={t("board.sceneActions")}
           className="card-more"
           items={[
-            { label: "Renommer", icon: Pencil, onClick: () => void renameScene(s) },
-            { label: "Déplacer vers…", icon: FolderInput, onClick: () => setMoving({ kind: "scene", id }) },
-            { label: "Supprimer", icon: Trash2, danger: true, onClick: () => void removeScene(id) },
+            { label: t("board.rename"), icon: Pencil, onClick: () => void renameScene(s) },
+            { label: t("board.moveTo"), icon: FolderInput, onClick: () => setMoving({ kind: "scene", id }) },
+            { label: t("common.delete"), icon: Trash2, danger: true, onClick: () => void removeScene(id) },
           ]}
         />
       </li>
@@ -394,35 +395,35 @@ export function BoardView() {
 
   const seqHead = (seq: SequenceGroup, fold: string) => (
     <header className="seq-head">
-      {seq.sequence && <Grip label="Glisser pour déplacer la séquence" onDragStart={startDrag({ kind: "sequence", id: seq.sequence.id }, ".seq-head")} />}
-      {fold && <HeadFold open={!folded.has(fold)} label="la séquence" onClick={() => toggleFold(fold)} />}
+      {seq.sequence && <Grip label={t("board.dragSequence")} onDragStart={startDrag({ kind: "sequence", id: seq.sequence.id }, ".seq-head")} />}
+      {fold && <HeadFold open={!folded.has(fold)} label={t("board.theSequence")} onClick={() => toggleFold(fold)} />}
       <div className="head-label">
-        <span className="seq-title">{numbered(seq.sequence?.id, "Hors séquence")}</span>
-        <span className="muted small">{seq.scenes.length} sc.</span>
+        <span className="seq-title">{numbered(seq.sequence?.id, t("board.noSequence"))}</span>
+        <span className="muted small">{t("bible.scenesShort", { n: seq.scenes.length })}</span>
       </div>
       {seq.sequence && (
         <MoreMenu
-          label="Actions de la séquence"
+          label={t("board.sequenceActions")}
           items={[
             {
-              label: "Renommer",
+              label: t("board.rename"),
               icon: Pencil,
               onClick: async () => {
-                const t = await prompt("Renommer la séquence", "Titre", seq.sequence!.title);
-                if (t) await updateSequence(seq.sequence!.id, { title: t });
+                const title = await prompt(t("board.renameSequence"), t("script.info.title"), seq.sequence!.title);
+                if (title) await updateSequence(seq.sequence!.id, { title });
               },
             },
-            { label: "Déplacer vers…", icon: FolderInput, onClick: () => setMoving({ kind: "sequence", id: seq.sequence!.id }) },
+            { label: t("board.moveTo"), icon: FolderInput, onClick: () => setMoving({ kind: "sequence", id: seq.sequence!.id }) },
             {
-              label: "Supprimer",
+              label: t("common.delete"),
               icon: Trash2,
               danger: true,
               onClick: async () => {
                 const c = await ask({
-                  title: "Supprimer la séquence ?",
-                  text: <p>Ses scènes restent dans le scénario et rejoignent la séquence précédente.</p>,
-                  cancel: "Annuler",
-                  choices: [{ label: "Supprimer", value: "y", danger: true }],
+                  title: t("script.removeSequence"),
+                  text: <p>{t("script.removeSequenceText")}</p>,
+                  cancel: t("common.cancel"),
+                  choices: [{ label: t("common.delete"), value: "y", danger: true }],
                 });
                 if (c === "y") await deleteSequence(seq.sequence!.id);
               },
@@ -430,15 +431,15 @@ export function BoardView() {
           ]}
         />
       )}
-      <HeadAdd label="Nouvelle scène" onClick={() => void newScene(seq)} />
+      <HeadAdd label={t("board.newScene")} onClick={() => void newScene(seq)} />
     </header>
   );
 
   const sceneCards = (seq: SequenceGroup) => (
     <ol className="cards cv-cards">
-      {seq.scenes.map((id) => card(id, seq.sequence?.id ?? null, <WireAdd dir="down" label="Insérer une scène ici" onClick={() => void newScene(seq, id)} />))}
+      {seq.scenes.map((id) => card(id, seq.sequence?.id ?? null, <WireAdd dir="down" label={t("board.insertScene")} onClick={() => void newScene(seq, id)} />))}
       <li className="card-add">
-        <Ghost label="Nouvelle scène" onClick={() => void newScene(seq)} />
+        <Ghost label={t("board.newScene")} onClick={() => void newScene(seq)} />
       </li>
     </ol>
   );
@@ -457,24 +458,24 @@ export function BoardView() {
       const seqs = new Map(groups.flatMap((g) => g.sequences).flatMap((q) => (q.sequence ? [[q.sequence.id, q] as const] : [])));
       const sceneName = (id: string) => {
         const x = byId.get(id);
-        return x ? `${sceneLabel(x.index + 1)} · ${x.heading || "(sans en-tête)"}` : "";
+        return x ? `${sceneLabel(x.index + 1)} · ${x.heading || t("dash.noHeading")}` : "";
       };
       return (
         <MoveDialog
-          title={`Déplacer la scène ${s.index + 1}`}
-          subject={s.heading || "(sans en-tête)"}
+          title={t("board.moveScene", { n: s.index + 1 })}
+          subject={s.heading || t("dash.noHeading")}
           groups={groups
             .filter((g) => g.sequences.some((q) => q.sequence))
             .map((g) => ({
               label: actTitle(g),
-              targets: g.sequences.flatMap((q) => (q.sequence ? [{ id: q.sequence.id, ...named(q.sequence.id), meta: `${q.scenes.length} sc.` }] : [])),
+              targets: g.sequences.flatMap((q) => (q.sequence ? [{ id: q.sequence.id, ...named(q.sequence.id), meta: t("bible.scenesShort", { n: q.scenes.length }) }] : [])),
             }))}
           current={home.sequence?.id ?? null}
           currentBefore={home.scenes[home.scenes.indexOf(m.id) + 1] ?? ""}
-          positions={(t) => places((seqs.get(t)?.scenes ?? []).filter((x) => x !== m.id), sceneName)}
-          onMove={(t, before) => {
+          positions={(to) => places((seqs.get(to)?.scenes ?? []).filter((x) => x !== m.id), sceneName)}
+          onMove={(to, before) => {
             close();
-            void apply(moveScene(groups, m.id, t, before), "Scène déplacée : le scénario est réordonné.");
+            void apply(moveScene(groups, m.id, to, before), t("board.sceneMoved"));
           }}
           onClose={close}
         />
@@ -487,15 +488,15 @@ export function BoardView() {
       const mine = home ? seqIds(home) : [];
       return (
         <MoveDialog
-          title={`Déplacer la séquence ${named(m.id).num.replace(/^Séq\. /, "")}`}
+          title={t("board.moveSequence", { n: named(m.id).num.replace(/^\S+\s/, "") })}
           subject={named(m.id).title}
-          groups={[{ targets: acts.map((g) => ({ id: g.act!.id, ...named(g.act!.id), meta: `${seqIds(g).length} séq.` })) }]}
+          groups={[{ targets: acts.map((g) => ({ id: g.act!.id, ...named(g.act!.id), meta: t("board.seqShort", { n: seqIds(g).length }) })) }]}
           current={home?.act?.id ?? null}
           currentBefore={mine[mine.indexOf(m.id) + 1] ?? ""}
-          positions={(t) => places(seqIds(acts.find((g) => g.act!.id === t)!).filter((x) => x !== m.id), label)}
-          onMove={(t, before) => {
+          positions={(to) => places(seqIds(acts.find((g) => g.act!.id === to)!).filter((x) => x !== m.id), label)}
+          onMove={(to, before) => {
             close();
-            placeSequence(m.id, t, before);
+            placeSequence(m.id, to, before);
           }}
           onClose={close}
         />
@@ -504,7 +505,7 @@ export function BoardView() {
     const order = acts.map((g) => g.act!.id);
     return (
       <MoveDialog
-        title={`Déplacer l'acte ${named(m.id).num.replace(/^Act\. /, "")}`}
+        title={t("board.moveActTitle", { n: named(m.id).num.replace(/^\S+\s/, "") })}
         subject={named(m.id).title}
         groups={[{ targets: [{ id: "", num: "", title: project.title }] }]}
         current=""
@@ -538,39 +539,39 @@ export function BoardView() {
     const ids = g.sequences.flatMap((s) => s.scenes);
     return (
       <header className="column-head">
-        {g.act && <Grip label="Glisser pour déplacer l'acte" onDragStart={startDrag({ kind: "act", id: g.act.id }, ".column-head")} />}
-        {fold && <HeadFold open={!folded.has(fold)} label="l'acte" onClick={() => toggleFold(fold)} />}
+        {g.act && <Grip label={t("board.dragAct")} onDragStart={startDrag({ kind: "act", id: g.act.id }, ".column-head")} />}
+        {fold && <HeadFold open={!folded.has(fold)} label={t("board.theAct")} onClick={() => toggleFold(fold)} />}
         <h3 className="act-title">
           <div className="head-label">
-            <span className="act-name">{numbered(g.act?.id, "Sans acte")}</span>
+            <span className="act-name">{numbered(g.act?.id, t("board.noAct"))}</span>
             <span className="muted small">
-              {ids.length} sc. · {totalEighths ? Math.round((durationOf(ids) / totalEighths) * 100) : 0} %
+              {t("bible.scenesShort", { n: ids.length })} · {t("stats.percent", { n: totalEighths ? Math.round((durationOf(ids) / totalEighths) * 100) : 0 })}
             </span>
           </div>
         </h3>
         {g.act && (
           <MoreMenu
-            label="Actions de l'acte"
+            label={t("board.actActions")}
             items={[
               {
-                label: "Renommer",
+                label: t("board.rename"),
                 icon: Pencil,
                 onClick: async () => {
-                  const t = await prompt("Renommer l'acte", "Titre", g.act!.title);
-                  if (t) await updateAct(g.act!.id, { title: t });
+                  const title = await prompt(t("board.renameAct"), t("script.info.title"), g.act!.title);
+                  if (title) await updateAct(g.act!.id, { title });
                 },
               },
-              { label: "Déplacer…", icon: FolderInput, onClick: () => setMoving({ kind: "act", id: g.act!.id }) },
+              { label: t("board.moveAct"), icon: FolderInput, onClick: () => setMoving({ kind: "act", id: g.act!.id }) },
               {
-                label: "Supprimer",
+                label: t("common.delete"),
                 icon: Trash2,
                 danger: true,
                 onClick: async () => {
                   const c = await ask({
-                    title: "Supprimer l'acte ?",
-                    text: <p>Ses séquences et ses scènes sont conservées, sans acte.</p>,
-                    cancel: "Annuler",
-                    choices: [{ label: "Supprimer", value: "y", danger: true }],
+                    title: t("script.removeAct"),
+                    text: <p>{t("script.removeActText")}</p>,
+                    cancel: t("common.cancel"),
+                    choices: [{ label: t("common.delete"), value: "y", danger: true }],
                   });
                   if (c === "y") await deleteAct(g.act!.id);
                 },
@@ -578,14 +579,14 @@ export function BoardView() {
             ]}
           />
         )}
-        <HeadAdd label="Nouvelle séquence" onClick={() => void newSequence(g)} />
+        <HeadAdd label={t("board.newSequence")} onClick={() => void newSequence(g)} />
       </header>
     );
   };
 
   const newAct = async (beforeId: string | null = null) => {
-    const t = await prompt("Nouvel acte", "Titre de l'acte", `Acte ${story.acts.length + 1}`);
-    if (t) await addAct(story, t, beforeId);
+    const title = await prompt(t("board.newAct"), t("board.actTitle"), t("board.actDefault", { n: story.acts.length + 1 }));
+    if (title) await addAct(story, title, beforeId);
   };
 
   /*
@@ -602,7 +603,7 @@ export function BoardView() {
           <Wire kind="in" />
           <Wire kind="on" />
           {!closed && <Wire kind="out" />}
-          {seq.sequence && <WireAdd dir="trunk" label="Insérer une séquence ici" onClick={() => void newSequence(g, seq.sequence!.id)} />}
+          {seq.sequence && <WireAdd dir="trunk" label={t("board.insertSequence")} onClick={() => void newSequence(g, seq.sequence!.id)} />}
           {seqHead(seq, fold)}
         </div>
         {!closed && sceneCards(seq)}
@@ -619,14 +620,14 @@ export function BoardView() {
         <div className={`cv-node cv-act-node ${closed ? "folded" : ""} ${dropTarget === `a:${key}` ? "drop" : ""}`} {...actDrop(g, g.sequences.at(-1))}>
           <Wire kind="in" />
           <Wire kind="on" />
-          {g.act && <WireAdd dir="trunk" label="Insérer un acte ici" onClick={() => void newAct(g.act!.id)} />}
+          {g.act && <WireAdd dir="trunk" label={t("board.insertAct")} onClick={() => void newAct(g.act!.id)} />}
           {actHead(g, fold)}
         </div>
         {!closed && (
           <ol className="cv-seqs">
             {g.sequences.map((s) => cvSeq(g, s))}
             <li className="cv-seq cv-add">
-              <Ghost label="Nouvelle séquence" className="cv-node" onClick={() => void newSequence(g)}>
+              <Ghost label={t("board.newSequence")} className="cv-node" onClick={() => void newSequence(g)}>
                 <Wire kind="in" />
               </Ghost>
             </li>
@@ -640,10 +641,10 @@ export function BoardView() {
   const allFolds = groups.flatMap((g) => [actKey(g), ...g.sequences.map((s) => seqKey(g, s))]);
   const foldTools = (
     <>
-      <button type="button" aria-label="Tout déplier" title="Tout déplier" disabled={folded.size === 0} onClick={() => setFolded(new Set())}>
+      <button type="button" aria-label={t("board.unfoldAll")} title={t("board.unfoldAll")} disabled={folded.size === 0} onClick={() => setFolded(new Set())}>
         <ChevronsUpDown aria-hidden="true" />
       </button>
-      <button type="button" aria-label="Tout plier" title="Tout plier" disabled={allFolds.every((k) => folded.has(k))} onClick={() => setFolded(new Set(allFolds))}>
+      <button type="button" aria-label={t("board.foldAll")} title={t("board.foldAll")} disabled={allFolds.every((k) => folded.has(k))} onClick={() => setFolded(new Set(allFolds))}>
         <ChevronsDownUp aria-hidden="true" />
       </button>
     </>
@@ -656,14 +657,14 @@ export function BoardView() {
         <div className="cv-node cv-film">
           <span className="cv-film-title">{project.title}</span>
           <span className="muted small">
-            {acts} acte{acts > 1 ? "s" : ""} · {scenes.length} sc.
+            {plural("dash.acts", acts)} · {t("bible.scenesShort", { n: scenes.length })}
           </span>
         </div>
         <ol className="cv-acts">
           {groups.map((g) => cvAct(g))}
           <li className="cv-act cv-add">
             <Ghost
-              label="Nouvel acte"
+              label={t("board.newAct")}
               className={`cv-node ${dropTarget === "a:end" ? "drop" : ""}`}
               onDragOver={(e) => {
                 if (drag.current?.kind === "act") allow("a:end")(e);
@@ -686,9 +687,9 @@ export function BoardView() {
     <div className="view board-view">
       {headerActions &&
         createPortal(
-          <div className="header-tools" role="toolbar" aria-label="Tableau">
+          <div className="header-tools" role="toolbar" aria-label={t("structure.board")}>
             <label>
-              Filtre{" "}
+              {t("board.filter")}{" "}
               <Select
                 value={filter ? `${filter.kind}:${filter.value}` : ""}
                 onChange={(e) => {
@@ -698,10 +699,10 @@ export function BoardView() {
                   setFilter({ kind: v.slice(0, i) as FilterKind, value: v.slice(i + 1) });
                 }}
               >
-                <option value="">Aucun</option>
+                <option value="">{t("board.none")}</option>
                 {(["character", "location", "plotline", "tag", "status"] as FilterKind[]).map((k) =>
                   options[k].length ? (
-                    <optgroup key={k} label={{ character: "Personnage", location: "Lieu", plotline: "Intrigue", tag: "Étiquette", status: "Statut" }[k]}>
+                    <optgroup key={k} label={t(`board.filterKinds.${k}`)}>
                       {options[k].map((o) => (
                         <option key={o.value} value={`${k}:${o.value}`}>
                           {o.label}
@@ -714,7 +715,7 @@ export function BoardView() {
             </label>
             {filter && (
               <label className="choice">
-                <input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} /> Colorer au lieu de griser
+                <input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} /> {t("board.highlight")}
               </label>
             )}
           </div>,
@@ -736,8 +737,8 @@ export function BoardView() {
 
 /** The places among `ids` (in order, the moved one left out): first, after each, the last being the end (""). */
 function places(ids: string[], label: (id: string) => string) {
-  if (!ids.length) return [{ value: "", label: "Seule à cet endroit" }];
-  return [{ value: ids[0], label: "En premier" }, ...ids.map((id, i) => ({ value: ids[i + 1] ?? "", label: `Après ${label(id)}` }))];
+  if (!ids.length) return [{ value: "", label: t("board.alone") }];
+  return [{ value: ids[0], label: t("board.first") }, ...ids.map((id, i) => ({ value: ids[i + 1] ?? "", label: t("board.after", { name: label(id) }) }))];
 }
 
 type MoveTarget = { id: string; num: string; title: string; meta?: string };
@@ -773,9 +774,9 @@ function MoveDialog({
   const listId = useId();
   const many = groups.reduce((n, g) => n + g.targets.length, 0) > 1;
   const unchanged = target === current && before === currentBefore;
-  const pick = (t: string) => {
-    setTarget(t);
-    setBefore(t === current ? currentBefore : "");
+  const pick = (to: string) => {
+    setTarget(to);
+    setBefore(to === current ? currentBefore : "");
   };
   return (
     <Dialog
@@ -784,26 +785,26 @@ function MoveDialog({
       className="move-dialog"
       onCancel={onClose}
       actions={[
-        { label: "Annuler", onClick: onClose },
-        { label: "Déplacer", primary: true, disabled: unchanged, onClick: () => onMove(target, before || null) },
+        { label: t("common.cancel"), onClick: onClose },
+        { label: t("board.move"), primary: true, disabled: unchanged, onClick: () => onMove(target, before || null) },
       ]}
     >
       {subject && <p className="move-subject">{subject}</p>}
       {many && (
         <div className="fld">
           <span className="fld-label" id={listId}>
-            Vers
+            {t("board.to")}
           </span>
           <div className="move-list" role="radiogroup" aria-labelledby={listId}>
             {groups.map((g, i) => (
               <div key={g.label ?? i} className="move-group" role="group" aria-label={g.label}>
                 {g.label && <div className="move-group-label">{g.label}</div>}
-                {g.targets.map((t) => (
-                  <label key={t.id} className="move-opt">
-                    <input type="radio" name={name} checked={target === t.id} onChange={() => pick(t.id)} data-autofocus={target === t.id ? "" : undefined} />
-                    <span className="move-num">{t.num}</span>
-                    <span className="move-title">{t.title}</span>
-                    <span className="move-meta">{t.id === current ? "Ici" : t.meta}</span>
+                {g.targets.map((x) => (
+                  <label key={x.id} className="move-opt">
+                    <input type="radio" name={name} checked={target === x.id} onChange={() => pick(x.id)} data-autofocus={target === x.id ? "" : undefined} />
+                    <span className="move-num">{x.num}</span>
+                    <span className="move-title">{x.title}</span>
+                    <span className="move-meta">{x.id === current ? t("board.here") : x.meta}</span>
                   </label>
                 ))}
               </div>
@@ -812,11 +813,11 @@ function MoveDialog({
         </div>
       )}
       <label className="fld move-place">
-        <span className="fld-label">Position</span>
+        <span className="fld-label">{t("board.position")}</span>
         <Select value={before} onChange={(e) => setBefore(e.target.value)}>
           {positions(target).map((p) => (
             <option key={p.value || "end"} value={p.value}>
-              {p.value === currentBefore && target === current ? `${p.label} (actuelle)` : p.label}
+              {p.value === currentBefore && target === current ? t("board.currentPlace", { place: p.label }) : p.label}
             </option>
           ))}
         </Select>
@@ -835,34 +836,34 @@ function CardPanel({ scene, meta, story, onClose, onRemove }: { scene: SceneInfo
   const plotSuggestions = [...new Set(["A", "B", "C", ...[...story.meta.values()].flatMap((m) => m.plotlines)])];
   const tagSuggestions = [...new Set([...story.meta.values()].flatMap((m) => m.tags))];
   return (
-    <aside className="card-panel" aria-label="Carte de scène">
+    <aside className="card-panel" aria-label={t("board.card")}>
       <header>
         <h2 className="auto-num">{sceneLabel(scene.index + 1)}</h2>
-        <button type="button" className="btn ghost small" onClick={onClose} aria-label="Fermer la carte">
+        <button type="button" className="btn ghost small" onClick={onClose} aria-label={t("board.closeCard")}>
           <X aria-hidden="true" />
         </button>
       </header>
       <p className="muted small">
-        {formatEighths(scene.eighths)} de page · p. {scene.page}
+        {t("board.length", { eighths: formatEighths(scene.eighths), page: scene.page })}
         {scene.characters.length > 0 && ` · ${scene.characters.map(prettyName).join(", ")}`}
       </p>
       <label className="fld wide">
-        <span className="fld-label">En-tête</span>
+        <span className="fld-label">{t("board.heading")}</span>
         <input
           className="heading-input"
           value={heading}
-          placeholder="INT. LIEU – JOUR"
+          placeholder={t("board.headingPlaceholder")}
           onChange={(e) => setHeading(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           onBlur={() => heading.trim() !== scene.heading && session.editor?.setSceneHeading(scene.id, heading.trim())}
         />
       </label>
       <label className="fld wide">
-        <span className="fld-label">Résumé</span>
+        <span className="fld-label">{t("board.summary")}</span>
         <textarea rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} onBlur={() => summary !== meta.summary && void save({ summary })} />
       </label>
       <label className="fld wide">
-        <span className="fld-label">Statut d'écriture</span>
+        <span className="fld-label">{t("board.status")}</span>
         <Select value={meta.status ?? ""} onChange={(e) => void save({ status: (e.target.value || null) as SceneMeta["status"] })}>
           <option value="">—</option>
           {SCENE_STATUSES.map((s) => (
@@ -873,26 +874,26 @@ function CardPanel({ scene, meta, story, onClose, onRemove }: { scene: SceneInfo
         </Select>
       </label>
       <div className="fld wide">
-        <span className="fld-label">Couleur</span>
+        <span className="fld-label">{t("board.color")}</span>
         <div className="swatches">
-          <button type="button" className={`swatch none ${meta.color ? "" : "on"}`} aria-label="Sans couleur" onClick={() => void save({ color: null })} />
+          <button type="button" className={`swatch none ${meta.color ? "" : "on"}`} aria-label={t("board.noColor")} onClick={() => void save({ color: null })} />
           {CARD_COLORS.map((c) => (
-            <button key={c} type="button" className={`swatch ${meta.color === c ? "on" : ""}`} style={{ background: c }} aria-label={`Couleur ${c}`} onClick={() => void save({ color: c })} />
+            <button key={c} type="button" className={`swatch ${meta.color === c ? "on" : ""}`} style={{ background: c }} aria-label={t("board.colorNamed", { color: c })} onClick={() => void save({ color: c })} />
           ))}
         </div>
       </div>
-      <TagInput label="Intrigues" value={meta.plotlines} suggestions={plotSuggestions} onChange={(plotlines) => void save({ plotlines })} help="A, B, C… ou un nom d'intrigue." />
-      <TagInput label="Étiquettes" value={meta.tags} suggestions={tagSuggestions} onChange={(tags) => void save({ tags })} />
+      <TagInput label={t("board.plotlines")} value={meta.plotlines} suggestions={plotSuggestions} onChange={(plotlines) => void save({ plotlines })} help={t("board.plotlinesHelp")} />
+      <TagInput label={t("entry.tags")} value={meta.tags} suggestions={tagSuggestions} onChange={(tags) => void save({ tags })} />
       <label className="fld wide">
-        <span className="fld-label">Moment dans l'histoire</span>
-        <input value={storyTime} placeholder="jour 3, 22 h · 1944…" onChange={(e) => setStoryTime(e.target.value)} onBlur={() => storyTime !== (meta.storyTime ?? "") && void save({ storyTime: storyTime || null })} />
+        <span className="fld-label">{t("board.storyTime")}</span>
+        <input value={storyTime} placeholder={t("board.storyTimePlaceholder")} onChange={(e) => setStoryTime(e.target.value)} onBlur={() => storyTime !== (meta.storyTime ?? "") && void save({ storyTime: storyTime || null })} />
       </label>
       <div className="panel-actions">
         <button type="button" className="btn primary small" onClick={() => openScene(scene.id)}>
-          Ouvrir dans le scénario
+          {t("board.openInScript")}
         </button>
         <button type="button" className="btn ghost small danger" onClick={onRemove}>
-          Supprimer la scène
+          {t("board.deleteScene")}
         </button>
       </div>
     </aside>

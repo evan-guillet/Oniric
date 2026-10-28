@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Minus, Square, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { t } from "../core/i18n";
 
 /**
  * The window's own title bar (the system one is turned off), drawn in the app's colors so it
@@ -27,19 +28,19 @@ export function TitleBar({ title, merged }: { title: string; merged: boolean }) 
         {title}
       </div>
       <div className="titlebar-controls">
-        <button type="button" className="titlebar-btn" aria-label="Réduire" title="Réduire" onClick={() => void win().minimize()}>
+        <button type="button" className="titlebar-btn" aria-label={t("titlebar.minimize")} title={t("titlebar.minimize")} onClick={() => void win().minimize()}>
           <Minus aria-hidden="true" />
         </button>
         <button
           type="button"
           className="titlebar-btn"
-          aria-label={maximized ? "Restaurer" : "Agrandir"}
-          title={maximized ? "Restaurer" : "Agrandir"}
+          aria-label={maximized ? t("titlebar.restore") : t("titlebar.maximize")}
+          title={maximized ? t("titlebar.restore") : t("titlebar.maximize")}
           onClick={() => void win().toggleMaximize()}
         >
           {maximized ? <Copy aria-hidden="true" className="flip" /> : <Square aria-hidden="true" />}
         </button>
-        <button type="button" className="titlebar-btn close" aria-label="Fermer" title="Fermer" onClick={() => void win().close()}>
+        <button type="button" className="titlebar-btn close" aria-label={t("common.close")} title={t("common.close")} onClick={() => void win().close()}>
           <X aria-hidden="true" />
         </button>
       </div>

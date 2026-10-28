@@ -10,10 +10,10 @@ import { ProjectShell, type WorkspaceHandle } from "./modules/project/ui/Project
 import { useChoice } from "./ui-kit/Dialog";
 import { TitleBar } from "./ui-kit/TitleBar";
 import { Toasts, type ToastMessage } from "./ui-kit/Toast";
+import { dateFormat } from "./core/i18n";
 
 type Screen = { kind: "home" } | { kind: "loading" } | { kind: "project"; state: OpenState };
 
-const sinceFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 
 export function App() {
   const { t } = useTranslation();
@@ -48,7 +48,7 @@ export function App() {
         }
         let forceLock = false;
         if (probe.lock === "openElsewhere") {
-          const since = probe.lockSince ? sinceFormat.format(new Date(probe.lockSince)) : "?";
+          const since = probe.lockSince ? dateFormat({ dateStyle: "long", timeStyle: "short" }).format(new Date(probe.lockSince)) : "?";
           const choice = await ask({
             title: t("open.lockedTitle"),
             text: <p>{t("open.lockedText", { title: probe.title, host: probe.lockHost, since })}</p>,

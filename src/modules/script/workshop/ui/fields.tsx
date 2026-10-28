@@ -5,8 +5,9 @@ import { Dialog } from "../../../../ui-kit/Dialog";
 import { useDebounced } from "../../../../ui-kit/Form";
 import { useProject } from "../../../project/ui/projectContext";
 import { fieldHistory, setField } from "../application/workshop";
+import { dateFormat, t } from "../../../../core/i18n";
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+const dates = () => dateFormat({ dateStyle: "medium", timeStyle: "short" });
 
 export interface Workshop {
   fields: Map<string, unknown>;
@@ -32,8 +33,8 @@ function HistoryButton({ k, onRestore }: { k: string; onRestore: (v: unknown) =>
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn ghost tiny" onClick={() => setOpen(true)} title="Versions précédentes de ce champ">
-        Historique
+      <button type="button" className="btn ghost tiny" onClick={() => setOpen(true)} title={t("fields.previous")}>
+        {t("fields.history")}
       </button>
       {open && (
         <FieldHistory
@@ -52,21 +53,21 @@ function HistoryButton({ k, onRestore }: { k: string; onRestore: (v: unknown) =>
 function FieldHistory({ k, onClose, onRestore }: { k: string; onClose: () => void; onRestore: (v: unknown) => void }) {
   const versions = useLive(() => fieldHistory(k), ["workshop_field_version"], [k]);
   return (
-    <Dialog title="Historique du champ" wide onCancel={onClose} actions={[{ label: "Fermer", onClick: onClose }]}>
+    <Dialog title={t("fields.historyTitle")} wide onCancel={onClose} actions={[{ label: t("common.close"), onClick: onClose }]}>
       {!versions ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t("dash.loading")}</p>
       ) : versions.length === 0 ? (
-        <p className="muted">Pas encore d'historique.</p>
+        <p className="muted">{t("fields.none")}</p>
       ) : (
         <ul className="version-list">
           {versions.map((v) => (
             <li key={v.id}>
               <span>
-                <strong>{dateFormat.format(new Date(v.createdAt))}</strong>
+                <strong>{dates().format(new Date(v.createdAt))}</strong>
                 <span className="history-text">{typeof v.value === "string" ? v.value : JSON.stringify(v.value)}</span>
               </span>
               <button type="button" className="btn small" onClick={() => onRestore(v.value)}>
-                Reprendre
+                {t("fields.takeBack")}
               </button>
             </li>
           ))}

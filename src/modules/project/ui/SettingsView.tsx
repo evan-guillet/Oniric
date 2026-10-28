@@ -21,6 +21,7 @@ import { commands, type BackupState, type Settings } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { describeError } from "../../../core/errors";
+import { dateFormat, LANGUAGES, numberFormat, setLanguage, t, type Language } from "../../../core/i18n";
 import {
   getThemePreference,
   onThemePreference,
@@ -49,6 +50,8 @@ import {
   ELEMENT_TYPES,
   FORMATS,
   FORMAT_KINDS,
+  formatHelp,
+  formatName,
   groupFormats,
   type FormatLanguage,
   type ScreenplayFormat,
@@ -62,21 +65,15 @@ type Notify = (m: Omit<ToastMessage, "id">) => void;
 
 const SOURCE_URL = "https://github.com/evan-guillet/Oniric";
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-const KIND_LABEL: Record<string, string> = {
-  auto: "automatique",
-  fermeture: "à la fermeture",
-  manuelle: "manuelle",
-};
+const dates = () => dateFormat({ dateStyle: "medium", timeStyle: "short" });
+/** The kinds of copy, as the backup files name them. */
+const KINDS = new Set(["auto", "fermeture", "manuelle"]);
 const kindLabel = (k: string) =>
-  KIND_LABEL[k] ?? (k.startsWith("avant-migration") ? "avant mise à jour" : k);
+  KINDS.has(k) ? t(`settings.kind.${k}`) : k.startsWith("avant-migration") ? t("settings.kind.migration") : k;
 const sizeLabel = (b: number) =>
   b > 1e6
-    ? `${(b / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo`
-    : `${Math.max(1, Math.round(b / 1e3))} Ko`;
+    ? t("settings.mb", { n: numberFormat({ maximumFractionDigits: 1 }).format(b / 1e6) })
+    : t("settings.kb", { n: Math.max(1, Math.round(b / 1e3)) });
 
 type PageId = SettingsPage;
 
@@ -90,75 +87,33 @@ interface Page {
   keywords: string;
 }
 
-const PAGES: Record<PageId, Page> = {
-  profile: {
-    id: "profile",
-    label: "Profil",
-    icon: UserRound,
-    lead: "Votre nom et vos coordonnées, repris sur la page de titre de chaque script.",
-    keywords: "nom auteur e-mail téléphone adresse agent contact page de titre",
-  },
-  appearance: {
-    id: "appearance",
-    label: "Apparence",
-    icon: Palette,
-    lead: "Le thème de toute l'application, pages du scénario comprises.",
-    keywords: "thème clair sombre système couleurs nuit",
-  },
-  writing: {
-    id: "writing",
-    label: "Écriture",
-    icon: PenLine,
-    lead: "Comment se comporte le Scénario pendant que vous tapez.",
-    keywords: "machine à écrire défilement centré orthographe correcteur typographie espaces insécables objectif mots par jour",
-  },
-  formats: {
-    id: "formats",
-    label: "Formats de scénario",
-    icon: Ruler,
-    lead: "Les mises en page fournies, et les vôtres, partagées par tous les projets.",
-    keywords: "marges papier a4 letter police personnalisé dupliquer modèle",
-  },
-  backups: {
-    id: "backups",
-    label: "Sauvegardes",
-    icon: DatabaseBackup,
-    lead: "Des copies de chaque projet dans un dossier à part, en plus de l'enregistrement continu.",
-    keywords: "copie restaurer dossier automatique fréquence rappel",
-  },
-  shortcuts: {
-    id: "shortcuts",
-    label: "Raccourcis clavier",
-    icon: Keyboard,
-    lead: "Tout ce qui se fait au clavier, vue par vue.",
-    keywords: "touches clavier ctrl tab entrée palette éléments aide",
-  },
-  script: {
-    id: "script",
-    label: "Script",
-    icon: FileText,
-    lead: "La mise en page et l'impression du script de ce projet.",
-    keywords: "format numéros de scène impression pdf fdx fountain marge",
-  },
-  parts: {
-    id: "parts",
-    label: "Parties affichées",
-    icon: LayoutGrid,
-    lead: "Ce que montre la navigation de ce projet.",
-    keywords: "réalisation production masquer navigation",
-  },
-  about: {
-    id: "about",
-    label: "À propos",
-    icon: Info,
-    lead: "Oniric, logiciel libre de création de films.",
-    keywords: "version licence gpl code source",
-  },
+
+const PAGE_ICONS: Record<PageId, LucideIcon> = {
+  profile: UserRound,
+  appearance: Palette,
+  writing: PenLine,
+  formats: Ruler,
+  backups: DatabaseBackup,
+  shortcuts: Keyboard,
+  script: FileText,
+  parts: LayoutGrid,
+  about: Info,
 };
 
-const GROUPS: { label: string; pages: PageId[]; projectOnly?: boolean }[] = [
-  { label: "Application", pages: ["profile", "appearance", "writing", "formats", "backups", "shortcuts"] },
-  { label: "Ce projet", projectOnly: true, pages: ["script", "parts"] },
+/** A page, its texts in the language of the moment. */
+function pageOf(id: PageId): Page {
+  return {
+    id,
+    icon: PAGE_ICONS[id],
+    label: t(`settings.pages.${id}.label`),
+    lead: t(`settings.pages.${id}.lead`),
+    keywords: t(`settings.pages.${id}.keywords`),
+  };
+}
+
+const GROUPS: { id: string; pages: PageId[]; projectOnly?: boolean }[] = [
+  { id: "application", pages: ["profile", "appearance", "writing", "formats", "backups", "shortcuts"] },
+  { id: "project", projectOnly: true, pages: ["script", "parts"] },
 ];
 
 const fold = (x: string) =>
@@ -198,12 +153,12 @@ export function SettingsDialog({
   }, []);
 
   const q = fold(search.trim());
-  const matches = (id: PageId) => !q || fold(`${PAGES[id].label} ${PAGES[id].keywords}`).includes(q);
+  const matches = (id: PageId) => !q || fold(`${pageOf(id).label} ${pageOf(id).keywords}`).includes(q);
   const groups = GROUPS.filter((g) => !g.projectOnly || ctx)
     .map((g) => ({ ...g, pages: g.pages.filter(matches) }))
     .filter((g) => g.pages.length > 0);
   const aboutShown = matches("about");
-  const current = PAGES[page];
+  const current = pageOf(page);
 
   const openProject =
     onOpenProject &&
@@ -213,7 +168,7 @@ export function SettingsDialog({
     });
 
   const link = (id: PageId) => {
-    const p = PAGES[id];
+    const p = pageOf(id);
     return (
       <button
         type="button"
@@ -231,20 +186,20 @@ export function SettingsDialog({
     <dialog
       ref={ref}
       className="dialog settings-dialog"
-      aria-label="Réglages"
+      aria-label={t("shell.settings")}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
       }}
       {...backdrop}
     >
-      <nav className="settings-nav" aria-label="Pages des réglages">
+      <nav className="settings-nav" aria-label={t("settings.pagesNav")}>
         <label className="settings-search">
           <Search aria-hidden="true" />
           <input
             type="search"
-            placeholder="Rechercher un réglage"
-            aria-label="Rechercher un réglage"
+            placeholder={t("settings.search")}
+            aria-label={t("settings.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -255,8 +210,8 @@ export function SettingsDialog({
           />
         </label>
         {groups.map((g) => (
-          <section key={g.label}>
-            <h2 title={g.projectOnly ? ctx?.project.title : undefined}>{g.label}</h2>
+          <section key={g.id}>
+            <h2 title={g.projectOnly ? ctx?.project.title : undefined}>{t(`settings.groups.${g.id}`)}</h2>
             <ul>
               {g.pages.map((id) => (
                 <li key={id}>{link(id)}</li>
@@ -265,7 +220,7 @@ export function SettingsDialog({
           </section>
         ))}
         {groups.length === 0 && !aboutShown && (
-          <p className="muted small settings-none">Aucun réglage ne correspond.</p>
+          <p className="muted small settings-none">{t("settings.none")}</p>
         )}
         {aboutShown && <div className="settings-nav-foot">{link("about")}</div>}
       </nav>
@@ -278,8 +233,8 @@ export function SettingsDialog({
           <button
             type="button"
             className="settings-close"
-            aria-label="Fermer les réglages"
-            title="Fermer (Échap)"
+            aria-label={t("settings.closeSettings")}
+            title={t("settings.closeTitle")}
             onClick={onClose}
           >
             <X aria-hidden="true" />
@@ -409,12 +364,12 @@ function NumberField({
   );
 }
 
-const PROFILE_FIELDS: { key: keyof Profile; label: string; help?: string; multiline?: boolean; type?: string }[] = [
-  { key: "name", label: "Nom", help: "Imprimé sous « Écrit par » et en tête du contact." },
-  { key: "email", label: "E-mail", type: "email" },
-  { key: "phone", label: "Téléphone", type: "tel" },
-  { key: "address", label: "Adresse", multiline: true },
-  { key: "agent", label: "Agent ou représentant", help: "Ajouté à la fin du contact.", multiline: true },
+const profileFields = (): { key: keyof Profile; label: string; help?: string; multiline?: boolean; type?: string }[] => [
+  { key: "name", label: t("settings.profile.name"), help: t("settings.profile.nameHelp") },
+  { key: "email", label: t("settings.profile.email"), type: "email" },
+  { key: "phone", label: t("settings.profile.phone"), type: "tel" },
+  { key: "address", label: t("settings.profile.address"), multiline: true },
+  { key: "agent", label: t("settings.profile.agent"), help: t("settings.profile.agentHelp"), multiline: true },
 ];
 
 function ProfileSettings({ notify }: { notify: Notify }) {
@@ -446,8 +401,8 @@ function ProfileSettings({ notify }: { notify: Notify }) {
 
   return (
     <>
-      <Group title="Coordonnées">
-        {PROFILE_FIELDS.map((f) => (
+      <Group title={t("settings.contactDetails")}>
+        {profileFields().map((f) => (
           <Row key={f.key} id={`profile-${f.key}`} title={f.label} help={f.help}>
             {f.multiline ? (
               <textarea
@@ -470,37 +425,34 @@ function ProfileSettings({ notify }: { notify: Notify }) {
           </Row>
         ))}
       </Group>
-      <Group title="Sur la page de titre">
-        <div className="profile-sheet" aria-label="Le contact tel qu'il s'imprime">
+      <Group title={t("settings.onTitlePage")}>
+        <div className="profile-sheet" aria-label={t("settings.printedContact")}>
           <div className="profile-sheet-by">
             {profile.name.trim() ? (
               <>
-                Écrit par
+                {t("settings.writtenBy")}
                 <br />
                 <br />
                 {profile.name}
               </>
             ) : (
-              <span className="muted">Votre nom s'imprimera ici.</span>
+              <span className="muted">{t("settings.nameHere")}</span>
             )}
           </div>
           <div className="profile-sheet-contact">
-            {contact.length > 0 ? contact.join("\n") : <span className="muted">Le contact s'imprime en bas à gauche.</span>}
+            {contact.length > 0 ? contact.join("\n") : <span className="muted">{t("settings.contactHere")}</span>}
           </div>
         </div>
-        <p className="set-note">
-          Chaque script suit ce profil, sauf les champs changés dans Scénario, onglet « Informations », qui ne
-          valent que pour lui. Le profil reste sur ce PC.
-        </p>
+        <p className="set-note">{t("settings.profileNote")}</p>
       </Group>
     </>
   );
 }
 
-const THEMES: { id: ThemePreference; label: string; help: string }[] = [
-  { id: "system", label: "Système", help: "Suit le réglage de Windows" },
-  { id: "light", label: "Clair", help: "Pages blanches, encre noire" },
-  { id: "dark", label: "Sombre", help: "Pages sombres, plus doux le soir" },
+const themes = (): { id: ThemePreference; label: string; help: string }[] => [
+  { id: "system", label: t("settings.themes.system"), help: t("settings.themes.systemHelp") },
+  { id: "light", label: t("settings.themes.light"), help: t("settings.themes.lightHelp") },
+  { id: "dark", label: t("settings.themes.dark"), help: t("settings.themes.darkHelp") },
 ];
 
 function AppearanceSettings({ notify }: { notify: Notify }) {
@@ -511,12 +463,13 @@ function AppearanceSettings({ notify }: { notify: Notify }) {
       notify({ text: describeError(e), tone: "error" }),
     );
   return (
+    <>
     <section className="set-group">
       <div className="set-group-head">
-        <h2>Thème</h2>
+        <h2>{t("settings.theme")}</h2>
       </div>
-      <div className="theme-options" role="radiogroup" aria-label="Thème">
-        {THEMES.map((o) => (
+      <div className="theme-options" role="radiogroup" aria-label={t("settings.theme")}>
+        {themes().map((o) => (
           <label
             key={o.id}
             className={`theme-option${theme === o.id ? " on" : ""}`}
@@ -545,8 +498,34 @@ function AppearanceSettings({ notify }: { notify: Notify }) {
           </label>
         ))}
       </div>
-      <p className="set-note">Les PDF exportés restent toujours en noir sur blanc.</p>
+      <p className="set-note">{t("settings.themeNote")}</p>
     </section>
+    <LanguageSettings notify={notify} />
+    </>
+  );
+}
+
+/** The language of the interface; the screenplay keeps the language of its format. */
+function LanguageSettings({ notify }: { notify: Notify }) {
+  const { i18n } = useTranslation();
+  return (
+    <Group title={t("settings.language")}>
+      <Row title={t("settings.languageRow")} help={t("settings.languageHelp")}>
+        <Select
+          aria-label={t("settings.languageRow")}
+          value={i18n.language}
+          onChange={(e) =>
+            void setLanguage(e.target.value as Language).catch((x) => notify({ text: describeError(x), tone: "error" }))
+          }
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l.id} value={l.id} lang={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </Select>
+      </Row>
+    </Group>
   );
 }
 
@@ -568,10 +547,10 @@ function ThemeMiniature({
   );
 }
 
-const TYPOGRAPHY: { id: WritingPrefs["typography"]; label: string }[] = [
-  { id: "auto", label: "Avec un format français" },
-  { id: "on", label: "Toujours" },
-  { id: "off", label: "Jamais" },
+const typographyChoices = (): { id: WritingPrefs["typography"]; label: string }[] => [
+  { id: "auto", label: t("settings.typography.auto") },
+  { id: "on", label: t("settings.typography.on") },
+  { id: "off", label: t("settings.typography.off") },
 ];
 
 function WritingSettings({ notify }: { notify: Notify }) {
@@ -580,31 +559,31 @@ function WritingSettings({ notify }: { notify: Notify }) {
     setWritingPrefs(patch).catch((e) => notify({ text: describeError(e), tone: "error" }));
   return (
     <>
-      <Group title="Pendant la frappe">
+      <Group title={t("settings.whileTyping")}>
         <Row
           id="w-typewriter"
-          title="Défilement machine à écrire"
-          help="La ligne que vous tapez reste au milieu de l'écran ; la page monte sous elle."
+          title={t("settings.typewriter")}
+          help={t("settings.typewriterHelp")}
         >
           <Switch id="w-typewriter" checked={prefs.typewriter} onChange={(v) => void set({ typewriter: v })} />
         </Row>
         <Row
           id="w-spell"
-          title="Correcteur orthographique"
-          help="Souligne les mots que Windows ne connaît pas, dans la langue du format. Clic droit pour les suggestions."
+          title={t("settings.spellcheck")}
+          help={t("settings.spellcheckHelp")}
         >
           <Switch id="w-spell" checked={prefs.spellcheck} onChange={(v) => void set({ spellcheck: v })} />
         </Row>
         <Row
-          title="Typographie française"
-          help="Une espace insécable avant ? ! ; : et dans les guillemets « », posée en tapant."
+          title={t("settings.typographyRow")}
+          help={t("settings.typographyHelp")}
         >
           <Select
-            aria-label="Typographie française"
+            aria-label={t("settings.typographyRow")}
             value={prefs.typography}
             onChange={(e) => void set({ typography: e.target.value as WritingPrefs["typography"] })}
           >
-            {TYPOGRAPHY.map((o) => (
+            {typographyChoices().map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
               </option>
@@ -612,16 +591,16 @@ function WritingSettings({ notify }: { notify: Notify }) {
           </Select>
         </Row>
       </Group>
-      <Group title="Objectif">
+      <Group title={t("settings.goal")}>
         <Row
           id="w-goal"
-          title="Mots par jour"
-          help="Tracé dans l'activité d'écriture du tableau de bord ; les jours atteints passent au vert. 0 : pas d'objectif."
+          title={t("settings.goalRow")}
+          help={t("settings.goalHelp")}
         >
           <NumberField
             id="w-goal"
             value={prefs.dailyGoal}
-            unit="mots"
+            unit={t("settings.unitWords")}
             min={0}
             max={20000}
             onSave={(v) => void set({ dailyGoal: v })}
@@ -657,14 +636,14 @@ function FormatSettings({ notify, inProject }: { notify: Notify; inProject: bool
     }
   };
   const duplicate = (f: ScreenplayFormat) =>
-    setEditing({ ...structuredClone(f), id: `perso-${uuidv7()}`, name: `${f.name} (copie)` });
-  const usedBadge = (id: string) => used === id && <span className="badge set-badge">Ce projet</span>;
+    setEditing({ ...structuredClone(f), id: `perso-${uuidv7()}`, name: t("settings.copyName", { name: formatName(f) }) });
+  const usedBadge = (id: string) => used === id && <span className="badge set-badge">{t("settings.groups.project")}</span>;
 
   return (
     <>
-      <Group title="Mes formats">
+      <Group title={t("settings.myFormats")}>
         {library.length === 0 ? (
-          <Row title="Aucun format à vous" help="Dupliquez un format fourni ci-dessous pour en régler les marges, le papier ou les mentions." />
+          <Row title={t("settings.noFormat")} help={t("settings.noFormatHelp")} />
         ) : (
           library.map((f) => (
             <Row
@@ -675,23 +654,23 @@ function FormatSettings({ notify, inProject }: { notify: Notify; inProject: bool
                   {usedBadge(f.id)}
                 </>
               }
-              help={`${f.paper === "A4" ? "A4" : "Letter (US)"} · personnalisé`}
+              help={t("settings.customHelp", { paper: f.paper === "A4" ? "A4" : "Letter (US)" })}
             >
               <button type="button" className="btn small" onClick={() => setEditing(structuredClone(f))}>
-                Modifier
+                {t("settings.edit")}
               </button>
               <button type="button" className="btn small" onClick={() => duplicate(f)}>
-                Dupliquer
+                {t("settings.duplicate")}
               </button>
               <button
                 type="button"
                 className="btn ghost small"
                 onClick={async () => {
-                  if (await confirmRemoval(ask, { title: `Supprimer le format « ${f.name} » ?`, text: "Il quitte la liste des formats de scénario. Les projets qui l'utilisent le gardent." }))
+                  if (await confirmRemoval(ask, { title: t("settings.deleteFormat", { name: f.name }), text: t("settings.deleteFormatText") }))
                     await persist(library.filter((x) => x.id !== f.id));
                 }}
               >
-                Supprimer
+                {t("common.delete")}
               </button>
             </Row>
           ))
@@ -704,20 +683,20 @@ function FormatSettings({ notify, inProject }: { notify: Notify; inProject: bool
               key={f.id}
               title={
                 <>
-                  {f.name}
+                  {formatName(f)}
                   {usedBadge(f.id)}
                 </>
               }
-              help={f.help}
+              help={formatHelp(f)}
             >
               <button type="button" className="btn small" onClick={() => duplicate(f)}>
-                Dupliquer
+                {t("settings.duplicate")}
               </button>
             </Row>
           ))}
         </Group>
       ))}
-      <p className="set-note">Les formats fournis reprennent les modèles de Final Draft. Un projet garde son format, même ouvert sur un autre PC.</p>
+      <p className="set-note">{t("settings.formatsNote")}</p>
       {choice}
       {editing && (
         <FormatEditor
@@ -779,13 +758,13 @@ function FormatEditor({
   const paper = f.page.width < 8.4 ? "A4" : "Letter";
   return (
     <Dialog
-      title="Format personnalisé"
+      title={t("settings.customFormat")}
       wide
       onCancel={onCancel}
       actions={[
-        { label: "Annuler", onClick: onCancel },
+        { label: t("common.cancel"), onClick: onCancel },
         {
-          label: "Enregistrer",
+          label: t("common.save"),
           primary: true,
           disabled: !f.name.trim(),
           onClick: () => onSave({ ...f, name: f.name.trim(), paper }),
@@ -793,14 +772,14 @@ function FormatEditor({
       ]}
     >
       <div className="format-editor">
-        <Labeled label="Nom" wide>
+        <Labeled label={t("settings.profile.name")} wide>
           <input
             value={f.name}
             onChange={(e) => set({ name: e.target.value })}
           />
         </Labeled>
         <div className="input-row">
-          <Labeled label="Papier">
+          <Labeled label={t("settings.paper")}>
             <Select
               value={paper}
               onChange={(e) =>
@@ -816,38 +795,31 @@ function FormatEditor({
               <option value="Letter">Letter (US)</option>
             </Select>
           </Labeled>
-          <Labeled label="Langue">
+          <Labeled label={t("settings.formatLanguage")}>
             <Select
               value={f.language}
               onChange={(e) => set({ language: e.target.value as FormatLanguage })}
             >
-              <option value="fr">Français</option>
-              <option value="en">Anglais</option>
-              <option value="de">Allemand</option>
-              <option value="es">Espagnol</option>
+              <option value="fr">{t("languages.fr")}</option>
+              <option value="en">{t("languages.en")}</option>
+              <option value="de">{t("languages.de")}</option>
+              <option value="es">{t("languages.es")}</option>
             </Select>
           </Labeled>
           <Num
-            label="Corps (pt)"
+            label={t("settings.size")}
             step={0.5}
             value={f.fontSizePt}
             onChange={(v) => set({ fontSizePt: v, lineHeightPt: v })}
           />
         </div>
         <fieldset className="field">
-          <legend>Marges (cm)</legend>
+          <legend>{t("settings.margins")}</legend>
           <div className="input-row">
             {(["top", "bottom", "left", "right"] as const).map((k) => (
               <Num
                 key={k}
-                label={
-                  {
-                    top: "Haut",
-                    bottom: "Bas",
-                    left: "Gauche",
-                    right: "Droite",
-                  }[k]
-                }
+                label={t(`settings.margin.${k}`)}
                 value={cm(f.margins[k])}
                 onChange={(v) =>
                   set({ margins: { ...f.margins, [k]: inch(v) } })
@@ -857,15 +829,15 @@ function FormatEditor({
           </div>
         </fieldset>
         <fieldset className="field">
-          <legend>Éléments (cm depuis la marge gauche)</legend>
+          <legend>{t("settings.elements")}</legend>
           <table className="table compact">
             <thead>
               <tr>
                 <th />
-                <th>Retrait</th>
-                <th>Largeur</th>
-                <th>Lignes avant</th>
-                <th>Majuscules</th>
+                <th>{t("settings.indent")}</th>
+                <th>{t("settings.width")}</th>
+                <th>{t("settings.linesBefore")}</th>
+                <th>{t("settings.uppercase")}</th>
               </tr>
             </thead>
             <tbody>
@@ -886,7 +858,7 @@ function FormatEditor({
                         onChange={(x) =>
                           setEl({ indent: inch(Number(x.target.value)) })
                         }
-                        aria-label="Retrait"
+                        aria-label={t("settings.indent")}
                       />
                     </td>
                     <td>
@@ -897,7 +869,7 @@ function FormatEditor({
                         onChange={(x) =>
                           setEl({ width: inch(Number(x.target.value)) })
                         }
-                        aria-label="Largeur"
+                        aria-label={t("settings.width")}
                       />
                     </td>
                     <td>
@@ -909,7 +881,7 @@ function FormatEditor({
                         onChange={(x) =>
                           setEl({ spaceBefore: Number(x.target.value) })
                         }
-                        aria-label="Lignes avant"
+                        aria-label={t("settings.linesBefore")}
                       />
                     </td>
                     <td>
@@ -917,7 +889,7 @@ function FormatEditor({
                         type="checkbox"
                         checked={e.uppercase}
                         onChange={(x) => setEl({ uppercase: x.target.checked })}
-                        aria-label="Majuscules"
+                        aria-label={t("settings.uppercase")}
                       />
                     </td>
                   </tr>
@@ -927,7 +899,7 @@ function FormatEditor({
           </table>
         </fieldset>
         <div className="input-row">
-          <Labeled label="Mention « à suivre »">
+          <Labeled label={t("settings.more")}>
             <input
               value={f.labels.more}
               onChange={(e) =>
@@ -935,7 +907,7 @@ function FormatEditor({
               }
             />
           </Labeled>
-          <Labeled label="Mention « suite »">
+          <Labeled label={t("settings.contd")}>
             <input
               value={f.labels.contd}
               onChange={(e) =>
@@ -985,7 +957,7 @@ function BackupSettings({
   const chooseDir = async () => {
     const dir = await open({
       directory: true,
-      title: "Dossier des sauvegardes",
+      title: t("settings.backupsDir"),
       defaultPath: state.root,
     });
     if (typeof dir === "string") await save({ ...s, dir });
@@ -995,7 +967,7 @@ function BackupSettings({
     setBusy(true);
     try {
       unwrap(await commands.backupNow());
-      notify({ text: "Sauvegarde faite." });
+      notify({ text: t("backup.done") });
       await refresh();
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -1007,19 +979,19 @@ function BackupSettings({
   const restore = async (file: string) => {
     const parent = await open({
       directory: true,
-      title: "Où recréer le projet ?",
+      title: t("settings.restoreWhere"),
     });
     if (typeof parent !== "string") return;
     try {
       const dir = unwrap(await commands.backupRestore(file, parent));
       notify({
-        text: `Projet recréé à partir de la sauvegarde : ${dir}`,
+        text: t("settings.restored", { dir }),
         timeout: 0,
         actions: onOpenProject
-          ? [{ label: "Ouvrir ce projet", onClick: () => onOpenProject(dir) }]
+          ? [{ label: t("settings.openThisProject"), onClick: () => onOpenProject(dir) }]
           : [
               {
-                label: "Afficher dans le dossier",
+                label: t("workspace.showInFolder"),
                 onClick: () => void commands.reveal(dir, false),
               },
             ],
@@ -1031,9 +1003,9 @@ function BackupSettings({
 
   const restoreFile = async () => {
     const file = await open({
-      title: "Choisir une sauvegarde",
+      title: t("settings.chooseBackup"),
       defaultPath: state.root,
-      filters: [{ name: "Sauvegarde Oniric", extensions: ["db"] }],
+      filters: [{ name: t("settings.backupFile"), extensions: ["db"] }],
     });
     if (typeof file === "string") await restore(file);
   };
@@ -1046,20 +1018,20 @@ function BackupSettings({
         <div className="set-status">
           <DatabaseBackup aria-hidden="true" />
           <div className="set-status-text">
-            <strong>{last ? `Dernière copie : ${dateFormat.format(new Date(last.at))}` : "Pas encore de copie de ce projet"}</strong>
+            <strong>{last ? t("settings.lastCopy", { date: dates().format(new Date(last.at)) }) : t("settings.noCopy")}</strong>
             <span>
               {last
-                ? `${kindLabel(last.kind)} · ${state.copies.length} copie${state.copies.length > 1 ? "s" : ""} gardée${state.copies.length > 1 ? "s" : ""}`
-                : "La première se fera d'elle-même, ou tout de suite avec ce bouton."}
+                ? t("settings.copiesKept", { kind: kindLabel(last.kind), count: state.copies.length })
+                : t("settings.firstCopy")}
             </span>
           </div>
           <button type="button" className="btn primary" disabled={busy} onClick={() => void now()}>
-            Sauvegarder maintenant
+            {t("backup.now")}
           </button>
         </div>
       )}
-      <Group title="Copies automatiques">
-        <Row id="b-every" title="Fréquence" help="Une copie de chaque projet ouvert, à cet intervalle, et une autre à sa fermeture.">
+      <Group title={t("settings.autoCopies")}>
+        <Row id="b-every" title={t("settings.every")} help={t("settings.everyHelp")}>
           <NumberField
             id="b-every"
             value={s.everyMinutes ?? 30}
@@ -1069,59 +1041,59 @@ function BackupSettings({
             onSave={(v) => void save({ ...s, everyMinutes: v })}
           />
         </Row>
-        <Row id="b-keep" title="Copies gardées" help="Par projet ; les plus anciennes s'effacent au-delà.">
+        <Row id="b-keep" title={t("settings.keep")} help={t("settings.keepHelp")}>
           <NumberField
             id="b-keep"
             value={s.keep ?? 20}
-            unit="copies"
+            unit={t("settings.unitCopies")}
             min={1}
             max={1000}
             onSave={(v) => void save({ ...s, keep: v })}
           />
         </Row>
-        <Row id="b-remind" title="Rappel" help="Prévient à l'ouverture d'un projet si sa dernière copie est plus ancienne. 0 : jamais.">
+        <Row id="b-remind" title={t("settings.remind")} help={t("settings.remindHelp")}>
           <NumberField
             id="b-remind"
             value={s.remindDays ?? 7}
-            unit="jours"
+            unit={t("settings.unitDays")}
             min={0}
             max={365}
             onSave={(v) => void save({ ...s, remindDays: v })}
           />
         </Row>
       </Group>
-      <Group title="Emplacement">
+      <Group title={t("settings.location")}>
         <Row
-          title="Dossier des sauvegardes"
+          title={t("settings.backupsDir")}
           help={<span className="set-path" title={state.root}>{state.root}</span>}
         >
           <button type="button" className="btn small" onClick={() => void chooseDir()}>
-            Choisir…
+            {t("settings.choose")}
           </button>
           {s.dir && (
             <button type="button" className="btn ghost small" onClick={() => void save({ ...s, dir: null })}>
-              Par défaut
+              {t("settings.default")}
             </button>
           )}
           <button type="button" className="btn ghost small" onClick={() => void commands.backupReveal()}>
-            Ouvrir
+            {t("settings.open")}
           </button>
         </Row>
         <Row
-          title="Restaurer une sauvegarde"
-          help="Recrée le projet dans un nouveau dossier, à côté ; une sauvegarde ne modifie jamais le projet."
+          title={t("settings.restore")}
+          help={t("settings.restoreHelp")}
         >
           <button type="button" className="btn small" onClick={() => void restoreFile()}>
-            Choisir un fichier…
+            {t("settings.chooseFile")}
           </button>
         </Row>
       </Group>
       {inProject && state.copies.length > 0 && (
-        <Group title="Copies de ce projet">
+        <Group title={t("settings.projectCopies")}>
           {state.copies.map((c) => (
-            <Row key={c.file} title={dateFormat.format(new Date(c.at))} help={`${kindLabel(c.kind)} · ${sizeLabel(c.bytes)}`}>
+            <Row key={c.file} title={dates().format(new Date(c.at))} help={`${kindLabel(c.kind)} · ${sizeLabel(c.bytes)}`}>
               <button type="button" className="btn small" onClick={() => void restore(c.file)}>
-                Restaurer…
+                {t("settings.restoreCopy")}
               </button>
             </Row>
           ))}
@@ -1131,15 +1103,19 @@ function BackupSettings({
   );
 }
 
+/** The keys whose name changes with the language; the others (Ctrl, Tab, letters) are written as they are. */
+const KEY_NAMES: Record<string, string> = { Maj: "shift", Échap: "escape", Entrée: "enter", Molette: "wheel", Clic: "click" };
+export const keyName = (k: string) => (KEY_NAMES[k] ? t(`keys.${KEY_NAMES[k]}`) : k);
+
 /** Keys as they are pressed together: « Ctrl » « K ». */
 function Keys({ keys }: { keys: string }) {
   return (
     <span className="keys">
       {keys.split(" ").map((group, i) => (
         <Fragment key={i}>
-          {i > 0 && <span className="keys-or">ou</span>}
+          {i > 0 && <span className="keys-or">{t("settings.or")}</span>}
           {group.split("+").map((k, j) => (
-            <kbd key={j}>{k}</kbd>
+            <kbd key={j}>{keyName(k)}</kbd>
           ))}
         </Fragment>
       ))}
@@ -1151,41 +1127,41 @@ function ShortcutSettings() {
   const { t } = useTranslation();
   const groups: { title: string; rows: [string, string][] }[] = [
     {
-      title: "Partout",
+      title: t("settings.sc.everywhere"),
       rows: [
-        ["Ctrl+K", "Palette de commandes : aller à une vue, une scène, une fiche, une action"],
-        ["Ctrl+/", "Voir ces raccourcis"],
-        ["Échap", "Fermer le dialogue ou le menu ouvert"],
+        ["Ctrl+K", t("settings.sc.palette")],
+        ["Ctrl+/", t("settings.sc.shortcuts")],
+        ["Échap", t("settings.sc.close")],
       ],
     },
     {
-      title: "Scénario",
+      title: t("nav.views.script"),
       rows: [
-        ["Ctrl+S", "Enregistrer tout de suite (l'enregistrement se fait de lui-même)"],
-        ["Ctrl+P", "Exporter en PDF"],
-        ["Ctrl+Z", "Annuler"],
-        ["Ctrl+Y Ctrl+Maj+Z", "Rétablir"],
-        ["Échap", "Quitter l'aperçu"],
-        ["@ [[", "Lier un nom à sa fiche de la Bible"],
-        ["Ctrl+Clic", "Ouvrir la fiche d'un nom lié"],
+        ["Ctrl+S", t("settings.sc.save")],
+        ["Ctrl+P", t("settings.sc.pdf")],
+        ["Ctrl+Z", t("settings.sc.undo")],
+        ["Ctrl+Y Ctrl+Maj+Z", t("settings.sc.redo")],
+        ["Échap", t("settings.sc.preview")],
+        ["@ [[", t("settings.sc.link")],
+        ["Ctrl+Clic", t("settings.sc.openLink")],
       ],
     },
     {
-      title: "Éléments du scénario",
+      title: t("settings.sc.elements"),
       rows: [
-        ["Entrée", "Élément suivant : après un personnage le dialogue, après le dialogue un personnage…"],
-        ["Tab", "Changer l'élément de la ligne : action, personnage, transition, en-tête…"],
-        ["Maj+Tab", "Le même cycle, à rebours"],
+        ["Entrée", t("settings.sc.next")],
+        ["Tab", t("settings.sc.cycle")],
+        ["Maj+Tab", t("settings.sc.back")],
         ...ELEMENT_TYPES.map((type, i): [string, string] => [`Ctrl+${i + 1}`, t(`elements.${type}`)]),
-        ["INT. EXT.", "Tapé en début d'action, en fait un en-tête de scène"],
-        ["(", "Tapé en début de dialogue, en fait une didascalie"],
+        ["INT. EXT.", t("settings.sc.heading")],
+        ["(", t("settings.sc.paren")],
       ],
     },
     {
-      title: "Tableau et Chronologie",
+      title: t("settings.sc.views"),
       rows: [
-        ["Ctrl+Molette", "Zoomer ; la Chronologie zoome en largeur seulement"],
-        ["Entrée", "Ouvrir la scène choisie dans le Scénario"],
+        ["Ctrl+Molette", t("settings.sc.zoom")],
+        ["Entrée", t("settings.sc.openScene")],
       ],
     },
   ];
@@ -1201,16 +1177,16 @@ function ShortcutSettings() {
           ))}
         </Group>
       ))}
-      <p className="set-note">Maintenez Ctrl dans le Scénario : la barre des éléments affiche leurs raccourcis.</p>
+      <p className="set-note">{t("settings.shortcutsNote")}</p>
     </>
   );
 }
 
-const NUMBERS: { id: SceneNumbers; label: string }[] = [
-  { id: "none", label: "Aucun" },
-  { id: "left", label: "À gauche" },
-  { id: "right", label: "À droite" },
-  { id: "both", label: "Des deux côtés" },
+const numberChoices = (): { id: SceneNumbers; label: string }[] => [
+  { id: "none", label: t("settings.numbers.none") },
+  { id: "left", label: t("settings.numbers.left") },
+  { id: "right", label: t("settings.numbers.right") },
+  { id: "both", label: t("settings.numbers.both") },
 ];
 
 /** A sheet seen from afar, with the scene numbers where they print. */
@@ -1244,13 +1220,13 @@ function ScriptSettings({ notify }: { notify: Notify }) {
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   return (
     <>
-      <Group title="Mise en page">
+      <Group title={t("settings.layout")}>
         <Row
-          title="Format du script"
-          help="Changer de format refait la pagination ; le texte, lui, ne change pas."
+          title={t("settings.scriptFormat")}
+          help={t("settings.scriptFormatHelp")}
         >
           <Select
-            aria-label="Format du script"
+            aria-label={t("settings.scriptFormat")}
             value={format.id}
             onChange={(e) => {
               const next = formats.find((f) => f.id === e.target.value);
@@ -1261,7 +1237,7 @@ function ScriptSettings({ notify }: { notify: Notify }) {
               <optgroup key={g.label} label={g.label}>
                 {g.formats.map((f) => (
                   <option key={f.id} value={f.id}>
-                    {f.name}
+                    {formatName(f)}
                   </option>
                 ))}
               </optgroup>
@@ -1269,14 +1245,14 @@ function ScriptSettings({ notify }: { notify: Notify }) {
           </Select>
         </Row>
       </Group>
-      <Group title="Impression">
+      <Group title={t("settings.printing")}>
         <Row
           stack
-          title="Numéros de scène"
-          help="Dans les marges, à hauteur de chaque en-tête, comme dans un script de tournage. Ils suivent la liste des scènes et passent dans l'aperçu, le PDF et les exports Final Draft et Fountain ; la pagination ne bouge pas."
+          title={t("settings.sceneNumbers")}
+          help={t("settings.sceneNumbersHelp")}
         >
-          <div className="numbers-choice" role="radiogroup" aria-label="Numéros de scène">
-            {NUMBERS.map((o) => (
+          <div className="numbers-choice" role="radiogroup" aria-label={t("settings.sceneNumbers")}>
+            {numberChoices().map((o) => (
               <label key={o.id} className={numbers === o.id ? "numbers-option on" : "numbers-option"}>
                 <input
                   type="radio"
@@ -1296,18 +1272,7 @@ function ScriptSettings({ notify }: { notify: Notify }) {
   );
 }
 
-const PARTS = [
-  {
-    id: "realisation",
-    label: "Réalisation",
-    help: "Moodboard, découpage, storyboard.",
-  },
-  {
-    id: "production",
-    label: "Production",
-    help: "Équipe, dépouillement, plan de travail…",
-  },
-];
+const PARTS = ["realisation", "production"];
 
 function PartsSettings() {
   const hidden = useLive(
@@ -1318,11 +1283,11 @@ function PartsSettings() {
   if (!hidden) return null;
   return (
     <>
-      <Group title="Navigation">
-        <Row title="Écriture" help="Atelier, Bible, Scénario, Structure… toujours affichée.">
-          <input type="checkbox" role="switch" className="switch" checked disabled aria-label="Écriture" />
+      <Group title={t("settings.navigation")}>
+        <Row title={t("settings.partsWriting")} help={t("settings.partsWritingHelp")}>
+          <input type="checkbox" role="switch" className="switch" checked disabled aria-label={t("settings.partsWriting")} />
         </Row>
-        {PARTS.map((p) => (
+        {PARTS.map((id) => ({ id, label: t(`nav.parts.${id}`), help: t(`settings.partsHelp.${id}`) })).map((p) => (
           <Row key={p.id} id={`part-${p.id}`} title={p.label} help={p.help}>
             <Switch
               id={`part-${p.id}`}
@@ -1337,7 +1302,7 @@ function PartsSettings() {
           </Row>
         ))}
       </Group>
-      <p className="set-note">Pour un projet d'écriture seule, masquez ce qui ne sert pas. Rien n'est effacé.</p>
+      <p className="set-note">{t("settings.partsNote")}</p>
     </>
   );
 }
@@ -1352,7 +1317,7 @@ function AboutSettings({ notify }: { notify: Notify }) {
   const copy = () =>
     navigator.clipboard
       .writeText(SOURCE_URL)
-      .then(() => notify({ text: "Lien copié." }))
+      .then(() => notify({ text: t("settings.linkCopied") }))
       .catch((e) => notify({ text: describeError(e), tone: "error" }));
   return (
     <>
@@ -1360,16 +1325,16 @@ function AboutSettings({ notify }: { notify: Notify }) {
         <img src="/oniric.svg" alt="" className="about-logo" width="44" height="44" />
         <div>
           <strong>Oniric</strong>
-          <span>{version ? `Version ${version}` : "Version inconnue"}</span>
+          <span>{version ? t("app.version", { version }) : t("settings.versionUnknown")}</span>
         </div>
       </div>
       <Group>
-        <Row title="Licence" help="Logiciel libre sous GPL-3.0 : vous pouvez l'utiliser, l'étudier, le modifier et le partager." />
-        <Row title="Vos données" help="Chaque projet est un dossier sur ce PC. Aucun compte, aucune connexion, rien n'est envoyé." />
-        <Row title="Code source" help={<span className="set-path">{SOURCE_URL}</span>}>
+        <Row title={t("settings.licence")} help={t("settings.licenceHelp")} />
+        <Row title={t("settings.data")} help={t("settings.dataHelp")} />
+        <Row title={t("settings.source")} help={<span className="set-path">{SOURCE_URL}</span>}>
           <button type="button" className="btn small" onClick={() => void copy()}>
             <Copy aria-hidden="true" />
-            Copier le lien
+            {t("settings.copyLink")}
           </button>
         </Row>
       </Group>

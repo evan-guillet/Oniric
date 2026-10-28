@@ -20,11 +20,12 @@ import {
   type Share,
   type StatScene,
 } from "../domain/stats";
+import { numberFormat, plural, t } from "../../../../core/i18n";
 
-const num = new Intl.NumberFormat("fr-FR");
-const pct = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+const num = { format: (n: number) => numberFormat().format(n) };
+const pct = { format: (n: number) => numberFormat({ maximumFractionDigits: 1 }).format(n) };
 
-const shareLabel = (p: number) => (p > 0 && p < 0.1 ? "< 0,1 %" : `${pct.format(p)} %`);
+const shareLabel = (p: number) => (p > 0 && p < 0.1 ? t("stats.tiny", { n: pct.format(0.1) }) : t("stats.percent", { n: pct.format(p) }));
 
 /** Counts and shares of the screenplay, its characters and places, and the writing of the last days. */
 export function StatsView() {
@@ -55,14 +56,14 @@ export function StatsView() {
   return (
     <div className="view view-main stats-view">
       <section className="stats-section" aria-labelledby="stats-overview">
-        <h2 id="stats-overview">Aperçu</h2>
+        <h2 id="stats-overview">{t("stats.overview")}</h2>
         <div className="stats-card stats-tiles">
-          <Tile label="Pages" value={num.format(pages.length)} />
-          <Tile label="Durée estimée" value={formatMinutes(exactPages)} />
-          <Tile label="Scènes" value={num.format(scenes.length)} />
-          <Tile label="Mots" value={num.format(totalWords)} />
-          <Tile label="Personnages qui parlent" value={num.format(characters.length)} />
-          <Tile label="Fiches de la Bible" value={entries === undefined ? "…" : num.format(entries)} />
+          <Tile label={t("dash.pages")} value={num.format(pages.length)} />
+          <Tile label={t("dash.duration")} value={formatMinutes(exactPages)} />
+          <Tile label={t("dash.scenes")} value={num.format(scenes.length)} />
+          <Tile label={t("dash.wordsTile")} value={num.format(totalWords)} />
+          <Tile label={t("stats.speakers")} value={num.format(characters.length)} />
+          <Tile label={t("stats.entries")} value={entries === undefined ? "…" : num.format(entries)} />
         </div>
         {story && scenes.length > 0 && (
           <Progress counts={SCENE_STATUSES.map((st) => scenes.filter((s) => story.meta.get(s.id)?.status === st.id).length)} total={scenes.length} />
@@ -70,8 +71,8 @@ export function StatsView() {
       </section>
 
       <section className="stats-section" aria-labelledby="stats-words">
-        <h2 id="stats-words">Répartition du texte</h2>
-        <p className="stats-lead">Les mots du scénario selon le type d'élément.</p>
+        <h2 id="stats-words">{t("stats.split")}</h2>
+        <p className="stats-lead">{t("stats.splitLead")}</p>
         <div className="stats-card stats-split">
           <SplitBar values={WORD_GROUPS.map((g) => words[g.id])} />
           <Legend items={WORD_GROUPS.map((g, i) => ({ label: g.label, series: i + 1, value: words[g.id] }))} />
@@ -81,8 +82,8 @@ export function StatsView() {
       <CharacterTable characters={characters} totalDialogue={characters.reduce((n, c) => n + c.words, 0)} />
 
       <PlaceTable places={places} />
-      <ShareTable title="Intérieur et extérieur" shares={headingShares(statScenes, "intExt")} />
-      <ShareTable title="Moments de la journée" shares={headingShares(statScenes, "time")} />
+      <ShareTable title={t("stats.intExt")} shares={headingShares(statScenes, "intExt")} />
+      <ShareTable title={t("stats.time")} shares={headingShares(statScenes, "time")} />
     </div>
   );
 }
@@ -99,16 +100,16 @@ export function Tile({ label, value }: { label: string; value: string }) {
 /** How far the scenes are, by status: one bar in the colors of the states. */
 export function Progress({ counts, total }: { counts: number[]; total: number }) {
   const none = total - counts.reduce((a, b) => a + b, 0);
-  const parts = [...SCENE_STATUSES.map((s, i) => ({ id: s.id, label: s.label, n: counts[i] })), { id: "none", label: "Sans statut", n: none }].filter((p) => p.n > 0);
+  const parts = [...SCENE_STATUSES.map((s, i) => ({ id: s.id, label: s.label, n: counts[i] })), { id: "none", label: t("stats.noStatus"), n: none }].filter((p) => p.n > 0);
   return (
     <div className="stats-card stats-progress">
       <div className="stats-progress-head">
-        <h3>Avancement des scènes</h3>
+        <h3>{t("stats.progress")}</h3>
         <span className="muted">
-          {counts[3]} sur {total} validée{counts[3] > 1 ? "s" : ""}
+          {plural("stats.validated", counts[3], { total })}
         </span>
       </div>
-      <div className="stats-progress-bar" role="img" aria-label={parts.map((p) => `${p.label} : ${p.n}`).join(", ")}>
+      <div className="stats-progress-bar" role="img" aria-label={parts.map((p) => t("stats.part", { label: p.label, n: p.n })).join(", ")}>
         {parts.map((p) => (
           <span key={p.id} className={`stats-p-${p.id}`} style={{ flexGrow: p.n }} />
         ))}
@@ -164,17 +165,17 @@ function CharacterTable({ characters, totalDialogue }: { characters: ReturnType<
   const shown = all ? characters : characters.slice(0, TOP);
   return (
     <section className="stats-section" aria-labelledby="stats-characters">
-      <h2 id="stats-characters">Principaux personnages</h2>
-      <p className="stats-lead">Les répliques et les mots de dialogue de chaque personnage.</p>
+      <h2 id="stats-characters">{t("stats.characters")}</h2>
+      <p className="stats-lead">{t("stats.charactersLead")}</p>
       <div className="stats-table">
         <div className="stats-row stats-row-head stats-cols-5" role="row">
-          <span>Personnage</span>
-          <span>Répliques</span>
-          <span>Scènes</span>
-          <span>Mots</span>
-          <span>Part du dialogue</span>
+          <span>{t("board.filterKinds.character")}</span>
+          <span>{t("stats.cues")}</span>
+          <span>{t("dash.scenes")}</span>
+          <span>{t("dash.wordsTile")}</span>
+          <span>{t("stats.dialogueShare")}</span>
         </div>
-        {shown.length === 0 && <p className="stats-table-empty">Aucun personnage ne parle encore.</p>}
+        {shown.length === 0 && <p className="stats-table-empty">{t("stats.noSpeaker")}</p>}
         {shown.map((c) => (
           <Fragment key={c.name}>
             <button
@@ -200,8 +201,8 @@ function CharacterTable({ characters, totalDialogue }: { characters: ReturnType<
                     <li key={id}>
                       <button type="button" onClick={() => openScene(id)}>
                         <span className="auto-num">{sceneLabel(s.index + 1)}</span>
-                        <span className="stats-slug">{s.heading || "(sans en-tête)"}</span>
-                        <span className="muted">{formatEighths(s.eighths)} p.</span>
+                        <span className="stats-slug">{s.heading || t("dash.noHeading")}</span>
+                        <span className="muted">{t("stats.pagesShort", { n: formatEighths(s.eighths) })}</span>
                       </button>
                     </li>
                   ) : null;
@@ -213,7 +214,7 @@ function CharacterTable({ characters, totalDialogue }: { characters: ReturnType<
       </div>
       {characters.length > TOP && (
         <button type="button" className="btn small text stats-more" onClick={() => setAll(!all)}>
-          {all ? "Afficher moins" : "Afficher plus"}
+          {all ? t("stats.less") : t("stats.more")}
         </button>
       )}
     </section>
@@ -230,14 +231,14 @@ function PlaceTable({ places }: { places: ReturnType<typeof placeStats> }) {
   const shown = all ? places : places.slice(0, TOP);
   return (
     <section className="stats-section" aria-labelledby="stats-places">
-      <h2 id="stats-places">Lieux</h2>
+      <h2 id="stats-places">{t("stats.places")}</h2>
       <div className="stats-table">
         <div className="stats-row stats-row-head stats-cols-3" role="row">
-          <span>Lieu</span>
-          <span>Scènes</span>
-          <span>Longueur</span>
+          <span>{t("board.filterKinds.location")}</span>
+          <span>{t("dash.scenes")}</span>
+          <span>{t("stats.length")}</span>
         </div>
-        {shown.length === 0 && <p className="stats-table-empty">Aucun en-tête de scène ne nomme de lieu.</p>}
+        {shown.length === 0 && <p className="stats-table-empty">{t("stats.noPlace")}</p>}
         {shown.map((p) => (
           <Fragment key={p.name}>
             <button type="button" className="stats-row stats-cols-3" aria-expanded={open === p.name} onClick={() => setOpen(open === p.name ? null : p.name)}>
@@ -257,7 +258,7 @@ function PlaceTable({ places }: { places: ReturnType<typeof placeStats> }) {
                       <button type="button" onClick={() => openScene(id)}>
                         <span className="auto-num">{sceneLabel(s.index + 1)}</span>
                         <span className="stats-slug">{s.heading}</span>
-                        <span className="muted">{formatEighths(s.eighths)} p.</span>
+                        <span className="muted">{t("stats.pagesShort", { n: formatEighths(s.eighths) })}</span>
                       </button>
                     </li>
                   ) : null;
@@ -269,7 +270,7 @@ function PlaceTable({ places }: { places: ReturnType<typeof placeStats> }) {
       </div>
       {places.length > TOP && (
         <button type="button" className="btn small text stats-more" onClick={() => setAll(!all)}>
-          {all ? "Afficher moins" : "Afficher plus"}
+          {all ? t("stats.less") : t("stats.more")}
         </button>
       )}
     </section>
@@ -283,11 +284,11 @@ function ShareTable({ title, shares }: { title: string; shares: Share[] }) {
       <h2>{title}</h2>
       <div className="stats-table">
         <div className="stats-row stats-row-head stats-cols-3" role="row">
-          <span>Mention</span>
-          <span>Scènes</span>
-          <span>Part du film</span>
+          <span>{t("stats.mention")}</span>
+          <span>{t("dash.scenes")}</span>
+          <span>{t("stats.filmShare")}</span>
         </div>
-        {shares.length === 0 && <p className="stats-table-empty">Pas encore de scène.</p>}
+        {shares.length === 0 && <p className="stats-table-empty">{t("stats.noScene")}</p>}
         {shares.map((s, i) => (
           <div key={s.label} className="stats-row stats-cols-3">
             <span className="stats-slug">{s.label}</span>

@@ -1,5 +1,7 @@
 /** The nine steps of the writing workshop (specification, 5.1). Steps 1 to 4 belong to version 1 « Écrire ». */
 
+import { t } from "../../../../core/i18n";
+
 export type StepStatus = "empty" | "started" | "done";
 
 export interface Step {
@@ -10,7 +12,7 @@ export interface Step {
   ready: boolean;
 }
 
-export const STEPS: Step[] = [
+export const STEPS: Step[] = ([
   { n: 1, title: "Préparation", intro: "L'idée de départ, la prémisse, le thème, le genre et le ton : ce que sera le film avant d'en écrire une ligne.", ready: true },
   { n: 2, title: "Personnages", intro: "Qui veut quoi, qui s'y oppose, et comment chacun change au fil du récit.", ready: true },
   { n: 3, title: "Structure", intro: "Les grands mouvements de l'histoire et ses points clés, reliés aux scènes.", ready: true },
@@ -20,7 +22,15 @@ export const STEPS: Step[] = [
   { n: 7, title: "Retours et polissage", intro: "Les avis des lecteurs et les vérifications.", ready: false },
   { n: 8, title: "Protection et diffusion", intro: "Dépôts, logline, note d'intention, dossier de présentation.", ready: false },
   { n: 9, title: "Développement", intro: "Demandes de réécriture et passage en préproduction.", ready: false },
-];
+] satisfies Step[]).map((step) => ({
+  ...step,
+  get title() {
+    return t(`workshop.steps.${step.n}.title`);
+  },
+  get intro() {
+    return t(`workshop.steps.${step.n}.intro`);
+  },
+}));
 
 export const GENRES = [
   "Drame",
@@ -39,29 +49,28 @@ export const GENRES = [
   "Comédie musicale",
 ];
 
-/** A short reminder of what the audience expects from each genre; the author edits it freely. */
-export const GENRE_CODES: Record<string, string[]> = {
-  Drame: ["Un conflit intime qui touche le spectateur", "Des personnages qui changent profondément", "Des choix moraux sans réponse facile"],
-  Comédie: ["Un personnage qui veut quelque chose avec excès", "L'escalade des situations", "Un rythme rapide, des chutes", "Une fin qui réconcilie"],
-  Thriller: ["Une menace claire et croissante", "Un compte à rebours", "Des retournements", "Le spectateur en sait parfois plus que le héros"],
-  Horreur: ["Une peur qui s'installe avant de frapper", "Un lieu dont on ne peut pas partir", "Des règles du monstre, puis leur transgression"],
-  "Science-fiction": ["Une hypothèse sur le monde, et ses conséquences", "Des règles cohérentes", "Un enjeu humain derrière la technique"],
-  Fantastique: ["Un monde ou un élément surnaturel aux règles précises", "Un prix à payer pour la magie", "L'émerveillement ou l'inquiétude"],
-  Romance: ["La rencontre", "Ce qui les sépare", "Le moment où tout semble perdu", "Le choix l'un de l'autre"],
-  Policier: ["Un crime au départ", "L'enquête et ses fausses pistes", "Les indices donnés au spectateur", "La révélation"],
-  Guerre: ["Le groupe face à la mort", "Le prix humain de chaque victoire", "La fraternité et la perte"],
-  Western: ["La frontière, la loi qui manque", "Le duel", "Un héros solitaire face à une communauté"],
-  Animation: ["Un univers visuel fort", "Des personnages lisibles en silhouette", "Le rythme du gag ou de l'émotion"],
-  Documentaire: ["Un point de vue d'auteur", "Une question qui guide le film", "Des personnes réelles et leur accord"],
-  Aventure: ["Un voyage, un but lointain", "Des épreuves de plus en plus dures", "Le retour transformé"],
-  "Comédie musicale": ["Les chansons font avancer l'histoire", "On chante quand on ne peut plus parler", "Un grand numéro final"],
-};
+/**
+ * The lists below hold what the fields store, in French; each is shown in the interface's language. A value typed or
+ * kept from elsewhere shows as it is.
+ */
+export const choiceLabel = (list: "genres" | "functions" | "oppositions" | "relations", value: string) =>
+  t(`workshop.${list}.${value}`, { defaultValue: value });
 
-export const TONES = [
-  { key: "dark", left: "Sombre", right: "Lumineux" },
-  { key: "real", left: "Réaliste", right: "Stylisé" },
-  { key: "pace", left: "Lent", right: "Nerveux" },
-];
+/** A short reminder of what the audience expects from each genre, in the interface's language; the author edits it freely. */
+export function genreCodes(genre: string): string[] {
+  const codes = t(`workshop.genreCodes.${genre}`, { returnObjects: true, defaultValue: [] }) as unknown;
+  return Array.isArray(codes) ? (codes as string[]) : [];
+}
+
+export const TONES = (["dark", "real", "pace"] as const).map((key) => ({
+  key,
+  get left() {
+    return t(`workshop.tones.${key}.left`);
+  },
+  get right() {
+    return t(`workshop.tones.${key}.right`);
+  },
+}));
 
 export const DRAMATIC_FUNCTIONS = ["Mentor", "Allié", "Confident", "Faire-valoir", "Gardien du seuil", "Messager", "Ombre", "Amoureux", "Rival", "Victime", "Autre"];
 

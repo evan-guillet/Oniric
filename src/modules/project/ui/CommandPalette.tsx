@@ -5,6 +5,7 @@ import { loadEntries, loadTypes } from "../../script/bible/application/bible";
 import { fold } from "../../script/bible/domain/types";
 import { iconOf } from "../../script/bible/ui/typeIcons";
 import { useBackdropClose } from "../../../ui-kit/Dialog";
+import { t } from "../../../core/i18n";
 
 export interface PaletteItem {
   id: string;
@@ -21,7 +22,7 @@ export interface PaletteItem {
 }
 
 const SHOWN_PER_GROUP = 8;
-const GROUPS = ["Vues", "Scènes", "Bible", "Actions"];
+const groups = () => [t("palette.views"), t("palette.scenes"), t("nav.views.bible"), t("palette.actions")];
 
 /** Every word of the query, accents and case aside, is somewhere in the item; the label's start counts more. */
 function score(item: PaletteItem, words: string[]): number {
@@ -66,9 +67,9 @@ export function CommandPalette({
   const all = useMemo(() => {
     const sceneItems: PaletteItem[] = scenes.map((heading, i) => ({
       id: `scene-${i}`,
-      group: "Scènes",
-      label: heading || "Scène sans en-tête",
-      detail: `Scène ${i + 1}`,
+      group: t("palette.scenes"),
+      label: heading || t("palette.sceneNoHeading"),
+      detail: t("palette.scene", { n: i + 1 }),
       icon: FileText,
       searchOnly: true,
       run: () => onScene(i),
@@ -79,7 +80,7 @@ export function CommandPalette({
         const type = types?.find((t) => t.id === e.type);
         return {
           id: `entry-${e.id}`,
-          group: "Bible",
+          group: t("nav.views.bible"),
           label: e.name,
           detail: type?.name,
           icon: iconOf(type),
@@ -93,7 +94,7 @@ export function CommandPalette({
 
   const shown = useMemo(() => {
     const words = fold(query).split(/\s+/).filter(Boolean);
-    return GROUPS.map((group) => {
+    return groups().map((group) => {
       const inGroup = all.filter((i) => i.group === group);
       if (!words.length) return { group, items: inGroup.filter((i) => !i.searchOnly) };
       const ranked = inGroup
@@ -121,7 +122,7 @@ export function CommandPalette({
     <dialog
       ref={ref}
       className="palette"
-      aria-label="Palette de commandes"
+      aria-label={t("palette.label")}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
@@ -137,7 +138,7 @@ export function CommandPalette({
           aria-controls={`${id}-list`}
           aria-activedescendant={current ? `${id}-${current.id}` : undefined}
           aria-autocomplete="list"
-          placeholder="Aller à une vue, une scène, une fiche de la Bible…"
+          placeholder={t("palette.placeholder")}
           value={query}
           spellCheck={false}
           onChange={(e) => {
@@ -156,7 +157,7 @@ export function CommandPalette({
           }}
         />
       </div>
-      <div ref={list} id={`${id}-list`} className="palette-list" role="listbox" aria-label="Résultats">
+      <div ref={list} id={`${id}-list`} className="palette-list" role="listbox" aria-label={t("palette.results")}>
         {shown.map((g) => (
           <div key={g.group} role="group" aria-labelledby={`${id}-g-${g.group}`}>
             <div id={`${id}-g-${g.group}`} className="palette-group" role="presentation">
@@ -183,17 +184,17 @@ export function CommandPalette({
             })}
           </div>
         ))}
-        {!flat.length && <p className="palette-none">Rien ne correspond à « {query.trim()} ».</p>}
+        {!flat.length && <p className="palette-none">{t("palette.none", { query: query.trim() })}</p>}
       </div>
       <div className="palette-foot" aria-hidden="true">
         <span>
-          <kbd>↑</kbd> <kbd>↓</kbd> choisir
+          <kbd>↑</kbd> <kbd>↓</kbd> {t("palette.footChoose")}
         </span>
         <span>
-          <kbd>Entrée</kbd> ouvrir
+          <kbd>{t("keys.enter")}</kbd> {t("palette.footOpen")}
         </span>
         <span>
-          <kbd>Échap</kbd> fermer
+          <kbd>{t("keys.escape")}</kbd> {t("palette.footClose")}
         </span>
       </div>
     </dialog>

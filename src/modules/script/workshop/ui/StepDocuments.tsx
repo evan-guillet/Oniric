@@ -17,16 +17,12 @@ import { exportDocumentPdf } from "./documentExport";
 import { Help } from "./fields";
 
 import { Select } from "../../../../ui-kit/Select";
+import { dateFormat, plural, t } from "../../../../core/i18n";
 type Tab = "synopsis" | "sequencer" | "treatment" | "continuity";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "synopsis", label: "Synopsis" },
-  { id: "sequencer", label: "Séquencier" },
-  { id: "treatment", label: "Traitement" },
-  { id: "continuity", label: "Continuité dialoguée" },
-];
+const TABS: Tab[] = ["synopsis", "sequencer", "treatment", "continuity"];
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+const dates = () => dateFormat({ dateStyle: "medium", timeStyle: "short" });
 
 /** Step 4: synopsis, sequencer, treatment, dialogue continuity, linked together [DOC-01, DOC-02]. */
 export function StepDocuments() {
@@ -34,27 +30,27 @@ export function StepDocuments() {
   return (
     <div className="step-body">
       <div className="tabs" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? "tab on" : "tab"} onClick={() => setTab(t.id)}>
-            {t.label}
+        {TABS.map((id) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "tab on" : "tab"} onClick={() => setTab(id)}>
+            {t(`docs.tabs.${id}`)}
           </button>
         ))}
       </div>
       {tab === "synopsis" && (
         <DocEditor
           kind="synopsis"
-          title="Synopsis"
+          title={t("docs.tabs.synopsis")}
           goal={[1, 2]}
-          help="Toute l'histoire, fin comprise, en une ou deux pages, au présent. Ce n'est pas un texte de vente : on y dit tout."
+          help={t("docs.synopsisHelp")}
         />
       )}
       {tab === "sequencer" && <Sequencer />}
       {tab === "treatment" && (
         <DocEditor
           kind="treatment"
-          title="Traitement"
+          title={t("docs.tabs.treatment")}
           goal={[5, 20]}
-          help="La version racontée du film, de 5 à 20 pages, au présent, presque sans dialogues. Les séquences du séquencier en sont les intertitres."
+          help={t("docs.treatmentHelp")}
           skeleton
         />
       )}
@@ -108,7 +104,7 @@ function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; 
     void flush();
   };
 
-  if (!doc) return <p className="muted">Chargement…</p>;
+  if (!doc) return <p className="muted">{t("dash.loading")}</p>;
   const words = wordCount(richPlainText(doc.content));
   const pages = pagesOf(words);
   const within = pages >= goal[0] && pages <= goal[1];
@@ -116,19 +112,19 @@ function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; 
   const generate = async () => {
     const seqs = orderedSequences(story);
     if (!seqs.length) {
-      notify({ text: "Le séquencier est vide : ajoutez d'abord des séquences.", tone: "warning" });
+      notify({ text: t("docs.sequencerEmpty"), tone: "warning" });
       return;
     }
     const empty = words === 0;
     const choice = empty
       ? "replace"
       : await ask({
-          title: "Squelette du traitement",
-          text: <p>Les titres des {seqs.length} séquences deviennent les intertitres du traitement, avec leur résumé.</p>,
-          cancel: "Annuler",
+          title: t("docs.skeleton"),
+          text: <p>{t("docs.skeletonText", { n: seqs.length })}</p>,
+          cancel: t("common.cancel"),
           choices: [
-            { label: "Ajouter à la fin", value: "append" },
-            { label: "Remplacer le texte", value: "replace", danger: true },
+            { label: t("docs.append"), value: "append" },
+            { label: t("docs.replaceText"), value: "replace", danger: true },
           ],
         });
     if (!choice) return;
@@ -142,34 +138,34 @@ function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; 
       <Help>{help}</Help>
       <div className="doc-bar">
         <span className={within ? "badge ok" : "badge"}>
-          {words} mots · ≈ {pages.toLocaleString("fr-FR")} page{pages > 1 ? "s" : ""} (objectif {goal[0]} à {goal[1]})
+          {t("docs.length", { words: plural("dash.words", words), pages: plural("versions.pages", pages), min: goal[0], max: goal[1] })}
         </span>
         <span className="spacer" />
         {skeleton && (
           <button type="button" className="btn small" onClick={() => void generate()}>
-            Générer depuis le séquencier
+            {t("docs.generate")}
           </button>
         )}
         <button type="button" className="btn small" onClick={() => setVersions(true)}>
-          Versions…
+          {t("docs.versions")}
         </button>
         <button
           type="button"
           className="btn small"
           onClick={async () => {
             await flush();
-            const name = await prompt(`Figer le ${title.toLowerCase()}`, "Nom de la version", `V${dateFormat.format(new Date())}`);
-            if (name) await freezeDocument(kind, name, latest.current).then(() => notify({ text: `Version « ${name} » figée.` }));
+            const name = await prompt(t("docs.freezeTitle", { title: title.toLowerCase() }), t("versions.name"), `V${dates().format(new Date())}`);
+            if (name) await freezeDocument(kind, name, latest.current).then(() => notify({ text: t("docs.frozen", { name }) }));
           }}
         >
-          Figer une version
+          {t("docs.freeze")}
         </button>
         <button
           type="button"
           className="btn small"
           onClick={() => void exportDocumentPdf({ printPdf, project }, title, latest.current)}
         >
-          Exporter en PDF
+          {t("workspace.exportPdf")}
         </button>
       </div>
       <RichText key={doc.key} value={doc.content} onChange={change} label={title} plugins={plugins} minHeight={420} className="paper-like" />
@@ -180,7 +176,7 @@ function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; 
           onRestore={(content) => {
             replace(content);
             setVersions(false);
-            notify({ text: "Version reprise. Ctrl+Z ne la défait pas : figez d'abord la version actuelle si besoin." });
+            notify({ text: t("docs.restored") });
           }}
         />
       )}
@@ -191,21 +187,21 @@ function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; 
 function VersionsDialog({ kind, onClose, onRestore }: { kind: DocumentKind; onClose: () => void; onRestore: (content: string) => void }) {
   const versions = useLive(() => documentVersions(kind), ["document_version", "document"], [kind]);
   return (
-    <Dialog title="Versions du document" wide onCancel={onClose} actions={[{ label: "Fermer", onClick: onClose }]}>
+    <Dialog title={t("docs.versionsTitle")} wide onCancel={onClose} actions={[{ label: t("common.close"), onClick: onClose }]}>
       {!versions ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t("dash.loading")}</p>
       ) : versions.length === 0 ? (
-        <p className="muted">Aucune version figée. « Figer une version » garde une copie nommée du document.</p>
+        <p className="muted">{t("docs.noVersion")}</p>
       ) : (
         <ul className="version-list">
           {versions.map((v) => (
             <li key={v.id}>
               <span>
-                <strong>{v.name}</strong> <span className="muted small">{dateFormat.format(new Date(v.createdAt))}</span>
+                <strong>{v.name}</strong> <span className="muted small">{dates().format(new Date(v.createdAt))}</span>
                 <span className="history-text">{richPlainText(v.content).slice(0, 160)}</span>
               </span>
               <button type="button" className="btn small" onClick={() => onRestore(v.content)}>
-                Reprendre
+                {t("fields.takeBack")}
               </button>
             </li>
           ))}
@@ -230,7 +226,7 @@ function Sequencer() {
   const { notify, ask } = useProject();
   const story = useLive(loadStory, [...STORY_TABLES]);
   const [title, setTitle] = useState("");
-  if (!story) return <p className="muted">Chargement…</p>;
+  if (!story) return <p className="muted">{t("dash.loading")}</p>;
   const seqs = orderedSequences(story);
 
   const add = async () => {
@@ -258,17 +254,17 @@ function Sequencer() {
 
   return (
     <section className="step-section">
-      <Help>La liste ordonnée des grandes séquences du film. Chaque séquence ajoutée ici apparaît dans le Tableau et, s'il est commencé, dans le traitement.</Help>
+      <Help>{t("docs.sequencerHelp")}</Help>
       <ol className="sequencer">
         {seqs.map((s, i) => (
           <li key={s.id}>
             <span className="seq-n">{i + 1}</span>
             <div className="seq-fields">
-              <input defaultValue={s.title} aria-label="Titre de la séquence" onBlur={(e) => e.target.value !== s.title && void updateSequence(s.id, { title: e.target.value })} />
-              <textarea rows={2} defaultValue={s.summary} placeholder="Ce qui s'y passe…" aria-label="Résumé de la séquence" onBlur={(e) => e.target.value !== s.summary && void updateSequence(s.id, { summary: e.target.value })} />
+              <input defaultValue={s.title} aria-label={t("board.sequenceTitle")} onBlur={(e) => e.target.value !== s.title && void updateSequence(s.id, { title: e.target.value })} />
+              <textarea rows={2} defaultValue={s.summary} placeholder={t("docs.sequenceSummaryPlaceholder")} aria-label={t("docs.sequenceSummary")} onBlur={(e) => e.target.value !== s.summary && void updateSequence(s.id, { summary: e.target.value })} />
             </div>
-            <Select value={s.actId ?? ""} onChange={(e) => void updateSequence(s.id, { act_id: e.target.value || null })} aria-label="Acte">
-              <option value="">Sans acte</option>
+            <Select value={s.actId ?? ""} onChange={(e) => void updateSequence(s.id, { act_id: e.target.value || null })} aria-label={t("docs.act")}>
+              <option value="">{t("board.noAct")}</option>
               {story.acts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.title}
@@ -276,18 +272,18 @@ function Sequencer() {
               ))}
             </Select>
             <span className="row-actions">
-              <button type="button" className="btn ghost small" disabled={i === 0} onClick={() => void move(i, -1)} aria-label="Monter">
+              <button type="button" className="btn ghost small" disabled={i === 0} onClick={() => void move(i, -1)} aria-label={t("typeEditor.up")}>
                 <ArrowUp aria-hidden="true" />
               </button>
-              <button type="button" className="btn ghost small" disabled={i === seqs.length - 1} onClick={() => void move(i, 1)} aria-label="Descendre">
+              <button type="button" className="btn ghost small" disabled={i === seqs.length - 1} onClick={() => void move(i, 1)} aria-label={t("typeEditor.down")}>
                 <ArrowDown aria-hidden="true" />
               </button>
               <button
                 type="button"
                 className="btn ghost small"
-                aria-label="Supprimer la séquence"
+                aria-label={t("docs.deleteSequence")}
                 onClick={async () => {
-                  const c = await ask({ title: "Supprimer la séquence ?", text: <p>Ses scènes restent dans le scénario.</p>, cancel: "Annuler", choices: [{ label: "Supprimer", value: "y", danger: true }] });
+                  const c = await ask({ title: t("script.removeSequence"), text: <p>{t("docs.removeSequenceText")}</p>, cancel: t("common.cancel"), choices: [{ label: t("common.delete"), value: "y", danger: true }] });
                   if (c === "y") await deleteSequence(s.id);
                 }}
               >
@@ -304,9 +300,9 @@ function Sequencer() {
           void add();
         }}
       >
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre de la nouvelle séquence" aria-label="Nouvelle séquence" />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("docs.newSequencePlaceholder")} aria-label={t("board.newSequence")} />
         <button type="submit" className="btn" disabled={!title.trim()}>
-          Ajouter la séquence
+          {t("docs.addSequence")}
         </button>
       </form>
     </section>
@@ -332,7 +328,7 @@ function Continuity() {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void saveDocument("continuity", JSON.stringify({ type: "text", text: t })).catch((e) => notify({ text: describeError(e), tone: "error" })), 800);
   };
-  if (text === null) return <p className="muted">Chargement…</p>;
+  if (text === null) return <p className="muted">{t("dash.loading")}</p>;
 
   const convert = async () => {
     const editor = session.editor;
@@ -343,12 +339,12 @@ function Continuity() {
     const choice = empty
       ? "replace"
       : await ask({
-          title: "Convertir en scénario",
-          text: <p>{blocks.length} éléments reconnus. Ctrl+Z dans le scénario permet de revenir en arrière.</p>,
-          cancel: "Annuler",
+          title: t("docs.convert"),
+          text: <p>{t("docs.convertText", { n: blocks.length })}</p>,
+          cancel: t("common.cancel"),
           choices: [
-            { label: "Ajouter à la fin du scénario", value: "append", primary: true },
-            { label: "Remplacer le scénario", value: "replace", danger: true },
+            { label: t("docs.appendScript"), value: "append", primary: true },
+            { label: t("docs.replaceScript"), value: "replace", danger: true },
           ],
         });
     if (!choice) return;
@@ -360,13 +356,10 @@ function Continuity() {
 
   return (
     <section className="step-section">
-      <Help>
-        Facultatif. Les scènes une à une avec les premiers dialogues, écrites librement : un en-tête « INT. CUISINE – NUIT », un nom en majuscules sur sa ligne
-        avant chaque réplique. Une fois prête, la continuité se convertit en scénario formaté.
-      </Help>
-      <textarea className="continuity" rows={22} value={text} onChange={(e) => save(e.target.value)} aria-label="Continuité dialoguée" spellCheck={false} />
+      <Help>{t("docs.continuityHelp")}</Help>
+      <textarea className="continuity" rows={22} value={text} onChange={(e) => save(e.target.value)} aria-label={t("docs.continuity")} spellCheck={false} />
       <button type="button" className="btn primary" disabled={!text.trim()} onClick={() => void convert()}>
-        Convertir en scénario
+        {t("docs.convert")}
       </button>
     </section>
   );

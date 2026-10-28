@@ -1,14 +1,16 @@
 import type { ElementType } from "../../screenplay/domain/formats";
 import { parseHeading } from "../../screenplay/domain/heading";
+import { t } from "../../../../core/i18n";
 
 /** How the words of the screenplay are split in the charts. */
 export type WordGroup = "action" | "dialogue" | "other";
 
-export const WORD_GROUPS: { id: WordGroup; label: string }[] = [
-  { id: "action", label: "Action" },
-  { id: "dialogue", label: "Dialogues" },
-  { id: "other", label: "En-têtes et autres" },
-];
+export const WORD_GROUPS: { id: WordGroup; readonly label: string }[] = (["action", "dialogue", "other"] as const).map((id) => ({
+  id,
+  get label() {
+    return t(`stats.groups.${id}`);
+  },
+}));
 
 export type WordCounts = Record<WordGroup, number>;
 
@@ -104,7 +106,7 @@ export interface Share {
 export function headingShares(scenes: StatScene[], part: "intExt" | "time"): Share[] {
   const byLabel = new Map<string, Share>();
   for (const s of scenes) {
-    const label = parseHeading(s.heading)[part] ?? "Sans précision";
+    const label = parseHeading(s.heading)[part] ?? t("stats.unspecified");
     const sh = byLabel.get(label) ?? { label, scenes: 0, eighths: 0 };
     byLabel.set(label, sh);
     sh.scenes++;

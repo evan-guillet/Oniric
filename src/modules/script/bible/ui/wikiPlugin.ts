@@ -1,6 +1,7 @@
 import { Plugin } from "prosemirror-state";
 import type { MarkType } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
+import { t } from "../../../../core/i18n";
 
 export interface WikiTarget {
   id: string;
@@ -172,8 +173,8 @@ export function wikiPlugin(mark: MarkType, source: () => WikiSource | null, link
           head.append(el("strong", "", target.name), el("span", "wiki-type", target.typeName));
           preview.replaceChildren(head);
           if (target.summary) preview.appendChild(el("p", "", target.summary));
-          preview.appendChild(el("span", "wiki-preview-open", "Ouvrir la fiche"));
-          preview.setAttribute("aria-label", `Ouvrir la fiche ${target.name}`);
+          preview.appendChild(el("span", "wiki-preview-open", t("bible.openEntry")));
+          preview.setAttribute("aria-label", t("bible.openEntryNamed", { name: target.name }));
           const r = link.getBoundingClientRect();
           Object.assign(preview.style, { left: `${r.left}px`, top: `${r.bottom + 4}px` });
           if (!preview.isConnected) document.body.appendChild(preview);

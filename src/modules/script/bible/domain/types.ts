@@ -1,5 +1,7 @@
 /** Types of bible entries and their fields (specification, 5.2). A type is data, so users can create their own. */
 
+import { getLanguage, t, type Language } from "../../../../core/i18n";
+
 export type FieldKind = "text" | "longtext" | "number" | "date" | "list" | "image" | "link" | "links";
 
 export interface FieldDef {
@@ -25,7 +27,36 @@ export interface EntryType {
 
 const f = (key: string, label: string, kind: FieldKind = "longtext", extra: Partial<FieldDef> = {}): FieldDef => ({ key, label, kind, ...extra });
 
-export const BUILTIN_TYPES: EntryType[] = [
+/**
+ * A built-in type, its names read in the interface's language. Its keys and its list choices stay as they are: they
+ * are what the entries store.
+ */
+function localized(type: EntryType): EntryType {
+  const k = `bible.types.${type.id}`;
+  return {
+    ...type,
+    get name() {
+      return t(`${k}.name`);
+    },
+    get plural() {
+      return t(`${k}.plural`);
+    },
+    fields: type.fields.map((fd) => ({
+      ...fd,
+      get label() {
+        return t(`${k}.fields.${fd.key}.label`);
+      },
+      get help() {
+        return fd.help && t(`${k}.fields.${fd.key}.help`);
+      },
+    })),
+  };
+}
+
+/** A list choice as shown: the built-in ones in the interface's language, the user's own as typed. */
+export const optionLabel = (value: string) => t(`bible.options.${value}`, { defaultValue: value });
+
+export const BUILTIN_TYPES: EntryType[] = ([
   {
     id: "character",
     icon: "user",
@@ -148,24 +179,23 @@ export const BUILTIN_TYPES: EntryType[] = [
     builtin: true,
     fields: [f("description", "Description"), f("behavior", "Comportement"), f("shooting_needs", "Besoins de tournage")],
   },
-];
+] satisfies EntryType[]).map(localized);
 
-export const FIELD_KINDS: { kind: FieldKind; label: string }[] = [
-  { kind: "text", label: "Texte court" },
-  { kind: "longtext", label: "Texte long" },
-  { kind: "number", label: "Nombre" },
-  { kind: "date", label: "Date" },
-  { kind: "list", label: "Liste de choix" },
-  { kind: "image", label: "Image" },
-  { kind: "link", label: "Lien vers une fiche" },
-  { kind: "links", label: "Liens vers plusieurs fiches" },
-];
+export const FIELD_KINDS: { kind: FieldKind; readonly label: string }[] = (
+  ["text", "longtext", "number", "date", "list", "image", "link", "links"] as const
+).map((kind) => ({
+  kind,
+  get label() {
+    return t(`bible.fieldKinds.${kind}`);
+  },
+}));
 
-export const STATUSES = [
-  { id: "idea", label: "Idée" },
-  { id: "validated", label: "Validé" },
-  { id: "abandoned", label: "Abandonné" },
-] as const;
+export const STATUSES = (["idea", "validated", "abandoned"] as const).map((id) => ({
+  id,
+  get label() {
+    return t(`bible.statuses.${id}`);
+  },
+}));
 
 /** The card shows the summary's first sentence: cut by the two-line clamp after a full stop, it ended in « .… ». */
 export function firstSentence(text: string): string {
@@ -173,9 +203,30 @@ export function firstSentence(text: string): string {
 }
 
 /** Words that end the part of a type's name that takes the plural: « Arme à feu » → « Armes à feu ». */
-const PLURAL_STOP = new Set(["de", "du", "des", "d", "à", "au", "aux", "en", "pour", "sans", "sur", "avec", "et", "ou"]);
+const PLURAL_STOP: Record<Language, Set<string>> = {
+  fr: new Set(["de", "du", "des", "d", "à", "au", "aux", "en", "pour", "sans", "sur", "avec", "et", "ou"]),
+  en: new Set(["of", "for", "with", "without", "and", "or", "to", "in", "on", "from"]),
+  es: new Set(["de", "del", "a", "al", "en", "para", "sin", "sobre", "con", "y", "o"]),
+};
 /** Plurals that don't follow the endings. */
 const PLURAL_EXCEPTIONS: Record<string, string> = { bal: "bals", carnaval: "carnavals", festival: "festivals", récital: "récitals", pneu: "pneus", bleu: "bleus", œil: "yeux", ciel: "cieux" };
+
+/** English plural of one word: -s, -x, -z, -ch, -sh → +es; consonant + y → -ies; the rest +s. */
+function pluralWordEn(w: string): string {
+  const up = w === w.toUpperCase();
+  if (/(s|x|z|ch|sh)$/i.test(w)) return w + (up ? "ES" : "es");
+  if (/[^aeiou]y$/i.test(w)) return w.slice(0, -1) + (up ? "IES" : "ies");
+  return w + (up ? "S" : "s");
+}
+
+/** Spanish plural of one word: a vowel takes -s, -z becomes -ces, another consonant takes -es (accents aside). */
+function pluralWordEs(w: string): string {
+  const up = w === w.toUpperCase();
+  if (/[aeiouáéó]$/i.test(w)) return w + (up ? "S" : "s");
+  if (/z$/i.test(w)) return w.slice(0, -1) + (up ? "CES" : "ces");
+  if (/s$/i.test(w) && w.length > 3) return w;
+  return w + (up ? "ES" : "es");
+}
 
 /** French plural of one word: -s, -x, -z stay; -al → -aux; -au, -eau, -eu → +x; -ail stays regular; the rest +s. Keeps the case. */
 function pluralWord(w: string): string {
@@ -188,20 +239,18 @@ function pluralWord(w: string): string {
   return w + (w === w.toUpperCase() ? "S" : "s");
 }
 
-/** Plural of a custom type's name, for its section and the filter: « Planète » → « Planètes », « Vaisseau spatial » → « Vaisseaux spatiaux ». */
-export function pluralize(name: string): string {
+/**
+ * Plural of a custom type's name, for its section and the filter, in the interface's language: « Planète » →
+ * « Planètes », « Vaisseau spatial » → « Vaisseaux spatiaux ». French and Spanish put every word before the first
+ * stop word in the plural; English only the last of them, « Space ship » → « Space ships ».
+ */
+export function pluralize(name: string, language: Language = getLanguage()): string {
   const words = name.trim().split(/(\s+|['’])/);
-  let stopped = false;
-  return words
-    .map((w) => {
-      if (stopped || !/\p{L}/u.test(w)) return w;
-      if (PLURAL_STOP.has(w.toLocaleLowerCase("fr"))) {
-        stopped = true;
-        return w;
-      }
-      return pluralWord(w);
-    })
-    .join("");
+  const stop = words.findIndex((w) => PLURAL_STOP[language].has(w.toLocaleLowerCase(language)));
+  const end = stop === -1 ? words.length : stop;
+  const last = words.slice(0, end).findLastIndex((w) => /\p{L}/u.test(w));
+  const one = language === "en" ? pluralWordEn : language === "es" ? pluralWordEs : pluralWord;
+  return words.map((w, i) => (i >= end || !/\p{L}/u.test(w) || (language === "en" && i !== last) ? w : one(w))).join("");
 }
 
 /** Lowercase, without accents, one apostrophe: « Hélène » and « helene », « d’Oren » and « d'Oren » match. */

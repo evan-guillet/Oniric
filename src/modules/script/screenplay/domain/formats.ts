@@ -1,3 +1,4 @@
+import { t } from "../../../../core/i18n";
 export const ELEMENT_TYPES = [
   "scene_heading",
   "action",
@@ -29,12 +30,12 @@ export type FormatLanguage = "fr" | "en" | "de" | "es";
 /** Where a provided format is listed. */
 export type FormatKind = "film" | "tv" | "stage" | "audio";
 
-export const FORMAT_KINDS: { id: FormatKind; label: string }[] = [
-  { id: "film", label: "Cinéma" },
-  { id: "tv", label: "Télévision" },
-  { id: "stage", label: "Théâtre" },
-  { id: "audio", label: "Audio" },
-];
+export const FORMAT_KINDS: { id: FormatKind; readonly label: string }[] = (["film", "tv", "stage", "audio"] as const).map((id) => ({
+  id,
+  get label() {
+    return t(`formats.kinds.${id}`);
+  },
+}));
 
 export interface ScreenplayFormat {
   id: string;
@@ -324,8 +325,17 @@ export const FORMATS = [
 export function groupFormats(formats: ScreenplayFormat[]): { label: string; formats: ScreenplayFormat[] }[] {
   const provided = new Set(FORMATS.map((f) => f.id));
   const groups = FORMAT_KINDS.map((k) => ({ label: k.label, formats: formats.filter((f) => provided.has(f.id) && (f.kind ?? "film") === k.id) }));
-  groups.push({ label: "Mes formats", formats: formats.filter((f) => !provided.has(f.id)) });
+  groups.push({ label: t("settings.myFormats"), formats: formats.filter((f) => !provided.has(f.id)) });
   return groups.filter((g) => g.formats.length > 0);
+}
+
+/** The name of a format in the interface's language; the user's own keep the name they were given. */
+export function formatName(f: ScreenplayFormat): string {
+  return FORMATS.some((x) => x.id === f.id) ? t(`formats.list.${f.id}.name`) : f.name;
+}
+
+export function formatHelp(f: ScreenplayFormat): string | undefined {
+  return FORMATS.some((x) => x.id === f.id) ? t(`formats.list.${f.id}.help`) : f.help;
 }
 
 export function formatById(id: string | null | undefined): ScreenplayFormat {

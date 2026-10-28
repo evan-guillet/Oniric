@@ -8,6 +8,7 @@ import { useScenes } from "../../screenplay/application/scriptSession";
 import { formatEighths } from "../../screenplay/domain/duration";
 import { numberedParts, sceneLabel } from "../domain/outline";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline } from "../application/story";
+import { t } from "../../../../core/i18n";
 
 const ROW = 30;
 /** Room above the acts, for the outline of the one picked. */
@@ -181,7 +182,7 @@ export function TimelineView() {
     return () => el.removeEventListener("wheel", wheel);
   }, [ready, scroller]);
 
-  if (!story) return <div className="view pad muted">Chargement…</div>;
+  if (!story) return <div className="view pad muted">{t("dash.loading")}</div>;
 
   const width = layout.length ? layout[layout.length - 1].x + layout[layout.length - 1].w : 0;
   const pos = new Map(layout.map((l) => [l.scene.id, l]));
@@ -262,7 +263,7 @@ export function TimelineView() {
           onScroll={(e) => scroller && (scroller.scrollLeft = e.currentTarget.scrollLeft)}
           onWheel={(e) => scroller && (scroller.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX)}
         >
-          <svg width={svgW} height={headH} aria-label="Chronologie des scènes">
+          <svg width={svgW} height={headH} aria-label={t("timeline.label")}>
             {grid(headH)}
             {[
               { parts: acts, top: actTop, h: ACT_H, kind: "act", inset: 9, rx: 5 },
@@ -300,7 +301,7 @@ export function TimelineView() {
                   className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""} ${faded(l.scene.id, l.scene.characters) ? "off" : ""}`}
                   tabIndex={0}
                   role="button"
-                  aria-label={`Scène ${l.scene.index + 1} ${l.scene.heading}`}
+                  aria-label={`${t("palette.scene", { n: l.scene.index + 1 })} ${l.scene.heading}`}
                   onMouseEnter={point(l.scene.id)}
                   onMouseLeave={() => setHover(null)}
                   onFocus={point(l.scene.id)}
@@ -321,9 +322,9 @@ export function TimelineView() {
           </svg>
         </div>
         <div className="tl-corner" style={{ width: label, height: headH }}>
-          {acts.length > 0 && <span style={{ top: actTop, height: ACT_H }}>Actes</span>}
-          {seqs.length > 0 && <span style={{ top: seqTop, height: SEQ_H }}>Séquences</span>}
-          <span style={{ top: stripTop, height: STRIP }}>Scènes</span>
+          {acts.length > 0 && <span style={{ top: actTop, height: ACT_H }}>{t("timeline.acts")}</span>}
+          {seqs.length > 0 && <span style={{ top: seqTop, height: SEQ_H }}>{t("timeline.sequences")}</span>}
+          <span style={{ top: stripTop, height: STRIP }}>{t("dash.scenes")}</span>
         </div>
       </div>
       <div className="tl-body">
@@ -364,7 +365,7 @@ export function TimelineView() {
           ref={namesRef}
           className={`tl-names${hover ? " hovering" : ""}${alone || cast ? " isolating" : ""}`}
           style={{ width: label + SCROLLBAR, paddingBottom: wide ? SCROLLBAR : 0 }}
-          aria-label="Personnages"
+          aria-label={t("timeline.characters")}
           onScroll={(e) => scroller && (scroller.scrollTop = e.currentTarget.scrollTop)}
         >
           {characters.map((c) => (
@@ -376,7 +377,7 @@ export function TimelineView() {
               <button
                 type="button"
                 aria-pressed={alone === c.name}
-                title={alone === c.name ? "Revoir tous les personnages" : `Isoler ${c.label}`}
+                title={alone === c.name ? t("timeline.all") : t("timeline.isolate", { name: c.label })}
                 onClick={() => setAlone(alone === c.name ? null : c.name)}
               >
                 <span className="tl-name">{c.label}</span>
@@ -385,14 +386,14 @@ export function TimelineView() {
             </li>
           ))}
         </ul>
-        <div className="canvas-tools tl-tools" role="toolbar" aria-label="Zoom de la chronologie" style={{ right: label + SCROLLBAR + 16, bottom: 16 + (wide ? SCROLLBAR : 0) }}>
-          <button type="button" aria-label="Dézoomer" title="Dézoomer (Ctrl + molette)" disabled={zoom <= 1} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
+        <div className="canvas-tools tl-tools" role="toolbar" aria-label={t("timeline.zoom")} style={{ right: label + SCROLLBAR + 16, bottom: 16 + (wide ? SCROLLBAR : 0) }}>
+          <button type="button" aria-label={t("timeline.zoomOut")} title={t("timeline.zoomOutTitle")} disabled={zoom <= 1} onClick={() => zoomTo(zoom / ZOOM_STEP)}>
             <Minus aria-hidden="true" />
           </button>
-          <button type="button" className="canvas-pct" title="Toute l'histoire dans la fenêtre" onClick={() => zoomTo(1)}>
+          <button type="button" className="canvas-pct" title={t("timeline.whole")} onClick={() => zoomTo(1)}>
             {Math.round(zoom * 100)} %
           </button>
-          <button type="button" aria-label="Zoomer" title="Zoomer (Ctrl + molette)" disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
+          <button type="button" aria-label={t("timeline.zoomIn")} title={t("timeline.zoomInTitle")} disabled={zoom >= ZOOM_MAX} onClick={() => zoomTo(zoom * ZOOM_STEP)}>
             <Plus aria-hidden="true" />
           </button>
         </div>
@@ -401,10 +402,11 @@ export function TimelineView() {
         {shown && hover && (
           <div className="timeline-info" style={{ left: hover.left, top: hover.top }}>
             <strong>
-              <span className="auto-num">{sceneLabel(shown.index + 1)}</span> {shown.heading || "(sans en-tête)"}
+              <span className="auto-num">{sceneLabel(shown.index + 1)}</span> {shown.heading || t("dash.noHeading")}
             </strong>{" "}
             <span className="muted">
-              p. {shown.page} · {formatEighths(shown.eighths)} · {SCENE_STATUSES.find((s) => s.id === story.meta.get(shown.id)?.status)?.label ?? "sans statut"}
+              {t("workspace.scenePage", { page: shown.page })} · {formatEighths(shown.eighths)} ·{" "}
+              {SCENE_STATUSES.find((s) => s.id === story.meta.get(shown.id)?.status)?.label ?? t("timeline.noStatus")}
             </span>
             {story.meta.get(shown.id)?.summary && <p>{story.meta.get(shown.id)?.summary}</p>}
           </div>

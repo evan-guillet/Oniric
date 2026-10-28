@@ -13,16 +13,16 @@ import { useScenes } from "../../screenplay/application/scriptSession";
 import { archiveEntry, backlinks, bibleIndex, deleteEntry, duplicateEntry, entryVersions, restoreEntry, saveEntry, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
 import { appearances } from "../domain/appearances";
-import { STATUSES, type EntryType, type FieldDef } from "../domain/types";
+import { optionLabel, STATUSES, type EntryType, type FieldDef } from "../domain/types";
 import { wikiPlugin } from "./wikiPlugin";
 
 import { Select } from "../../../../ui-kit/Select";
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+import { dateFormat, t } from "../../../../core/i18n";
+const dates = () => dateFormat({ dateStyle: "medium", timeStyle: "short" });
 /** Scenes listed before « Voir les N scènes ». */
 const SCENES_SHOWN = 6;
 
 type SaveState = "idle" | "pending" | "saved" | "error";
-const SAVE_LABEL: Record<Exclude<SaveState, "idle">, string> = { pending: "Modifications…", saved: "Enregistré", error: "Non enregistré" };
 
 /** Edits one entry; changes are saved a moment after the last one [BIB-01]. */
 export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: Entry[]; types: EntryType[] }) {
@@ -91,7 +91,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
   };
   const sceneLabel = (id: string) => {
     const s = scenes.find((x) => x.id === id);
-    return s ? `${s.index + 1}. ${s.heading || "(sans en-tête)"}` : null;
+    return s ? `${s.index + 1}. ${s.heading || t("dash.noHeading")}` : null;
   };
 
   // The copy was silent: the notice says it exists and opens it.
@@ -99,7 +99,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
     try {
       await flush();
       const id = await duplicateEntry(latest.current);
-      notify({ text: `La copie « ${latest.current.name} (copie) » est créée.`, actions: [{ label: "Ouvrir", onClick: () => openEntry(id) }] });
+      notify({ text: t("entry.copied", { name: t("settings.copyName", { name: latest.current.name }) }), actions: [{ label: t("workspace.openFile"), onClick: () => openEntry(id) }] });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -108,13 +108,13 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
   // Confirmed first; the notice still offers to bring the entry back, with the edits saved just before.
   const remove = async () => {
     const { id, name } = latest.current;
-    if (!(await confirmRemoval(ask, { title: `Supprimer « ${name || "Sans nom"} » ?`, text: "La fiche et tout ce qu'elle contient quittent la Bible." }))) return;
+    if (!(await confirmRemoval(ask, { title: t("entry.deleteAsk", { name: name || t("entry.unnamed") }), text: t("entry.deleteText") }))) return;
     try {
       await flush();
       await deleteEntry(id);
       notify({
-        text: `La fiche « ${name} » est supprimée.`,
-        actions: [{ label: "Annuler", onClick: () => void restoreEntry(id).catch((e) => notify({ text: describeError(e), tone: "error" })) }],
+        text: t("entry.deleted", { name }),
+        actions: [{ label: t("common.cancel"), onClick: () => void restoreEntry(id).catch((e) => notify({ text: describeError(e), tone: "error" })) }],
       });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -122,20 +122,20 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
   };
 
   return (
-    <article className="entry" aria-label={`Fiche ${draft.name}`}>
+    <article className="entry" aria-label={t("entry.label", { name: draft.name })}>
       <header className="entry-head">
         <ImageFrame path={draft.image} onChange={(image) => update({ image })} />
         <div className="entry-title">
-          <input className="entry-name-input" value={draft.name} onChange={(e) => update({ name: e.target.value })} onBlur={() => void flush()} aria-label="Nom" />
+          <input className="entry-name-input" value={draft.name} onChange={(e) => update({ name: e.target.value })} onBlur={() => void flush()} aria-label={t("settings.profile.name")} />
           <div className="entry-meta">
-            <Select value={draft.type} onChange={(e) => update({ type: e.target.value })} aria-label="Type">
+            <Select value={draft.type} onChange={(e) => update({ type: e.target.value })} aria-label={t("bible.type")}>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
             </Select>
-            <Select value={draft.status} onChange={(e) => update({ status: e.target.value as EntryStatus })} aria-label="Statut">
+            <Select value={draft.status} onChange={(e) => update({ status: e.target.value as EntryStatus })} aria-label={t("board.filterKinds.status")}>
               {STATUSES.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -143,27 +143,27 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
               ))}
             </Select>
             {/* From the live entry: the draft never sees archiving, which saveEntry leaves alone. */}
-            {entry.archivedAt && <span className="badge">Archivée</span>}
+            {entry.archivedAt && <span className="badge">{t("entry.archivedBadge")}</span>}
             {/* The occasional actions wait in « ⋯ »; only Supprimer, which can be undone, stays in view. */}
             <span className="entry-actions">
-              {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{SAVE_LABEL[saveState]}</span>}
+              {saveState !== "idle" && <span className={`entry-saved ${saveState}`}>{t(`entry.save.${saveState}`)}</span>}
               <button type="button" className="btn small danger" onClick={() => void remove()}>
                 <Trash2 aria-hidden="true" />
-                Supprimer
+                {t("common.delete")}
               </button>
               <MoreMenu
-                label="Autres actions sur la fiche"
+                label={t("entry.more")}
                 items={[
-                  { label: "Dupliquer", icon: Copy, onClick: () => void duplicate() },
+                  { label: t("settings.duplicate"), icon: Copy, onClick: () => void duplicate() },
                   entry.archivedAt
-                    ? { label: "Désarchiver", icon: ArchiveRestore, hint: "La fiche revient parmi les cartes.", onClick: () => void archiveEntry(draft.id, false) }
+                    ? { label: t("script.notes.unarchive"), icon: ArchiveRestore, hint: t("entry.unarchiveHint"), onClick: () => void archiveEntry(draft.id, false) }
                     : {
-                        label: "Archiver",
+                        label: t("script.notes.archive"),
                         icon: Archive,
-                        hint: "Retire la fiche des cartes sans l'effacer. Pour la revoir : « Afficher les fiches archivées » dans le filtre.",
+                        hint: t("entry.archiveHint"),
                         onClick: () => void archiveEntry(draft.id, true),
                       },
-                  { label: "Historique", icon: History, onClick: () => setHistory(true) },
+                  { label: t("entry.historyAction"), icon: History, onClick: () => setHistory(true) },
                 ]}
               />
             </span>
@@ -173,33 +173,33 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
 
       <div className="entry-body">
         <div className="entry-main">
-          <Labeled label="Résumé court">
+          <Labeled label={t("entry.summary")}>
             <textarea rows={2} value={draft.summary} onChange={(e) => update({ summary: e.target.value })} onBlur={() => void flush()} />
           </Labeled>
           {longFields.map(field)}
           <div className="fld">
-            <span className="fld-label">Contenu</span>
-            <RichText value={draft.content} onChange={(content) => update({ content })} label="Contenu de la fiche" plugins={plugins} minHeight={220} />
+            <span className="fld-label">{t("entry.content")}</span>
+            <RichText value={draft.content} onChange={(content) => update({ content })} label={t("entry.contentLabel")} plugins={plugins} minHeight={220} />
           </div>
           {notesOpen ? (
-            <Labeled label="Notes">
+            <Labeled label={t("script.panels.notes")}>
               <textarea rows={3} value={draft.notes} onChange={(e) => update({ notes: e.target.value })} onBlur={() => void flush()} autoFocus={!draft.notes} />
             </Labeled>
           ) : (
             <button type="button" className="btn small text entry-fold" onClick={() => setNotesOpen(true)}>
               <Plus aria-hidden="true" />
-              Notes
+              {t("script.panels.notes")}
             </button>
           )}
         </div>
 
-        <aside className="entry-side" aria-label="Détails de la fiche">
+        <aside className="entry-side" aria-label={t("entry.details")}>
           <section className="entry-refs">
             <h3>
-              Scènes <span className="entry-refs-count">{seen.size}</span>
+              {t("dash.scenes")} <span className="entry-refs-count">{seen.size}</span>
             </h3>
             {seen.size === 0 ? (
-              <p className="muted small">Aucune scène pour l'instant.</p>
+              <p className="muted small">{t("entry.noScene")}</p>
             ) : (
               <>
                 <ul className="ref-list">
@@ -213,7 +213,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                 </ul>
                 {seen.size > SCENES_SHOWN && (
                   <button type="button" className="btn small text entry-refs-more" aria-expanded={allScenes} onClick={() => setAllScenes(!allScenes)}>
-                    {allScenes ? "Voir moins" : `Voir les ${seen.size} scènes`}
+                    {allScenes ? t("entry.seeLess") : t("entry.seeAllScenes", { n: seen.size })}
                   </button>
                 )}
               </>
@@ -221,7 +221,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
             {links && links.entries.length > 0 && (
               <>
                 <h3>
-                  Mentionnée dans <span className="entry-refs-count">{links.entries.length}</span>
+                  {t("entry.mentionedIn")} <span className="entry-refs-count">{links.entries.length}</span>
                 </h3>
                 <ul className="ref-list">
                   {links.entries.map((e) => (
@@ -235,13 +235,13 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
               </>
             )}
           </section>
-          <TagInput label="Autres noms" value={draft.aliases} onChange={(aliases) => update({ aliases })} help="Surnoms, diminutifs : reconnus dans le scénario comme le nom." />
+          <TagInput label={t("entry.aliases")} value={draft.aliases} onChange={(aliases) => update({ aliases })} help={t("entry.aliasesHelp")} />
           {shortFields.map(field)}
-          <TagInput label="Étiquettes" value={draft.tags} onChange={(tags) => update({ tags })} suggestions={[...new Set(entries.flatMap((e) => e.tags))]} />
-          <LinksInput value={draft.links} entries={entries} selfId={draft.id} onChange={(l) => update({ links: l })} label="Liens vers d'autres fiches" />
+          <TagInput label={t("entry.tags")} value={draft.tags} onChange={(tags) => update({ tags })} suggestions={[...new Set(entries.flatMap((e) => e.tags))]} />
+          <LinksInput value={draft.links} entries={entries} selfId={draft.id} onChange={(l) => update({ links: l })} label={t("entry.links")} />
           {draft.gallery.length > 0 ? (
             <div className="fld">
-              <span className="fld-label">Galerie</span>
+              <span className="fld-label">{t("entry.gallery")}</span>
               <div className="gallery">
                 {draft.gallery.map((p) => (
                   <figure key={p}>
@@ -250,23 +250,23 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                       type="button"
                       className="btn ghost small"
                       onClick={async () => {
-                        if (await confirmRemoval(ask, { title: "Retirer cette image ?", text: "Elle quitte la galerie de la fiche.", label: "Retirer" }))
+                        if (await confirmRemoval(ask, { title: t("entry.removeImageAsk"), text: t("entry.removeImageText"), label: t("script.info.remove") }))
                           update({ gallery: latest.current.gallery.filter((x) => x !== p) });
                       }}
                     >
-                      Retirer
+                      {t("script.info.remove")}
                     </button>
                   </figure>
                 ))}
                 <button type="button" className="btn small" onClick={() => void addImages()}>
-                  Ajouter des images…
+                  {t("entry.addImages")}
                 </button>
               </div>
             </div>
           ) : (
             <button type="button" className="btn small text entry-fold" onClick={() => void addImages()}>
               <Plus aria-hidden="true" />
-              Galerie
+              {t("entry.gallery")}
             </button>
           )}
         </aside>
@@ -283,7 +283,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
             setDraft(restored);
             await saveEntry(restored, previous);
             setHistory(false);
-            notify({ text: "Version restaurée." });
+            notify({ text: t("entry.restored") });
           }}
         />
       )}
@@ -327,7 +327,7 @@ function FieldInput({
             <option value="">—</option>
             {field.options?.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {optionLabel(o)}
               </option>
             ))}
           </Select>
@@ -382,7 +382,7 @@ function ImageFrame({ path, onChange }: { path: string | null; onChange: (p: str
       <button
         type="button"
         className="entry-image-pick"
-        aria-label={path ? "Changer l'image" : "Choisir une image"}
+        aria-label={path ? t("entry.changeImage") : t("media.choose")}
         onClick={async () => {
           try {
             const [p] = await pickImage();
@@ -395,13 +395,13 @@ function ImageFrame({ path, onChange }: { path: string | null; onChange: (p: str
         {path && <MediaImage path={path} alt="" />}
         <span className="entry-image-hint">
           <ImagePlus aria-hidden="true" />
-          {path ? "Changer" : "Choisir une image"}
+          {path ? t("entry.change") : t("media.choose")}
         </span>
       </button>
       {path && (
-        <button type="button" className="entry-image-remove" aria-label="Retirer l'image" title="Retirer l'image"
+        <button type="button" className="entry-image-remove" aria-label={t("entry.removeImage")} title={t("entry.removeImage")}
           onClick={async () => {
-            if (await confirmRemoval(ask, { title: "Retirer l'image ?", text: "La fiche n'aura plus d'image.", label: "Retirer" })) onChange(null);
+            if (await confirmRemoval(ask, { title: t("entry.removeOneImageAsk"), text: t("entry.removeOneImageText"), label: t("script.info.remove") })) onChange(null);
           }}
         >
           <X aria-hidden="true" />
@@ -425,7 +425,7 @@ function LinksInput({
   label: string;
 }) {
   const { openEntry } = useProject();
-  const name = (id: string) => entries.find((e) => e.id === id)?.name ?? "(fiche supprimée)";
+  const name = (id: string) => entries.find((e) => e.id === id)?.name ?? t("entry.deletedEntry");
   return (
     <div className="fld wide">
       <span className="fld-label">{label}</span>
@@ -435,7 +435,7 @@ function LinksInput({
             <button type="button" className="link" onClick={() => openEntry(id)}>
               {name(id)}
             </button>
-            <button type="button" aria-label={`Retirer ${name(id)}`} onClick={() => onChange(value.filter((x) => x !== id))}>
+            <button type="button" aria-label={t("script.info.removeName", { name: name(id) })} onClick={() => onChange(value.filter((x) => x !== id))}>
               <X aria-hidden="true" />
             </button>
           </span>
@@ -443,13 +443,13 @@ function LinksInput({
         <Select
           className="links-add"
           value=""
-          aria-label={`Ajouter : ${label}`}
+          aria-label={t("entry.addTo", { label })}
           onChange={(e) => {
             if (e.target.value) onChange([...value, e.target.value]);
           }}
         >
           <option value="" hidden>
-            + Lier…
+            {t("entry.link")}
           </option>
           {entries
             .filter((e) => e.id !== selfId && !value.includes(e.id))
@@ -467,21 +467,21 @@ function LinksInput({
 function HistoryDialog({ id, onClose, onRestore }: { id: string; onClose: () => void; onRestore: (e: Entry) => Promise<void> }) {
   const versions = useLive(() => entryVersions(id), ["bible_entry_version"], [id]);
   return (
-    <Dialog title="Historique de la fiche" onCancel={onClose} wide actions={[{ label: "Fermer", onClick: onClose }]}>
+    <Dialog title={t("entry.history")} onCancel={onClose} wide actions={[{ label: t("common.close"), onClick: onClose }]}>
       {!versions ? (
-        <p className="muted">Chargement…</p>
+        <p className="muted">{t("dash.loading")}</p>
       ) : versions.length === 0 ? (
-        <p className="muted">Aucune version antérieure pour l'instant : Oniric en garde une toutes les dix minutes de travail sur la fiche.</p>
+        <p className="muted">{t("entry.noHistory")}</p>
       ) : (
         <ul className="version-list">
           {versions.map((v) => (
             <li key={v.id}>
               <span>
-                <strong>{dateFormat.format(new Date(v.createdAt))}</strong> — {v.entry.name}
+                <strong>{dates().format(new Date(v.createdAt))}</strong> — {v.entry.name}
                 {v.entry.summary && <span className="muted small"> · {v.entry.summary.slice(0, 80)}</span>}
               </span>
               <button type="button" className="btn small" onClick={() => void onRestore(v.entry)}>
-                Restaurer
+                {t("entry.restore")}
               </button>
             </li>
           ))}

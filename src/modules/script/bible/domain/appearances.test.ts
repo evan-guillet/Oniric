@@ -77,6 +77,16 @@ describe("bible wording", () => {
     expect(pluralize("Festival")).toBe("Festivals");
   });
 
+  it("follows the interface's language: English on the last word, Spanish on every word", () => {
+    expect(pluralize("Space ship", "en")).toBe("Space ships");
+    expect(pluralize("Weapon of choice", "en")).toBe("Weapons of choice");
+    expect(pluralize("Box", "en")).toBe("Boxes");
+    expect(pluralize("City", "en")).toBe("Cities");
+    expect(pluralize("Nave espacial", "es")).toBe("Naves espaciales");
+    expect(pluralize("Arma de fuego", "es")).toBe("Armas de fuego");
+    expect(pluralize("Luz", "es")).toBe("Luces");
+  });
+
   it("keeps the first sentence of a summary for the card", () => {
     expect(firstSentence("Reine du crime. Patronne de la Halte.")).toBe("Reine du crime.");
     expect(firstSentence("Sans point final")).toBe("Sans point final");

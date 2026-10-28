@@ -1,12 +1,14 @@
-import { Ellipsis, type LucideIcon } from "lucide-react";
+import { Check, Ellipsis, type LucideIcon } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 /** `hint` is a second, muted line that says what the action does; it is read as the item's description. */
 export type MoreItem = {
   label: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   hint?: string;
+  /** Set on every item of a choice (a language, a mode): the chosen one is checked. */
+  checked?: boolean;
   danger?: boolean;
   onClick: () => void;
 };
@@ -15,7 +17,7 @@ export type MoreItem = {
  * A menu drawn over the page so no scrolling box clips it, with the arrows, Escape and outside clicks of a menu.
  * Inside a modal <dialog> it is drawn in the dialog: outside, the page is inert.
  */
-function FloatingMenu({
+export function FloatingMenu({
   items,
   style,
   anchor,
@@ -67,11 +69,14 @@ function FloatingMenu({
   }, [anchor, menu]);
   return createPortal(
     <div ref={menu} className="project-menu more-menu" role="menu" style={style}>
-      {items.map(({ label, icon: Icon, hint, danger, onClick }, i) => (
+      {items.map(({ label, icon, hint, danger, checked, onClick }, i) => {
+        const Icon = icon ?? (checked ? Check : undefined);
+        return (
         <button
           key={label}
           type="button"
-          role="menuitem"
+          role={checked === undefined ? "menuitem" : "menuitemradio"}
+          aria-checked={checked}
           className={[danger && "danger", hint && "with-hint"].filter(Boolean).join(" ") || undefined}
           aria-describedby={hint ? `${id}-${i}` : undefined}
           onClick={() => {
@@ -79,7 +84,7 @@ function FloatingMenu({
             onClick();
           }}
         >
-          <Icon aria-hidden="true" />
+          {Icon ? <Icon aria-hidden="true" /> : <span className="more-icon-gap" aria-hidden="true" />}
           {hint ? (
             <span className="more-item">
               {label}
@@ -91,7 +96,8 @@ function FloatingMenu({
             label
           )}
         </button>
-      ))}
+        );
+      })}
     </div>,
     anchor.current?.closest("dialog") ?? document.body,
   );

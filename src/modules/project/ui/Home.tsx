@@ -9,8 +9,8 @@ import { projectDirOf } from "../application/projects";
 import { confirmRemoval, useChoice } from "../../../ui-kit/Dialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 import { SettingsDialog } from "./SettingsView";
+import { dateFormat } from "../../../core/i18n";
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 
 /** The start screen: create or open a project, then the recent ones. Restoring a backup lives in Settings, importing inside a project. */
 export function Home({
@@ -88,7 +88,7 @@ export function Home({
                   </span>
                   <span className="recent-title">{r.title}</span>
                   <span className="recent-path">{r.available ? r.path : `${r.path} — ${t("home.unavailable")}`}</span>
-                  <span className="recent-date">{t("home.openedAt", { date: dateFormat.format(new Date(r.openedAt)) })}</span>
+                  <span className="recent-date">{t("home.openedAt", { date: dateFormat({ dateStyle: "long", timeStyle: "short" }).format(new Date(r.openedAt)) })}</span>
                 </button>
                 <button type="button" className="btn ghost icon-only recent-forget" aria-label={`${t("home.forget")} : ${r.title}`} title={t("home.forget")} onClick={() => void forget(r.path, r.title)}>
                   <X aria-hidden="true" />
@@ -107,7 +107,7 @@ export function Home({
         </span>
         <button type="button" className="btn ghost small" onClick={() => setSettings(true)}>
           <Settings aria-hidden="true" />
-          Réglages
+          {t("shell.settings")}
         </button>
       </footer>
 

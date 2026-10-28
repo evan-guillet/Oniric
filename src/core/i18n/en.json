@@ -1,0 +1,2220 @@
+{
+  "app": {
+    "name": "Oniric",
+    "tagline": "Write, prepare and produce a film, on your own computer.",
+    "version": "Version {{version}}",
+    "portable": "portable version",
+    "loading": "Opening…"
+  },
+  "home": {
+    "newProject": "New project",
+    "newProjectHint": "Start a new film",
+    "openProject": "Open a project…",
+    "openProjectHint": "Pick up a film in progress",
+    "recent": "Recent projects",
+    "noRecent": "No projects yet. Create one to start writing.",
+    "unavailable": "not found (folder moved or deleted)",
+    "forget": "Remove from the list",
+    "forgetAsk": "Remove “{{title}}” from recent projects?",
+    "forgetText": "The project stays on the disk; “Open a project…” finds it again.",
+    "forgetConfirm": "Remove",
+    "openedAt": "opened {{date}}",
+    "openDialogTitle": "Open an Oniric project",
+    "projectFile": "Oniric project"
+  },
+  "newProject": {
+    "title": "New project",
+    "name": "Film title",
+    "namePlaceholder": "The Blue Hours",
+    "format": "Screenplay format",
+    "formatHelp": "You can change it at any time: the text stays the same, only the pages are recalculated.",
+    "location": "Location",
+    "browse": "Browse…",
+    "browseTitle": "Where should the project go?",
+    "folder": "The project will be a folder: {{folder}}",
+    "create": "Create project",
+    "cancel": "Cancel"
+  },
+  "open": {
+    "recoverTitle": "Oniric closed unexpectedly",
+    "recoverText": "Your latest work on “{{title}}” was kept on this PC. It holds changes that are not in the project folder yet.",
+    "restore": "Restore my work",
+    "discard": "Open the folder’s version",
+    "discardHelp": "The folder’s version is older. The kept work is not erased: it is set aside on this PC.",
+    "lockedTitle": "This project seems to be open already",
+    "lockedText": "“{{title}}” has been open on the computer {{host}} since {{since}}. If you open it here at the same time, the changes made on one of the two computers will be lost.",
+    "lockedOpen": "Open anyway",
+    "openHere": "“{{title}}” is already open in another Oniric window on this PC.",
+    "restored": "Work restored after an unexpected shutdown.",
+    "repaired": "The project file was damaged: it was repaired from the work kept on this PC.",
+    "keptAside": "A copy of your previous work was set aside: {{path}}",
+    "cancel": "Cancel",
+    "ok": "Got it"
+  },
+  "close": {
+    "notSavedTitle": "The project folder can’t be reached",
+    "notSavedText": "The latest changes could not be copied into the project folder ({{detail}}). They are still kept on this PC and will be offered the next time the project is opened on this PC.",
+    "retry": "Try again",
+    "closeAnyway": "Close anyway",
+    "saveFailedTitle": "Saving failed",
+    "saveFailedText": "The changes of the last few seconds could not be saved ({{detail}}). If you close now, they will be lost."
+  },
+  "workspace": {
+    "closeProject": "Close project",
+    "element": "Element",
+    "format": "Format",
+    "import": "Import…",
+    "export": "Export…",
+    "exportPdf": "Export as PDF",
+    "exportFountain": "Export as Fountain",
+    "scenes": "Scenes",
+    "noHeading": "(no heading)",
+    "scenePage": "p. {{page}}",
+    "importConfirmTitle": "Replace the screenplay?",
+    "importConfirmText": "The current screenplay will be replaced by “{{file}}” ({{count}} elements). Ctrl+Z takes you back.",
+    "importReplace": "Replace",
+    "imported": "“{{file}}” imported: {{count}} elements.",
+    "exported": "File saved in the project folder: {{file}}",
+    "openFile": "Open",
+    "showInFolder": "Show in folder",
+    "exporting": "Creating the PDF…",
+    "dismiss": "Dismiss message"
+  },
+  "status": {
+    "saved": "Saved",
+    "savedTitle": "Your work is saved on this PC. Last copied into the project folder: {{time}}.",
+    "savedNoFlush": "Your work is saved on this PC; it will be copied into the project folder in a few seconds.",
+    "pending": "Changes in progress…",
+    "saving": "Saving…",
+    "error": "Can’t save, trying again…",
+    "notInFolder": "Not copied into the project folder",
+    "notInFolderTitle": "The project folder can’t be reached ({{detail}}). Your work is still saved on this PC; Oniric tries again every 30 seconds.",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "duration": "≈ {{duration}}",
+    "scene": "Scene {{n}} of {{total}}",
+    "backupAt": "Backed up at {{time}}"
+  },
+  "elements": {
+    "scene_heading": "Scene heading",
+    "action": "Action",
+    "character": "Character",
+    "parenthetical": "Parenthetical",
+    "dialogue": "Dialogue",
+    "transition": "Transition",
+    "shot": "Shot",
+    "on_screen_text": "On-screen text"
+  },
+  "hints": {
+    "scene_heading": "INT. PLACE – DAY",
+    "action": "Action…",
+    "character": "CHARACTER",
+    "parenthetical": "(parenthetical)",
+    "dialogue": "Line…",
+    "transition": "CUT TO:",
+    "shot": "CLOSE ON",
+    "on_screen_text": "On-screen text…"
+  },
+  "errors": {
+    "noProject": "No project is open.",
+    "notAProject": "This folder is not an Oniric project. ({{detail}})",
+    "folderNotEmpty": "A folder with this name already exists here and is not empty. Choose another title or another location.",
+    "newerFormat": "This project was created by a newer version of Oniric. Update Oniric to open it; the project was not changed.",
+    "lockedElsewhere": "This project is open on another computer. ({{detail}})",
+    "alreadyOpen": "This project is already open in another Oniric window.",
+    "damaged": "The project is damaged and no valid copy was found on this PC. ({{detail}})",
+    "refused": "Oniric refused the operation. ({{detail}})",
+    "notSaved": "The project folder can’t be reached. ({{detail}})",
+    "failed": "Something went wrong. ({{detail}})"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "OK",
+    "close": "Close",
+    "delete": "Delete",
+    "rename": "Rename",
+    "save": "Save",
+    "add": "Add",
+    "more": "More actions",
+    "addEllipsis": "Add…"
+  },
+  "nav": {
+    "parts": {
+      "script": "Script",
+      "realisation": "Directing",
+      "production": "Production"
+    },
+    "views": {
+      "dashboard": "Dashboard",
+      "workshop": "Workshop",
+      "bible": "Bible",
+      "script": "Screenplay",
+      "structure": "Structure",
+      "versions": "Versions",
+      "stats": "Statistics",
+      "moodboard": "Moodboard",
+      "shotlist": "Shot list",
+      "storyboard": "Storyboard",
+      "team": "Crew",
+      "breakdown": "Breakdown",
+      "schedule": "Shooting schedule",
+      "callsheets": "Call sheets",
+      "budget": "Budget",
+      "scouting": "Location scouting",
+      "permits": "Permits"
+    },
+    "keywords": {
+      "dashboard": "home overview resume progress",
+      "structure": "board timeline acts sequences"
+    }
+  },
+  "shell": {
+    "views": "Project views",
+    "brand": "Oniric, project {{title}}",
+    "openFolder": "Open the project folder",
+    "settings": "Settings",
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsTitle": "Keyboard shortcuts (Ctrl /)",
+    "fold": "Collapse the menu",
+    "unfold": "Expand the menu",
+    "search": "Search",
+    "searchTitle": "Search (Ctrl K)",
+    "later": "Coming soon",
+    "comesIn": "{{view}} · coming in {{version}}",
+    "crumbs": "Location",
+    "themeTo": {
+      "light": "Switch to the light theme",
+      "dark": "Switch to the dark theme"
+    },
+    "language": "Language: {{language}}",
+    "bibleImported": "Bible imported: {{added}} entries added, {{updated}} updated."
+  },
+  "palette": {
+    "views": "Views",
+    "actions": "Actions",
+    "project": "Project",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme",
+    "themeSystem": "System theme",
+    "kw": {
+      "import": "fountain fdx file",
+      "export": "pdf fountain fdx file",
+      "folder": "explorer disk location files",
+      "settings": "preferences options",
+      "shortcuts": "keys help keyboard",
+      "light": "appearance day",
+      "dark": "appearance night",
+      "system": "appearance windows",
+      "language": "language langue idioma translation",
+      "close": "quit home"
+    },
+    "label": "Command palette",
+    "placeholder": "Go to a view, a scene, a Bible entry…",
+    "results": "Results",
+    "scenes": "Scenes",
+    "sceneNoHeading": "Scene without heading",
+    "scene": "Scene {{n}}",
+    "none": "Nothing matches “{{query}}”.",
+    "footChoose": "choose",
+    "footOpen": "open",
+    "footClose": "close"
+  },
+  "backup": {
+    "failed": "The automatic backup could not be made: {{detail}}",
+    "old_one": "This project’s last backup is more than a day old.",
+    "old_other": "This project’s last backup is more than {{count}} days old.",
+    "now": "Back up now",
+    "done": "Backup done."
+  },
+  "later": {
+    "comes": "Coming in Oniric {{version}}.",
+    "text": {
+      "moodboard": "The film’s reference images: colors, light, costumes, sets.",
+      "shotlist": "The shots of each scene: size, movement, lens, length.",
+      "storyboard": "A drawn or imported frame per shot, linked to the shot list.",
+      "team": "The crew and cast, with their contact details and availability.",
+      "breakdown": "Everything each scene needs: roles, extras, props, costumes, vehicles.",
+      "schedule": "The shooting order of the scenes, day by day.",
+      "callsheets": "The sheet for each shooting day, ready to send.",
+      "budget": "The film’s budget, line by line.",
+      "scouting": "The locations visited, with photos and contacts.",
+      "permits": "Filming permits and their deadlines."
+    }
+  },
+  "keys": {
+    "enter": "Enter",
+    "escape": "Esc",
+    "shift": "Shift",
+    "wheel": "Wheel",
+    "click": "Click"
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "restore": "Restore",
+    "maximize": "Maximize"
+  },
+  "rich": {
+    "heading": "Heading",
+    "paragraph": "Paragraph",
+    "hint": "@ or [[ to link an entry",
+    "bold": "B",
+    "italic": "I"
+  },
+  "media": {
+    "choose": "Choose an image",
+    "images": "Images",
+    "missing": "Image not found"
+  },
+  "transfer": {
+    "pdfHelp": "To read, print and send the screenplay.",
+    "fountainHelp": "Plain text, readable by most writing software.",
+    "fdxHelp": "To open the screenplay in Final Draft.",
+    "bibleExportHelp": "Every entry, with its types and links, to use in another project.",
+    "synopsis": "Synopsis (PDF)",
+    "synopsisHelp": "The synopsis on A4 paper, under the film’s title.",
+    "treatment": "Treatment (PDF)",
+    "treatmentHelp": "The treatment on A4 paper, under the film’s title.",
+    "scriptImport": "Fountain or FDX",
+    "scriptImportHelp": "Replaces the current screenplay. Ctrl+Z takes you back.",
+    "bibleImportHelp": "Adds the new entries and updates the ones that already exist.",
+    "parts": "Project parts",
+    "layout": "Layout",
+    "otherFormat": "The screenplay is not changed: only the pages of the PDF are recalculated in this format.",
+    "withTitle": "With the title page",
+    "where": "Files are saved in the project’s “exports” folder.",
+    "export": "Export",
+    "import": "Import",
+    "chooseFile": "Choose the file…",
+    "kind": "{{section}}: file type",
+    "current": " (current)",
+    "noTitlePage": "(no title page)"
+  },
+  "languages": {
+    "fr": "French",
+    "en": "English",
+    "de": "German",
+    "es": "Spanish"
+  },
+  "settings": {
+    "pagesNav": "Settings pages",
+    "search": "Search settings",
+    "none": "No setting matches.",
+    "closeSettings": "Close settings",
+    "closeTitle": "Close (Esc)",
+    "profile": {
+      "name": "Name",
+      "nameHelp": "Printed under “Written by” and at the top of the contact.",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "agent": "Agent or representative",
+      "agentHelp": "Added at the end of the contact."
+    },
+    "contactDetails": "Contact details",
+    "onTitlePage": "On the title page",
+    "printedContact": "The contact as it prints",
+    "nameHere": "Your name will print here.",
+    "contactHere": "The contact prints at the bottom left.",
+    "themes": {
+      "system": "System",
+      "systemHelp": "Follows the Windows setting",
+      "light": "Light",
+      "lightHelp": "White pages, black ink",
+      "dark": "Dark",
+      "darkHelp": "Dark pages, easier at night"
+    },
+    "typography": {
+      "auto": "With a French format",
+      "on": "Always",
+      "off": "Never"
+    },
+    "whileTyping": "While typing",
+    "typewriter": "Typewriter scrolling",
+    "typewriterHelp": "The line you type stays in the middle of the screen; the page moves up beneath it.",
+    "spellcheck": "Spell checker",
+    "spellcheckHelp": "Underlines the words Windows doesn’t know, in the format’s language. Right-click for suggestions.",
+    "typographyHelp": "A non-breaking space before ? ! ; : and inside « » quotes, added as you type.",
+    "goal": "Goal",
+    "goalRow": "Words per day",
+    "goalHelp": "Drawn in the dashboard’s writing activity; the days that reach it turn green. 0: no goal.",
+    "myFormats": "My formats",
+    "noFormat": "No formats of your own",
+    "noFormatHelp": "Duplicate one of the provided formats below to adjust its margins, paper or mentions.",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "formatsNote": "The provided formats follow Final Draft’s templates. A project keeps its format, even when opened on another PC.",
+    "customFormat": "Custom format",
+    "paper": "Paper",
+    "formatLanguage": "Language",
+    "size": "Size (pt)",
+    "margins": "Margins (cm)",
+    "elements": "Elements (cm from the left margin)",
+    "indent": "Indent",
+    "width": "Width",
+    "linesBefore": "Lines before",
+    "uppercase": "Capitals",
+    "more": "“More” mention",
+    "contd": "“Continued” mention",
+    "backupsDir": "Backup folder",
+    "restoreWhere": "Where should the project be recreated?",
+    "chooseBackup": "Choose a backup",
+    "backupFile": "Oniric backup",
+    "autoCopies": "Automatic copies",
+    "every": "Frequency",
+    "everyHelp": "A copy of each open project at this interval, and another when it closes.",
+    "keep": "Copies kept",
+    "keepHelp": "Per project; the oldest are erased beyond that.",
+    "remind": "Reminder",
+    "remindHelp": "Warns when a project opens if its last copy is older than this. 0: never.",
+    "location": "Location",
+    "choose": "Choose…",
+    "default": "Default",
+    "open": "Open",
+    "restore": "Restore a backup",
+    "restoreHelp": "Recreates the project in a new folder, next to it; a backup never changes the project.",
+    "chooseFile": "Choose a file…",
+    "projectCopies": "Copies of this project",
+    "restoreCopy": "Restore…",
+    "sc": {
+      "everywhere": "Everywhere",
+      "palette": "Command palette: go to a view, a scene, an entry, an action",
+      "shortcuts": "Show these shortcuts",
+      "close": "Close the open dialog or menu",
+      "save": "Save right now (saving happens on its own)",
+      "pdf": "Export as PDF",
+      "undo": "Undo",
+      "redo": "Redo",
+      "preview": "Leave the preview",
+      "link": "Link a name to its Bible entry",
+      "openLink": "Open the entry of a linked name",
+      "elements": "Screenplay elements",
+      "next": "Next element: after a character the dialogue, after the dialogue a character…",
+      "cycle": "Change the line’s element: action, character, transition, heading…",
+      "back": "The same cycle, backwards",
+      "heading": "Typed at the start of an action, makes it a scene heading",
+      "paren": "Typed at the start of a dialogue, makes it a parenthetical",
+      "views": "Board and Timeline",
+      "zoom": "Zoom; the Timeline zooms in width only",
+      "openScene": "Open the chosen scene in the Screenplay"
+    },
+    "shortcutsNote": "Hold Ctrl in the Screenplay: the element bar shows their shortcuts.",
+    "numbers": {
+      "none": "None",
+      "left": "Left",
+      "right": "Right",
+      "both": "Both sides"
+    },
+    "layout": "Layout",
+    "scriptFormat": "Script format",
+    "scriptFormatHelp": "Changing the format redoes the pagination; the text itself doesn’t change.",
+    "printing": "Printing",
+    "sceneNumbers": "Scene numbers",
+    "sceneNumbersHelp": "In the margins, level with each heading, as in a shooting script. They follow the scene list and appear in the preview, the PDF and the Final Draft and Fountain exports; the pagination doesn’t move.",
+    "partsNote": "For a writing-only project, hide what you don’t use. Nothing is erased.",
+    "licence": "License",
+    "licenceHelp": "Free software under the GPL-3.0: you can use, study, change and share it.",
+    "data": "Your data",
+    "dataHelp": "Each project is a folder on this PC. No account, no connection, nothing is sent.",
+    "source": "Source code",
+    "copyLink": "Copy the link",
+    "pages": {
+      "profile": {
+        "label": "Profile",
+        "lead": "Your name and contact details, printed on the title page of every script.",
+        "keywords": "name author email phone address agent contact title page"
+      },
+      "appearance": {
+        "label": "Appearance",
+        "lead": "The theme and language of the whole application, screenplay pages included.",
+        "keywords": "theme light dark system colors night language langue idioma french english spanish"
+      },
+      "writing": {
+        "label": "Writing",
+        "lead": "How the Screenplay behaves while you type.",
+        "keywords": "typewriter scrolling centered spelling checker typography non-breaking spaces goal words per day"
+      },
+      "formats": {
+        "label": "Screenplay formats",
+        "lead": "The provided layouts, and your own, shared by every project.",
+        "keywords": "margins paper a4 letter font custom duplicate template"
+      },
+      "backups": {
+        "label": "Backups",
+        "lead": "Copies of each project in a separate folder, on top of the continuous saving.",
+        "keywords": "copy restore folder automatic frequency reminder"
+      },
+      "shortcuts": {
+        "label": "Keyboard shortcuts",
+        "lead": "Everything you can do from the keyboard, view by view.",
+        "keywords": "keys keyboard ctrl tab enter palette elements help"
+      },
+      "script": {
+        "label": "Script",
+        "lead": "The layout and printing of this project’s script.",
+        "keywords": "format scene numbers printing pdf fdx fountain margin"
+      },
+      "parts": {
+        "label": "Parts shown",
+        "lead": "What this project’s navigation shows.",
+        "keywords": "directing production hide navigation"
+      },
+      "about": {
+        "label": "About",
+        "lead": "Oniric, free software for making films.",
+        "keywords": "version license gpl source code"
+      }
+    },
+    "groups": {
+      "application": "Application",
+      "project": "This project"
+    },
+    "kind": {
+      "auto": "automatic",
+      "fermeture": "on closing",
+      "manuelle": "manual",
+      "migration": "before update"
+    },
+    "mb": "{{n}} MB",
+    "kb": "{{n}} KB",
+    "writtenBy": "Written by",
+    "profileNote": "Every script follows this profile, except for the fields changed in Screenplay, “Information” tab, which apply to that script only. The profile stays on this PC.",
+    "theme": "Theme",
+    "themeNote": "Exported PDFs always stay black on white.",
+    "language": "Language",
+    "languageRow": "Interface language",
+    "languageHelp": "Menus, views and messages. The screenplay keeps its format’s language: headings, mentions and typography.",
+    "unitWords": "words",
+    "unitCopies": "copies",
+    "unitDays": "days",
+    "copyName": "{{name}} (copy)",
+    "customHelp": "{{paper}} · custom",
+    "deleteFormat": "Delete the format “{{name}}”?",
+    "deleteFormatText": "It leaves the list of screenplay formats. Projects that use it keep it.",
+    "margin": {
+      "top": "Top",
+      "bottom": "Bottom",
+      "left": "Left",
+      "right": "Right"
+    },
+    "restored": "Project recreated from the backup: {{dir}}",
+    "openThisProject": "Open this project",
+    "lastCopy": "Last copy: {{date}}",
+    "noCopy": "No copy of this project yet",
+    "copiesKept_one": "{{kind}} · {{count}} copy kept",
+    "copiesKept_other": "{{kind}} · {{count}} copies kept",
+    "firstCopy": "The first one will happen on its own, or right away with this button.",
+    "or": "or",
+    "navigation": "Navigation",
+    "partsWriting": "Writing",
+    "partsWritingHelp": "Workshop, Bible, Screenplay, Structure… always shown.",
+    "partsHelp": {
+      "realisation": "Moodboard, shot list, storyboard.",
+      "production": "Crew, breakdown, shooting schedule…"
+    },
+    "linkCopied": "Link copied.",
+    "versionUnknown": "Unknown version",
+    "typographyRow": "French typography"
+  },
+  "dash": {
+    "progress": "Progress",
+    "pages": "Pages",
+    "duration": "Estimated length",
+    "scenes": "Scenes",
+    "wordsTile": "Words",
+    "emptyScript": "The screenplay is still empty. The Workshop can help set out the idea, the characters and the structure before the first scene.",
+    "noHeading": "(no heading)",
+    "waiting": "To do",
+    "loading": "Loading…",
+    "clear": "Nothing waiting: no open notes, no scenes to rewrite.",
+    "openNotes": "Open notes",
+    "rewrite": "Scenes to rewrite",
+    "unnamedTitle": "Not in the Bible",
+    "activity": "Writing activity",
+    "today": "Today",
+    "week": "Last 7 days",
+    "weekTime": "Time over 7 days",
+    "streak": "Days in a row",
+    "chartEmpty": "The words written in the Screenplay will show here, day after day.",
+    "project": "The project",
+    "start": "Start writing",
+    "resume": "Resume writing",
+    "writeFirst": "Write the first scene",
+    "openScene": "Open the scene",
+    "pageOf": "Page {{page}} of {{total}}",
+    "quote": "“{{quote}}”",
+    "emptyNote": "(empty note)",
+    "others_one": "and {{n}} more",
+    "others_other": "and {{n}} more",
+    "unnamed_one": "A character or place in the screenplay has no entry yet",
+    "unnamed_other": "{{n}} characters or places in the screenplay have no entry yet",
+    "minutes": "{{m}} min",
+    "hours": "{{h}} h {{m}}",
+    "words_one": "{{n}} word",
+    "words_other": "{{n}} words",
+    "chartLabel": "Words written per day over four weeks: {{total}} in all",
+    "written_one": "{{n}} word written over four weeks",
+    "written_other": "{{n}} words written over four weeks",
+    "goalMet": "goal reached {{days}}, dotted line at {{goal}}",
+    "days_one": "{{n}} day",
+    "days_other": "{{n}} days",
+    "writingTime": "{{time}} of writing",
+    "stepsDone": "{{done}} of {{total}} steps done",
+    "noEntry": "No entries",
+    "entries_one": "{{n}} entry",
+    "entries_other": "{{n}} entries",
+    "noAct": "No acts or sequences",
+    "acts_one": "{{n}} act",
+    "acts_other": "{{n}} acts",
+    "sequences_one": "{{n}} sequence",
+    "sequences_other": "{{n}} sequences",
+    "versions_one": "{{n}} frozen version",
+    "versions_other": "{{n}} frozen versions",
+    "versionsLast": "{{versions}} · the latest on {{date}}",
+    "noVersion": "No frozen versions",
+    "speakers_one": "{{n}} speaking character",
+    "speakers_other": "{{n}} speaking characters",
+    "places_one": "{{n}} place",
+    "places_other": "{{n}} places"
+  },
+  "formats": {
+    "kinds": {
+      "film": "Film",
+      "tv": "Television",
+      "stage": "Stage",
+      "audio": "Audio"
+    },
+    "list": {
+      "fr": {
+        "name": "French (A4)",
+        "help": "The format of French screenplays, on A4"
+      },
+      "us": {
+        "name": "American (Letter)",
+        "help": "Final Draft’s format for film and single-camera series"
+      },
+      "us-fr": {
+        "name": "American in French (Letter)",
+        "help": "The American layout, with French mentions and typography"
+      },
+      "us-de": {
+        "name": "American in German (Letter)",
+        "help": "The American layout, with German mentions"
+      },
+      "us-es": {
+        "name": "American in Spanish (Letter)",
+        "help": "The American layout, with Spanish mentions"
+      },
+      "cole-haag": {
+        "name": "Cole and Haag (Letter)",
+        "help": "The older layout of Cole and Haag’s guide, columns shifted to the right"
+      },
+      "warner": {
+        "name": "Warner Bros. (Letter)",
+        "help": "The studio layout: narrower, more indented dialogue"
+      },
+      "bbc": {
+        "name": "BBC (A4)",
+        "help": "The BBC’s format for film and single-camera TV drama"
+      },
+      "multicam": {
+        "name": "Multi-camera sitcom (Letter)",
+        "help": "Sitcom shot before an audience: action in capitals, double-spaced dialogue"
+      },
+      "bbc-sitcom": {
+        "name": "BBC studio sitcom (A4)",
+        "help": "BBC sitcom before an audience: double-spaced lines, action in capitals"
+      },
+      "stage": {
+        "name": "Traditional stage play (Letter)",
+        "help": "The Dramatists Guild format: centered names, full-width lines, indented stage directions"
+      },
+      "stage-modern": {
+        "name": "Modern stage play (Letter)",
+        "help": "The modern Dramatists Guild format: names at the margin, indented stage directions"
+      },
+      "stage-fr": {
+        "name": "French stage play (A4)",
+        "help": "Centered character names, stage directions in italics"
+      },
+      "podcast": {
+        "name": "Podcast and audio drama (Letter)",
+        "help": "Names at the margin, indented lines, sound effects and music in underlined capitals"
+      }
+    }
+  },
+  "script": {
+    "display": "Display",
+    "cards": "Scene cards",
+    "cardsHint": "Each scene in its card, in the Board’s color",
+    "links": "Bible links",
+    "linksHint": "Bible items in color, their entry on hover",
+    "pin": "Act and sequence",
+    "pinHint": "The marker left of the text, which follows the scene at the top of the desk",
+    "previewTitle": "The whole script as it prints (Esc to go back)",
+    "preview": "Preview",
+    "panel": "Panel",
+    "info": {
+      "fromProfile": "Taken from your profile; a field changed here applies to this script only.",
+      "editProfile": "Edit profile",
+      "takeBackButton": "Use the profile",
+      "otherLines": "Other lines",
+      "otherLinesPlaceholder": "Production, website, registration…",
+      "yourMention": "Your mention",
+      "yourMentionPlaceholder": "Registration, rights, distribution…",
+      "title": "Title",
+      "subtitle": "Subtitle",
+      "subtitlePlaceholder": "A genre, a tagline, an episode…",
+      "author": "Author {{n}}",
+      "removeName": "Remove {{name}}",
+      "removeAuthor": "Remove author {{n}}",
+      "remove": "Remove",
+      "removeAsk": "Remove “{{name}}” from the authors?",
+      "removeText": "Their name leaves the title page.",
+      "more": "More",
+      "basedOn": "Based on",
+      "basedOnPlaceholder": "Based on the novel by…",
+      "contact": "Contact",
+      "takeBack": "Use “{{value}}”",
+      "takeBackEmpty": "Use the profile, empty for this field",
+      "mentions": "Mentions"
+    },
+    "notes": {
+      "placeCursor": "Place the cursor in the screenplay, or select the passage to annotate.",
+      "show": "Show the passage",
+      "gone": "The passage was deleted",
+      "goneBadge": "passage deleted",
+      "actions": "Note actions",
+      "edit": "Edit",
+      "unarchive": "Unarchive",
+      "archive": "Archive",
+      "archiveHint": "Puts the note away under the list, in “Archived”, without erasing it.",
+      "delete": "Delete",
+      "deleteAsk": "Delete the note?",
+      "deleteText": "It leaves the screenplay and the list of notes.",
+      "empty": "Empty note",
+      "create": "Create a note",
+      "createHint": "On the selected passage, or the cursor’s line",
+      "archived": "Archived",
+      "note": "Note",
+      "placeholder": "Your note…"
+    },
+    "panels": {
+      "scenes": "Scenes",
+      "scenesHint": "Acts, sequences and scenes, in script order",
+      "notes": "Notes",
+      "notesHint": "The notes in place of the scenes",
+      "info": "Information",
+      "infoHint": "Title, authors, contact, mention: what the title page prints"
+    },
+    "removeScene": "Delete the scene?",
+    "removeSceneText": "It leaves the screenplay but stays in the bin of cut scenes (Versions view), from where it can be put back.",
+    "removeAct": "Delete the act?",
+    "removeActText": "Its sequences and scenes are kept, without an act.",
+    "removeSequence": "Delete the sequence?",
+    "removeSequenceText": "Its scenes stay in the screenplay and join the previous sequence.",
+    "pinCount": "Scene {{n}} of {{total}}",
+    "contact": {
+      "name": "Name",
+      "namePlaceholder": "First Last",
+      "address": "Address",
+      "addressPlaceholder": "Street, postcode, city",
+      "phone": "Phone",
+      "phonePlaceholder": "+1 555 012 3456",
+      "email": "Email",
+      "emailPlaceholder": "name@example.com",
+      "agent": "Agent",
+      "agentPlaceholder": "Agency, name, phone"
+    },
+    "newScene": "New scene"
+  },
+  "titlePage": {
+    "mentions": {
+      "none": "No mention",
+      "sacd": "Registered with the SACD",
+      "sacd-copyright": "Registered with the SACD, © and rights reserved",
+      "sgdl": "Registered with the SGDL",
+      "wga": "Registered WGA (Writers Guild of America)",
+      "copyright": "© year, authors. All rights reserved.",
+      "confidential": "Confidential document, do not distribute",
+      "draft": "Working draft, do not distribute",
+      "custom": "Other mention…"
+    }
+  },
+  "sceneList": {
+    "unfold": "Expand all",
+    "fold": "Collapse all",
+    "remove": {
+      "act": "Delete the act…",
+      "seq": "Delete the sequence…",
+      "scene": "Delete the scene…"
+    },
+    "partTitle_one": "{{n}} scene, from scene {{first}}",
+    "partTitle_other": "{{n}} scenes, from scene {{first}}",
+    "none": "No scenes",
+    "count_one": "{{n}} scene",
+    "count_other": "{{n}} scenes"
+  },
+  "versions": {
+    "thread": "Version history",
+    "live": "In progress",
+    "copyHash": "Copy the fingerprint",
+    "removeFromList": "Remove from the list",
+    "cuts": "Cut scenes",
+    "cutsNote": "A scene deleted from the screenplay waits here before being erased.",
+    "reinstate": "Put back",
+    "firstTitle": "Keep track of every stage of the screenplay",
+    "firstWhen": "Good moments: before a big rewrite, before sending the screenplay to someone, at the end of a draft.",
+    "sampleLabel": "Comparison example",
+    "sampleCaption": "The frozen version on the left, the current version on the right.",
+    "reference": "Reference",
+    "compared": "Compared",
+    "pair": "Compared versions",
+    "swap": "Swap the two versions",
+    "chooseTwo": "Choose two different versions",
+    "comparing": "Comparing…",
+    "lines": "Lines",
+    "shownScenes": "Scenes shown",
+    "changes": "Changes",
+    "all": "The whole screenplay",
+    "search": "Find a scene…",
+    "searchLabel": "Find a scene",
+    "moved": "The scene moved; its text is the same.",
+    "kind": {
+      "same": "unchanged",
+      "changed": "changed",
+      "added": "added",
+      "removed": "deleted",
+      "moved": "moved"
+    },
+    "kinds": {
+      "same": "Unchanged",
+      "changed": "Changed",
+      "added": "Added",
+      "removed": "Deleted",
+      "moved": "Moved"
+    },
+    "freeze": "Freeze the current version",
+    "name": "Version name",
+    "frozen": "Version “{{name}}” frozen in the project’s versions folder.",
+    "restoreAsk": "Go back to “{{name}}”?",
+    "restoreText": "The current screenplay is replaced by this version. Ctrl+Z in the screenplay takes you back; freeze the current version first if you want to keep it.",
+    "restore": "Go back to this version",
+    "restored": "Screenplay back to “{{name}}”.",
+    "removeAsk": "Remove “{{name}}” from the list?",
+    "removeText": "The file stays in the project’s “versions” folder.",
+    "noHeadingBare": "no heading",
+    "reinstated": "Scene “{{heading}}” put back in the screenplay.",
+    "purgeAsk": "Delete for good?",
+    "purgeText": "The scene “{{heading}}” will be erased from the project. The frozen versions that contain it keep it.",
+    "purge": "Delete for good",
+    "current": "Current version",
+    "pages_one": "{{n}} page",
+    "pages_other": "{{n}} pages",
+    "savedAsTyped": "saved as you type",
+    "seeSince": "See what changed since {{name}}",
+    "actionsFor": "Actions for {{name}}",
+    "hashCopied": "Fingerprint copied: it proves the file hasn’t changed.",
+    "cutOn": "Cut on {{date}}",
+    "cutActions": "Actions for the cut scene {{heading}}",
+    "firstText": "Freezing a version puts a dated copy of the screenplay in the project’s “versions” folder. Nothing changes it afterwards: you’ll see what changed since, scene by scene, and you can always go back to it.",
+    "sceneShort": "Sc. {{n}}",
+    "sample": {
+      "heading": "INT. HANGAR — NIGHT",
+      "line": "Lia pushes the hangar door open.",
+      "start": "The ship",
+      "old": "sleeps",
+      "new": "waits for her",
+      "end": "under a tarp."
+    },
+    "nothingSince": "Nothing has changed since {{name}}",
+    "touchedSince_one": "{{n}} scene touched since {{name}}",
+    "touchedSince_other": "{{n}} scenes touched since {{name}}",
+    "same": "{{head}} and {{base}} have exactly the same text, scene by scene.",
+    "foldAll": "Collapse all",
+    "noMatch": "No scene matches “{{query}}”.",
+    "asIn": "Same as in {{name}}",
+    "wasIn": "{{n}} in {{name}}",
+    "linesAdded_one": "{{n}} line added",
+    "linesAdded_other": "{{n}} lines added",
+    "linesRemoved_one": "{{n}} line removed",
+    "linesRemoved_other": "{{n}} lines removed",
+    "sides": "{{base}} on the left, {{head}} on the right",
+    "showSame_one": "Show {{n}} unchanged line",
+    "showSame_other": "Show {{n}} unchanged lines"
+  },
+  "bible": {
+    "types": {
+      "character": {
+        "name": "Character",
+        "plural": "Characters",
+        "fields": {
+          "nicknames": {
+            "label": "Nicknames"
+          },
+          "age": {
+            "label": "Age"
+          },
+          "birth": {
+            "label": "Date of birth",
+            "help": "In the calendar of the film’s world: “1944”, “year 312 of the Era of Moons”…"
+          },
+          "appearance": {
+            "label": "Appearance"
+          },
+          "physique": {
+            "label": "Build"
+          },
+          "costume": {
+            "label": "Typical costume"
+          },
+          "backstory": {
+            "label": "Backstory"
+          },
+          "motivations": {
+            "label": "Motivations"
+          },
+          "desire": {
+            "label": "Want",
+            "help": "What the character wants, consciously."
+          },
+          "need": {
+            "label": "Need",
+            "help": "What they really need, often without knowing it."
+          },
+          "flaw": {
+            "label": "Flaw"
+          },
+          "arc_start": {
+            "label": "Arc: starting point"
+          },
+          "arc_end": {
+            "label": "Arc: end point"
+          },
+          "speech": {
+            "label": "Way of speaking",
+            "help": "Tics, register, accent, sample lines."
+          },
+          "actor": {
+            "label": "Associated actor"
+          }
+        }
+      },
+      "location": {
+        "name": "Place",
+        "plural": "Places",
+        "fields": {
+          "kind": {
+            "label": "Type"
+          },
+          "parent": {
+            "label": "Parent place",
+            "help": "Country > city > house > kitchen."
+          },
+          "description": {
+            "label": "Description"
+          },
+          "mood": {
+            "label": "Mood"
+          },
+          "era": {
+            "label": "Period"
+          },
+          "map": {
+            "label": "Map or plan"
+          },
+          "real_set": {
+            "label": "Associated real location"
+          }
+        }
+      },
+      "object": {
+        "name": "Object",
+        "plural": "Objects",
+        "fields": {
+          "description": {
+            "label": "Description"
+          },
+          "owner": {
+            "label": "Owner"
+          },
+          "importance": {
+            "label": "Dramatic importance"
+          },
+          "history": {
+            "label": "The object’s history"
+          }
+        }
+      },
+      "vehicle": {
+        "name": "Vehicle",
+        "plural": "Vehicles",
+        "fields": {
+          "kind": {
+            "label": "Type"
+          },
+          "model": {
+            "label": "Model"
+          },
+          "era": {
+            "label": "Period"
+          },
+          "condition": {
+            "label": "Condition"
+          },
+          "owner": {
+            "label": "Owner"
+          },
+          "features": {
+            "label": "Features"
+          }
+        }
+      },
+      "faction": {
+        "name": "Faction",
+        "plural": "Factions",
+        "fields": {
+          "members": {
+            "label": "Members"
+          },
+          "hierarchy": {
+            "label": "Hierarchy"
+          },
+          "ideology": {
+            "label": "Ideology"
+          },
+          "allies": {
+            "label": "Allies"
+          },
+          "enemies": {
+            "label": "Enemies"
+          }
+        }
+      },
+      "event": {
+        "name": "Event",
+        "plural": "Events",
+        "fields": {
+          "date": {
+            "label": "Date",
+            "help": "In the calendar of the film’s world."
+          },
+          "place": {
+            "label": "Place"
+          },
+          "people": {
+            "label": "Characters involved"
+          },
+          "consequences": {
+            "label": "Consequences"
+          }
+        }
+      },
+      "culture": {
+        "name": "Culture",
+        "plural": "Cultures",
+        "fields": {
+          "customs": {
+            "label": "Customs"
+          },
+          "language": {
+            "label": "Language"
+          },
+          "religion": {
+            "label": "Religion"
+          },
+          "appearance": {
+            "label": "Appearance"
+          },
+          "history": {
+            "label": "History"
+          }
+        }
+      },
+      "concept": {
+        "name": "Concept",
+        "plural": "Concepts",
+        "fields": {
+          "kind": {
+            "label": "Nature"
+          },
+          "description": {
+            "label": "Description"
+          }
+        }
+      },
+      "creature": {
+        "name": "Creature",
+        "plural": "Creatures",
+        "fields": {
+          "description": {
+            "label": "Description"
+          },
+          "behavior": {
+            "label": "Behavior"
+          },
+          "shooting_needs": {
+            "label": "Shooting needs"
+          }
+        }
+      }
+    },
+    "options": {
+      "Pays": "Country",
+      "Région": "Region",
+      "Ville": "City",
+      "Quartier": "Neighborhood",
+      "Bâtiment": "Building",
+      "Pièce": "Room",
+      "Extérieur": "Exterior",
+      "Planète": "Planet",
+      "Autre": "Other",
+      "Magie": "Magic",
+      "Technologie": "Technology",
+      "Loi physique": "Law of physics",
+      "Règle sociale": "Social rule",
+      "Glossaire": "Glossary"
+    },
+    "fieldKinds": {
+      "text": "Short text",
+      "longtext": "Long text",
+      "number": "Number",
+      "date": "Date",
+      "list": "Choice list",
+      "image": "Image",
+      "link": "Link to an entry",
+      "links": "Links to several entries"
+    },
+    "statuses": {
+      "idea": "Idea",
+      "validated": "Approved",
+      "abandoned": "Dropped"
+    },
+    "icons": {
+      "user": "Person",
+      "map-pin": "Place",
+      "package": "Object",
+      "car": "Vehicle",
+      "flag": "Flag",
+      "calendar": "Calendar",
+      "landmark": "Monument",
+      "lightbulb": "Idea",
+      "paw": "Paw",
+      "users": "Group",
+      "globe": "World",
+      "orbit": "Planet",
+      "mountain": "Mountain",
+      "leaf": "Plant",
+      "castle": "Castle",
+      "building": "Building",
+      "ship": "Ship",
+      "rocket": "Rocket",
+      "anchor": "Anchor",
+      "swords": "Fight",
+      "shield": "Shield",
+      "crown": "Crown",
+      "gem": "Jewel",
+      "key": "Key",
+      "hammer": "Tool",
+      "shirt": "Costume",
+      "wand": "Magic",
+      "sparkles": "Sparkles",
+      "zap": "Energy",
+      "atom": "Science",
+      "flask": "Laboratory",
+      "book": "Book",
+      "scroll": "Scroll",
+      "music": "Music",
+      "drama": "Theater",
+      "heart": "Heart",
+      "moon": "Moon",
+      "ghost": "Spirit",
+      "skull": "Skull",
+      "bird": "Bird",
+      "file": "Entry"
+    },
+    "detectedTitle": "Found in the screenplay: the entry is created when you open it",
+    "detected": "Detected",
+    "newEntry": "New entry",
+    "back": "Back",
+    "editType": "Edit type",
+    "sortBy": "Sort by",
+    "recent": "Recently changed",
+    "presence": "Presence in the screenplay",
+    "archived": "Archived",
+    "noArchived": "No archived entries here.",
+    "noEntryHere": "No entries here yet.",
+    "noMatch": "No entry matches.",
+    "emptyTitle": "The film’s bible",
+    "loadingScript": "The screenplay is loading…",
+    "willAppear": "The screenplay’s characters and places will show up here on their own.",
+    "noScene": "No scenes",
+    "byType": "By type",
+    "newType": "New type",
+    "newTypeHint": "Planet, spell, recipe… with its own fields",
+    "noEntryYet": "No entries yet",
+    "searchIn": "Search in {{title}}…",
+    "search": "Search entries…",
+    "searchInLabel": "Search in {{title}}",
+    "searchLabel": "Search entries",
+    "emptyText": "Characters, places, objects, vehicles, events… Everything that makes up the film’s world.",
+    "emptyLinkBefore": "In the screenplay and the documents, type",
+    "emptyLinkAfter": "to link an entry.",
+    "typeCreated": "Type created: it awaits its first entry, under “No entries yet”.",
+    "justNow": "just now",
+    "scenesShort": "{{n}} sc.",
+    "seeAll": "See all {{n}}",
+    "createFirst": "Create a first entry: {{name}}",
+    "createEntry": "Create entry",
+    "type": "Type",
+    "openEntry": "Open the entry",
+    "openEntryNamed": "Open the entry {{name}}"
+  },
+  "entry": {
+    "archivedBadge": "Archived",
+    "more": "More entry actions",
+    "unarchiveHint": "The entry comes back among the cards.",
+    "archiveHint": "Removes the entry from the cards without erasing it. To see it again: “Show archived entries” in the filter.",
+    "historyAction": "History",
+    "summary": "Short summary",
+    "content": "Content",
+    "contentLabel": "Entry content",
+    "details": "Entry details",
+    "noScene": "No scenes yet.",
+    "aliases": "Other names",
+    "aliasesHelp": "Nicknames, short forms: recognized in the screenplay like the name.",
+    "tags": "Tags",
+    "links": "Links to other entries",
+    "gallery": "Gallery",
+    "addImages": "Add images…",
+    "noHistory": "No earlier version yet: Oniric keeps one for every ten minutes of work on the entry.",
+    "restore": "Restore",
+    "save": {
+      "pending": "Changes…",
+      "saved": "Saved",
+      "error": "Not saved"
+    },
+    "copied": "The copy “{{name}}” was created.",
+    "deleteAsk": "Delete “{{name}}”?",
+    "unnamed": "Untitled",
+    "deleteText": "The entry and everything in it leave the Bible.",
+    "deleted": "The entry “{{name}}” was deleted.",
+    "label": "Entry {{name}}",
+    "seeLess": "See less",
+    "seeAllScenes": "See all {{n}} scenes",
+    "mentionedIn": "Mentioned in",
+    "removeImageAsk": "Remove this image?",
+    "removeImageText": "It leaves the entry’s gallery.",
+    "restored": "Version restored.",
+    "changeImage": "Change the image",
+    "change": "Change",
+    "removeImage": "Remove the image",
+    "removeOneImageAsk": "Remove the image?",
+    "removeOneImageText": "The entry will have no image.",
+    "deletedEntry": "(deleted entry)",
+    "addTo": "Add: {{label}}",
+    "history": "Entry history",
+    "link": "+ Link…"
+  },
+  "typeEditor": {
+    "name": "Type name",
+    "namePlaceholder": "Planet, spell, recipe…",
+    "icon": "Icon",
+    "field": "Field",
+    "nature": "Kind",
+    "precision": "Details",
+    "fieldName": "Field name",
+    "fieldNature": "Field kind",
+    "choicesPlaceholder": "choice 1, choice 2…",
+    "choices": "Choices",
+    "target": "Type of linked entries",
+    "anyType": "Any type",
+    "up": "Move up",
+    "down": "Move down",
+    "removeField": "Remove the field",
+    "addField": "Add a field",
+    "deleteAsk": "Delete this type?",
+    "deleteText": "Entries of this type are kept; their own fields stay saved but are no longer shown.",
+    "editTitle": "Edit the type “{{name}}”",
+    "delete": "Delete the type",
+    "create": "Create the type",
+    "pluralHelp": "In the plural, on its card: {{plural}}",
+    "removeFieldAsk": "Remove the field “{{name}}”?",
+    "removeFieldText": "It disappears from entries of this type once the type is saved."
+  },
+  "outline": {
+    "act": "Act {{n}}",
+    "seq": "Seq. {{n}}"
+  },
+  "story": {
+    "status": {
+      "todo": "To write",
+      "draft": "First draft",
+      "rewrite": "To rewrite",
+      "done": "Approved"
+    }
+  },
+  "stats": {
+    "groups": {
+      "action": "Action",
+      "dialogue": "Dialogue",
+      "other": "Headings and other"
+    },
+    "unspecified": "Unspecified",
+    "overview": "Overview",
+    "speakers": "Speaking characters",
+    "entries": "Bible entries",
+    "split": "Text breakdown",
+    "splitLead": "The screenplay’s words by element type.",
+    "intExt": "Interior and exterior",
+    "time": "Times of day",
+    "progress": "Scene progress",
+    "characters": "Main characters",
+    "charactersLead": "Each character’s lines and words of dialogue.",
+    "cues": "Lines",
+    "dialogueShare": "Share of dialogue",
+    "noSpeaker": "No character speaks yet.",
+    "places": "Places",
+    "length": "Length",
+    "noPlace": "No scene heading names a place.",
+    "mention": "Mention",
+    "filmShare": "Share of the film",
+    "noScene": "No scenes yet.",
+    "tiny": "< {{n}}%",
+    "percent": "{{n}}%",
+    "noStatus": "No status",
+    "validated_one": "{{n}} of {{total}} approved",
+    "validated_other": "{{n}} of {{total}} approved",
+    "part": "{{label}}: {{n}}",
+    "pagesShort": "{{n}} p.",
+    "less": "Show less",
+    "more": "Show more"
+  },
+  "structure": {
+    "shape": "Structure display",
+    "board": "Board",
+    "boardHint": "Acts, sequences and scenes on a canvas",
+    "timeline": "Timeline",
+    "timelineHint": "The scenes along the pages, with their characters"
+  },
+  "canvas": {
+    "tools": "Canvas tools",
+    "zoomOut": "Zoom out",
+    "zoomOutTitle": "Zoom out (Ctrl + wheel)",
+    "actual": "Actual size",
+    "zoomIn": "Zoom in",
+    "zoomInTitle": "Zoom in (Ctrl + wheel)",
+    "fit": "Fit all"
+  },
+  "timeline": {
+    "label": "Scene timeline",
+    "zoom": "Timeline zoom",
+    "zoomOut": "Zoom out",
+    "zoomOutTitle": "Zoom out (Ctrl + wheel)",
+    "zoomIn": "Zoom in",
+    "zoomInTitle": "Zoom in (Ctrl + wheel)",
+    "whole": "The whole story in the window",
+    "acts": "Acts",
+    "sequences": "Sequences",
+    "characters": "Characters",
+    "all": "Show all characters again",
+    "isolate": "Isolate {{name}}",
+    "noStatus": "no status"
+  },
+  "board": {
+    "noAct": "No act",
+    "sceneActions": "Scene actions",
+    "rename": "Rename",
+    "moveTo": "Move to…",
+    "moveAct": "Move…",
+    "dragScene": "Drag to move the scene",
+    "dragSequence": "Drag to move the sequence",
+    "dragAct": "Drag to move the act",
+    "theSequence": "the sequence",
+    "theAct": "the act",
+    "noSequence": "Outside any sequence",
+    "sequenceActions": "Sequence actions",
+    "actActions": "Act actions",
+    "newScene": "New scene",
+    "insertScene": "Insert a scene here",
+    "insertSequence": "Insert a sequence here",
+    "insertAct": "Insert an act here",
+    "seqMoved": "Sequence moved: the screenplay is reordered.",
+    "actMoved": "Act moved: the screenplay is reordered.",
+    "unfoldAll": "Expand all",
+    "foldAll": "Collapse all",
+    "none": "None",
+    "to": "To",
+    "position": "Position",
+    "card": "Scene card",
+    "closeCard": "Close the card",
+    "headingPlaceholder": "INT. PLACE – DAY",
+    "summary": "Summary",
+    "status": "Writing status",
+    "color": "Color",
+    "noColor": "No color",
+    "plotlines": "Plotlines",
+    "plotlinesHelp": "A, B, C… or a plotline name.",
+    "storyTime": "Moment in the story",
+    "storyTimePlaceholder": "day 3, 10 pm · 1944…",
+    "openInScript": "Open in the screenplay",
+    "deleteScene": "Delete the scene",
+    "newSequence": "New sequence",
+    "sequenceTitle": "Sequence title",
+    "renameScene": "Rename the scene",
+    "heading": "Heading",
+    "renameSequence": "Rename the sequence",
+    "renameAct": "Rename the act",
+    "newAct": "New act",
+    "actTitle": "Act title",
+    "actDefault": "Act {{n}}",
+    "sceneMoved": "Scene moved: the screenplay is reordered.",
+    "here": "Here",
+    "foldNamed": "Collapse {{name}}",
+    "unfoldNamed": "Expand {{name}}",
+    "fold": "Collapse",
+    "unfold": "Expand",
+    "removeSceneText": "The scene leaves the screenplay but stays in the bin of cut scenes (Versions view), from where it can be put back.",
+    "moveScene": "Move scene {{n}}",
+    "moveSequence": "Move sequence {{n}}",
+    "seqShort": "{{n}} seq.",
+    "moveActTitle": "Move act {{n}}",
+    "filterKinds": {
+      "character": "Character",
+      "location": "Place",
+      "plotline": "Plotline",
+      "tag": "Tag",
+      "status": "Status"
+    },
+    "highlight": "Color instead of graying out",
+    "alone": "Alone in this place",
+    "first": "First",
+    "after": "After {{name}}",
+    "move": "Move",
+    "currentPlace": "{{place}} (current)",
+    "length": "{{eighths}} of a page · p. {{page}}",
+    "colorNamed": "Color {{color}}",
+    "filter": "Filter"
+  },
+  "workshop": {
+    "models": {
+      "three-acts": {
+        "name": "Three acts",
+        "parts": {
+          "0": "Act I",
+          "1": "Act II",
+          "2": "Act III"
+        },
+        "beats": {
+          "setup": {
+            "title": "Setup",
+            "help": "The character's ordinary world, and what they lack."
+          },
+          "inciting": {
+            "title": "Inciting incident",
+            "help": "The event that upsets the balance and sets the story going."
+          },
+          "plot1": {
+            "title": "First plot point",
+            "help": "The character commits: there is no going back. End of Act I."
+          },
+          "midpoint": {
+            "title": "Midpoint",
+            "help": "A revelation or reversal that changes the nature of the quest."
+          },
+          "low": {
+            "title": "Lowest point",
+            "help": "All seems lost. End of Act II."
+          },
+          "climax": {
+            "title": "Climax",
+            "help": "The decisive confrontation."
+          },
+          "resolution": {
+            "title": "Resolution",
+            "help": "The new balance."
+          }
+        }
+      },
+      "heros-journey": {
+        "name": "The hero's journey",
+        "parts": {
+          "0": "Departure",
+          "1": "Initiation",
+          "2": "Return"
+        },
+        "beats": {
+          "ordinary": {
+            "title": "The ordinary world",
+            "help": "The hero in everyday life."
+          },
+          "call": {
+            "title": "The call to adventure",
+            "help": "A problem, a challenge, an invitation."
+          },
+          "refusal": {
+            "title": "Refusal of the call",
+            "help": "Fear, hesitation."
+          },
+          "mentor": {
+            "title": "Meeting the mentor",
+            "help": "Advice, an object, training."
+          },
+          "threshold": {
+            "title": "Crossing the threshold",
+            "help": "The hero enters the extraordinary world."
+          },
+          "tests": {
+            "title": "Tests, allies, enemies",
+            "help": "The hero learns the rules of the new world."
+          },
+          "approach": {
+            "title": "Approach to the inmost cave",
+            "help": "Preparing for the major ordeal."
+          },
+          "ordeal": {
+            "title": "The ordeal",
+            "help": "A symbolic death and rebirth."
+          },
+          "reward": {
+            "title": "The reward",
+            "help": "The hero seizes what they were looking for."
+          },
+          "road-back": {
+            "title": "The road back",
+            "help": "The consequences catch up."
+          },
+          "resurrection": {
+            "title": "The resurrection",
+            "help": "The final test, the hero transformed."
+          },
+          "elixir": {
+            "title": "Return with the elixir",
+            "help": "They bring something back to their world."
+          }
+        }
+      },
+      "save-the-cat": {
+        "name": "Blake Snyder's 15 beats",
+        "parts": {
+          "0": "Act I",
+          "1": "Act II A",
+          "2": "Act II B",
+          "3": "Act III"
+        },
+        "beats": {
+          "opening": {
+            "title": "Opening image",
+            "help": "A picture of the world and the hero before the story."
+          },
+          "theme": {
+            "title": "Theme stated",
+            "help": "Someone tells the hero what they need to learn."
+          },
+          "setup": {
+            "title": "Setup",
+            "help": "The hero, their world, what they must change."
+          },
+          "catalyst": {
+            "title": "Catalyst",
+            "help": "The event that changes everything."
+          },
+          "debate": {
+            "title": "Debate",
+            "help": "The hero hesitates."
+          },
+          "break2": {
+            "title": "Break into Act II",
+            "help": "The hero chooses to act."
+          },
+          "bstory": {
+            "title": "B story",
+            "help": "Often a love story, which carries the theme."
+          },
+          "fun": {
+            "title": "Promise of the premise",
+            "help": "What the poster promised."
+          },
+          "midpoint": {
+            "title": "Midpoint",
+            "help": "False victory or false defeat; the stakes rise."
+          },
+          "badguys": {
+            "title": "Bad guys close in",
+            "help": "Outside pressure and inner doubts."
+          },
+          "lost": {
+            "title": "All is lost",
+            "help": "The lowest point, often a death."
+          },
+          "dark": {
+            "title": "Dark night of the soul",
+            "help": "The hero hits rock bottom."
+          },
+          "break3": {
+            "title": "Break into Act III",
+            "help": "The solution, born of the A and B stories."
+          },
+          "finale": {
+            "title": "Finale",
+            "help": "The hero applies what they have learned."
+          },
+          "final-image": {
+            "title": "Final image",
+            "help": "The opposite of the opening image."
+          }
+        }
+      },
+      "eight-sequences": {
+        "name": "The 8 sequences",
+        "parts": {
+          "0": "Sequence A",
+          "1": "Sequence B",
+          "2": "Sequence C",
+          "3": "Sequence D",
+          "4": "Sequence E",
+          "5": "Sequence F",
+          "6": "Sequence G",
+          "7": "Sequence H"
+        },
+        "beats": {
+          "a": {
+            "title": "A — Setup",
+            "help": "The world, the hero, up to the inciting incident."
+          },
+          "b": {
+            "title": "B — Predicament",
+            "help": "The hero faces the problem; end of Act I."
+          },
+          "c": {
+            "title": "C — First obstacles",
+            "help": "First attempts; the easy solutions fail."
+          },
+          "d": {
+            "title": "D — Toward the midpoint",
+            "help": "Tension builds up to the central reversal."
+          },
+          "e": {
+            "title": "E — New complications",
+            "help": "The consequences of the midpoint."
+          },
+          "f": {
+            "title": "F — The worst",
+            "help": "Everything collapses; end of Act II."
+          },
+          "g": {
+            "title": "G — New tension",
+            "help": "The final battle is prepared."
+          },
+          "h": {
+            "title": "H — Resolution",
+            "help": "The climax and the resolution."
+          }
+        }
+      },
+      "four-acts": {
+        "name": "Four acts",
+        "parts": {
+          "0": "Act I",
+          "1": "Act II",
+          "2": "Act III",
+          "3": "Act IV"
+        },
+        "beats": {
+          "setup": {
+            "title": "Setup",
+            "help": "The character's world and what they lack."
+          },
+          "inciting": {
+            "title": "Inciting incident",
+            "help": "The event that sets the story going."
+          },
+          "turn1": {
+            "title": "First turning point",
+            "help": "The character commits. End of Act I."
+          },
+          "midpoint": {
+            "title": "Midpoint",
+            "help": "The reversal that changes the quest. End of Act II."
+          },
+          "turn2": {
+            "title": "Second turning point",
+            "help": "The crisis: all seems lost. End of Act III."
+          },
+          "climax": {
+            "title": "Climax",
+            "help": "The decisive confrontation."
+          },
+          "resolution": {
+            "title": "Resolution",
+            "help": "The new balance."
+          }
+        }
+      },
+      "freytag": {
+        "name": "Freytag's pyramid (five acts)",
+        "parts": {
+          "0": "Exposition",
+          "1": "Rising action",
+          "2": "Climax",
+          "3": "Falling action",
+          "4": "Denouement"
+        },
+        "beats": {
+          "exposition": {
+            "title": "Exposition",
+            "help": "The characters, the place, the starting situation."
+          },
+          "exciting": {
+            "title": "Exciting force",
+            "help": "The conflict sets in and tension starts to rise."
+          },
+          "rising": {
+            "title": "Complications",
+            "help": "Obstacles pile up, the stakes grow."
+          },
+          "climax": {
+            "title": "Climax",
+            "help": "The top of the pyramid: the moment everything turns."
+          },
+          "tragic": {
+            "title": "Reversal",
+            "help": "The consequences of the climax turn against the hero."
+          },
+          "suspense": {
+            "title": "Final suspense",
+            "help": "One last hope, or one last threat, before the end."
+          },
+          "catastrophe": {
+            "title": "Denouement",
+            "help": "Catastrophe or resolution: the conflict is settled."
+          }
+        }
+      },
+      "story-circle": {
+        "name": "Dan Harmon's story circle",
+        "parts": {
+          "0": "The known world",
+          "1": "The descent",
+          "2": "The ascent",
+          "3": "The return"
+        },
+        "beats": {
+          "you": {
+            "title": "1. A character",
+            "help": "In their comfort zone."
+          },
+          "need": {
+            "title": "2. A need",
+            "help": "They want something."
+          },
+          "go": {
+            "title": "3. They go",
+            "help": "They enter an unfamiliar situation."
+          },
+          "search": {
+            "title": "4. They search",
+            "help": "They adapt, learn the rules."
+          },
+          "find": {
+            "title": "5. They find",
+            "help": "They get what they wanted."
+          },
+          "take": {
+            "title": "6. They pay",
+            "help": "They pay a heavy price for it."
+          },
+          "return": {
+            "title": "7. They return",
+            "help": "They go back to their world."
+          },
+          "change": {
+            "title": "8. They have changed",
+            "help": "What they went through has transformed them."
+          }
+        }
+      },
+      "hauge": {
+        "name": "Michael Hauge's six stages",
+        "parts": {
+          "0": "The setup",
+          "1": "The new situation",
+          "2": "Progress",
+          "3": "Complications and higher stakes",
+          "4": "The final push",
+          "5": "The aftermath"
+        },
+        "beats": {
+          "opportunity": {
+            "title": "The opportunity",
+            "help": "What brings the hero into a new situation."
+          },
+          "change": {
+            "title": "The change of plans",
+            "help": "Desire becomes a visible, specific goal."
+          },
+          "no-return": {
+            "title": "The point of no return",
+            "help": "The hero commits fully and can no longer back out."
+          },
+          "setback": {
+            "title": "The major setback",
+            "help": "All seems lost."
+          },
+          "climax": {
+            "title": "The climax",
+            "help": "The final confrontation with the greatest obstacle."
+          },
+          "aftermath": {
+            "title": "The aftermath",
+            "help": "The hero's new life, transformed."
+          }
+        }
+      },
+      "drama-hour": {
+        "name": "One-hour drama: teaser and five acts",
+        "parts": {
+          "0": "Teaser",
+          "1": "Act I",
+          "2": "Act II",
+          "3": "Act III",
+          "4": "Act IV",
+          "5": "Act V"
+        },
+        "beats": {
+          "teaser": {
+            "title": "Teaser",
+            "help": "A hook before the titles: the episode's problem."
+          },
+          "act1": {
+            "title": "End of Act I",
+            "help": "The episode's plot is launched, before the first break."
+          },
+          "act2": {
+            "title": "End of Act II",
+            "help": "A complication that makes viewers stay through the ads."
+          },
+          "act3": {
+            "title": "End of Act III",
+            "help": "The episode's big reversal."
+          },
+          "act4": {
+            "title": "End of Act IV",
+            "help": "The worst: all seems lost."
+          },
+          "act5": {
+            "title": "Resolution",
+            "help": "The plot unravels; a door opens to the next episode."
+          }
+        }
+      },
+      "sitcom": {
+        "name": "Sitcom: cold open, two acts and tag",
+        "parts": {
+          "0": "Cold open",
+          "1": "Act I",
+          "2": "Act II",
+          "3": "Tag"
+        },
+        "beats": {
+          "cold-open": {
+            "title": "Cold open",
+            "help": "A funny scene before the titles, sometimes unrelated to the plot."
+          },
+          "problem": {
+            "title": "The problem",
+            "help": "What the hero wants or has to sort out in the episode."
+          },
+          "act-break": {
+            "title": "End of Act I",
+            "help": "Things get worse: the hero's plan backfires."
+          },
+          "resolution": {
+            "title": "The resolution",
+            "help": "Everything goes back to normal, or almost."
+          },
+          "tag": {
+            "title": "Tag",
+            "help": "One last joke after the plot, often over the end credits."
+          }
+        }
+      },
+      "free": {
+        "name": "Free structure",
+        "parts": {},
+        "beats": {}
+      }
+    },
+    "steps": {
+      "1": {
+        "title": "Preparation",
+        "intro": "The initial idea, premise, theme, genre and tone: what the film will be before you write a line of it."
+      },
+      "2": {
+        "title": "Characters",
+        "intro": "Who wants what, who stands in the way, and how each one changes over the story."
+      },
+      "3": {
+        "title": "Structure",
+        "intro": "The story's major movements and key beats, linked to the scenes."
+      },
+      "4": {
+        "title": "Preparatory documents",
+        "intro": "Synopsis, step outline, treatment and scriptment."
+      },
+      "5": {
+        "title": "Writing the script",
+        "intro": "The script itself, page after page (about one page per minute)."
+      },
+      "6": {
+        "title": "Rewriting",
+        "intro": "Freeze a version, compare, rewrite in passes. Frozen versions and comparison are already in the Versions view."
+      },
+      "7": {
+        "title": "Feedback and polish",
+        "intro": "Readers' notes and checks."
+      },
+      "8": {
+        "title": "Protection and distribution",
+        "intro": "Registrations, logline, statement of intent, pitch deck."
+      },
+      "9": {
+        "title": "Development",
+        "intro": "Rewrite requests and moving into pre-production."
+      }
+    },
+    "genres": {
+      "Drame": "Drama",
+      "Comédie": "Comedy",
+      "Thriller": "Thriller",
+      "Horreur": "Horror",
+      "Science-fiction": "Science fiction",
+      "Fantastique": "Fantasy",
+      "Romance": "Romance",
+      "Policier": "Crime",
+      "Guerre": "War",
+      "Western": "Western",
+      "Animation": "Animation",
+      "Documentaire": "Documentary",
+      "Aventure": "Adventure",
+      "Comédie musicale": "Musical"
+    },
+    "genreCodes": {
+      "Drame": [
+        "An intimate conflict that moves the audience",
+        "Characters who change deeply",
+        "Moral choices with no easy answer"
+      ],
+      "Comédie": [
+        "A character who wants something too much",
+        "Situations that escalate",
+        "A fast pace, punchlines",
+        "An ending that reconciles"
+      ],
+      "Thriller": [
+        "A clear, growing threat",
+        "A ticking clock",
+        "Twists",
+        "The audience sometimes knows more than the hero"
+      ],
+      "Horreur": [
+        "A fear that builds before it strikes",
+        "A place you cannot leave",
+        "The monster's rules, then their breaking"
+      ],
+      "Science-fiction": [
+        "A hypothesis about the world, and its consequences",
+        "Consistent rules",
+        "A human stake behind the technology"
+      ],
+      "Fantastique": [
+        "A world or supernatural element with precise rules",
+        "A price to pay for magic",
+        "Wonder or unease"
+      ],
+      "Romance": [
+        "The meeting",
+        "What keeps them apart",
+        "The moment all seems lost",
+        "Choosing each other"
+      ],
+      "Policier": [
+        "A crime at the start",
+        "The investigation and its red herrings",
+        "The clues given to the audience",
+        "The reveal"
+      ],
+      "Guerre": [
+        "The group facing death",
+        "The human cost of every victory",
+        "Brotherhood and loss"
+      ],
+      "Western": [
+        "The frontier, the missing law",
+        "The duel",
+        "A lone hero facing a community"
+      ],
+      "Animation": [
+        "A strong visual world",
+        "Characters readable in silhouette",
+        "The rhythm of the gag or the emotion"
+      ],
+      "Documentaire": [
+        "An author's point of view",
+        "A question that guides the film",
+        "Real people and their consent"
+      ],
+      "Aventure": [
+        "A journey, a distant goal",
+        "Ever harder trials",
+        "The return, transformed"
+      ],
+      "Comédie musicale": [
+        "The songs move the story forward",
+        "Characters sing when they can no longer speak",
+        "A big final number"
+      ]
+    },
+    "tones": {
+      "dark": {
+        "left": "Dark",
+        "right": "Light"
+      },
+      "real": {
+        "left": "Realistic",
+        "right": "Stylized"
+      },
+      "pace": {
+        "left": "Slow",
+        "right": "Punchy"
+      }
+    },
+    "functions": {
+      "Mentor": "Mentor",
+      "Allié": "Ally",
+      "Confident": "Confidant",
+      "Faire-valoir": "Foil",
+      "Gardien du seuil": "Threshold guardian",
+      "Messager": "Herald",
+      "Ombre": "Shadow",
+      "Amoureux": "Love interest",
+      "Rival": "Rival",
+      "Victime": "Victim",
+      "Autre": "Other"
+    },
+    "oppositions": {
+      "Personne": "Person",
+      "Groupe": "Group",
+      "Nature": "Nature",
+      "Société": "Society",
+      "Soi-même": "Self"
+    },
+    "relations": {
+      "Famille": "Family",
+      "Amour": "Love",
+      "Amitié": "Friendship",
+      "Rivalité": "Rivalry",
+      "Hiérarchie": "Hierarchy",
+      "Alliance": "Alliance",
+      "Haine": "Hatred",
+      "Autre": "Other"
+    }
+  },
+  "prep": {
+    "idea": "Initial idea",
+    "ideaHelp": "A subject, a character, a situation, a “what if…?” question. Jot down several, then keep the one that drives you.",
+    "retained": "kept",
+    "removeIdea": "Remove idea",
+    "ideaPlaceholder": "What if a woman found out that…",
+    "newIdea": "New idea",
+    "premise": "Premise",
+    "premiseHelp": "One or two sentences: who wants what, what stands in the way, and what they risk. The whole film, very short.",
+    "who": "Who",
+    "whoPlaceholder": "A shy baker",
+    "wants": "Wants what",
+    "wantsPlaceholder": "to win the Paris contest",
+    "obstacle": "What stands in the way",
+    "obstaclePlaceholder": "her father swore to disinherit her",
+    "stakes": "What's at stake",
+    "stakesPlaceholder": "she will lose her family",
+    "takePremise": "Use as premise",
+    "pitch": "Premise (pitch)",
+    "theme": "Theme",
+    "themeHelp": "What the film really means, beyond what it tells: “revenge destroys the one who seeks it”.",
+    "mainTheme": "Main theme",
+    "otherThemes": "Secondary themes",
+    "genreTone": "Genre and tone",
+    "subgenres": "Subgenres",
+    "subgenresPlaceholder": "heist film, comedy of remarriage…",
+    "codes": "Genre conventions",
+    "codesHelp": "What the audience expects from the chosen genre. Follow them, or subvert them knowingly.",
+    "reminder": "Reminder",
+    "proposeCodes": "Suggest the conventions of the chosen genres",
+    "references": "References",
+    "referencesHelp": "Films, books and works that inspire the project, and what you take from them.",
+    "work": "Work",
+    "workPlaceholder": "Title, author, year",
+    "take": "What I take from it",
+    "reference": "Reference",
+    "balanced": "Balanced",
+    "very": "Very {{pole}}",
+    "rather": "Rather {{pole}}",
+    "poles": "{{left}} or {{right}}",
+    "composed": "{{who}} wants {{wants}}, but {{obstacle}}; if they fail, {{stakes}}.",
+    "removeIdeaAsk": "Remove this idea?",
+    "genres": "Genres",
+    "removeRefNamed": "Remove “{{name}}”?",
+    "removeRef": "Remove this reference?",
+    "removeRefText": "It leaves your references, along with what you take from it."
+  },
+  "chars": {
+    "choose": "— Choose a character from the bible —",
+    "newOption": "+ New character…",
+    "protagonist": "The protagonist",
+    "protagonistHelp": "The character whose quest we follow. Their desire drives them; their need, often hidden, is what they discover along the way.",
+    "antagonistTitle": "The antagonist or opposing force",
+    "antagonistHelp": "What opposes the protagonist's desire: a person, a group, nature, society, or themselves.",
+    "oppositionKind": "Kind of opposition",
+    "antagonist": "Antagonist",
+    "oppositionText": "How it opposes",
+    "secondary": "Supporting characters",
+    "secondaryHelp": "Each has a dramatic function: the mentor guides, the ally helps, the threshold guardian tests, the shadow embodies what the hero could become…",
+    "function": "Dramatic function",
+    "addSecondary": "Add a supporting character",
+    "addSecondaryOption": "+ Add a supporting character…",
+    "relations": "Relationship map",
+    "relationsHelp": "The ties between characters: family, love, rivalry, hierarchy… A tie can apply only from a given act on, to watch relationships evolve.",
+    "needTwo": "Create at least two characters in the bible to draw their relationships.",
+    "mapLabel": "Map of relationships between characters",
+    "showRelations": "Show relationships",
+    "wholeFilm": "Across the whole film",
+    "removeRelation": "Remove relationship",
+    "first": "First character",
+    "characterOption": "Character…",
+    "linkKind": "Kind of tie",
+    "second": "Second character",
+    "precisionPlaceholder": "Detail (older brother, ex-wife…)",
+    "precision": "Detail",
+    "fromLabel": "From",
+    "fromStart": "From the start",
+    "addLink": "Add tie",
+    "new": "New character",
+    "name": "Character name",
+    "removeNamed": "Remove “{{name}}” from the supporting characters?",
+    "remove": "Remove this character from the supporting characters?",
+    "removeText": "Their entry stays in the Bible.",
+    "sheet": {
+      "desire": "Desire (what they want)",
+      "need": "Need (what they really need)",
+      "flaw": "Flaw",
+      "arc_start": "Arc: starting state",
+      "arc_end": "Arc: final state",
+      "motivations": "Motivations"
+    },
+    "openFull": "Open {{name}}'s full entry",
+    "until": "Until {{act}}",
+    "since": "from {{act}}",
+    "removeRelationAsk": "Remove the relationship?",
+    "from": "From {{act}}"
+  },
+  "structureStep": {
+    "model": "Structure model",
+    "modelHelp": "A model constrains nothing: it suggests key beats to place. Switching models loses nothing; filled beats stay on offer.",
+    "createActs": "Create these acts in the Board",
+    "real": "Actual breakdown",
+    "realHelp": "The Board's acts, in order, compared with the model's proportions, in pages and estimated minutes.",
+    "noActs": "The Board has no acts yet. Create the model's acts, then sort sequences and scenes into them.",
+    "part": "Part",
+    "modelColumn": "Model",
+    "realColumn": "Actual",
+    "gap": "large gap",
+    "beats": "Key beats",
+    "addOwn": "Add your own key beats.",
+    "beat": "Key beat",
+    "elsewhere": "Key beats from other models",
+    "elsewhereHelp": "Filled in with another model: bring them over here without retyping anything.",
+    "takeIntoOption": "Move into…",
+    "forget": "Forget this key beat",
+    "unlink": "Unlink scene",
+    "sceneToLink": "Scene to link",
+    "chooseScene": "Choose a scene…",
+    "link": "Link a scene",
+    "actsCreated": "The model's acts are in the Board.",
+    "films": "Films",
+    "series": "Series",
+    "noModel": "No model",
+    "newBeat": "New key beat",
+    "takeInto": "Move {{name}} into…",
+    "taken": "“{{from}}” moved into “{{to}}”.",
+    "forgetAsk": "Forget this key beat?",
+    "forgetText": "Its notes and links to scenes will be erased.",
+    "forgetButton": "Forget",
+    "expectedAt": "expected around p. {{page}}",
+    "realAt": "actual p. {{page}}",
+    "notes": "Notes: {{name}}"
+  },
+  "docs": {
+    "synopsisHelp": "The whole story, ending included, in one or two pages, in the present tense. It is not a sales text: everything is told.",
+    "treatmentHelp": "The film told as prose, 5 to 20 pages, in the present tense, with almost no dialogue. The step outline's sequences are its headings.",
+    "generate": "Generate from the step outline",
+    "versions": "Versions…",
+    "freeze": "Freeze a version",
+    "noVersion": "No frozen version. “Freeze a version” keeps a named copy of the document.",
+    "sequencerHelp": "The ordered list of the film's major sequences. Each sequence added here appears in the Board and, if started, in the treatment.",
+    "sequenceSummaryPlaceholder": "What happens in it…",
+    "sequenceSummary": "Sequence summary",
+    "act": "Act",
+    "deleteSequence": "Delete sequence",
+    "newSequencePlaceholder": "Title of the new sequence",
+    "addSequence": "Add sequence",
+    "continuity": "Scriptment",
+    "tabs": {
+      "synopsis": "Synopsis",
+      "sequencer": "Step outline",
+      "treatment": "Treatment",
+      "continuity": "Scriptment"
+    },
+    "sequencerEmpty": "The step outline is empty: add some sequences first.",
+    "skeleton": "Treatment skeleton",
+    "skeletonText": "The titles of the {{n}} sequences become the treatment's headings, with their summary.",
+    "append": "Add at the end",
+    "replaceText": "Replace the text",
+    "length": "{{words}} · ≈ {{pages}} (target {{min}} to {{max}})",
+    "freezeTitle": "Freeze the {{title}}",
+    "frozen": "Version “{{name}}” frozen.",
+    "restored": "Version restored. Ctrl+Z won't undo it: freeze the current version first if needed.",
+    "versionsTitle": "Document versions",
+    "removeSequenceText": "Its scenes stay in the script.",
+    "convert": "Convert to script",
+    "convertText": "{{n}} elements recognised. Ctrl+Z in the script lets you go back.",
+    "appendScript": "Add at the end of the script",
+    "replaceScript": "Replace the script",
+    "continuityHelp": "Optional. The scenes one by one with first dialogue, written freely: a heading “INT. KITCHEN – NIGHT”, a name in capitals on its own line before each line of dialogue. Once ready, the scriptment converts into a formatted script."
+  },
+  "workshopView": {
+    "steps": "Workshop steps",
+    "stepState": "Step status",
+    "tip1": "A feature film usually runs 90 to 120 pages; a short film, under 30.",
+    "tip2": "Only write what can be seen and heard. Characters' thoughts come through their actions.",
+    "tip3": "Enter a scene as late as possible and leave it as early as possible.",
+    "tip4": "Type @ or [[ to link a character, place or object from the Bible.",
+    "openScript": "Open the script",
+    "later": "This guided step arrives in version 2.0.",
+    "openVersions": "Open versions",
+    "status": {
+      "empty": "To do",
+      "started": "Started",
+      "done": "Done"
+    },
+    "help": "Help",
+    "helpHint": "The explanations under each step",
+    "writing": "The script has {{scenes}}, about {{pages}}, or {{time}} on screen.",
+    "doneOf": "of {{total}} done"
+  },
+  "fields": {
+    "previous": "Previous versions of this field",
+    "history": "History",
+    "none": "No history yet.",
+    "takeBack": "Restore",
+    "historyTitle": "Field history"
+  }
+}

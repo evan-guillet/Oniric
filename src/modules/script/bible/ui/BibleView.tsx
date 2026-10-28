@@ -16,6 +16,7 @@ import { EntryEditor } from "./EntryEditor";
 import { TypeDialog } from "./TypeEditor";
 import { iconOf } from "./typeIcons";
 import { Select } from "../../../../ui-kit/Select";
+import { plural, relativeFormat, t } from "../../../../core/i18n";
 
 /** Where one is in the Bible: the categories, or one category's entries. The open entry takes their place. */
 type View = { kind: "home" } | { kind: "type"; id: string };
@@ -65,8 +66,8 @@ function detectedEntries(texts: ReturnType<typeof sceneTexts>, entries: Entry[])
 
 function DetectedBadge() {
   return (
-    <span className="badge detected" title="Trouvé dans le scénario : la fiche se crée en l'ouvrant">
-      Détecté
+    <span className="badge detected" title={t("bible.detectedTitle")}>
+      {t("bible.detected")}
     </span>
   );
 }
@@ -249,15 +250,15 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
               <input
                 type="search"
                 className="header-search"
-                placeholder={category ? `Rechercher dans ${category.title}…` : "Rechercher une fiche…"}
+                placeholder={category ? t("bible.searchIn", { title: category.title }) : t("bible.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                aria-label={category ? `Rechercher dans ${category.title}` : "Rechercher une fiche"}
+                aria-label={category ? t("bible.searchInLabel", { title: category.title }) : t("bible.searchLabel")}
               />
             )}
             <button type="button" className="btn primary" onClick={newEntry}>
               <Plus aria-hidden="true" />
-              Nouvelle fiche
+              {t("bible.newEntry")}
             </button>
           </div>,
           headerActions,
@@ -268,7 +269,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
             <div className="bible-bar">
               <button type="button" className="btn text" onClick={close}>
                 <ArrowLeft aria-hidden="true" />
-                Retour
+                {t("bible.back")}
               </button>
             </div>
             <div className="entry-page">
@@ -298,57 +299,56 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
             <div className="bible-bar">
               <button type="button" className="btn text" onClick={() => go({ kind: "home" })}>
                 <ArrowLeft aria-hidden="true" />
-                Retour
+                {t("bible.back")}
               </button>
               <div className="bible-bar-tools">
                 {customType && (
                   <button type="button" className="btn small" onClick={() => setTypeEdit({ type: customType })}>
                     <Pencil aria-hidden="true" />
-                    Modifier le type
+                    {t("bible.editType")}
                   </button>
                 )}
                 <label className="bible-sort">
-                  <span>Trier par</span>
+                  <span>{t("bible.sortBy")}</span>
                   <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-                    <option value="name">Nom</option>
-                    <option value="recent">Modifiées récemment</option>
-                    <option value="presence">Présence dans le scénario</option>
+                    <option value="name">{t("settings.profile.name")}</option>
+                    <option value="recent">{t("bible.recent")}</option>
+                    <option value="presence">{t("bible.presence")}</option>
                   </Select>
                 </label>
                 {(archivedHere > 0 || archived) && (
                   <button type="button" className={archived ? "btn small on" : "btn small"} aria-pressed={archived} onClick={() => setArchived(!archived)}>
                     <Archive aria-hidden="true" />
-                    Archivées
+                    {t("bible.archived")}
                     <span className="btn-count">{archivedHere}</span>
                   </button>
                 )}
               </div>
             </div>
             <EntryCards entries={visible} types={types} presence={presence} sort={sort} level={2} onOpen={(id) => void open(id)} />
-            {shown.length === 0 && <p className="entry-cards-empty muted">{archived ? "Aucune fiche archivée ici." : "Pas encore de fiche ici."}</p>}
+            {shown.length === 0 && <p className="entry-cards-empty muted">{archived ? t("bible.noArchived") : t("bible.noEntryHere")}</p>}
           </>
         )}
         {browsing && (
           // Always in the page, so that the screen reader hears the message when a search empties the cards.
           <p className="entry-cards-none muted" role="status">
-            {noMatch ? "Aucune fiche ne correspond." : ""}
+            {noMatch ? t("bible.noMatch") : ""}
           </p>
         )}
         {/* Not while the cards are still being read: an empty Bible would flash before them. */}
         {browsing && loaded?.length === 0 && detected.length === 0 && (
-          <EmptyState title="La bible du film">
+          <EmptyState title={t("bible.emptyTitle")}>
             <p className="muted">
-              Personnages, lieux, objets, véhicules, événements… Tout ce qui fait le monde du film. Dans le scénario et les documents, tapez{" "}
-              <kbd>@</kbd> ou <kbd>[[</kbd> pour lier une fiche.
+              {t("bible.emptyText")} {t("bible.emptyLinkBefore")} <kbd>@</kbd> {t("settings.or")} <kbd>[[</kbd> {t("bible.emptyLinkAfter")}
             </p>
             <p className="empty-actions">
               <button type="button" className="btn primary" onClick={newEntry}>
                 <Plus aria-hidden="true" />
-                Nouvelle fiche
+                {t("bible.newEntry")}
               </button>
             </p>
             <p className="muted small">
-              {session.editor === null ? "Le scénario se charge…" : "Les personnages et les lieux du scénario apparaîtront ici d'eux-mêmes."}
+              {session.editor === null ? t("bible.loadingScript") : t("bible.willAppear")}
             </p>
           </EmptyState>
         )}
@@ -360,7 +360,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
           types={types}
           onClose={(id) => {
             setTypeEdit(null);
-            if (id && !typeEdit.type) notify({ text: "Type créé : il attend sa première fiche, sous « Sans fiche encore »." });
+            if (id && !typeEdit.type) notify({ text: t("bible.typeCreated") });
           }}
         />
       )}
@@ -371,8 +371,8 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
 /** « 12 scènes », for the types the screenplay places: characters by their cues, locations by the headings. */
 function presenceLabel(type: string, p: Presence | undefined): string | null {
   if (type !== "character" && type !== "location") return null;
-  if (!p || p.count === 0) return "Aucune scène";
-  return p.count === 1 ? "1 scène" : `${p.count} scènes`;
+  if (!p || p.count === 0) return t("bible.noScene");
+  return plural("sceneList.count", p.count);
 }
 
 /** The entries of a type, the most present first where the screenplay counts them, else by name. */
@@ -381,7 +381,6 @@ function ranked(type: string, entries: Entry[], presence: Map<string, Presence>)
   return [...entries].sort((a, b) => (counted ? (presence.get(b.id)?.count ?? 0) - (presence.get(a.id)?.count ?? 0) : 0) || byName(a, b));
 }
 
-const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
 /** « il y a 5 minutes », « hier », « il y a 3 semaines ». */
 function since(iso: string): string {
   const steps: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -395,7 +394,7 @@ function since(iso: string): string {
   ];
   let v = (Date.parse(iso) - Date.now()) / 1000;
   for (const [unit, size] of steps) {
-    if (Math.round(Math.abs(v)) < size) return unit === "second" ? "à l'instant" : relative.format(Math.round(v), unit);
+    if (Math.round(Math.abs(v)) < size) return unit === "second" ? t("bible.justNow") : relativeFormat({ numeric: "auto" }).format(Math.round(v), unit);
     v /= size;
   }
   return "";
@@ -448,7 +447,7 @@ function CategoryCards({
       {recent.length > 0 && (
         <section className="bible-home-part" aria-labelledby="bible-recent">
           <h2 id="bible-recent" className="bible-home-label">
-            Modifiées récemment
+            {t("bible.recent")}
           </h2>
           <ul className="recent-entries">
             {recent.map((e) => {
@@ -482,7 +481,7 @@ function CategoryCards({
 
       <section className="bible-home-part" aria-labelledby="bible-types">
         <h2 id="bible-types" className="bible-home-label">
-          Par type
+          {t("bible.byType")}
         </h2>
         <ul className="type-cards">
           {full.map((c) => {
@@ -515,8 +514,8 @@ function CategoryCards({
                             <span className="type-card-entry-name">{e.name}</span>
                             {isDetected(e) && <DetectedBadge />}
                             {counted && (
-                              <span className="type-card-entry-where" title={k === 1 ? "1 scène" : `${k} scènes`}>
-                                {k} sc.
+                              <span className="type-card-entry-where" title={plural("sceneList.count", k)}>
+                                {t("bible.scenesShort", { n: k })}
                               </span>
                             )}
                           </button>
@@ -526,7 +525,7 @@ function CategoryCards({
                 </ul>
                 {n > LISTED && (
                   <button type="button" className="type-card-more" onClick={() => onOpen(c.id)}>
-                    Voir les {n}
+                    {t("bible.seeAll", { n })}
                   </button>
                 )}
               </li>
@@ -536,9 +535,9 @@ function CategoryCards({
             <button type="button" className="type-card-new" onClick={onNewType}>
               <span className="type-card-new-label">
                 <Plus aria-hidden="true" />
-                Nouveau type
+                {t("bible.newType")}
               </span>
-              <span className="type-card-new-hint">Planète, sortilège, recette… avec ses propres champs</span>
+              <span className="type-card-new-hint">{t("bible.newTypeHint")}</span>
             </button>
           </li>
         </ul>
@@ -547,14 +546,14 @@ function CategoryCards({
       {empty.length > 0 && (
         <section className="bible-home-part" aria-labelledby="bible-empty">
           <h2 id="bible-empty" className="bible-home-label">
-            Sans fiche encore
+            {t("bible.noEntryYet")}
           </h2>
           <ul className="type-pills">
           {empty.map((c) => {
             const Icon = iconOf(c.type);
             return (
               <li key={c.id}>
-                <button type="button" className="type-pill" title={`Créer une première fiche : ${c.name}`} onClick={() => onCreate(c.id)}>
+                <button type="button" className="type-pill" title={t("bible.createFirst", { name: c.name })} onClick={() => onCreate(c.id)}>
                   <Icon aria-hidden="true" />
                   {c.title}
                   <Plus className="type-pill-add" aria-hidden="true" />
@@ -658,9 +657,9 @@ function EntryCards({
             )}
             {meta && (
               <span id={`entry-meta-${e.id}`} className="entry-card-meta">
-                {where && <span className={where === "Aucune scène" ? "entry-card-where none" : "entry-card-where"}>{where}</span>}
-                {e.status === "idea" && <span className="badge st-draft">Idée</span>}
-                {e.status === "abandoned" && <span className="badge st-todo">Abandonné</span>}
+                {where && <span className={where === t("bible.noScene") ? "entry-card-where none" : "entry-card-where"}>{where}</span>}
+                {e.status === "idea" && <span className="badge st-draft">{t("bible.statuses.idea")}</span>}
+                {e.status === "abandoned" && <span className="badge st-todo">{t("bible.statuses.abandoned")}</span>}
                 {isDetected(e) && <DetectedBadge />}
               </span>
             )}
@@ -682,27 +681,27 @@ function NewEntryDialog({
   onCancel: () => void;
   onCreate: (type: string, name: string) => void;
 }) {
-  const [t, setT] = useState(type);
+  const [chosen, setChosen] = useState(type);
   const [name, setName] = useState("");
   return (
     <Dialog
-      title="Nouvelle fiche"
+      title={t("bible.newEntry")}
       onCancel={onCancel}
       actions={[
-        { label: "Annuler", onClick: onCancel },
-        { label: "Créer la fiche", primary: true, disabled: !name.trim(), onClick: () => onCreate(t, name) },
+        { label: t("common.cancel"), onClick: onCancel },
+        { label: t("bible.createEntry"), primary: true, disabled: !name.trim(), onClick: () => onCreate(chosen, name) },
       ]}
     >
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim()) onCreate(t, name);
+          if (name.trim()) onCreate(chosen, name);
         }}
       >
         <label className="field">
-          <span>Type</span>
-          <Select value={t} onChange={(e) => setT(e.target.value)}>
+          <span>{t("bible.type")}</span>
+          <Select value={chosen} onChange={(e) => setChosen(e.target.value)}>
             {types.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name}
@@ -711,7 +710,7 @@ function NewEntryDialog({
           </Select>
         </label>
         <label className="field">
-          <span>Nom</span>
+          <span>{t("settings.profile.name")}</span>
           <input name="entry-name" value={name} onChange={(e) => setName(e.target.value)} data-autofocus />
         </label>
       </form>

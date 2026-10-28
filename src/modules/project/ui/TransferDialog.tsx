@@ -7,7 +7,7 @@ import { describeError } from "../../../core/errors";
 import { Dialog } from "../../../ui-kit/Dialog";
 import { exportBible } from "../../script/bible/application/bible";
 import { availableFormats } from "../../script/screenplay/application/formatSettings";
-import { groupFormats } from "../../script/screenplay/domain/formats";
+import { formatName, groupFormats } from "../../script/screenplay/domain/formats";
 import { readTitlePage } from "../../script/screenplay/application/titlePageSettings";
 import { hasContent } from "../../script/screenplay/domain/titlePage";
 import { exportScreenplayPdf, exportScreenplayText } from "../../script/screenplay/ui/screenplayExport";
@@ -16,6 +16,7 @@ import { exportDocumentPdf } from "../../script/workshop/ui/documentExport";
 import { useProject, type TransferMode, type TransferSection } from "./projectContext";
 
 import { Select } from "../../../ui-kit/Select";
+import { t } from "../../../core/i18n";
 interface Option {
   id: string;
   label: string;
@@ -29,46 +30,46 @@ interface Section {
   options: Option[];
 }
 
-const EXPORTS: Section[] = [
+const exportSections = (): Section[] => [
   {
     id: "script",
-    label: "Scénario",
+    label: t("nav.views.script"),
     icon: FileText,
     options: [
-      { id: "pdf", label: "PDF", help: "Pour lire, imprimer et envoyer le scénario." },
-      { id: "fountain", label: "Fountain", help: "Texte brut, lisible par la plupart des logiciels d'écriture." },
-      { id: "fdx", label: "FDX", help: "Pour ouvrir le scénario dans Final Draft." },
+      { id: "pdf", label: "PDF", help: t("transfer.pdfHelp") },
+      { id: "fountain", label: "Fountain", help: t("transfer.fountainHelp") },
+      { id: "fdx", label: "FDX", help: t("transfer.fdxHelp") },
     ],
   },
   {
     id: "bible",
     label: "Bible",
     icon: BookOpen,
-    options: [{ id: "bible", label: "Bible Oniric (JSON)", help: "Toutes les fiches, leurs types et leurs liens, à reprendre dans un autre projet." }],
+    options: [{ id: "bible", label: "Bible Oniric (JSON)", help: t("transfer.bibleExportHelp") }],
   },
   {
     id: "workshop",
-    label: "Atelier",
+    label: t("nav.views.workshop"),
     icon: NotebookPen,
     options: [
-      { id: "synopsis", label: "Synopsis (PDF)", help: "Le synopsis au format A4, sous le titre du film." },
-      { id: "treatment", label: "Traitement (PDF)", help: "Le traitement au format A4, sous le titre du film." },
+      { id: "synopsis", label: t("transfer.synopsis"), help: t("transfer.synopsisHelp") },
+      { id: "treatment", label: t("transfer.treatment"), help: t("transfer.treatmentHelp") },
     ],
   },
 ];
 
-const IMPORTS: Section[] = [
+const importSections = (): Section[] => [
   {
     id: "script",
-    label: "Scénario",
+    label: t("nav.views.script"),
     icon: FileText,
-    options: [{ id: "script", label: "Fountain ou FDX", help: "Remplace le scénario actuel. Ctrl+Z permet de revenir en arrière." }],
+    options: [{ id: "script", label: t("transfer.scriptImport"), help: t("transfer.scriptImportHelp") }],
   },
   {
     id: "bible",
     label: "Bible",
     icon: BookOpen,
-    options: [{ id: "bible", label: "Bible Oniric (JSON)", help: "Ajoute les nouvelles fiches et met à jour celles qui existent déjà." }],
+    options: [{ id: "bible", label: "Bible Oniric (JSON)", help: t("transfer.bibleImportHelp") }],
   },
 ];
 
@@ -90,7 +91,7 @@ export function TransferDialog({
   onClose: () => void;
 }) {
   const api = useProject();
-  const sections = mode === "export" ? EXPORTS : IMPORTS;
+  const sections = mode === "export" ? exportSections() : importSections();
   const [at, setAt] = useState<TransferSection>(sections.find((s) => s.id === section)?.id ?? sections[0].id);
   const current = sections.find((s) => s.id === at)!;
   const [choice, setChoice] = useState<Record<string, string>>({});
@@ -104,8 +105,8 @@ export function TransferDialog({
 
   const saved = (path: string) =>
     api.notify({
-      text: `Fichier enregistré dans le dossier du projet : ${fileOf(path)}`,
-      actions: [{ label: "Afficher dans le dossier", onClick: () => void commands.reveal(path, false) }],
+      text: t("workspace.exported", { file: fileOf(path) }),
+      actions: [{ label: t("workspace.showInFolder"), onClick: () => void commands.reveal(path, false) }],
     });
 
   const run = async () => {
@@ -135,16 +136,16 @@ export function TransferDialog({
 
   return (
     <Dialog
-      title={mode === "export" ? "Exporter" : "Importer"}
+      title={mode === "export" ? t("transfer.export") : t("transfer.import")}
       className="transfer-dialog"
       onCancel={onClose}
       actions={[
-        { label: "Annuler", onClick: onClose },
-        { label: mode === "export" ? "Exporter" : "Choisir le fichier…", primary: true, onClick: go },
+        { label: t("common.cancel"), onClick: onClose },
+        { label: mode === "export" ? t("transfer.export") : t("transfer.chooseFile"), primary: true, onClick: go },
       ]}
     >
       <div className="transfer">
-        <nav className="transfer-nav" aria-label="Parties du projet">
+        <nav className="transfer-nav" aria-label={t("transfer.parts")}>
           {sections.map((s) => {
             const Icon = s.icon;
             return (
@@ -157,7 +158,7 @@ export function TransferDialog({
           })}
         </nav>
         <div className="transfer-main">
-          <div className="export-kinds" role="radiogroup" aria-label={`${current.label} : type de fichier`}>
+          <div className="export-kinds" role="radiogroup" aria-label={t("transfer.kind", { section: current.label })}>
             {current.options.map((o) => (
               <label key={o.id} className={option === o.id ? "export-kind on" : "export-kind"}>
                 <input type="radio" name="transfer-kind" checked={option === o.id} onChange={() => setChoice({ ...choice, [at]: o.id })} />
@@ -169,29 +170,29 @@ export function TransferDialog({
           {option === "pdf" && currentFormat && (
             <div className="form transfer-options">
               <label className="field">
-                <span>Mise en page</span>
+                <span>{t("transfer.layout")}</span>
                 <Select value={formatId} onChange={(e) => setFormatId(e.target.value)}>
                   {groupFormats(formats).map((g) => (
                     <optgroup key={g.label} label={g.label}>
                       {g.formats.map((x) => (
                         <option key={x.id} value={x.id}>
-                          {x.name}
-                          {x.id === currentFormat.id ? " (actuel)" : ""}
+                          {formatName(x)}
+                          {x.id === currentFormat.id ? t("transfer.current") : ""}
                         </option>
                       ))}
                     </optgroup>
                   ))}
                 </Select>
               </label>
-              {formatId !== currentFormat.id && <p className="muted small">Le scénario n'est pas modifié : seules les pages du PDF sont recalculées dans ce format.</p>}
+              {formatId !== currentFormat.id && <p className="muted small">{t("transfer.otherFormat")}</p>}
               <label className="choice">
                 <input type="checkbox" checked={withTitle && titled} disabled={!titled} onChange={(e) => setWithTitle(e.target.checked)} />
-                Avec la page de titre
-                {!titled && <span className="muted small"> (aucune page de titre)</span>}
+                {t("transfer.withTitle")}
+                {!titled && <span className="muted small"> {t("transfer.noTitlePage")}</span>}
               </label>
             </div>
           )}
-          {mode === "export" && <p className="muted small transfer-where">Les fichiers sont enregistrés dans le dossier « exports » du projet.</p>}
+          {mode === "export" && <p className="muted small transfer-where">{t("transfer.where")}</p>}
         </div>
       </div>
     </Dialog>

@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { commands } from "../../bindings";
 import { unwrap } from "../../core/db/client";
+import { t } from "../../core/i18n";
 
 const cache = new Map<string, Promise<string>>();
 
 /** Asks for an image and copies it into `medias/images/` of the project; returns its path in the project. */
 export async function pickImage(multiple = false): Promise<string[]> {
   const chosen = await open({
-    title: "Choisir une image",
+    title: t("media.choose"),
     multiple,
-    filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"] }],
+    filters: [{ name: t("media.images"), extensions: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"] }],
   });
   const files = chosen === null ? [] : Array.isArray(chosen) ? chosen : [chosen];
   const out: string[] = [];
@@ -34,7 +35,7 @@ export function MediaImage({ path, alt, className }: { path: string; alt: string
       alive = false;
     };
   }, [path]);
-  if (src === "") return <span className={`media-missing ${className ?? ""}`}>Image introuvable</span>;
+  if (src === "") return <span className={`media-missing ${className ?? ""}`}>{t("media.missing")}</span>;
   return src ? <img src={src} alt={alt} className={className} /> : <span className={`media-loading ${className ?? ""}`} />;
 }
 

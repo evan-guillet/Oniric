@@ -12,7 +12,9 @@ import { MODELS, modelById, partGaps, type ModelBeat } from "../domain/structure
 import { Help, useWorkshop } from "./fields";
 
 import { Select } from "../../../../ui-kit/Select";
+import { t } from "../../../../core/i18n";
 const pct = (x: number) => `${Math.round(x * 100)} %`;
+const pctLabel = (x: number) => t("stats.percent", { n: Math.round(x * 100) });
 
 /** Step 3: structure model, key points linked to scenes, real against expected [STR-01 to STR-04]. */
 export function StepStructure() {
@@ -22,7 +24,7 @@ export function StepStructure() {
   const story = useLive(loadStory, [...STORY_TABLES]);
   const modelId = w.get<string>("structure.model", "three-acts");
   const model = modelById(modelId);
-  if (!story) return <p className="muted">Chargement…</p>;
+  if (!story) return <p className="muted">{t("dash.loading")}</p>;
 
   const total = scenes.reduce((n, s) => n + s.eighths, 0) || 1;
   const groups = storyOutline(story, scenes.map((s) => s.id)).filter((g) => g.act);
@@ -42,13 +44,13 @@ export function StepStructure() {
       const existing = new Set(story.acts.map((a) => a.title));
       const missing = model.parts.map((p) => p.title).filter((t) => !existing.has(t));
       if (model.id === "eight-sequences") {
-        const [one, two, three] = await addActs(story, ["Acte I", "Acte II", "Acte III"].filter((t) => !existing.has(t)));
+        const [one, two, three] = await addActs(story, modelById("three-acts").parts.map((p) => p.title).filter((title) => !existing.has(title)));
         const fresh = await loadStory();
         for (const [i, p] of model.parts.entries()) await addSequence(fresh, [one, two, two, two, two, two, three, three][i] ?? null, p.title);
       } else if (missing.length) {
         await addActs(story, missing);
       }
-      notify({ text: "Les actes du modèle sont dans le Tableau." });
+      notify({ text: t("structureStep.actsCreated") });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -57,14 +59,14 @@ export function StepStructure() {
   return (
     <div className="step-body">
       <section className="step-section">
-        <h3>Modèle de structure</h3>
-        <Help>Un modèle ne contraint rien : il propose des points clés à placer. Changer de modèle ne perd rien, les points remplis restent proposés.</Help>
+        <h3>{t("structureStep.model")}</h3>
+        <Help>{t("structureStep.modelHelp")}</Help>
         <div className="input-row">
-          <Select value={model.id} onChange={(e) => w.set("structure.model", e.target.value)} aria-label="Modèle de structure">
+          <Select value={model.id} onChange={(e) => w.set("structure.model", e.target.value)} aria-label={t("structureStep.model")}>
             {[
-              { label: "Films", models: MODELS.filter((m) => m.parts.length > 0 && m.kind !== "tv") },
-              { label: "Séries", models: MODELS.filter((m) => m.kind === "tv") },
-              { label: "Sans modèle", models: MODELS.filter((m) => m.parts.length === 0) },
+              { label: t("structureStep.films"), models: MODELS.filter((m) => m.parts.length > 0 && m.kind !== "tv") },
+              { label: t("structureStep.series"), models: MODELS.filter((m) => m.kind === "tv") },
+              { label: t("structureStep.noModel"), models: MODELS.filter((m) => m.parts.length === 0) },
             ].map((g) => (
               <optgroup key={g.label} label={g.label}>
                 {g.models.map((m) => (
@@ -77,7 +79,7 @@ export function StepStructure() {
           </Select>
           {model.parts.length > 0 && (
             <button type="button" className="btn" onClick={() => void createActs()}>
-              Créer ces actes dans le Tableau
+              {t("structureStep.createActs")}
             </button>
           )}
         </div>
@@ -85,17 +87,17 @@ export function StepStructure() {
 
       {model.parts.length > 0 && (
         <section className="step-section">
-          <h3>Répartition réelle</h3>
-          <Help>Les actes du Tableau, dans l'ordre, comparés aux proportions du modèle, en pages et en minutes estimées.</Help>
+          <h3>{t("structureStep.real")}</h3>
+          <Help>{t("structureStep.realHelp")}</Help>
           {groups.length === 0 ? (
-            <p className="muted">Le Tableau n'a pas encore d'actes. Créez ceux du modèle, puis rangez-y les séquences et les scènes.</p>
+            <p className="muted">{t("structureStep.noActs")}</p>
           ) : (
             <table className="table compact gaps">
               <thead>
                 <tr>
-                  <th>Partie</th>
-                  <th>Modèle</th>
-                  <th>Réel</th>
+                  <th>{t("structureStep.part")}</th>
+                  <th>{t("structureStep.modelColumn")}</th>
+                  <th>{t("structureStep.realColumn")}</th>
                   <th />
                 </tr>
               </thead>
@@ -107,15 +109,15 @@ export function StepStructure() {
                       {groups[i]?.act && groups[i].act!.title !== g.title && <span className="muted small"> ({groups[i].act!.title})</span>}
                     </td>
                     <td>
-                      {pct(g.expected)} · {formatMinutes(g.expected * pages)}
+                      {pctLabel(g.expected)} · {formatMinutes(g.expected * pages)}
                     </td>
-                    <td>{g.actual === null ? "—" : `${pct(g.actual)} · ${formatMinutes(g.actual * pages)}`}</td>
+                    <td>{g.actual === null ? "—" : `${pctLabel(g.actual)} · ${formatMinutes(g.actual * pages)}`}</td>
                     <td>
                       <span className="bar">
                         <span className="bar-expected" style={{ width: pct(g.expected) }} />
                         {g.actual !== null && <span className="bar-actual" style={{ width: pct(g.actual) }} />}
                       </span>
-                      {g.off && <span className="badge warn">écart important</span>}
+                      {g.off && <span className="badge warn">{t("structureStep.gap")}</span>}
                     </td>
                   </tr>
                 ))}
@@ -126,8 +128,8 @@ export function StepStructure() {
       )}
 
       <section className="step-section">
-        <h3>Points clés</h3>
-        {beats.length === 0 && <p className="muted">Ajoutez vos propres points clés.</p>}
+        <h3>{t("structureStep.beats")}</h3>
+        {beats.length === 0 && <p className="muted">{t("structureStep.addOwn")}</p>}
         <ol className="beats">
           {beats.map(({ def, stored }) => (
             <BeatRow key={def.key} model={model.id} def={def} stored={stored} story={story} scenes={scenes} pages={pages} />
@@ -138,20 +140,20 @@ export function StepStructure() {
             type="button"
             className="btn small"
             onClick={async () => {
-              const t = await prompt("Nouveau point clé", "Titre");
-              if (t) await ensureBeat(story, "free", uuidv7(), t);
+              const title = await prompt(t("structureStep.newBeat"), t("script.info.title"));
+              if (title) await ensureBeat(story, "free", uuidv7(), title);
             }}
           >
             <Plus aria-hidden="true" />
-            Point clé
+            {t("structureStep.beat")}
           </button>
         )}
       </section>
 
       {elsewhere.length > 0 && (
         <section className="step-section">
-          <h3>Points clés d'autres modèles</h3>
-          <Help>Remplis avec un autre modèle : reprenez-les ici sans rien retaper.</Help>
+          <h3>{t("structureStep.elsewhere")}</h3>
+          <Help>{t("structureStep.elsewhereHelp")}</Help>
           <ul className="elsewhere">
             {elsewhere.map((b) => (
               <li key={b.id}>
@@ -161,7 +163,7 @@ export function StepStructure() {
                 </span>
                 <Select
                   value=""
-                  aria-label={`Reprendre ${b.title} dans…`}
+                  aria-label={t("structureStep.takeInto", { name: b.title })}
                   onChange={async (e) => {
                     const key = e.target.value;
                     if (!key) return;
@@ -171,13 +173,13 @@ export function StepStructure() {
                       const target = story.beats.find((x) => x.id === id);
                       await updateBeat(id, { notes: [target?.notes, b.notes].filter((s) => s?.trim()).join("\n\n") });
                       await setBeatScenes(id, [...new Set([...(target?.scenes ?? []), ...b.scenes])]);
-                      notify({ text: `« ${b.title} » repris dans « ${def?.title ?? key} ».` });
+                      notify({ text: t("structureStep.taken", { from: b.title, to: def?.title ?? key }) });
                     } catch (err) {
                       notify({ text: describeError(err), tone: "error" });
                     }
                   }}
                 >
-                  <option value="" hidden>Reprendre dans…</option>
+                  <option value="" hidden>{t("structureStep.takeIntoOption")}</option>
                   {model.beats.map((x) => (
                     <option key={x.key} value={x.key}>
                       {x.title}
@@ -187,9 +189,9 @@ export function StepStructure() {
                 <button
                   type="button"
                   className="btn ghost small"
-                  aria-label="Oublier ce point clé"
+                  aria-label={t("structureStep.forget")}
                   onClick={async () => {
-                    const c = await ask({ title: "Oublier ce point clé ?", text: <p>Ses notes et ses liens aux scènes seront effacés.</p>, cancel: "Annuler", choices: [{ label: "Oublier", value: "y", danger: true }] });
+                    const c = await ask({ title: t("structureStep.forgetAsk"), text: <p>{t("structureStep.forgetText")}</p>, cancel: t("common.cancel"), choices: [{ label: t("structureStep.forgetButton"), value: "y", danger: true }] });
                     if (c === "y") await deleteBeat(b.id);
                   }}
                 >
@@ -221,22 +223,22 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
         <strong>{def.title}</strong>
         {def.at >= 0 && (
           <span className="muted small">
-            prévu vers p. {Math.max(1, Math.round(def.at * pages))}
-            {realPage !== null && ` · réel p. ${realPage}`}
+            {t("structureStep.expectedAt", { page: Math.max(1, Math.round(def.at * pages)) })}
+            {realPage !== null && ` · ${t("structureStep.realAt", { page: realPage })}`}
           </span>
         )}
       </div>
       {def.help && <p className="muted small">{def.help}</p>}
-      <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={flush} aria-label={`Notes : ${def.title}`} />
+      <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={flush} aria-label={t("structureStep.notes", { name: def.title })} />
       <div className="tags">
         {linked.map((s) => (
           <span key={s.id} className="tag">
             <button type="button" className="link" onClick={() => openScene(s.id)}>
-              {s.index + 1}. {s.heading || "(sans en-tête)"}
+              {s.index + 1}. {s.heading || t("dash.noHeading")}
             </button>
             <button
               type="button"
-              aria-label="Délier la scène"
+              aria-label={t("structureStep.unlink")}
               onClick={() => stored && void setBeatScenes(stored.id, stored.scenes.filter((x) => x !== s.id))}
             >
               <X aria-hidden="true" />
@@ -247,7 +249,7 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
           <Select
             defaultOpen
             value=""
-            aria-label="Scène à relier"
+            aria-label={t("structureStep.sceneToLink")}
             onClose={() => setAdding(false)}
             onChange={async (e) => {
               const id = e.target.value;
@@ -263,20 +265,20 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
             }}
           >
             <option value="" hidden>
-              Choisir une scène…
+              {t("structureStep.chooseScene")}
             </option>
             {scenes
               .filter((s) => !stored?.scenes.includes(s.id))
               .map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.index + 1}. {s.heading || "(sans en-tête)"}
+                  {s.index + 1}. {s.heading || t("dash.noHeading")}
                 </option>
               ))}
           </Select>
         ) : (
           <button type="button" className="btn ghost small" onClick={() => setAdding(true)}>
             <Plus aria-hidden="true" />
-            Relier une scène
+            {t("structureStep.link")}
           </button>
         )}
       </div>

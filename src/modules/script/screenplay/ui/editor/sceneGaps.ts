@@ -1,6 +1,7 @@
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import type { Node as PMNode } from "prosemirror-model";
+import { t } from "../../../../../core/i18n";
 
 const gapsKey = new PluginKey<DecorationSet>("sceneGaps");
 
@@ -14,7 +15,8 @@ function gapWidget(afterId: string, onAdd: (afterId: string) => void): HTMLEleme
   button.className = "scene-gap-add";
   button.tabIndex = -1;
   button.innerHTML =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>Nouvelle scène</span>';
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span></span>';
+  button.lastElementChild!.textContent = t("script.newScene");
   // The editor keeps its selection until the click is done.
   button.addEventListener("mousedown", (e) => e.preventDefault());
   button.addEventListener("click", (e) => {

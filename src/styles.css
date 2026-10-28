@@ -1906,6 +1906,14 @@ input.switch:disabled {
   width: 32px;
   height: 32px;
 }
+/* Leaving the project: the arrow points out of the window, toward the edge the side bar stands on. */
+.nav-close svg {
+  transform: scaleX(-1);
+}
+.nav-icon-btn.on {
+  background: var(--control-hover);
+  color: var(--ink);
+}
 
 /* Folded: icons alone, their names in the tooltips; a line stands for each section's heading. */
 .shell-nav.rail {
@@ -4674,6 +4682,17 @@ h4 {
   font-size: 12px;
   line-height: 1.4;
   color: var(--muted);
+}
+/* A choice (the language): the chosen item is checked, the others keep its place empty so the names line up. */
+.more-icon-gap {
+  flex: none;
+  width: 16px;
+}
+.more-menu button[aria-checked="true"] {
+  color: var(--ink);
+}
+.more-menu button[aria-checked="true"] svg {
+  color: var(--accent);
 }
 .more-menu button.danger,
 .more-menu button.danger:hover,

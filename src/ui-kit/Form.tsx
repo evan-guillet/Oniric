@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { t } from "../core/i18n";
 
 /** A value saved a moment after the last keystroke, and at once when the field loses focus. */
 export function useDebounced<T>(value: T, save: (v: T) => void, delay = 600): [T, (v: T) => void, () => void] {
@@ -93,7 +94,7 @@ export function TagInput({
   value,
   onChange,
   label,
-  placeholder = "Ajouter…",
+  placeholder = t("common.addEllipsis"),
   suggestions = [],
   help,
 }: {
@@ -154,7 +155,20 @@ export function TagInput({
 }
 
 /** Toggle buttons for a multiple choice. */
-export function Chips({ options, value, onChange, label }: { options: string[]; value: string[]; onChange: (v: string[]) => void; label: string }) {
+/** `labelOf` names a stored option on screen (the stored value stays as it is). */
+export function Chips({
+  options,
+  value,
+  onChange,
+  label,
+  labelOf = (o) => o,
+}: {
+  options: string[];
+  value: string[];
+  onChange: (v: string[]) => void;
+  label: string;
+  labelOf?: (option: string) => string;
+}) {
   return (
     <fieldset className="fld wide">
       <legend className="fld-label">{label}</legend>
@@ -163,7 +177,7 @@ export function Chips({ options, value, onChange, label }: { options: string[]; 
           const on = value.includes(o);
           return (
             <button key={o} type="button" className={on ? "chip on" : "chip"} aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== o) : [...value, o])}>
-              {o}
+              {labelOf(o)}
             </button>
           );
         })}

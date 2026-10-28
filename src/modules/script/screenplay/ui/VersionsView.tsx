@@ -25,8 +25,9 @@ import {
 import { readTitlePage } from "../application/titlePageSettings";
 
 import { Select } from "../../../../ui-kit/Select";
-const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-const shortFormat = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+import { dateFormat as dates, plural, t } from "../../../../core/i18n";
+const dateFormat = { format: (d: Date) => dates({ dateStyle: "medium", timeStyle: "short" }).format(d) };
+const shortFormat = { format: (d: Date) => dates({ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(d) };
 /** A date short enough for one line: the year only when it is not this one. */
 const shortDate = (iso: string) => {
   const d = new Date(iso);
@@ -66,16 +67,11 @@ function compareVersions(base: VersionFile, head: VersionFile): Comparison {
   return { base, head, scenes };
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "");
 
-const KIND_LABEL: Record<Kind, [string, string]> = {
-  same: ["identique", "identiques"],
-  changed: ["modifiée", "modifiées"],
-  added: ["ajoutée", "ajoutées"],
-  removed: ["supprimée", "supprimées"],
-  moved: ["déplacée", "déplacées"],
-};
+/** What became of a scene: one scene, or the name of the filter over several. */
+const kindOne = (k: Kind) => t(`versions.kind.${k}`);
+const kindMany = (k: Kind) => t(`versions.kinds.${k}`);
 const KINDS: Exclude<Kind, "same">[] = ["changed", "added", "removed", "moved"];
 
 /**
@@ -119,12 +115,12 @@ export function VersionsView() {
   }, [base, head, format]);
 
   const freeze = async () => {
-    const name = await prompt("Figer la version actuelle", "Nom de la version", `V${versions.length + 1}`);
+    const name = await prompt(t("versions.freeze"), t("versions.name"), `V${versions.length + 1}`);
     if (!name) return;
     try {
       await session.flush();
       const v = await freezeVersion(await currentVersion(session, project.title, format ?? formatById(null), await readTitlePage(), name));
-      notify({ text: `Version « ${v.name} » figée dans le dossier versions du projet.` });
+      notify({ text: t("versions.frozen", { name: v.name }) });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -132,17 +128,17 @@ export function VersionsView() {
 
   const restore = async (v: VersionRow) => {
     const c = await ask({
-      title: `Revenir à « ${v.name} » ?`,
-      text: <p>Le scénario actuel est remplacé par cette version. Ctrl+Z dans le scénario permet de revenir en arrière ; pensez à figer la version actuelle avant si vous voulez la garder.</p>,
-      cancel: "Annuler",
-      choices: [{ label: "Revenir à cette version", value: "y", primary: true }],
+      title: t("versions.restoreAsk", { name: v.name }),
+      text: <p>{t("versions.restoreText")}</p>,
+      cancel: t("common.cancel"),
+      choices: [{ label: t("versions.restore"), value: "y", primary: true }],
     });
     if (c !== "y") return;
     try {
       const file = await readVersion(v.file);
       session.editor?.restoreScenes(file.scenes.map((s) => ({ id: s.id, content: s.content })));
       await session.flush();
-      notify({ text: `Scénario revenu à « ${v.name} ».` });
+      notify({ text: t("versions.restored", { name: v.name }) });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -150,29 +146,29 @@ export function VersionsView() {
 
   const remove = async (v: VersionRow) => {
     const c = await ask({
-      title: `Retirer « ${v.name} » de la liste ?`,
-      text: <p>Le fichier reste dans le dossier « versions » du projet.</p>,
-      cancel: "Annuler",
-      choices: [{ label: "Retirer", value: "y", danger: true }],
+      title: t("versions.removeAsk", { name: v.name }),
+      text: <p>{t("versions.removeText")}</p>,
+      cancel: t("common.cancel"),
+      choices: [{ label: t("script.info.remove"), value: "y", danger: true }],
     });
     if (c === "y") await deleteVersionRow(v.id);
   };
 
   const reinstateCut = (c: CutScene) =>
     void reinstate(session, c)
-      .then(() => notify({ text: `Scène « ${c.heading || "sans en-tête"} » réintégrée dans le scénario.` }))
+      .then(() => notify({ text: t("versions.reinstated", { heading: c.heading || t("versions.noHeadingBare") }) }))
       .catch((e) => notify({ text: describeError(e), tone: "error" }));
   const purgeCut = async (c: CutScene) => {
     const x = await ask({
-      title: "Supprimer définitivement ?",
-      text: <p>La scène « {c.heading || "sans en-tête"} » sera effacée du projet. Les versions figées qui la contiennent la gardent.</p>,
-      cancel: "Annuler",
-      choices: [{ label: "Supprimer définitivement", value: "y", danger: true }],
+      title: t("versions.purgeAsk"),
+      text: <p>{t("versions.purgeText", { heading: c.heading || t("versions.noHeadingBare") })}</p>,
+      cancel: t("common.cancel"),
+      choices: [{ label: t("versions.purge"), value: "y", danger: true }],
     });
     if (x === "y") await purgeScene(c.id);
   };
 
-  const label = (file: string) => (file === CURRENT ? "Version actuelle" : (versions.find((v) => v.file === file)?.name ?? file));
+  const label = (file: string) => (file === CURRENT ? t("versions.current") : (versions.find((v) => v.file === file)?.name ?? file));
   const pick = (file: string) => {
     if (file === CURRENT) {
       setHead(CURRENT);
@@ -192,15 +188,15 @@ export function VersionsView() {
           <div className="header-tools">
             <button type="button" className="btn primary" onClick={() => void freeze()}>
               <Lock aria-hidden="true" />
-              Figer la version actuelle
+              {t("versions.freeze")}
             </button>
           </div>,
           headerActions,
         )}
 
-      <aside className="vr-rail" aria-label="Fil des versions">
+      <aside className="vr-rail" aria-label={t("versions.thread")}>
         <h2 className="vr-rail-title">
-          Versions
+          {t("nav.views.versions")}
           {versions.length > 0 && <span className="count">{versions.length}</span>}
         </h2>
         <ol className="vr-thread">
@@ -210,12 +206,12 @@ export function VersionsView() {
             </span>
             <button type="button" className="vr-stop-main" aria-pressed={head === CURRENT} onClick={() => pick(CURRENT)}>
               <span className="vr-stop-title">
-                <span className="vr-stop-name">Version actuelle</span>
+                <span className="vr-stop-name">{t("versions.current")}</span>
                 <RoleTag file={CURRENT} base={base} head={head} />
               </span>
               <span className="vr-stop-meta">
-                <span className="vr-live">En cours</span>
-                {current ? ` · ${plural(current.pages, "page", "pages")} · ${plural(current.scenes.length, "scène", "scènes")}` : " · s'enregistre à chaque frappe"}
+                <span className="vr-live">{t("versions.live")}</span>
+                {current ? ` · ${plural("versions.pages", current.pages)} · ${plural("sceneList.count", current.scenes.length)}` : ` · ${t("versions.savedAsTyped")}`}
               </span>
             </button>
           </li>
@@ -226,28 +222,28 @@ export function VersionsView() {
                 <span className="vr-node" aria-hidden="true">
                   <Lock />
                 </span>
-                <button type="button" className="vr-stop-main" aria-pressed={v.file === base} onClick={() => pick(v.file)} title={`Voir ce qui a changé depuis ${v.name}`}>
+                <button type="button" className="vr-stop-main" aria-pressed={v.file === base} onClick={() => pick(v.file)} title={t("versions.seeSince", { name: v.name })}>
                   <span className="vr-stop-title">
                     <span className="vr-stop-name">{v.name}</span>
                     <RoleTag file={v.file} base={base} head={head} />
                   </span>
                   <span className="vr-stop-meta">{dateFormat.format(new Date(v.createdAt))}</span>
                   <span className="vr-stop-meta">
-                    {plural(v.pages, "page", "pages")} · {plural(v.scenes, "scène", "scènes")}
+                    {plural("versions.pages", v.pages)} · {plural("sceneList.count", v.scenes)}
                     {older && v.scenes !== older.scenes && <span className="vr-gain"> ({signed(v.scenes - older.scenes)})</span>}
                   </span>
                 </button>
                 <MoreMenu
-                  label={`Actions pour ${v.name}`}
+                  label={t("versions.actionsFor", { name: v.name })}
                   className="vr-stop-more"
                   items={[
-                    { label: "Revenir à cette version", icon: Undo2, onClick: () => void restore(v) },
+                    { label: t("versions.restore"), icon: Undo2, onClick: () => void restore(v) },
                     {
-                      label: "Copier l'empreinte",
+                      label: t("versions.copyHash"),
                       icon: Copy,
-                      onClick: () => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: "Empreinte copiée : elle prouve que le fichier n'a pas changé." })),
+                      onClick: () => void navigator.clipboard.writeText(v.sha256).then(() => notify({ text: t("versions.hashCopied") })),
                     },
-                    { label: "Retirer de la liste", icon: X, danger: true, onClick: () => void remove(v) },
+                    { label: t("versions.removeFromList"), icon: X, danger: true, onClick: () => void remove(v) },
                   ]}
                 />
               </li>
@@ -257,23 +253,23 @@ export function VersionsView() {
 
         <section className="vr-cuts" aria-labelledby="vr-cuts-title">
           <h2 id="vr-cuts-title" className="vr-rail-title">
-            Scènes coupées
+            {t("versions.cuts")}
             {cuts.length > 0 && <span className="count">{cuts.length}</span>}
           </h2>
-          {cuts.length === 0 && <p className="vr-cuts-note">Une scène supprimée du scénario attend ici avant d'être effacée.</p>}
+          {cuts.length === 0 && <p className="vr-cuts-note">{t("versions.cutsNote")}</p>}
           {cuts.length > 0 && (
             <ul className="vr-cut-list">
               {cuts.map((c) => (
                 <li key={c.id} className="vr-cut">
-                  <span className="vr-slug">{c.heading || "(sans en-tête)"}</span>
-                  <span className="vr-stop-meta" title={`Coupée le ${dateFormat.format(new Date(c.deletedAt))}`}>
+                  <span className="vr-slug">{c.heading || t("dash.noHeading")}</span>
+                  <span className="vr-stop-meta" title={t("versions.cutOn", { date: dateFormat.format(new Date(c.deletedAt)) })}>
                     {shortDate(c.deletedAt)}
                   </span>
                   <button type="button" className="btn ghost small vr-cut-back" onClick={() => reinstateCut(c)}>
                     <Undo2 aria-hidden="true" />
-                    Réintégrer
+                    {t("versions.reinstate")}
                   </button>
-                  <MoreMenu label={`Actions pour la scène coupée ${c.heading}`} items={[{ label: "Supprimer définitivement", icon: Trash2, danger: true, onClick: () => void purgeCut(c) }]} />
+                  <MoreMenu label={t("versions.cutActions", { heading: c.heading })} items={[{ label: t("versions.purge"), icon: Trash2, danger: true, onClick: () => void purgeCut(c) }]} />
                 </li>
               ))}
             </ul>
@@ -308,8 +304,8 @@ export function VersionsView() {
 /** « Référence » or « Comparée » on the two versions being compared. */
 function RoleTag({ file, base, head }: { file: string; base: string; head: string }) {
   if (base === head) return null;
-  if (file === base) return <span className="vr-role">Référence</span>;
-  if (file === head) return <span className="vr-role head">Comparée</span>;
+  if (file === base) return <span className="vr-role">{t("versions.reference")}</span>;
+  if (file === head) return <span className="vr-role head">{t("versions.compared")}</span>;
   return null;
 }
 
@@ -317,37 +313,34 @@ function RoleTag({ file, base, head }: { file: string; base: string; head: strin
 function FirstVersion() {
   return (
     <div className="vr-first">
-      <h2>Gardez une trace de chaque étape du scénario</h2>
-      <p>
-        Figer une version range une copie datée du scénario dans le dossier « versions » du projet. Rien ne la modifie ensuite : vous verrez ce qui a changé depuis, scène par
-        scène, et vous pourrez toujours y revenir.
-      </p>
-      <p className="vr-first-when">Les bons moments : avant une grande réécriture, avant d'envoyer le scénario à quelqu'un, à la fin d'un jet.</p>
-      <figure className="vr-first-sample" aria-label="Exemple de comparaison">
+      <h2>{t("versions.firstTitle")}</h2>
+      <p>{t("versions.firstText")}</p>
+      <p className="vr-first-when">{t("versions.firstWhen")}</p>
+      <figure className="vr-first-sample" aria-label={t("versions.sampleLabel")}>
         <div className="vr-file-head">
-          <span className="vr-file-num">Scè. 12</span>
-          <span className="vr-slug">INT. HANGAR — NUIT</span>
-          <span className="vr-kind changed">modifiée</span>
+          <span className="vr-file-num">{t("versions.sceneShort", { n: 12 })}</span>
+          <span className="vr-slug">{t("versions.sample.heading")}</span>
+          <span className="vr-kind changed">{t("versions.kind.changed")}</span>
         </div>
         <div className="vr-split" aria-hidden="true">
           <span className="vr-ln">1</span>
           <span className="vr-code">
-            <span className="vr-sign"> </span>Lia pousse la porte du hangar.
+            <span className="vr-sign"> </span>{t("versions.sample.line")}
           </span>
           <span className="vr-ln">1</span>
           <span className="vr-code">
-            <span className="vr-sign"> </span>Lia pousse la porte du hangar.
+            <span className="vr-sign"> </span>{t("versions.sample.line")}
           </span>
           <span className="vr-ln del">2</span>
           <span className="vr-code del">
-            <span className="vr-sign">−</span>Le vaisseau <mark>dort</mark> sous une bâche.
+            <span className="vr-sign">−</span>{t("versions.sample.start")} <mark>{t("versions.sample.old")}</mark> {t("versions.sample.end")}
           </span>
           <span className="vr-ln ins">2</span>
           <span className="vr-code ins">
-            <span className="vr-sign">+</span>Le vaisseau <mark>l'attend</mark> sous une bâche.
+            <span className="vr-sign">+</span>{t("versions.sample.start")} <mark>{t("versions.sample.new")}</mark> {t("versions.sample.end")}
           </span>
         </div>
-        <figcaption>La version figée à gauche, la version actuelle à droite.</figcaption>
+        <figcaption>{t("versions.sampleCaption")}</figcaption>
       </figure>
     </div>
   );
@@ -381,7 +374,7 @@ function Compare({
 
   const options = (
     <>
-      <option value={CURRENT}>Version actuelle</option>
+      <option value={CURRENT}>{t("versions.current")}</option>
       {versions.map((v) => (
         <option key={v.id} value={v.file}>
           {v.name}
@@ -390,21 +383,21 @@ function Compare({
     </>
   );
   const pair = (
-    <div className="vr-pair" role="group" aria-label="Versions comparées">
+    <div className="vr-pair" role="group" aria-label={t("versions.pair")}>
       <label className="vr-pick">
-        <span className="vr-pick-role">Référence</span>
+        <span className="vr-pick-role">{t("versions.reference")}</span>
         <Select value={base} onChange={(e) => onBase(e.target.value)}>
           {options}
         </Select>
       </label>
       <ArrowRight aria-hidden="true" className="vr-pair-arrow" />
       <label className="vr-pick">
-        <span className="vr-pick-role">Comparée</span>
+        <span className="vr-pick-role">{t("versions.compared")}</span>
         <Select value={head} onChange={(e) => onHead(e.target.value)}>
           {options}
         </Select>
       </label>
-      <button type="button" className="btn ghost vr-swap" aria-label="Inverser les deux versions" title="Inverser les deux versions" onClick={onSwap}>
+      <button type="button" className="btn ghost vr-swap" aria-label={t("versions.swap")} title={t("versions.swap")} onClick={onSwap}>
         <ArrowLeftRight aria-hidden="true" />
       </button>
     </div>
@@ -415,7 +408,7 @@ function Compare({
       <header className="vr-head">
         <div className="vr-head-top">
           {pair}
-          <h2>Choisissez deux versions différentes</h2>
+          <h2>{t("versions.chooseTwo")}</h2>
         </div>
       </header>
     );
@@ -425,7 +418,7 @@ function Compare({
         <header className="vr-head">
           <div className="vr-head-top">
             {pair}
-            <h2>Comparaison en cours…</h2>
+            <h2>{t("versions.comparing")}</h2>
           </div>
         </header>
         <div className="vr-loading" aria-hidden="true">
@@ -439,7 +432,7 @@ function Compare({
   const count = (k: Kind) => cmp.scenes.filter((s) => s.diff.kind === k).length;
   const changed = cmp.scenes.filter((s) => s.diff.kind !== "same");
   const totals = changed.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
-  const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || "(sans en-tête)";
+  const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || t("dash.noHeading");
   const needle = search.trim().toLocaleLowerCase("fr");
   const shown = cmp.scenes
     .filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter))
@@ -460,16 +453,16 @@ function Compare({
           {pair}
           <h2>
             {changed.length === 0
-              ? `Rien n'a changé depuis ${label(base)}`
-              : `${plural(changed.length, "scène touchée", "scènes touchées")} depuis ${label(base)}`}
+              ? t("versions.nothingSince", { name: label(base) })
+              : plural("versions.touchedSince", changed.length, { name: label(base) })}
           </h2>
         </div>
         <dl className="vr-figures">
-          <Figure label="Scènes" before={cmp.base.scenes.length} after={cmp.head.scenes.length} baseLabel={label(base)} />
-          <Figure label="Pages" before={cmp.base.pages} after={cmp.head.pages} baseLabel={label(base)} />
+          <Figure label={t("dash.scenes")} before={cmp.base.scenes.length} after={cmp.head.scenes.length} baseLabel={label(base)} />
+          <Figure label={t("dash.pages")} before={cmp.base.pages} after={cmp.head.pages} baseLabel={label(base)} />
           {changed.length > 0 && (
             <div className="vr-figure">
-              <dt>Lignes</dt>
+              <dt>{t("versions.lines")}</dt>
               <dd className="vr-figure-value">
                 <LineStat added={totals.added} removed={totals.removed} />
               </dd>
@@ -484,28 +477,28 @@ function Compare({
             <Check />
           </span>
           <p>
-            {label(head)} et {label(base)} ont exactement le même texte, scène pour scène.
+            {t("versions.same", { head: label(head), base: label(base) })}
           </p>
         </div>
       ) : (
         <>
           <div className="vr-bar">
-            <div className="segmented" role="group" aria-label="Scènes affichées">
+            <div className="segmented" role="group" aria-label={t("versions.shownScenes")}>
               <button type="button" className={filter === "changes" ? "seg on" : "seg"} aria-pressed={filter === "changes"} onClick={() => setFilter("changes")}>
-                Modifications <span className="vr-seg-n">{changed.length}</span>
+                {t("versions.changes")} <span className="vr-seg-n">{changed.length}</span>
               </button>
               {KINDS.filter((k) => count(k) > 0).map((k) => (
                 <button key={k} type="button" className={filter === k ? "seg on" : "seg"} aria-pressed={filter === k} onClick={() => setFilter(k)}>
                   <span className={`vr-dot ${k}`} aria-hidden="true" />
-                  {KIND_LABEL[k][1].replace(/^./, (c) => c.toUpperCase())} <span className="vr-seg-n">{count(k)}</span>
+                  {kindMany(k)} <span className="vr-seg-n">{count(k)}</span>
                 </button>
               ))}
               <button type="button" className={filter === "all" ? "seg on" : "seg"} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-                Tout le scénario <span className="vr-seg-n">{cmp.scenes.length}</span>
+                {t("versions.all")} <span className="vr-seg-n">{cmp.scenes.length}</span>
               </button>
             </div>
             <span className="vr-bar-end">
-              <input type="search" className="vr-search" placeholder="Chercher une scène…" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Chercher une scène" />
+              <input type="search" className="vr-search" placeholder={t("versions.search")} value={search} onChange={(e) => setSearch(e.target.value)} aria-label={t("versions.searchLabel")} />
               <button
                 type="button"
                 className="btn ghost small"
@@ -513,13 +506,13 @@ function Compare({
                 onClick={() => setClosed(allClosed ? new Set() : new Set(shown.map((s) => s.key)))}
               >
                 {allClosed ? <ChevronsUpDown aria-hidden="true" /> : <ChevronsDownUp aria-hidden="true" />}
-                {allClosed ? "Tout déplier" : "Tout replier"}
+                {allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
               </button>
             </span>
           </div>
 
           <div className="vr-files">
-            {shown.length === 0 && <p className="vr-blank">Aucune scène ne correspond à « {search.trim()} ».</p>}
+            {shown.length === 0 && <p className="vr-blank">{t("versions.noMatch", { query: search.trim() })}</p>}
             {shown.map((s) => (
               <SceneFile key={s.key} scene={s} heading={heading(s)} open={!closed.has(s.key)} onToggle={() => toggle(s.key)} baseLabel={label(base)} headLabel={label(head)} />
             ))}
@@ -540,14 +533,14 @@ function Figure({ label, before, after, baseLabel }: { label: string; before: nu
         {after}
         {delta !== 0 && <span className="vr-delta">{signed(delta)}</span>}
       </dd>
-      <dd className="vr-figure-was">{delta === 0 ? `Comme dans ${baseLabel}` : `${before} dans ${baseLabel}`}</dd>
+      <dd className="vr-figure-was">{delta === 0 ? t("versions.asIn", { name: baseLabel }) : t("versions.wasIn", { n: before, name: baseLabel })}</dd>
     </div>
   );
 }
 
 function LineStat({ added, removed }: { added: number; removed: number }) {
   return (
-    <span className="vr-linestat" title={`${plural(added, "ligne ajoutée", "lignes ajoutées")}, ${plural(removed, "ligne retirée", "lignes retirées")}`}>
+    <span className="vr-linestat" title={`${plural("versions.linesAdded", added)}, ${plural("versions.linesRemoved", removed)}`}>
       <span className={added ? "vr-plus" : "vr-none"}>+{added}</span>
       <span className={removed ? "vr-minus" : "vr-none"}>−{removed}</span>
     </span>
@@ -578,14 +571,14 @@ function SceneFile({
       <header className="vr-file-head">
         <button type="button" className="vr-file-toggle" aria-expanded={open} onClick={onToggle}>
           <ChevronDown aria-hidden="true" />
-          <span className="vr-file-num">Scè. {scene.number}</span>
+          <span className="vr-file-num">{t("versions.sceneShort", { n: scene.number })}</span>
           <span className="vr-slug">{heading}</span>
         </button>
-        <span className={`vr-kind ${kind}`}>{KIND_LABEL[kind][0]}</span>
+        <span className={`vr-kind ${kind}`}>{kindOne(kind)}</span>
         <span className="vr-file-end">{(scene.added > 0 || scene.removed > 0) && <LineStat added={scene.added} removed={scene.removed} />}</span>
       </header>
       {open && (
-        <div className="vr-split" role="table" aria-label={`${baseLabel} à gauche, ${headLabel} à droite`}>
+        <div className="vr-split" role="table" aria-label={t("versions.sides", { base: baseLabel, head: headLabel })}>
           <div className="vr-row vr-sides" role="row">
             <span className="vr-side-name" role="columnheader">
               {baseLabel}
@@ -594,12 +587,12 @@ function SceneFile({
               {headLabel}
             </span>
           </div>
-          {kind === "moved" && <div className="vr-split-note">La scène a changé de place ; son texte est identique.</div>}
+          {kind === "moved" && <div className="vr-split-note">{t("versions.moved")}</div>}
           {hunks.map((h, i) =>
             h.kind === "fold" && !unfolded.has(i) ? (
               <button key={i} type="button" className="vr-fold" onClick={() => setUnfolded(new Set(unfolded).add(i))}>
                 <UnfoldVertical aria-hidden="true" />
-                Afficher {plural(h.lines.length, "ligne identique", "lignes identiques")}
+                {plural("versions.showSame", h.lines.length)}
               </button>
             ) : (
               <Fragment key={i}>

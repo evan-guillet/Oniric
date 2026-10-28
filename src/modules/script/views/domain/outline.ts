@@ -1,3 +1,4 @@
+import { t } from "../../../../core/i18n";
 /**
  * Acts, sequences and scenes of the story [VUE-03]. The order of the screenplay is the only order of the scenes:
  * a scene without a sequence belongs to the sequence of the scene before it, so that a scene typed in the editor
@@ -124,14 +125,15 @@ export function letters(n: number): string {
   return out;
 }
 
-// A number typed by hand at the head of a title (« Acte I : », « Act. II – », « II. », « Séquence B – », « C. ») gives way to the automatic one.
-const ACT_NUMBER = /^\s*(?:(?:[Aa]cte|[Aa]ct\.)\s*(?:[IVXLCDM]+|\d+)\b\s*[.:–—-]?\s*|(?:[IVXLCDM]+|\d+)\s*[.:)]\s+)/;
-const SEQ_NUMBER = /^\s*(?:(?:[Ss][ée]quence|[Ss][ée]q\.)\s*(?:[A-Z]{1,2}|\d+)\b\s*[.:–—-]?\s*|[A-Z]{1,2}\s*[.:)]\s+)/;
+// A number typed by hand at the head of a title (« Acte I : », « Act. II – », « Acto III », « II. », « Séquence B – »,
+// « Secuencia C », « C. »), in any of the interface's languages, gives way to the automatic one.
+const ACT_NUMBER = /^\s*(?:(?:[Aa]ct(?:e|o|\.)?)\s*(?:[IVXLCDM]+|\d+)\b\s*[.:–—-]?\s*|(?:[IVXLCDM]+|\d+)\s*[.:)]\s+)/;
+const SEQ_NUMBER = /^\s*(?:(?:[Ss][ée]quence|[Ss]ecuencia|[Ss][ée]q\.|[Ss]ec\.)\s*(?:[A-Z]{1,2}|\d+)\b\s*[.:–—-]?\s*|[A-Z]{1,2}\s*[.:)]\s+)/;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The label of scene `n` (counted from 1): « Scè. 12 ». */
-export const sceneLabel = (n: number) => `Scè. ${n}`;
+export const sceneLabel = (n: number) => t("versions.sceneShort", { n });
 
 /** An act or sequence's automatic number (« Act. I », « Séq. A ») and its title without any number typed by hand. */
 export type Numbered = { num: string; title: string };
@@ -145,8 +147,8 @@ export function numberedParts(groups: ActGroup[]): Map<string, Numbered> {
   let act = 0;
   let seq = 0;
   for (const g of groups) {
-    if (g.act) out.set(g.act.id, { num: `Act. ${roman(++act)}`, title: capitalize(g.act.title.replace(ACT_NUMBER, "").trim()) });
-    for (const s of g.sequences) if (s.sequence) out.set(s.sequence.id, { num: `Séq. ${letters(++seq)}`, title: capitalize(s.sequence.title.replace(SEQ_NUMBER, "").trim()) });
+    if (g.act) out.set(g.act.id, { num: t("outline.act", { n: roman(++act) }), title: capitalize(g.act.title.replace(ACT_NUMBER, "").trim()) });
+    for (const s of g.sequences) if (s.sequence) out.set(s.sequence.id, { num: t("outline.seq", { n: letters(++seq) }), title: capitalize(s.sequence.title.replace(SEQ_NUMBER, "").trim()) });
   }
   return out;
 }

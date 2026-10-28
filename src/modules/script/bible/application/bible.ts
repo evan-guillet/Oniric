@@ -5,6 +5,7 @@ import type { EntryStatus } from "../../../../core/db/schema";
 import { uuidv7 } from "../../../../core/ids";
 import type { WikiSource, WikiTarget } from "../ui/wikiPlugin";
 import { BUILTIN_TYPES, fold, pluralize, type EntryType, type FieldDef } from "../domain/types";
+import { t } from "../../../../core/i18n";
 
 export interface Entry {
   id: string;
@@ -95,7 +96,7 @@ export async function createEntry(type: string, name: string, extra: Partial<Ent
     db.insertInto("bible_entry").values({
       id,
       type,
-      name: name.trim() || "Sans nom",
+      name: name.trim() || t("entry.unnamed"),
       summary: extra.summary ?? "",
       fields: JSON.stringify(extra.fields ?? {}),
       aliases: JSON.stringify(extra.aliases ?? []),
@@ -125,7 +126,7 @@ export async function saveEntry(entry: Entry, previous: Entry | null): Promise<v
       .updateTable("bible_entry")
       .set({
         type: entry.type,
-        name: entry.name.trim() || "Sans nom",
+        name: entry.name.trim() || t("entry.unnamed"),
         aliases: JSON.stringify(entry.aliases),
         summary: entry.summary,
         content: entry.content,
@@ -171,8 +172,9 @@ export async function entryVersions(id: string): Promise<{ id: string; createdAt
 }
 
 export async function duplicateEntry(e: Entry): Promise<string> {
-  const id = await createEntry(e.type, `${e.name} (copie)`);
-  await saveEntry({ ...e, id, name: `${e.name} (copie)` }, null);
+  const name = t("settings.copyName", { name: e.name });
+  const id = await createEntry(e.type, name);
+  await saveEntry({ ...e, id, name }, null);
   return id;
 }
 

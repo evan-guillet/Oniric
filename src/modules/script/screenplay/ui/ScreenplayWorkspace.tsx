@@ -10,6 +10,7 @@ import {
   Plus,
   RotateCcw,
   StickyNote,
+  type LucideIcon,
   Trash2,
   X,
 } from "lucide-react";
@@ -68,6 +69,7 @@ import { useScenes } from "../application/scriptSession";
 import { exportScreenplayPdf } from "./screenplayExport";
 
 import { Select } from "../../../../ui-kit/Select";
+import { t } from "../../../../core/i18n";
 /**
  * How the writing shows on screen, on a white desk: each scene framed in a card or not, the bible links coloured and
  * clickable or not, the act and sequence pinned beside the text or not. The pagination, exports and printing stay
@@ -122,12 +124,14 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
  */
 type Panel = "scenes" | "notes" | "info";
 /** The panel's tabs: one is always chosen, and pressing it again keeps it. */
-const PANEL_TABS: SegmentedOption<Panel>[] = [
-  { id: "scenes", label: "Scènes", hint: "Les actes, les séquences et les scènes, dans l'ordre du script", icon: ListTree },
-  { id: "notes", label: "Notes", hint: "Les notes à la place des scènes", icon: StickyNote },
-  { id: "info", label: "Informations", hint: "Titre, auteurs, contact, mention : ce qu'imprime la page de titre", icon: FileText },
-];
-const PANELS: Record<Panel, string> = { scenes: "Scènes", notes: "Notes", info: "Informations" };
+const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText };
+const panelTabs = (): SegmentedOption<Panel>[] =>
+  (["scenes", "notes", "info"] as const).map((id) => ({
+    id,
+    label: t(`script.panels.${id}`),
+    hint: t(`script.panels.${id}Hint`),
+    icon: PANEL_ICONS[id],
+  }));
 
 function sameRows(a: SceneRow[], b: SceneRow[]) {
   return (
@@ -427,24 +431,23 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     const request =
       target.kind === "scene"
         ? {
-            title: "Supprimer la scène ?",
+            title: t("script.removeScene"),
             text: (
               <p>
-                {name(`Scène ${target.index + 1}`, rowsRef.current[target.index]?.heading ?? "")}. Elle quitte le scénario mais reste dans la
-                corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.
+                {name(t("palette.scene", { n: target.index + 1 }), rowsRef.current[target.index]?.heading ?? "")}. {t("script.removeSceneText")}
               </p>
             ),
           }
         : target.kind === "act"
           ? {
-              title: "Supprimer l'acte ?",
-              text: <p>{name(target.part.num, target.part.title)}. Ses séquences et ses scènes sont conservées, sans acte.</p>,
+              title: t("script.removeAct"),
+              text: <p>{name(target.part.num, target.part.title)}. {t("script.removeActText")}</p>,
             }
           : {
-              title: "Supprimer la séquence ?",
-              text: <p>{name(target.part.num, target.part.title)}. Ses scènes restent dans le scénario et rejoignent la séquence précédente.</p>,
+              title: t("script.removeSequence"),
+              text: <p>{name(target.part.num, target.part.title)}. {t("script.removeSequenceText")}</p>,
             };
-    const c = await ask({ ...request, cancel: "Annuler", choices: [{ label: "Supprimer", value: "y", danger: true }] });
+    const c = await ask({ ...request, cancel: t("common.cancel"), choices: [{ label: t("common.delete"), value: "y", danger: true }] });
     if (c !== "y") return;
     try {
       if (target.kind === "scene") {
@@ -547,7 +550,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       {display.cards && story && <style>{cardCss}</style>}
       {choice}
       <div className="workspace">
-        <aside className="sidebar" aria-label={PANELS[panel]}>
+        <aside className="sidebar" aria-label={t(`script.panels.${panel}`)}>
           {panel === "scenes" && (
             <SceneList
               scenes={rows}
@@ -608,7 +611,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                     {pin.sequence.title && <span className="story-pin-title">{pin.sequence.title}</span>}
                     <span className="story-pin-steps">
                       <span className="story-pin-count">
-                        Scène {pin.at + 1} sur {pin.count}
+                        {t("script.pinCount", { n: pin.at + 1, total: pin.count })}
                       </span>
                       {pin.count <= 16 && pin.count > 1 && (
                         <span className="story-pin-dots">
@@ -669,26 +672,26 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         createPortal(
           <div className="header-tools">
             <CheckMenu
-              label="Affichage"
+              label={t("script.display")}
               icon={Eye}
               disabled={body !== "editor"}
               items={[
                 {
                   id: "cards",
-                  label: "Cartes de scène",
-                  hint: "Chaque scène dans sa carte, à la couleur du Tableau",
+                  label: t("script.cards"),
+                  hint: t("script.cardsHint"),
                   checked: display.cards,
                 },
                 {
                   id: "links",
-                  label: "Liens de la Bible",
-                  hint: "Les éléments de la Bible en couleur, leur fiche au survol",
+                  label: t("script.links"),
+                  hint: t("script.linksHint"),
                   checked: display.links,
                 },
                 {
                   id: "pin",
-                  label: "Acte et séquence",
-                  hint: "Le repère à gauche du texte, qui suit la scène en haut du bureau",
+                  label: t("script.pin"),
+                  hint: t("script.pinHint"),
                   checked: display.pin,
                 },
               ]}
@@ -698,16 +701,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               type="button"
               className={preview ? "btn on" : "btn"}
               aria-pressed={preview}
-              title="Le script entier tel qu'il s'imprime (Échap pour revenir)"
+              title={t("script.previewTitle")}
               onClick={togglePreview}
             >
               <BookOpen aria-hidden="true" />
-              <span>Aperçu</span>
+              <span>{t("script.preview")}</span>
             </button>
             <span className="bar-sep" aria-hidden="true" />
             <Segmented
-              label="Panneau"
-              options={PANEL_TABS}
+              label={t("script.panel")}
+              options={panelTabs()}
               value={panel}
               onChange={showPanel}
               compact
@@ -730,12 +733,12 @@ interface TitleDraft {
 
 /** The script's information, in the side panel: what the title page prints, seen with « Aperçu ». */
 /** The contact fields of the panel, in the order they print, with what they hold when the profile leaves them empty. */
-const CONTACT_FIELDS: { key: ContactKey; label: string; placeholder: string; type?: string; rows?: number }[] = [
-  { key: "name", label: "Nom", placeholder: "Prénom Nom" },
-  { key: "address", label: "Adresse", placeholder: "Rue, code postal, ville", rows: 2 },
-  { key: "phone", label: "Téléphone", placeholder: "06 12 34 56 78", type: "tel" },
-  { key: "email", label: "E-mail", placeholder: "nom@exemple.fr", type: "email" },
-  { key: "agent", label: "Agent", placeholder: "Agence, nom, téléphone", rows: 2 },
+const CONTACT_FIELDS: { key: ContactKey; type?: string; rows?: number }[] = [
+  { key: "name" },
+  { key: "address", rows: 2 },
+  { key: "phone", type: "tel" },
+  { key: "email", type: "email" },
+  { key: "agent", rows: 2 },
 ];
 
 function TitlePagePanel({
@@ -783,17 +786,17 @@ function TitlePagePanel({
   const custom = page.mention === "custom";
   return (
     <div className="side-form form">
-      {field("title", "Titre")}
-      {field("subtitle", "Sous-titre", 1, "Un genre, une accroche, un épisode…")}
+      {field("title", t("script.info.title"))}
+      {field("subtitle", t("script.info.subtitle"), 1, t("script.info.subtitlePlaceholder"))}
       <fieldset className="field">
-        <legend>Écrit par</legend>
+        <legend>{t("settings.writtenBy")}</legend>
         <div className="name-list">
           {names.map((n, i) => (
             <div key={i} className="name-row">
               <input
                 value={n}
-                aria-label={`Auteur ${i + 1}`}
-                placeholder="Prénom Nom"
+                aria-label={t("script.info.author", { n: i + 1 })}
+                placeholder={t("script.contact.namePlaceholder")}
                 autoFocus={i === added}
                 onChange={(e) => setNames(names.map((m, j) => (j === i ? e.target.value : m)))}
               />
@@ -801,10 +804,10 @@ function TitlePagePanel({
                 <button
                   type="button"
                   className="btn ghost small icon-only"
-                  aria-label={`Retirer ${n.trim() || `l'auteur ${i + 1}`}`}
-                  title="Retirer"
+                  aria-label={n.trim() ? t("script.info.removeName", { name: n.trim() }) : t("script.info.removeAuthor", { n: i + 1 })}
+                  title={t("script.info.remove")}
                   onClick={async () => {
-                    if (n.trim() && !(await confirmRemoval(ask, { title: `Retirer « ${n.trim()} » des auteurs ?`, text: "Son nom quitte la page de titre.", label: "Retirer" }))) return;
+                    if (n.trim() && !(await confirmRemoval(ask, { title: t("script.info.removeAsk", { name: n.trim() }), text: t("script.info.removeText"), label: t("script.info.remove") }))) return;
                     setNames(names.filter((_m, j) => j !== i));
                   }}
                 >
@@ -823,16 +826,16 @@ function TitlePagePanel({
           }}
         >
           <Plus aria-hidden="true" />
-          Plus
+          {t("script.info.more")}
         </button>
       </fieldset>
-      {field("basedOn", "D'après", 1, "D'après le roman de…")}
+      {field("basedOn", t("script.info.basedOn"), 1, t("script.info.basedOnPlaceholder"))}
       <fieldset className="field contact-fields">
-        <legend>Contact</legend>
+        <legend>{t("script.info.contact")}</legend>
         <p className="contact-from">
-          <span>Repris de votre profil ; un champ changé ici ne vaut que pour ce script.</span>
+          <span>{t("script.info.fromProfile")}</span>
           <button type="button" className="btn small text" onClick={() => openSettings("profile")}>
-            Modifier le profil
+            {t("script.info.editProfile")}
           </button>
         </p>
         {CONTACT_FIELDS.map((f) => {
@@ -841,55 +844,55 @@ function TitlePagePanel({
           return (
             <div key={f.key} className="contact-field">
               <div className="contact-field-head">
-                <label htmlFor={id}>{f.label}</label>
+                <label htmlFor={id}>{t(`script.contact.${f.key}`)}</label>
                 {own(f.key) && (
                   <button
                     type="button"
                     className="btn small text contact-reset"
-                    title={profile?.[f.key].trim() ? `Reprendre « ${profile[f.key].trim().split("\n")[0]} »` : "Reprendre le profil, vide pour ce champ"}
+                    title={profile?.[f.key].trim() ? t("script.info.takeBack", { value: profile[f.key].trim().split("\n")[0] }) : t("script.info.takeBackEmpty")}
                     onClick={() => setContact(f.key, profile?.[f.key] ?? "")}
                   >
                     <RotateCcw aria-hidden="true" />
-                    Reprendre le profil
+                    {t("script.info.takeBackButton")}
                   </button>
                 )}
               </div>
               {f.rows ? (
-                <textarea id={id} rows={f.rows} value={value} placeholder={f.placeholder} onChange={(e) => setContact(f.key, e.target.value)} />
+                <textarea id={id} rows={f.rows} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} onChange={(e) => setContact(f.key, e.target.value)} />
               ) : (
-                <input id={id} type={f.type ?? "text"} value={value} placeholder={f.placeholder} spellCheck={false} onChange={(e) => setContact(f.key, e.target.value)} />
+                <input id={id} type={f.type ?? "text"} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} spellCheck={false} onChange={(e) => setContact(f.key, e.target.value)} />
               )}
             </div>
           );
         })}
         <div className="contact-field">
-          <label htmlFor="title-contact-more">Autres lignes</label>
+          <label htmlFor="title-contact-more">{t("script.info.otherLines")}</label>
           <textarea
             id="title-contact-more"
             rows={2}
             value={page.contact}
-            placeholder="Production, site, dépôt…"
+            placeholder={t("script.info.otherLinesPlaceholder")}
             onChange={(e) => set({ contact: e.target.value })}
           />
         </div>
       </fieldset>
       <label className="field">
-        <span>Mentions</span>
+        <span>{t("script.info.mentions")}</span>
         <Select value={page.mention} onChange={(e) => set({ mention: e.target.value as MentionId })}>
           {MENTIONS.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.label}
+              {t(`titlePage.mentions.${m.id}`)}
             </option>
           ))}
         </Select>
       </label>
       {custom && (
         <label className="field">
-          <span>Votre mention</span>
+          <span>{t("script.info.yourMention")}</span>
           <textarea
             rows={3}
             value={page.notes}
-            placeholder="Dépôt, droits, diffusion…"
+            placeholder={t("script.info.yourMentionPlaceholder")}
             autoFocus={!page.notes}
             onChange={(e) => set({ notes: e.target.value })}
           />
@@ -953,7 +956,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
     const range = editor?.selectionRange();
     if (!editor || !range) {
       notify({
-        text: "Placez le curseur dans le scénario, ou sélectionnez le passage à annoter.",
+        text: t("script.notes.placeCursor"),
         tone: "warning",
       });
       return;
@@ -1012,40 +1015,40 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
             disabled={!span}
             onClick={() => span && editor?.reveal(span.from, span.to)}
             title={
-              span ? "Afficher le passage" : "Le passage a été supprimé"
+              span ? t("script.notes.show") : t("script.notes.gone")
             }
           >
-            « {span?.text ?? n.quote} »
+            {t("dash.quote", { quote: span?.text ?? n.quote })}
             {!span && (
-              <span className="badge warn">passage supprimé</span>
+              <span className="badge warn">{t("script.notes.goneBadge")}</span>
             )}
           </button>
           <MoreMenu
-            label="Actions sur la note"
+            label={t("script.notes.actions")}
             items={[
               {
-                label: "Modifier",
+                label: t("script.notes.edit"),
                 icon: Pencil,
                 onClick: () => setEditing(n.id),
               },
               n.resolved
                 ? {
-                    label: "Désarchiver",
+                    label: t("script.notes.unarchive"),
                     icon: ArchiveRestore,
                     onClick: () => void update(n.id, { resolved: 0 }),
                   }
                 : {
-                    label: "Archiver",
+                    label: t("script.notes.archive"),
                     icon: Archive,
-                    hint: "Range la note sous la liste, dans « Archivées », sans l'effacer.",
+                    hint: t("script.notes.archiveHint"),
                     onClick: () => void update(n.id, { resolved: 1 }),
                   },
               {
-                label: "Supprimer",
+                label: t("script.notes.delete"),
                 icon: Trash2,
                 danger: true,
                 onClick: async () => {
-                  if (!(await confirmRemoval(ask, { title: "Supprimer la note ?", text: "Elle quitte le scénario et la liste des notes." }))) return;
+                  if (!(await confirmRemoval(ask, { title: t("script.notes.deleteAsk"), text: t("script.notes.deleteText") }))) return;
                   editor?.removeMarkById("note", n.id);
                   void update(n.id, { deleted_at: nowIso() });
                 },
@@ -1064,7 +1067,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
         ) : n.body.trim() ? (
           <p className="note-body">{n.body}</p>
         ) : (
-          <p className="note-body muted">Note vide</p>
+          <p className="note-body muted">{t("script.notes.empty")}</p>
         )}
       </li>
     );
@@ -1078,9 +1081,9 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
           <button type="button" className="note-new" onClick={() => void add()}>
             <span className="note-new-label">
               <Plus aria-hidden="true" />
-              Créer une note
+              {t("script.notes.create")}
             </span>
-            <span className="note-new-hint">Sur le passage sélectionné, ou la ligne du curseur</span>
+            <span className="note-new-hint">{t("script.notes.createHint")}</span>
           </button>
         </li>
         {open.map(card)}
@@ -1090,7 +1093,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
         <section className="notes-archived">
           <button type="button" className="notes-archived-toggle" aria-expanded={archives} onClick={() => setArchives(!archives)}>
             <ChevronRight className="notes-archived-chevron" aria-hidden="true" />
-            Archivées
+            {t("script.notes.archived")}
             <span className="notes-archived-count">{archived.length}</span>
           </button>
           {archives && <ul className="notes">{archived.map(card)}</ul>}
@@ -1120,8 +1123,8 @@ function NoteBody({
     <textarea
       rows={3}
       value={v}
-      aria-label="Note"
-      placeholder="Votre note…"
+      aria-label={t("script.notes.note")}
+      placeholder={t("script.notes.placeholder")}
       autoFocus
       onFocus={(e) => e.currentTarget.setSelectionRange(v.length, v.length)}
       onChange={(e) => setV(e.target.value)}

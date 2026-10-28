@@ -30,6 +30,7 @@ import {
   LayoutDashboard,
   LayoutPanelTop,
   ListChecks,
+  Languages,
   LogOut,
   MapPin,
   Monitor,
@@ -48,6 +49,7 @@ import { commands, events, type OpenState } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { describeCoreError, describeError } from "../../../core/errors";
+import { dateFormat, getLanguage, LANGUAGES, setLanguage, t } from "../../../core/i18n";
 import {
   getThemePreference,
   onThemePreference,
@@ -56,6 +58,7 @@ import {
 } from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
 import { Dialog, type ChoiceRequest } from "../../../ui-kit/Dialog";
+import { FloatingMenu } from "../../../ui-kit/MoreMenu";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import {
   bibleIndex,
@@ -115,67 +118,59 @@ interface NavItem {
   keywords?: string;
 }
 
+/** A view of the side bar; its name and keywords are read in the language of the moment. */
+function navItem(id: ViewId, icon: LucideIcon, later?: string): NavItem {
+  return {
+    id,
+    icon,
+    later,
+    get label() {
+      return t(`nav.views.${id}`);
+    },
+    get keywords() {
+      return t(`nav.keywords.${id}`, { defaultValue: "" }) || undefined;
+    },
+  };
+}
+
 /** The first page of a project, above the parts. */
-const DASHBOARD: NavItem = { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard, keywords: "accueil aperçu reprendre avancement" };
+const DASHBOARD = navItem("dashboard", LayoutDashboard);
+
+function navPart(part: string, items: NavItem[]) {
+  return {
+    part,
+    items,
+    get label() {
+      return t(`nav.parts.${part}`);
+    },
+  };
+}
 
 export const NAV: { part: string; label: string; items: NavItem[] }[] = [
-  {
-    part: "script",
-    label: "Script",
-    items: [
-      { id: "workshop", label: "Atelier", icon: NotebookPen },
-      { id: "bible", label: "Bible", icon: BookOpen },
-      { id: "script", label: "Scénario", icon: FileText },
-      { id: "structure", label: "Structure", icon: Layers, keywords: "tableau chronologie actes séquences" },
-      { id: "versions", label: "Versions", icon: History },
-      { id: "stats", label: "Statistiques", icon: ChartColumn },
-    ],
-  },
-  {
-    part: "realisation",
-    label: "Réalisation",
-    items: [
-      { id: "moodboard", label: "Moodboard", icon: Images, later: "2.0" },
-      { id: "shotlist", label: "Découpage", icon: Clapperboard, later: "2.0" },
-      {
-        id: "storyboard",
-        label: "Storyboard",
-        icon: LayoutPanelTop,
-        later: "2.0",
-      },
-    ],
-  },
-  {
-    part: "production",
-    label: "Production",
-    items: [
-      { id: "team", label: "Équipe", icon: Users, later: "2.0" },
-      {
-        id: "breakdown",
-        label: "Dépouillement",
-        icon: ListChecks,
-        later: "2.0",
-      },
-      {
-        id: "schedule",
-        label: "Plan de travail",
-        icon: CalendarDays,
-        later: "2.0",
-      },
-      {
-        id: "callsheets",
-        label: "Feuilles de service",
-        icon: ClipboardList,
-        later: "2.0",
-      },
-      { id: "budget", label: "Budget", icon: Wallet, later: "3.0" },
-      { id: "scouting", label: "Repérages", icon: MapPin, later: "3.0" },
-      { id: "permits", label: "Autorisations", icon: FileCheck2, later: "3.0" },
-    ],
-  },
+  navPart("script", [
+    navItem("workshop", NotebookPen),
+    navItem("bible", BookOpen),
+    navItem("script", FileText),
+    navItem("structure", Layers),
+    navItem("versions", History),
+    navItem("stats", ChartColumn),
+  ]),
+  navPart("realisation", [
+    navItem("moodboard", Images, "2.0"),
+    navItem("shotlist", Clapperboard, "2.0"),
+    navItem("storyboard", LayoutPanelTop, "2.0"),
+  ]),
+  navPart("production", [
+    navItem("team", Users, "2.0"),
+    navItem("breakdown", ListChecks, "2.0"),
+    navItem("schedule", CalendarDays, "2.0"),
+    navItem("callsheets", ClipboardList, "2.0"),
+    navItem("budget", Wallet, "3.0"),
+    navItem("scouting", MapPin, "3.0"),
+    navItem("permits", FileCheck2, "3.0"),
+  ]),
 ];
 
-const timeFormat = new Intl.DateTimeFormat("fr-FR", { timeStyle: "short" });
 const DAY_MS = 24 * 3600 * 1000;
 
 interface PromptRequest {
@@ -294,14 +289,14 @@ export function ProjectShell({
           await commands.exportPdf(fileName, page.width, page.height),
         );
         notify({
-          text: `Fichier enregistré dans le dossier du projet : ${path.split(/[\\/]/).slice(-2).join("\\")}`,
+          text: t("workspace.exported", { file: path.split(/[\\/]/).slice(-2).join("\\") }),
           actions: [
             {
-              label: "Ouvrir",
+              label: t("workspace.openFile"),
               onClick: () => void commands.reveal(path, true),
             },
             {
-              label: "Afficher dans le dossier",
+              label: t("workspace.showInFolder"),
               onClick: () => void commands.reveal(path, false),
             },
           ],
@@ -370,7 +365,8 @@ export function ProjectShell({
     };
   }, [view, session, project.id]);
 
-  const { t } = useTranslation();
+  // Re-renders in the language just chosen.
+  const { i18n } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -417,9 +413,9 @@ export function ProjectShell({
   const paletteItems = useMemo((): PaletteItem[] => {
     const dashboard: PaletteItem = {
       id: "view-dashboard",
-      group: "Vues",
+      group: t("palette.views"),
       label: DASHBOARD.label,
-      detail: "Projet",
+      detail: t("palette.project"),
       icon: DASHBOARD.icon,
       keywords: DASHBOARD.keywords,
       run: () => goView("dashboard"),
@@ -428,7 +424,7 @@ export function ProjectShell({
       (g) =>
         g.items.map((item) => ({
           id: `view-${item.id}`,
-          group: "Vues",
+          group: t("palette.views"),
           label: item.label,
           detail: item.later ? `${g.label} · ${item.later}` : g.label,
           icon: item.icon,
@@ -443,21 +439,24 @@ export function ProjectShell({
       icon: LucideIcon,
       run: () => void,
       keywords?: string,
-    ): PaletteItem => ({ id, group: "Actions", label, icon, run, keywords });
+    ): PaletteItem => ({ id, group: t("palette.actions"), label, icon, run, keywords });
     return [
       dashboard,
       ...views,
-      action("import", "Importer…", FileInput, () => transfer("import"), "fountain fdx fichier"),
-      action("export", "Exporter…", FileOutput, () => transfer("export"), "pdf fountain fdx fichier"),
-      { ...action("folder", "Ouvrir le dossier du projet", FolderOpen, () => void commands.reveal(project.dir, true), "explorateur disque emplacement fichiers"), detail: project.dir },
-      action("settings", "Réglages", Settings, () => setSettings("profile"), "préférences options"),
-      action("shortcuts", "Raccourcis clavier", Keyboard, () => setSettings("shortcuts"), "touches aide clavier"),
-      action("light", "Thème clair", Sun, () => void setThemePreference("light"), "apparence jour"),
-      action("dark", "Thème sombre", Moon, () => void setThemePreference("dark"), "apparence nuit"),
-      action("system", "Thème du système", Monitor, () => void setThemePreference("system"), "apparence windows"),
-      action("close", "Fermer le projet", LogOut, onClose, "quitter accueil"),
+      action("import", t("workspace.import"), FileInput, () => transfer("import"), t("palette.kw.import")),
+      action("export", t("workspace.export"), FileOutput, () => transfer("export"), t("palette.kw.export")),
+      { ...action("folder", t("shell.openFolder"), FolderOpen, () => void commands.reveal(project.dir, true), t("palette.kw.folder")), detail: project.dir },
+      action("settings", t("shell.settings"), Settings, () => setSettings("profile"), t("palette.kw.settings")),
+      action("shortcuts", t("shell.shortcuts"), Keyboard, () => setSettings("shortcuts"), t("palette.kw.shortcuts")),
+      action("light", t("palette.themeLight"), Sun, () => void setThemePreference("light"), t("palette.kw.light")),
+      action("dark", t("palette.themeDark"), Moon, () => void setThemePreference("dark"), t("palette.kw.dark")),
+      action("system", t("palette.themeSystem"), Monitor, () => void setThemePreference("system"), t("palette.kw.system")),
+      ...LANGUAGES.filter((l) => l.id !== i18n.language).map((l) =>
+        action(`language-${l.id}`, l.name, Languages, () => void setLanguage(l.id), t("palette.kw.language")),
+      ),
+      action("close", t("workspace.closeProject"), LogOut, onClose, t("palette.kw.close")),
     ];
-  }, [hiddenParts, goView, transfer, onClose, project.dir]);
+  }, [hiddenParts, goView, transfer, onClose, project.dir, i18n.language]);
 
   /** Replaces the screenplay by a Fountain or FDX file [EDT-05]. */
   const importFile = async (file: File | undefined) => {
@@ -519,7 +518,7 @@ export function ProjectShell({
       const r = await importBible(await file.text());
       setView("bible");
       notify({
-        text: `Bible importée : ${r.added} fiche(s) ajoutée(s), ${r.updated} mise(s) à jour.`,
+        text: t("shell.bibleImported", { added: r.added, updated: r.updated }),
       });
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -533,7 +532,7 @@ export function ProjectShell({
       <div className="shell">
         <nav
           className={railed ? "shell-nav rail" : "shell-nav"}
-          aria-label="Vues du projet"
+          aria-label={t("shell.views")}
         >
           <div className="shell-nav-top">
             <ProjectMenu
@@ -553,15 +552,15 @@ export function ProjectShell({
                   onClick: () => transfer("export"),
                 },
                 {
-                  label: "Ouvrir le dossier du projet",
+                  label: t("shell.openFolder"),
                   detail: project.dir,
                   icon: FolderOpen,
                   onClick: () => void commands.reveal(project.dir, true),
                 },
                 {
-                  label: "Fermer le projet",
-                  icon: LogOut,
-                  onClick: onClose,
+                  label: t("shell.settings"),
+                  icon: Settings,
+                  onClick: () => setSettings("profile"),
                   separated: true,
                 },
               ]}
@@ -570,8 +569,8 @@ export function ProjectShell({
               type="button"
               className="nav-icon-btn nav-rail-toggle"
               hidden={narrow}
-              aria-label={rail ? "Déplier le menu" : "Plier le menu"}
-              title={rail ? "Déplier le menu" : "Plier le menu"}
+              aria-label={rail ? t("shell.unfold") : t("shell.fold")}
+              title={rail ? t("shell.unfold") : t("shell.fold")}
               aria-expanded={!rail}
               onClick={() => setRail(!rail)}
             >
@@ -586,11 +585,11 @@ export function ProjectShell({
             type="button"
             className="nav-link nav-search"
             aria-keyshortcuts="Control+K"
-            title="Rechercher (Ctrl K)"
+            title={t("shell.searchTitle")}
             onClick={() => setPalette(true)}
           >
             <Search aria-hidden="true" />
-            <span>Rechercher</span>
+            <span>{t("shell.search")}</span>
             <span className="nav-keys" aria-hidden="true">
               <kbd>Ctrl</kbd>
               <kbd>K</kbd>
@@ -642,7 +641,7 @@ export function ProjectShell({
                       <span>{g.label}</span>
                       <ChevronDown aria-hidden="true" />
                       {g.items.every((item) => item.later) && (
-                        <span className="nav-part-later">À venir</span>
+                        <span className="nav-part-later">{t("shell.later")}</span>
                       )}
                     </button>
                   </h2>
@@ -663,23 +662,26 @@ export function ProjectShell({
               );
             })}
           </div>
-          {/* Settings fill the foot; the shortcuts and the theme, used now and then, sit beside them as icons. */}
+          {/* Leaving the project fills the foot, its arrow toward the window's edge; the language, the shortcuts and the theme,
+              used now and then, sit beside it as icons. */}
           <div className="shell-nav-foot">
             <button
               type="button"
-              className="nav-link"
-              title="Réglages"
-              onClick={() => setSettings("profile")}
+              className="nav-link nav-close"
+              aria-label={t("workspace.closeProject")}
+              title={t("workspace.closeProject")}
+              onClick={onClose}
             >
-              <Settings aria-hidden="true" />
-              <span>Réglages</span>
+              <LogOut aria-hidden="true" />
+              <span>{t("common.close")}</span>
             </button>
+            <LanguageButton />
             <button
               type="button"
               className="nav-icon-btn"
-              aria-label="Raccourcis clavier"
+              aria-label={t("shell.shortcuts")}
               aria-keyshortcuts="Control+/"
-              title="Raccourcis clavier (Ctrl /)"
+              title={t("shell.shortcutsTitle")}
               onClick={() => setSettings("shortcuts")}
             >
               <Keyboard aria-hidden="true" />
@@ -687,8 +689,8 @@ export function ProjectShell({
             <button
               type="button"
               className="nav-icon-btn"
-              aria-label={`Passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
-              title={`Passer au thème ${THEME_LABEL[THEME_NEXT[theme]].toLowerCase()}`}
+              aria-label={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
+              title={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
               onClick={() => void setThemePreference(THEME_NEXT[theme])}
             >
               {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
@@ -768,7 +770,7 @@ interface MenuItem {
   separated?: boolean;
 }
 
-/** The project's name at the top of the side bar, opening the project actions: import, settings, close. */
+/** The project's name at the top of the side bar, opening the project actions: import, export, folder, settings. */
 function ProjectMenu({
   title,
   dir,
@@ -829,7 +831,7 @@ function ProjectMenu({
         type="button"
         className={open ? "shell-brand on" : "shell-brand"}
         title={`${title} — ${dir}`}
-        aria-label={`Oniric, projet ${title}`}
+        aria-label={t("shell.brand", { title })}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
@@ -886,7 +888,6 @@ const subscribeNarrow = (onChange: () => void) => {
 };
 
 type Shown = "light" | "dark";
-const THEME_LABEL: Record<Shown, string> = { light: "Clair", dark: "Sombre" };
 /** The theme button swaps one for the other. */
 const THEME_NEXT: Record<Shown, Shown> = { light: "dark", dark: "light" };
 
@@ -931,7 +932,7 @@ function NavButton({
         .filter(Boolean)
         .join(" ")}
       aria-current={on ? "page" : undefined}
-      title={item.later ? `${item.label} · arrive en ${item.later}` : item.label}
+      title={item.later ? t("shell.comesIn", { view: item.label, version: item.later }) : item.label}
       onClick={onClick}
     >
       <Icon aria-hidden="true" />
@@ -967,7 +968,7 @@ function ViewHeader({
     ["bible_entry"],
   );
   const group = NAV.find((g) => g.items.some((i) => i.id === view));
-  const label = view === "dashboard" ? DASHBOARD.label : (group?.items.find((i) => i.id === view)?.label ?? "Réglages");
+  const label = view === "dashboard" ? DASHBOARD.label : (group?.items.find((i) => i.id === view)?.label ?? t("shell.settings"));
   const viewCount = SCENE_VIEWS.has(view)
     ? session.snapshot?.headings.length
     : view === "bible"
@@ -979,7 +980,7 @@ function ViewHeader({
   return (
     <header className="view-header">
       <div className="view-header-text">
-        <ol className="crumbs" aria-label="Emplacement">
+        <ol className="crumbs" aria-label={t("shell.crumbs")}>
           <li>{project.title}</li>
           {group && (
             <li>
@@ -1039,9 +1040,9 @@ function PromptDialog({
       title={req.title}
       onCancel={() => answer(null)}
       actions={[
-        { label: "Annuler", onClick: () => answer(null) },
+        { label: t("common.cancel"), onClick: () => answer(null) },
         {
-          label: "Valider",
+          label: t("common.confirm"),
           onClick: ok,
           primary: true,
           disabled: !value.trim(),
@@ -1123,9 +1124,7 @@ function StatusBar({
       text: t("status.saved"),
       title: flushedAt
         ? t("status.savedTitle", {
-            time: new Intl.DateTimeFormat("fr-FR", {
-              timeStyle: "medium",
-            }).format(flushedAt),
+            time: dateFormat({ timeStyle: "medium" }).format(flushedAt),
           })
         : t("status.savedNoFlush"),
       tone: "ok",
@@ -1150,7 +1149,7 @@ function StatusBar({
         </span>
       )}
       {backupAt && (
-        <span>Sauvegarde faite à {timeFormat.format(backupAt)}</span>
+        <span>{t("status.backupAt", { time: dateFormat({ timeStyle: "short" }).format(backupAt) })}</span>
       )}
       <span className="statusbar-dir" title={project.dir}>
         {project.dir}
@@ -1165,7 +1164,7 @@ function useBackupWatch(notify: Notify) {
   useEffect(() => {
     const failed = events.backupFailed.listen((e) =>
       notify({
-        text: `La sauvegarde automatique n'a pas pu être faite : ${e.payload.message}`,
+        text: t("backup.failed", { detail: e.payload.message }),
         tone: "warning",
       }),
     );
@@ -1177,19 +1176,19 @@ function useBackupWatch(notify: Notify) {
         return;
       reminded.current = true;
       notify({
-        text: `La dernière sauvegarde de ce projet date de plus de ${days} jours.`,
+        text: t("backup.old", { count: days }),
         tone: "warning",
         timeout: 0,
         actions: [
           {
-            label: "Sauvegarder maintenant",
+            label: t("backup.now"),
             onClick: () =>
               void commands
                 .backupNow()
                 .then((x) =>
                   notify(
                     x.status === "ok"
-                      ? { text: "Sauvegarde faite." }
+                      ? { text: t("backup.done") }
                       : { text: describeCoreError(x.error), tone: "error" },
                   ),
                 ),
@@ -1201,4 +1200,44 @@ function useBackupWatch(notify: Notify) {
       void failed.then((u) => u());
     };
   }, [notify]);
+}
+
+/** The language of the interface: each one named in itself, the current one checked. */
+function LanguageButton() {
+  const { i18n } = useTranslation();
+  const button = useRef<HTMLButtonElement>(null);
+  const [at, setAt] = useState<{ bottom: number; left: number } | null>(null);
+  const current = LANGUAGES.find((l) => l.id === getLanguage())!;
+  const label = t("shell.language", { language: current.name });
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        className={at ? "nav-icon-btn on" : "nav-icon-btn"}
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={!!at}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAt(at ? null : { bottom: window.innerHeight - r.top + 4, left: r.left });
+        }}
+      >
+        <Languages aria-hidden="true" />
+      </button>
+      {at && (
+        <FloatingMenu
+          anchor={button}
+          style={{ bottom: at.bottom, left: at.left, minWidth: 180 }}
+          onClose={() => setAt(null)}
+          items={LANGUAGES.map((l) => ({
+            label: l.name,
+            checked: l.id === i18n.language,
+            onClick: () => void setLanguage(l.id),
+          }))}
+        />
+      )}
+    </>
+  );
 }

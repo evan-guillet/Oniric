@@ -5,6 +5,7 @@ import { keymap } from "prosemirror-keymap";
 import { DOMSerializer, Schema, type Node as PMNode } from "prosemirror-model";
 import { EditorState, type Command, type Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { t } from "../core/i18n";
 
 /** Rich text of the documents and bible entries: paragraphs, headings, bold, italic, wiki links. */
 export const richSchema = new Schema({
@@ -164,18 +165,18 @@ export function RichText({
     <div className={`rich ${className ?? ""}`}>
       <div className="rich-toolbar" role="toolbar" aria-label={label}>
         <button type="button" className="btn ghost small" onMouseDown={(e) => e.preventDefault()} onClick={run(heading(2))} title="Ctrl+Alt+2">
-          Titre
+          {t("rich.heading")}
         </button>
         <button type="button" className="btn ghost small" onMouseDown={(e) => e.preventDefault()} onClick={run(setBlockType(richSchema.nodes.paragraph))} title="Ctrl+Alt+0">
-          Paragraphe
+          {t("rich.paragraph")}
         </button>
         <button type="button" className="btn ghost small" onMouseDown={(e) => e.preventDefault()} onClick={run(toggleMark(richSchema.marks.strong))} title="Ctrl+B">
-          <strong>G</strong>
+          <strong>{t("rich.bold")}</strong>
         </button>
         <button type="button" className="btn ghost small" onMouseDown={(e) => e.preventDefault()} onClick={run(toggleMark(richSchema.marks.em))} title="Ctrl+I">
-          <em>I</em>
+          <em>{t("rich.italic")}</em>
         </button>
-        <span className="muted small rich-hint">@ ou [[ pour lier une fiche</span>
+        <span className="muted small rich-hint">{t("rich.hint")}</span>
       </div>
       <div ref={mount} className="rich-mount" style={minHeight ? { minHeight } : undefined} />
     </div>

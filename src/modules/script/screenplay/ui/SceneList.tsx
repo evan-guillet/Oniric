@@ -3,6 +3,7 @@ import { memo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ContextMenu } from "../../../../ui-kit/MoreMenu";
 import { formatEighths } from "../domain/duration";
+import { plural, t } from "../../../../core/i18n";
 
 export interface SceneRow {
   heading: string;
@@ -26,7 +27,7 @@ export interface ListGroup {
 /** What a right click in the list is on. */
 export type ListTarget = { kind: "act" | "seq"; part: PartLabel } | { kind: "scene"; index: number };
 
-const REMOVE_LABEL = { act: "Supprimer l'acte…", seq: "Supprimer la séquence…", scene: "Supprimer la scène…" };
+const removeLabel = (kind: "act" | "seq" | "scene") => t(`sceneList.remove.${kind}`);
 
 function savedFolds(key: string): Set<string> {
   try {
@@ -118,7 +119,7 @@ export const SceneList = memo(function SceneList({
           aria-expanded={open}
           onClick={() => toggle(p.id)}
           onContextMenu={(e) => openMenu(e, { kind, part: p }, p.id)}
-          title={first ? `${indexes.length} scène${indexes.length > 1 ? "s" : ""}, dès la scène ${first}` : "Aucune scène"}
+          title={first ? plural("sceneList.partTitle", indexes.length, { first }) : t("sceneList.none")}
         >
           <ChevronRight className="outline-chevron" aria-hidden="true" />
           <span className="outline-num">{p.num}</span>
@@ -139,12 +140,12 @@ export const SceneList = memo(function SceneList({
       {!flat && (
         <div className="scene-list-tools">
           <span className="scene-list-count">
-            {scenes.length} scène{scenes.length > 1 ? "s" : ""}
+            {plural("sceneList.count", scenes.length)}
           </span>
           <button
             type="button"
-            title="Tout déplier"
-            aria-label="Tout déplier"
+            title={t("sceneList.unfold")}
+            aria-label={t("sceneList.unfold")}
             disabled={noneFolded}
             onClick={() => setFolded(new Set())}
           >
@@ -152,8 +153,8 @@ export const SceneList = memo(function SceneList({
           </button>
           <button
             type="button"
-            title="Tout plier"
-            aria-label="Tout plier"
+            title={t("sceneList.fold")}
+            aria-label={t("sceneList.fold")}
             disabled={allFolded}
             onClick={() => setFolded(new Set(partIds))}
           >
@@ -171,7 +172,7 @@ export const SceneList = memo(function SceneList({
           at={menu}
           anchor={anchor}
           onClose={() => setMenu(null)}
-          items={[{ label: REMOVE_LABEL[menu.target.kind], icon: Trash2, danger: true, onClick: () => onRemove(menu.target) }]}
+          items={[{ label: removeLabel(menu.target.kind), icon: Trash2, danger: true, onClick: () => onRemove(menu.target) }]}
         />
       )}
     </nav>

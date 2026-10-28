@@ -6,6 +6,7 @@ import { uuidv7 } from "../../../../core/ids";
 import { rankBetween } from "../../../../core/ordering";
 import type { ScriptSession } from "../../screenplay/application/scriptSession";
 import { flatten, outline, type ActGroup, type OutlineAct, type OutlineSequence } from "../domain/outline";
+import { t } from "../../../../core/i18n";
 
 export interface Act extends OutlineAct {
   color: string | null;
@@ -45,12 +46,12 @@ export interface Story {
 
 export const STORY_TABLES = ["act", "sequence", "scene", "structure_beat", "beat_scene"] as const;
 
-export const SCENE_STATUSES: { id: SceneStatus; label: string }[] = [
-  { id: "todo", label: "À écrire" },
-  { id: "draft", label: "Premier jet" },
-  { id: "rewrite", label: "À réécrire" },
-  { id: "done", label: "Validée" },
-];
+export const SCENE_STATUSES: { id: SceneStatus; readonly label: string }[] = (["todo", "draft", "rewrite", "done"] as const).map((id) => ({
+  id,
+  get label() {
+    return t(`story.status.${id}`);
+  },
+}));
 
 export const CARD_COLORS = ["#e05d5d", "#e8933c", "#e3c13b", "#5fb36b", "#4aa3c7", "#5b6fd6", "#9b62c9", "#8a8a8a"];
 

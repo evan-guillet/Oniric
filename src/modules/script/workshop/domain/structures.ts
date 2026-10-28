@@ -1,5 +1,7 @@
 /** Story structure models and their key points [STR-01, STR-02]. Positions are fractions of the film. */
 
+import { t } from "../../../../core/i18n";
+
 export interface ModelBeat {
   key: string;
   title: string;
@@ -25,7 +27,33 @@ export interface StructureModel {
 
 const b = (key: string, title: string, at: number, help: string): ModelBeat => ({ key, title, at, help });
 
-export const MODELS: StructureModel[] = [
+/** A model, its names read in the interface's language; ids, keys and positions stay. */
+function localized(m: StructureModel): StructureModel {
+  const k = `workshop.models.${m.id}`;
+  return {
+    ...m,
+    get name() {
+      return t(`${k}.name`);
+    },
+    parts: m.parts.map((p, i) => ({
+      ...p,
+      get title() {
+        return t(`${k}.parts.${i}`);
+      },
+    })),
+    beats: m.beats.map((x) => ({
+      ...x,
+      get title() {
+        return t(`${k}.beats.${x.key}.title`);
+      },
+      get help() {
+        return t(`${k}.beats.${x.key}.help`);
+      },
+    })),
+  };
+}
+
+export const MODELS: StructureModel[] = ([
   {
     id: "three-acts",
     name: "Trois actes",
@@ -224,7 +252,7 @@ export const MODELS: StructureModel[] = [
     ],
   },
   { id: "free", name: "Structure libre", parts: [], beats: [] },
-];
+] satisfies StructureModel[]).map(localized);
 
 export function modelById(id: string | null | undefined): StructureModel {
   return MODELS.find((m) => m.id === id) ?? MODELS[0];

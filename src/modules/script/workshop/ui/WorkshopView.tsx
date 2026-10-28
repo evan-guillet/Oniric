@@ -14,7 +14,9 @@ import { StepStructure } from "./StepStructure";
 
 import { CheckMenu } from "../../../../ui-kit/CheckMenu";
 import { Select } from "../../../../ui-kit/Select";
-const STATUS_LABEL: Record<StepStatus, string> = { empty: "À faire", started: "Commencée", done: "Terminée" };
+import { plural, t } from "../../../../core/i18n";
+const STATUSES: StepStatus[] = ["empty", "started", "done"];
+const statusLabel = (s: StepStatus) => t(`workshopView.status.${s}`);
 
 /** The writing workshop: nine steps, none compulsory, the first five in this version [ATL-01 to ATL-03]. */
 export function WorkshopView() {
@@ -72,7 +74,7 @@ export function WorkshopView() {
 
   const hidden = workshop.get<number[]>("ui.hidden", []);
   const [step, setStep] = useState(1);
-  if (!stored) return <p className="muted view-pad">Chargement…</p>;
+  if (!stored) return <p className="muted view-pad">{t("dash.loading")}</p>;
   const current = STEPS.find((s) => s.n === step) ?? STEPS[0];
   const status = (n: number) => workshop.get<StepStatus>(`step.${n}.status`, "empty");
   const ready = STEPS.filter((s) => s.ready);
@@ -81,16 +83,16 @@ export function WorkshopView() {
   return (
     <WorkshopContext.Provider value={workshop}>
       <div className="view split">
-        <nav className="view-side steps" aria-label="Étapes de l'atelier">
+        <nav className="view-side steps" aria-label={t("workshopView.steps")}>
           <div className="steps-head">
             <p className="steps-count">
-              <strong>{ready.filter((s) => status(s.n) === "done").length}</strong> sur {ready.length} terminées
+              <strong>{ready.filter((s) => status(s.n) === "done").length}</strong> {t("workshopView.doneOf", { total: ready.length })}
             </p>
             <CheckMenu
-              label="Affichage"
+              label={t("script.display")}
               icon={Eye}
               items={[
-                { id: "help", label: "Aide", hint: "Les explications sous chaque étape", checked: workshop.help },
+                { id: "help", label: t("workshopView.help"), hint: t("workshopView.helpHint"), checked: workshop.help },
                 ...STEPS.map((s) => ({ id: String(s.n), label: `${s.n}. ${s.title}`, checked: !hidden.includes(s.n) })),
               ]}
               onToggle={(id) => {
@@ -110,7 +112,7 @@ export function WorkshopView() {
           <StepList steps={ready.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
           {later.some((s) => !hidden.includes(s.n)) && (
             <>
-              <p className="steps-group">Version 2.0</p>
+              <p className="steps-group">{t("app.version", { version: "2.0" })}</p>
               <StepList steps={later.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
             </>
           )}
@@ -120,10 +122,10 @@ export function WorkshopView() {
             <h2>
               {current.n}. {current.title}
             </h2>
-            <Select value={status(current.n)} onChange={(e) => workshop.set(`step.${current.n}.status`, e.target.value)} aria-label="État de l'étape">
-              {(Object.keys(STATUS_LABEL) as StepStatus[]).map((k) => (
+            <Select value={status(current.n)} onChange={(e) => workshop.set(`step.${current.n}.status`, e.target.value)} aria-label={t("workshopView.stepState")}>
+              {STATUSES.map((k) => (
                 <option key={k} value={k}>
-                  {STATUS_LABEL[k]}
+                  {statusLabel(k)}
                 </option>
               ))}
             </Select>
@@ -150,19 +152,22 @@ function StepWriting() {
     <div className="step-body">
       <section className="step-section">
         <p>
-          Le scénario compte {scenes.length} scène{scenes.length > 1 ? "s" : ""}, environ {pages.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} page
-          {pages > 1 ? "s" : ""}, soit {formatMinutes(pages)} à l'écran.
+          {t("workshopView.writing", {
+            scenes: plural("sceneList.count", scenes.length),
+            pages: plural("versions.pages", Number(pages.toFixed(1))),
+            time: formatMinutes(pages),
+          })}
         </p>
         <Help>
           <ul>
-            <li>Un long métrage fait en général de 90 à 120 pages ; un court métrage, moins de 30.</li>
-            <li>N'écrivez que ce qui se voit et s'entend. Les pensées des personnages passent par leurs actes.</li>
-            <li>Une scène entre le plus tard possible et sort le plus tôt possible.</li>
-            <li>Tapez @ ou [[ pour relier un personnage, un lieu ou un objet de la Bible.</li>
+            <li>{t("workshopView.tip1")}</li>
+            <li>{t("workshopView.tip2")}</li>
+            <li>{t("workshopView.tip3")}</li>
+            <li>{t("workshopView.tip4")}</li>
           </ul>
         </Help>
         <button type="button" className="btn primary" onClick={() => go("script")}>
-          Ouvrir le scénario
+          {t("workshopView.openScript")}
         </button>
       </section>
     </div>
@@ -174,10 +179,10 @@ function StepLater({ n }: { n: number }) {
   return (
     <div className="step-body">
       <section className="step-section empty-state">
-        <p>Cette étape guidée arrive dans la version 2.0.</p>
+        <p>{t("workshopView.later")}</p>
         {n === 6 && (
           <button type="button" className="btn" onClick={() => go("versions")}>
-            Ouvrir les versions
+            {t("workshopView.openVersions")}
           </button>
         )}
       </section>
@@ -198,7 +203,7 @@ function StepList({ steps, step, status, onPick }: { steps: Step[]; step: number
                 {st === "done" ? <Check /> : s.n}
               </span>
               <span className="step-title">{s.title}</span>
-              {st !== "later" && <span className="visually-hidden">, {STATUS_LABEL[st]}</span>}
+              {st !== "later" && <span className="visually-hidden">, {statusLabel(st)}</span>}
             </button>
           </li>
         );
