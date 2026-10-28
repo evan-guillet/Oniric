@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
+import { markEditorStep } from "../../../../core/history";
 import { Dialog } from "../../../../ui-kit/Dialog";
 import { pagesOf, RichText, richAppend, richFromParts, richPlainText, richSchema, wordCount } from "../../../../ui-kit/RichText";
 import { useProject } from "../../../project/ui/projectContext";
@@ -351,6 +352,7 @@ function Continuity() {
     const doc = docFromBlocks(blocks);
     if (choice === "replace") editor.replaceContent(doc);
     else editor.appendDoc(doc);
+    void markEditorStep(editor, "Document converti en scénario");
     go("script");
   };
 

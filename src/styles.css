@@ -4518,6 +4518,11 @@ h4 {
 .more-menu button.danger:focus-visible {
   color: var(--danger);
 }
+/* A destructive item says so before the click: red behind it on hover and focus. */
+.more-menu button.danger:hover,
+.more-menu button.danger:focus-visible {
+  background: var(--danger-soft);
+}
 .seq {
   flex: 0 0 330px;
   min-width: 0;
@@ -5477,23 +5482,7 @@ h4 {
   background: var(--sunken);
 }
 
-/* The question, in the header: the reference, an arrow, the compared version. */
-.vr-pair {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.header-tools .vr-pair .select {
-  max-width: 200px;
-}
-.vr-pair-arrow {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  color: var(--hint);
-}
-
-/* The panel: its tabs on top, the width of the panel, then what they show, scrolling on its own. */
+/* The panel: what its tab in the header shows, scrolling on its own. */
 .vr-side {
   display: flex;
   flex-direction: column;
@@ -5501,19 +5490,6 @@ h4 {
   min-height: 0;
   border-left: 1px solid var(--line);
   background: var(--panel);
-}
-.vr-side-tabs {
-  flex: none;
-  padding: 12px 12px 8px;
-}
-.vr-side-tabs .segmented {
-  display: flex;
-  width: 100%;
-}
-.vr-side-tabs .seg {
-  flex: 1;
-  justify-content: center;
-  padding-inline: 6px;
 }
 .seg-n {
   color: var(--hint);
@@ -5527,7 +5503,7 @@ h4 {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 4px 12px 24px;
+  padding: 12px 12px 24px;
 }
 .vr-pane-empty {
   margin: 12px 4px 0;
@@ -5536,35 +5512,36 @@ h4 {
   line-height: 1.5;
 }
 
-/* The versions, a thread: a 22px node each, joined by a rule; a frozen one is a button that makes it the reference. */
+/* The versions, each a card beside its 22px node and its number; a frozen one is a button that makes it the reference. */
 .vr-thread {
+  display: grid;
+  gap: 4px;
   margin: 0;
-  padding: 4px 0 0;
+  padding: 0;
   list-style: none;
 }
 .vr-stop {
-  position: relative;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
-  padding-bottom: 4px;
 }
-.vr-stop:not(:last-child)::before {
-  content: "";
-  position: absolute;
-  left: 10.5px;
-  top: 32px;
-  bottom: -2px;
-  width: 1px;
-  background: var(--line);
+.vr-mark {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding-top: 8px;
+  color: var(--hint);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .vr-node {
   display: grid;
   place-items: center;
   width: 22px;
   height: 22px;
-  margin-top: 8px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: var(--panel);
@@ -5614,6 +5591,12 @@ h4 {
 .vr-stop.base .vr-stop-card {
   border-color: var(--accent-line);
   background: var(--accent-soft);
+}
+/* The current version is no button: its card stays green, without hover. */
+.vr-stop.current .vr-stop-card {
+  grid-template-columns: minmax(0, 1fr);
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
 }
 .vr-stop-card > .vr-stop-body {
   border: none;

@@ -187,7 +187,9 @@
       "dark": "Passer au thème sombre"
     },
     "language": "Langue : {{language}}",
-    "bibleImported": "Bible importée : {{added}} fiche(s) ajoutée(s), {{updated}} mise(s) à jour."
+    "bibleImported": "Bible importée : {{added}} fiche(s) ajoutée(s), {{updated}} mise(s) à jour.",
+    "renameProject": "Renommer le projet",
+    "projectTitle": "Titre du projet"
   },
   "palette": {
     "views": "Vues",
@@ -206,7 +208,8 @@
       "dark": "apparence nuit",
       "system": "apparence windows",
       "language": "langue language idioma traduction",
-      "close": "quitter accueil"
+      "close": "quitter accueil",
+      "rename": "renommer titre nom projet"
     },
     "label": "Palette de commandes",
     "placeholder": "Aller à une vue, une scène, une fiche de la Bible…",
@@ -764,9 +767,6 @@
     "firstWhen": "Les bons moments : avant une grande réécriture, avant d'envoyer le scénario à quelqu'un, à la fin d'un jet.",
     "sampleLabel": "Exemple de comparaison",
     "sampleCaption": "La ligne retirée en rouge, la nouvelle en vert, les mots changés surlignés.",
-    "reference": "Référence",
-    "compared": "Comparée",
-    "pair": "Versions comparées",
     "swap": "Inverser les deux versions",
     "historyHint": "Les versions figées, et la version actuelle",
     "panel": "Panneau",
@@ -2224,5 +2224,14 @@
     "none": "Pas encore d'historique.",
     "takeBack": "Reprendre",
     "historyTitle": "Historique du champ"
+  },
+  "history": {
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "undone": "Annulé : {{label}}",
+    "redone": "Rétabli : {{label}}",
+    "nothingToUndo": "Rien à annuler.",
+    "nothingToRedo": "Rien à rétablir.",
+    "textChanged": "Le texte a changé depuis : annulez d'abord dans le Scénario, avec Ctrl+Z."
   }
 }

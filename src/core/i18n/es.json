@@ -187,7 +187,9 @@
       "dark": "Cambiar al tema oscuro"
     },
     "language": "Idioma: {{language}}",
-    "bibleImported": "Biblia importada: {{added}} ficha(s) añadida(s), {{updated}} actualizada(s)."
+    "bibleImported": "Biblia importada: {{added}} ficha(s) añadida(s), {{updated}} actualizada(s).",
+    "renameProject": "Cambiar el nombre del proyecto",
+    "projectTitle": "Título del proyecto"
   },
   "palette": {
     "views": "Vistas",
@@ -206,7 +208,8 @@
       "dark": "apariencia noche",
       "system": "apariencia windows",
       "language": "idioma language langue traducción",
-      "close": "salir inicio"
+      "close": "salir inicio",
+      "rename": "renombrar título nombre proyecto"
     },
     "label": "Paleta de comandos",
     "placeholder": "Ir a una vista, una escena, una ficha de la Biblia…",
@@ -764,9 +767,6 @@
     "firstWhen": "Buenos momentos: antes de una gran reescritura, antes de enviar el guion a alguien, al terminar un borrador.",
     "sampleLabel": "Ejemplo de comparación",
     "sampleCaption": "La línea eliminada en rojo, la nueva en verde, las palabras cambiadas resaltadas.",
-    "reference": "Referencia",
-    "compared": "Comparada",
-    "pair": "Versiones comparadas",
     "swap": "Intercambiar las dos versiones",
     "historyHint": "Las versiones congeladas y la actual",
     "panel": "Panel",
@@ -2224,5 +2224,14 @@
     "none": "Aún no hay historial.",
     "takeBack": "Recuperar",
     "historyTitle": "Historial del campo"
+  },
+  "history": {
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "undone": "Deshecho: {{label}}",
+    "redone": "Rehecho: {{label}}",
+    "nothingToUndo": "Nada que deshacer.",
+    "nothingToRedo": "Nada que rehacer.",
+    "textChanged": "El texto cambió desde entonces: deshazlo primero en el Guion, con Ctrl+Z."
   }
 }

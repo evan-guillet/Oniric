@@ -16,6 +16,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use crate::db::history::{self, History};
 use fsx::sibling;
 pub use lock::{LockInfo, LockState};
 
@@ -131,6 +132,8 @@ pub struct Project {
     dirty: bool,
     /// Something was written since the last backup copy.
     unsaved_in_backup: bool,
+    /// What Ctrl+Z undoes, for this session only.
+    pub history: History,
 }
 
 #[derive(Debug, Default)]
@@ -387,8 +390,10 @@ impl Project {
             notes.push(format!("format du projet mis à jour ({migrated} étape(s)) ; copie d'origine dans {}", backup.display()));
         }
 
+        history::install(&conn)?;
+
         let dirty = source != Source::ProjectFolder || migrated > 0;
-        let mut project = Project { dir: dir.to_path_buf(), work_dir, manifest, conn, dirty, unsaved_in_backup: dirty };
+        let mut project = Project { dir: dir.to_path_buf(), work_dir, manifest, conn, dirty, unsaved_in_backup: dirty, history: History::default() };
         if source == Source::RepairedFromWorkingCopy {
             project.flush()?;
         }
@@ -430,6 +435,28 @@ impl Project {
         self.dirty = true;
         self.unsaved_in_backup = true;
         Ok(value)
+    }
+
+    /// A new title, written in the manifest; the folder keeps its name.
+    pub fn retitle(&mut self, title: &str) -> Result<()> {
+        let mut manifest = self.manifest.clone();
+        manifest.title = title.into();
+        fsx::write_atomically(&self.dir.join(MANIFEST), serde_json::to_string_pretty(&manifest).unwrap().as_bytes())?;
+        self.manifest = manifest;
+        Ok(())
+    }
+
+    /// The same for a project that is not open, unless another Oniric has it open.
+    pub fn retitle_closed(dir: &Path, title: &str) -> Result<()> {
+        let mut manifest = Self::read_manifest(dir)?;
+        match lock::inspect(&dir.join(LOCK)) {
+            LockState::HeldHere(i) => return Err(Error::AlreadyOpenHere(i)),
+            LockState::HeldElsewhere(i) => return Err(Error::LockedElsewhere(i)),
+            _ => {}
+        }
+        manifest.title = title.into();
+        fsx::write_atomically(&dir.join(MANIFEST), serde_json::to_string_pretty(&manifest).unwrap().as_bytes())?;
+        Ok(())
     }
 
     pub fn needs_backup(&self) -> bool {

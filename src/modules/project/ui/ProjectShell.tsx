@@ -38,6 +38,7 @@ import {
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Search,
   Settings,
   Sun,
@@ -49,6 +50,8 @@ import { commands, events, type OpenState } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
 import { describeCoreError, describeError } from "../../../core/errors";
+import { markEditorStep, stepHistory } from "../../../core/history";
+import { PromptDialog, type PromptRequest } from "../../../ui-kit/PromptDialog";
 import { dateFormat, getLanguage, LANGUAGES, setLanguage, t } from "../../../core/i18n";
 import {
   getThemePreference,
@@ -57,7 +60,7 @@ import {
   setThemePreference,
 } from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
-import { Dialog, type ChoiceRequest } from "../../../ui-kit/Dialog";
+import type { ChoiceRequest } from "../../../ui-kit/Dialog";
 import { FloatingMenu } from "../../../ui-kit/MoreMenu";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import {
@@ -173,13 +176,6 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
 
 const DAY_MS = 24 * 3600 * 1000;
 
-interface PromptRequest {
-  title: string;
-  label: string;
-  value: string;
-  resolve: (v: string | null) => void;
-}
-
 /** An open project: navigation between the views, the shared screenplay session, the status bar. */
 export function ProjectShell({
   project,
@@ -187,12 +183,14 @@ export function ProjectShell({
   notify,
   ask,
   onClose,
+  onRenamed,
 }: {
   project: OpenState;
   handle: RefObject<WorkspaceHandle | null>;
   notify: Notify;
   ask: (r: ChoiceRequest) => Promise<string | null>;
   onClose: () => void;
+  onRenamed: (title: string) => void;
 }) {
   const session = useMemo(() => new ScriptSession(), []);
   const [view, setView] = useState<ViewId>("dashboard");
@@ -267,6 +265,46 @@ export function ProjectShell({
       ),
     [],
   );
+
+  // Only the title changes: the folder keeps its name, so the window and the recent list still find it.
+  const rename = useCallback(async () => {
+    const title = await prompt(t("shell.renameProject"), t("shell.projectTitle"), project.title);
+    if (!title || title === project.title) return;
+    try {
+      onRenamed(unwrap(await commands.projectRename(project.dir, title)));
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  }, [prompt, project.title, project.dir, onRenamed, notify]);
+
+  // Ctrl+Z and Ctrl+Y outside a text field undo and redo the project's last action; a field keeps its own.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== "z" && key !== "y") return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest("textarea, select, [contenteditable='true'], input:not([type='checkbox']):not([type='radio']):not([type='button'])")) return;
+      if (document.querySelector("dialog[open]")) return;
+      e.preventDefault();
+      const redo = key === "y" || e.shiftKey;
+      const run = (again: boolean) =>
+        stepHistory(again, session.editor)
+          .then((done) => {
+            if (done === "none") notify({ text: t(again ? "history.nothingToRedo" : "history.nothingToUndo") });
+            else if (done === "textChanged") notify({ text: t("history.textChanged"), tone: "warning" });
+            else
+              notify({
+                text: t(again ? "history.redone" : "history.undone", { label: done.label }),
+                actions: [{ label: t(again ? "history.undo" : "history.redo"), onClick: () => void run(!again) }],
+              });
+          })
+          .catch((err) => notify({ text: describeError(err), tone: "error" }));
+      void run(redo);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [session, notify]);
 
   const printPdf = useCallback(
     async (
@@ -443,6 +481,7 @@ export function ProjectShell({
     return [
       dashboard,
       ...views,
+      action("rename", t("shell.renameProject"), Pencil, () => void rename(), t("palette.kw.rename")),
       action("import", t("workspace.import"), FileInput, () => transfer("import"), t("palette.kw.import")),
       action("export", t("workspace.export"), FileOutput, () => transfer("export"), t("palette.kw.export")),
       { ...action("folder", t("shell.openFolder"), FolderOpen, () => void commands.reveal(project.dir, true), t("palette.kw.folder")), detail: project.dir },
@@ -456,7 +495,7 @@ export function ProjectShell({
       ),
       action("close", t("workspace.closeProject"), LogOut, onClose, t("palette.kw.close")),
     ];
-  }, [hiddenParts, goView, transfer, onClose, project.dir, i18n.language]);
+  }, [hiddenParts, goView, transfer, onClose, rename, project.dir, i18n.language]);
 
   /** Replaces the screenplay by a Fountain or FDX file [EDT-05]. */
   const importFile = async (file: File | undefined) => {
@@ -495,6 +534,7 @@ export function ProjectShell({
       }
       setView("script");
       editor.replaceContent(docFromBlocks(imported.blocks));
+      await markEditorStep(editor, "Import du scénario");
       editor.goToScene(0);
       if (imported.titlePage && !hasContent(await readTitlePage()))
         await writeTitlePage(imported.titlePage);
@@ -541,6 +581,11 @@ export function ProjectShell({
               open={menuOpen}
               onOpenChange={setMenuOpen}
               items={[
+                {
+                  label: t("shell.renameProject"),
+                  icon: Pencil,
+                  onClick: () => void rename(),
+                },
                 {
                   label: t("workspace.import"),
                   icon: FileInput,
@@ -1021,54 +1066,6 @@ const LATER = new Set<ViewId>([
   "scouting",
   "permits",
 ]);
-
-function PromptDialog({
-  req,
-  onDone,
-}: {
-  req: PromptRequest;
-  onDone: () => void;
-}) {
-  const [value, setValue] = useState(req.value);
-  const answer = (v: string | null) => {
-    req.resolve(v);
-    onDone();
-  };
-  const ok = () => value.trim() && answer(value.trim());
-  return (
-    <Dialog
-      title={req.title}
-      onCancel={() => answer(null)}
-      actions={[
-        { label: t("common.cancel"), onClick: () => answer(null) },
-        {
-          label: t("common.confirm"),
-          onClick: ok,
-          primary: true,
-          disabled: !value.trim(),
-        },
-      ]}
-    >
-      <form
-        className="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ok();
-        }}
-      >
-        <label className="field">
-          <span>{req.label}</span>
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            autoFocus
-            onFocus={(e) => e.target.select()}
-          />
-        </label>
-      </form>
-    </Dialog>
-  );
-}
 
 function StatusBar({
   session,

@@ -22,6 +22,20 @@ export const commands = {
 } | null, CoreError>(__TAURI_INVOKE("project_flush")),
 	dbQuery: (query: Statement) => typedError<Rows, CoreError>(__TAURI_INVOKE("db_query", { query })),
 	dbWrite: (batch: Statement[], meta: WriteMeta) => typedError<number, CoreError>(__TAURI_INVOKE("db_write", { batch, meta })),
+	/**  The next steps Ctrl+Z and Ctrl+Y would take. */
+	historyState: () => typedError<HistoryState, CoreError>(__TAURI_INVOKE("history_state")),
+	/**  Puts an action done in the screenplay editor in the undo line; `absorb` joins the write just made for it. */
+	historyMark: (label: string, depth: number, absorb: boolean) => typedError<null, CoreError>(__TAURI_INVOKE("history_mark", { label, depth, absorb })),
+	/**  Forgets the next step to undo (or redo), already undone in the editor. */
+	historyDrop: (redo: boolean) => typedError<null, CoreError>(__TAURI_INVOKE("history_drop", { redo })),
+	/**  Undoes (or redoes) the next step in the database; the editor does its part when the step says so. */
+	historyStep: (redo: boolean) => typedError<{
+	label: string,
+	/**  The depth of the editor's history after the action, when the editor undoes it. */
+	editor: number | null,
+} | null, CoreError>(__TAURI_INVOKE("history_step", { redo })),
+	/**  A new title for the project in `dir`, open or not; its folder keeps its name. */
+	projectRename: (dir: string, title: string) => typedError<string, CoreError>(__TAURI_INVOKE("project_rename", { dir, title })),
 	/**  Prints the main window to `exports/<file_name>` and returns the full path. */
 	exportPdf: (fileName: string, widthIn: number | null, heightIn: number | null) => typedError<string, CoreError>(__TAURI_INVOKE("export_pdf", { fileName, widthIn, heightIn })),
 	exportText: (fileName: string, contents: string) => typedError<string, CoreError>(__TAURI_INVOKE("export_text", { fileName, contents })),
@@ -88,6 +102,18 @@ export type Entry = {
 	at: string,
 	bytes: number,
 	sha256: string,
+};
+
+export type HistoryState = {
+	undo: HistoryStep | null,
+	redo: HistoryStep | null,
+};
+
+/**  A step of the undo line, as the interface sees it. */
+export type HistoryStep = {
+	label: string,
+	/**  The depth of the editor's history after the action, when the editor undoes it. */
+	editor: number | null,
 };
 
 export type LockStatus = "free" | "openHere" | "openElsewhere";
@@ -170,6 +196,8 @@ export type Statement = {
 export type WriteMeta = {
 	label: string,
 	tables: string[],
+	/**  False for the screenplay's text, which the editor undoes itself. */
+	undoable: boolean,
 };
 
 /* Tauri Specta runtime */

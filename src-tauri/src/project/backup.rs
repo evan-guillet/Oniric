@@ -60,9 +60,18 @@ struct Index {
 }
 
 /// The folder of one project inside the backup folder; the end of the id tells apart two projects with the same title.
+/// A renamed project keeps the folder of its earlier copies.
 pub fn folder(root: &Path, manifest: &Manifest) -> PathBuf {
     let tail = &manifest.id[manifest.id.len().saturating_sub(8)..];
-    root.join(format!("{} ({tail})", system::file_name(&manifest.title)))
+    let named = root.join(format!("{} ({tail})", system::file_name(&manifest.title)));
+    if named.exists() {
+        return named;
+    }
+    let end = format!(" ({tail})");
+    fs::read_dir(root)
+        .ok()
+        .and_then(|entries| entries.flatten().map(|e| e.path()).find(|p| p.is_dir() && p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(&end))))
+        .unwrap_or(named)
 }
 
 fn read_index(dir: &Path) -> Index {

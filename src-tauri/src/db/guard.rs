@@ -8,6 +8,8 @@ const INTERNAL_PREFIX: &str = "oniric_";
 fn decide(ctx: AuthContext<'_>) -> Authorization {
     let internal = |t: &str| t.starts_with(INTERNAL_PREFIX) || t.starts_with("sqlite_");
     match ctx.action {
+        // The core notes the rows a write changes, through its own triggers [history].
+        AuthAction::Insert { table_name: "oniric_undo" } => Authorization::Allow,
         AuthAction::Read { table_name, .. }
         | AuthAction::Insert { table_name }
         | AuthAction::Update { table_name, .. }

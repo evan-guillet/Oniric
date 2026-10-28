@@ -187,7 +187,9 @@
       "dark": "Switch to the dark theme"
     },
     "language": "Language: {{language}}",
-    "bibleImported": "Bible imported: {{added}} entries added, {{updated}} updated."
+    "bibleImported": "Bible imported: {{added}} entries added, {{updated}} updated.",
+    "renameProject": "Rename the project",
+    "projectTitle": "Project title"
   },
   "palette": {
     "views": "Views",
@@ -206,7 +208,8 @@
       "dark": "appearance night",
       "system": "appearance windows",
       "language": "language langue idioma translation",
-      "close": "quit home"
+      "close": "quit home",
+      "rename": "rename title name project"
     },
     "label": "Command palette",
     "placeholder": "Go to a view, a scene, a Bible entry…",
@@ -764,9 +767,6 @@
     "firstWhen": "Good moments: before a big rewrite, before sending the screenplay to someone, at the end of a draft.",
     "sampleLabel": "Comparison example",
     "sampleCaption": "The removed line in red, the new one in green, the changed words highlighted.",
-    "reference": "Reference",
-    "compared": "Compared",
-    "pair": "Compared versions",
     "swap": "Swap the two versions",
     "historyHint": "The frozen versions, and the current one",
     "panel": "Panel",
@@ -2224,5 +2224,14 @@
     "none": "No history yet.",
     "takeBack": "Restore",
     "historyTitle": "Field history"
+  },
+  "history": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "undone": "Undone: {{label}}",
+    "redone": "Redone: {{label}}",
+    "nothingToUndo": "Nothing to undo.",
+    "nothingToRedo": "Nothing to redo.",
+    "textChanged": "The text changed since: undo it first in the Screenplay, with Ctrl+Z."
   }
 }

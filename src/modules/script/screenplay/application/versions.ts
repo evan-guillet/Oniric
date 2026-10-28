@@ -1,5 +1,6 @@
 import { commands } from "../../../../bindings";
 import { db, nowIso, query, unwrap, write } from "../../../../core/db/client";
+import { markEditorStep } from "../../../../core/history";
 import { uuidv7 } from "../../../../core/ids";
 import type { ScreenplayFormat } from "../domain/formats";
 import type { VersionScene } from "../domain/diff";
@@ -148,6 +149,7 @@ export async function reinstate(session: ScriptSession, cut: CutScene): Promise<
   let at = ids.findIndex((id) => (rankOf.get(id) ?? "") > cut.rank);
   if (at < 0) at = ids.length;
   editor.insertScene(at, "", { id: cut.id, content: cut.content });
+  await markEditorStep(editor, "Scène réintégrée");
   await session.flush();
 }
 

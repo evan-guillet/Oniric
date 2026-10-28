@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
+import { markEditorStep } from "../../../../core/history";
 import { Dialog } from "../../../../ui-kit/Dialog";
 import { TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
@@ -287,6 +288,7 @@ export function BoardView() {
       const id = editor.insertScene(at);
       await session.flush();
       await updateSceneMeta(id, { sequenceId: seq.sequence?.id ?? null, status: "todo" });
+      await markEditorStep(editor, "Nouvelle scène", true);
       setSelected(id);
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -295,7 +297,10 @@ export function BoardView() {
 
   const renameScene = async (s: SceneInfo) => {
     const heading = await prompt(t("board.renameScene"), t("board.heading"), s.heading);
-    if (heading !== null) session.editor?.setSceneHeading(s.id, heading.trim());
+    const editor = session.editor;
+    if (heading === null || !editor) return;
+    editor.setSceneHeading(s.id, heading.trim());
+    await markEditorStep(editor, "En-tête de scène");
   };
   // The scene leaves the screenplay for the bin of cut scenes (Versions view), where it can be restored.
   const removeScene = async (id: string) => {
@@ -305,8 +310,10 @@ export function BoardView() {
       cancel: t("common.cancel"),
       choices: [{ label: t("common.delete"), value: "y", danger: true }],
     });
-    if (c !== "y") return;
-    session.editor?.removeScene(id);
+    const editor = session.editor;
+    if (c !== "y" || !editor) return;
+    editor.removeScene(id);
+    await markEditorStep(editor, "Scène supprimée");
     if (selected === id) setSelected(null);
   };
 

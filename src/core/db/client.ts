@@ -41,10 +41,10 @@ export async function query<Q extends Compilable>(q: Q): Promise<InferResult<Q>>
   return rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i]]))) as InferResult<Q>;
 }
 
-/** One batch, one transaction: all the queries are applied, or none. */
-export async function write(label: string, tables: TableName[], queries: Compilable[]): Promise<number> {
+/** One batch, one transaction: all the queries are applied, or none; Ctrl+Z undoes it unless `undoable` is false. */
+export async function write(label: string, tables: TableName[], queries: Compilable[], undoable = true): Promise<number> {
   if (queries.length === 0) return 0;
-  return unwrap(await commands.dbWrite(queries.map(statement), { label, tables }));
+  return unwrap(await commands.dbWrite(queries.map(statement), { label, tables, undoable }));
 }
 
 export const nowIso = () => new Date().toISOString();

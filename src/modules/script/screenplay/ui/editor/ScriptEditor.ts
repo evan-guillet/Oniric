@@ -1,6 +1,6 @@
-import { EditorState, Plugin, PluginKey, TextSelection } from "prosemirror-state";
+import { EditorState, Plugin, PluginKey, TextSelection, type Transaction } from "prosemirror-state";
 import { EditorView, DecorationSet } from "prosemirror-view";
-import { history } from "prosemirror-history";
+import { closeHistory, history, redo as redoStep, redoDepth, undo as undoStep, undoDepth } from "prosemirror-history";
 import { Fragment, type Mark, type Node as PMNode } from "prosemirror-model";
 import type { ElementType, ScreenplayFormat } from "../../domain/formats";
 import { paginate } from "../../domain/paginate";
@@ -175,7 +175,7 @@ export class ScriptEditor {
   /** Replaces the whole screenplay in one step that Ctrl+Z can undo (imports). */
   replaceContent(doc: PMNode): void {
     const state = this.view.state;
-    this.view.dispatch(state.tr.replaceWith(0, state.doc.content.size, doc.content).scrollIntoView());
+    this.apart(state.tr.replaceWith(0, state.doc.content.size, doc.content).scrollIntoView());
   }
 
   /** Adds the scenes of `doc` after the last one, in one step that Ctrl+Z can undo. */
@@ -183,7 +183,7 @@ export class ScriptEditor {
     const state = this.view.state;
     const lone = state.doc.childCount === 1 && state.doc.firstChild!.textContent === "";
     if (lone) this.replaceContent(doc);
-    else this.view.dispatch(state.tr.insert(state.doc.content.size, doc.content).scrollIntoView());
+    else this.apart(state.tr.insert(state.doc.content.size, doc.content).scrollIntoView());
   }
 
   /** Puts the cursor at the end of the first element of scene `index` and shows it. */
@@ -222,7 +222,29 @@ export class ScriptEditor {
 
   private replaceScenes(nodes: PMNode[]): void {
     const state = this.view.state;
-    this.view.dispatch(state.tr.replaceWith(0, state.doc.content.size, Fragment.from(nodes)));
+    this.apart(state.tr.replaceWith(0, state.doc.content.size, Fragment.from(nodes)));
+  }
+
+  /** An action from outside the text, one step of its own in the history. */
+  private apart(tr: Transaction): void {
+    this.view.dispatch(closeHistory(tr));
+  }
+
+  /** Steps the editor can undo: the project's undo line checks it to know whether the text changed since its step. */
+  undoDepth(): number {
+    return undoDepth(this.view.state);
+  }
+
+  redoDepth(): number {
+    return redoDepth(this.view.state);
+  }
+
+  undo(): boolean {
+    return undoStep(this.view.state, this.view.dispatch);
+  }
+
+  redo(): boolean {
+    return redoStep(this.view.state, this.view.dispatch);
   }
 
   /** Puts the scenes in the order of `ids`, in one step that Ctrl+Z can undo; scenes not listed keep their place at the end. */
@@ -253,7 +275,7 @@ export class ScriptEditor {
       if (i === index) pos = offset;
     });
     const state = this.view.state;
-    this.view.dispatch(state.tr.insert(pos, node));
+    this.apart(state.tr.insert(pos, node));
     return node.attrs.id as string;
   }
 
@@ -264,8 +286,8 @@ export class ScriptEditor {
       const state = this.view.state;
       const node = schema.nodes.scene_heading.create(null, heading ? [schema.text(heading)] : []);
       const first = scene.firstChild;
-      if (first?.type === schema.nodes.scene_heading) this.view.dispatch(state.tr.replaceWith(offset + 1, offset + 1 + first.nodeSize, node));
-      else this.view.dispatch(state.tr.insert(offset + 1, node));
+      if (first?.type === schema.nodes.scene_heading) this.apart(state.tr.replaceWith(offset + 1, offset + 1 + first.nodeSize, node));
+      else this.apart(state.tr.insert(offset + 1, node));
     });
   }
 
@@ -275,7 +297,7 @@ export class ScriptEditor {
       if (scene.attrs.id !== id) return;
       const state = this.view.state;
       if (doc.childCount === 1) this.replaceScenes([newScene()]);
-      else this.view.dispatch(state.tr.delete(offset, offset + scene.nodeSize));
+      else this.apart(state.tr.delete(offset, offset + scene.nodeSize));
     });
   }
 

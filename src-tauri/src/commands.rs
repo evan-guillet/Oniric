@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager, State, WebviewWindow};
 use tauri_specta::Event;
 
 use crate::app_data::{self, RecentProject};
-use crate::db::{self, DbError, Rows, Statement};
+use crate::db::{self, history, DbError, Rows, Statement};
 use crate::project::{self, backup, CrashChoice, LockState, OpenOptions, Project, Source};
 use crate::system::{self, log, Paths};
 
@@ -145,6 +145,30 @@ pub struct ProbeState {
 pub struct WriteMeta {
     pub label: String,
     pub tables: Vec<String>,
+    /// False for the screenplay's text, which the editor undoes itself.
+    pub undoable: bool,
+}
+
+/// A step of the undo line, as the interface sees it.
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryStep {
+    pub label: String,
+    /// The depth of the editor's history after the action, when the editor undoes it.
+    pub editor: Option<u32>,
+}
+
+impl From<history::StepInfo> for HistoryStep {
+    fn from(s: history::StepInfo) -> Self {
+        HistoryStep { label: s.label, editor: s.editor }
+    }
+}
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryState {
+    pub undo: Option<HistoryStep>,
+    pub redo: Option<HistoryStep>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
@@ -452,10 +476,92 @@ pub fn db_query(core: State<'_, Core>, query: Statement) -> Result<Rows> {
 pub fn db_write(app: AppHandle, core: State<'_, Core>, batch: Vec<Statement>, meta: WriteMeta) -> Result<u32> {
     let mut slot = core.project.lock().unwrap();
     let p = slot.as_mut().ok_or(CoreError::NoProject)?;
-    let changed = p.write(|tx| db::write(tx, &batch, &meta.label, &meta.tables))?;
+    let (changed, changes) = p.write(|tx| history::capture(tx, || db::write(tx, &batch, &meta.label, &meta.tables)))?;
+    if meta.undoable {
+        p.history.record(&meta.label, &meta.tables, changes);
+    }
     drop(slot);
     let _ = DbChanged { tables: meta.tables, label: meta.label }.emit(&app);
     Ok(changed as u32)
+}
+
+/// The next steps Ctrl+Z and Ctrl+Y would take.
+#[tauri::command]
+#[specta::specta]
+pub fn history_state(core: State<'_, Core>) -> Result<HistoryState> {
+    let slot = core.project.lock().unwrap();
+    let p = slot.as_ref().ok_or(CoreError::NoProject)?;
+    Ok(HistoryState { undo: p.history.next_undo().map(Into::into), redo: p.history.next_redo().map(Into::into) })
+}
+
+/// Puts an action done in the screenplay editor in the undo line; `absorb` joins the write just made for it.
+#[tauri::command]
+#[specta::specta]
+pub fn history_mark(core: State<'_, Core>, label: String, depth: u32, absorb: bool) -> Result<()> {
+    let mut slot = core.project.lock().unwrap();
+    let p = slot.as_mut().ok_or(CoreError::NoProject)?;
+    p.history.mark(&label, depth, absorb);
+    Ok(())
+}
+
+/// Forgets the next step to undo (or redo), already undone in the editor.
+#[tauri::command]
+#[specta::specta]
+pub fn history_drop(core: State<'_, Core>, redo: bool) -> Result<()> {
+    let mut slot = core.project.lock().unwrap();
+    let p = slot.as_mut().ok_or(CoreError::NoProject)?;
+    p.history.drop_next(redo);
+    Ok(())
+}
+
+/// Undoes (or redoes) the next step in the database; the editor does its part when the step says so.
+#[tauri::command]
+#[specta::specta]
+pub fn history_step(app: AppHandle, core: State<'_, Core>, redo: bool) -> Result<Option<HistoryStep>> {
+    let mut slot = core.project.lock().unwrap();
+    let p = slot.as_mut().ok_or(CoreError::NoProject)?;
+    let mut line = std::mem::take(&mut p.history);
+    let done = p.write(|tx| {
+        let step = if redo { line.redo(tx)? } else { line.undo(tx)? };
+        if let Some(s) = &step {
+            let label = format!("{} : {}", if redo { "Rétablir" } else { "Annuler" }, s.label);
+            tx.execute(
+                "INSERT INTO oniric_journal (at, label, tables) VALUES (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?1, ?2)",
+                [&label, &s.tables.join(",")],
+            )?;
+        }
+        Ok::<_, rusqlite::Error>(step)
+    });
+    p.history = line;
+    let step = done.map_err(|e| CoreError::Failed(e.to_string()))?;
+    drop(slot);
+    if let Some(s) = &step {
+        if !s.tables.is_empty() {
+            let _ = DbChanged { tables: s.tables.clone(), label: s.label.clone() }.emit(&app);
+        }
+    }
+    Ok(step.map(Into::into))
+}
+
+/// A new title for the project in `dir`, open or not; its folder keeps its name.
+#[tauri::command]
+#[specta::specta]
+pub fn project_rename(core: State<'_, Core>, dir: String, title: String) -> Result<String> {
+    let title = title.trim().to_string();
+    if title.is_empty() {
+        return Err(CoreError::Failed("le titre est vide".into()));
+    }
+    {
+        let mut slot = core.project.lock().unwrap();
+        match slot.as_mut() {
+            Some(p) if Path::new(&dir) == p.dir() => p.retitle(&title)?,
+            _ => Project::retitle_closed(Path::new(&dir), &title)?,
+        }
+    }
+    if let Some(conn) = core.app_db.lock().unwrap().as_ref() {
+        app_data::retitle(conn, &dir, &title)?;
+    }
+    Ok(title)
 }
 
 pub fn flush_now(app: &AppHandle) -> Result<Option<ProjectFlushed>> {

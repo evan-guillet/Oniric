@@ -73,7 +73,8 @@ export class SceneStore {
         ),
     );
     const deletion = plan.deletes.length > 0 ? [db.updateTable("scene").set({ deleted_at: now, updated_at: now }).where("id", "in", plan.deletes)] : [];
-    await write("Écriture du scénario", ["scene"], [...queries, ...deletion]);
+    // The editor undoes its own text.
+    await write("Écriture du scénario", ["scene"], [...queries, ...deletion], false);
 
     for (const id of plan.deletes) this.saved.delete(id);
     const index = new Map(scenes.map((s, i) => [s.id, i]));

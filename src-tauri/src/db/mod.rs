@@ -1,6 +1,7 @@
 //! SQL sent by the interface, executed by the core behind its guard rails (architecture, 4.2).
 
 mod guard;
+pub mod history;
 
 pub use guard::guarded;
 

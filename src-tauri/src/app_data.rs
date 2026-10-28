@@ -65,6 +65,12 @@ pub fn list(conn: &Connection) -> rusqlite::Result<Vec<RecentProject>> {
     rows.collect()
 }
 
+/// A project renamed: its line keeps its place in the list.
+pub fn retitle(conn: &Connection, path: &str, title: &str) -> rusqlite::Result<()> {
+    conn.execute("UPDATE recent_project SET title = ?2 WHERE path = ?1", params![path, title])?;
+    Ok(())
+}
+
 pub fn forget(conn: &Connection, path: &str) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM recent_project WHERE path = ?1", [path])?;
     Ok(())

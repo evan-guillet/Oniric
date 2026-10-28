@@ -165,7 +165,15 @@ export function App() {
           </main>
         )}
         {screen.kind === "project" && (
-          <ProjectShell key={screen.state.id} project={screen.state} handle={workspace} notify={notify} ask={ask} onClose={() => void closeProject()} />
+          <ProjectShell
+            key={screen.state.id}
+            project={screen.state}
+            handle={workspace}
+            notify={notify}
+            ask={ask}
+            onClose={() => void closeProject()}
+            onRenamed={(title) => setScreen((s) => (s.kind === "project" ? { ...s, state: { ...s.state, title } } : s))}
+          />
         )}
       </div>
       <Toasts messages={toasts} onDismiss={dismiss} dismissLabel={t("workspace.dismiss")} />

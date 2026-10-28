@@ -4,6 +4,7 @@ import { parseJson } from "../../../../core/db/live";
 import type { SceneStatus, TableName } from "../../../../core/db/schema";
 import { uuidv7 } from "../../../../core/ids";
 import { rankBetween } from "../../../../core/ordering";
+import { markEditorStep } from "../../../../core/history";
 import type { ScriptSession } from "../../screenplay/application/scriptSession";
 import { flatten, outline, type ActGroup, type OutlineAct, type OutlineSequence } from "../domain/outline";
 import { t } from "../../../../core/i18n";
@@ -206,8 +207,9 @@ export async function arrange(session: ScriptSession, story: Story, groups: ActG
       }
     }
   }
-  if (writes.length + extra.length > 0) await write("Réorganisation du tableau", ["scene", ...tables], [...writes, ...extra]);
-  editor.moveScenes(flatten(groups));
+  const wrote = writes.length + extra.length > 0;
+  if (wrote) await write("Réorganisation du tableau", ["scene", ...tables], [...writes, ...extra]);
+  if (editor.moveScenes(flatten(groups)) || wrote) await markEditorStep(editor, "Réorganisation du tableau", wrote);
   return before;
 }
 
