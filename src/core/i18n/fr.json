@@ -769,6 +769,8 @@
     "compared": "Comparée",
     "pair": "Versions comparées",
     "swap": "Inverser les deux versions",
+    "from": "De",
+    "to": "À",
     "chooseTwo": "Choisissez deux versions différentes",
     "comparing": "Comparaison en cours…",
     "shownScenes": "Scènes affichées",
@@ -840,7 +842,6 @@
     "sceneActions": "Actions pour {{heading}}",
     "tree": "Liste des scènes",
     "removedLine": "Ligne retirée",
-    "sections": "Parties de Versions",
     "versionsIntro": "Chaque version figée est une copie datée du scénario, rangée dans le dossier « versions » du projet. Rien ne la modifie ensuite : comparez-la au texte actuel, ou revenez-y.",
     "compare": "Comparer",
     "noneYet": "Aucune version figée pour l'instant",
@@ -849,8 +850,6 @@
     "moreLines_one": "{{n}} ligne de plus",
     "moreLines_other": "{{n}} lignes de plus",
     "freezeShort": "Figer",
-    "changesHint": "Ce qui a changé entre deux versions, scène par scène",
-    "versionsHint": "Les versions figées, et la version actuelle",
     "cutsHint": "Les scènes supprimées du scénario, à réintégrer"
   },
   "bible": {

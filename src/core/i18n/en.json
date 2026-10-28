@@ -769,6 +769,8 @@
     "compared": "Compared",
     "pair": "Compared versions",
     "swap": "Swap the two versions",
+    "from": "From",
+    "to": "To",
     "chooseTwo": "Choose two different versions",
     "comparing": "Comparing…",
     "shownScenes": "Scenes shown",
@@ -840,7 +842,6 @@
     "sceneActions": "Actions for {{heading}}",
     "tree": "Scene list",
     "removedLine": "Removed line",
-    "sections": "Versions sections",
     "versionsIntro": "Each frozen version is a dated copy of the screenplay, kept in the project’s “versions” folder. Nothing changes it afterwards: compare it with the current text, or go back to it.",
     "compare": "Compare",
     "noneYet": "No frozen version yet",
@@ -849,8 +850,6 @@
     "moreLines_one": "{{n}} more line",
     "moreLines_other": "{{n}} more lines",
     "freezeShort": "Freeze",
-    "changesHint": "What changed between two versions, scene by scene",
-    "versionsHint": "The frozen versions, and the current one",
     "cutsHint": "The scenes deleted from the screenplay, to put back"
   },
   "bible": {

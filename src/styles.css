@@ -5621,8 +5621,8 @@ h4 {
 }
 
 /*
- * Versions, one thing at a time behind three tabs in the header: the changes between two versions, laid out like a code
- * review; the versions themselves, as a thread; the scenes cut from the screenplay, waiting to be put back.
+ * Versions: the versions themselves, as a thread; one level down, the changes between two of them, laid out like a code
+ * review, and the scenes cut from the screenplay, waiting to be put back.
  */
 .versions-view {
   display: flex;
@@ -5964,68 +5964,97 @@ h4 {
   min-height: 0;
   overflow: auto;
 }
+/* The text on the left; on the right, all the height long, which two versions, how much changed and the list of the scenes. */
 .vr-compare {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
   height: 100%;
 }
-/* With scenes to go through: the bar heads the text only, the list runs the full height on the right. */
-.vr-compare.with-tree {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 264px;
-}
 .vr-col {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--sunken);
+}
+.vr-note {
+  margin: 0;
+  padding: 28px 24px;
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 13px;
+}
+.vr-compare > .vr-loading {
+  align-content: start;
+  background: var(--sunken);
+}
+
+.vr-side {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  container-type: inline-size;
+  border-left: 1px solid var(--line);
 }
-/* Short of room, the bar keeps to one line, level with the head of the list: the counts of scenes and pages go first. */
-@container (max-width: 820px) {
-  .vr-col .vr-summary-sums {
-    display: none;
-  }
-}
-
-/* The bar: how much changed on the left, which two versions and how to lay them out on the right. */
-.vr-toolbar {
+.vr-side-top {
   flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  min-height: 46px;
-  padding: 7px 12px 7px 16px;
+  display: grid;
+  gap: 14px;
+  padding: 14px 12px 14px 14px;
   border-bottom: 1px solid var(--line);
 }
+
+/* The two versions, one above the other, read « De … À … »; the swap faces both. */
+.vr-pair {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 8px;
+}
+.vr-pair-tag {
+  min-width: 1.6em;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.vr-pair .select {
+  width: 100%;
+  height: 30px;
+  border-radius: 7px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.vr-swap {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+/* How much changed: the count and the lines on one line, the scenes and pages under it. */
 .vr-summary {
+  display: grid;
+  gap: 5px;
+}
+.vr-summary-line {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 10px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 10px;
 }
 .vr-summary-title {
+  margin: 0;
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-.vr-summary-title.quiet {
-  color: var(--muted);
-  font-weight: 500;
-}
-.vr-summary > .vr-linestat {
+.vr-summary-line > .vr-linestat {
   font-size: 13px;
   font-weight: 600;
 }
 .vr-summary-sums {
-  display: inline-flex;
-  gap: 14px;
-  margin-left: 4px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
   color: var(--muted);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
@@ -6044,36 +6073,9 @@ h4 {
   font-weight: 600;
   line-height: 17px;
 }
-.vr-toolbar-end {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-}
-.vr-pair {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.vr-pair .select {
-  max-width: 220px;
-  height: 30px;
-  border-radius: 7px;
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-.vr-pair-arrow {
-  width: 14px;
-  height: 14px;
+.vr-cuts-n {
   color: var(--hint);
-}
-.vr-toolbar .segmented {
-  height: 30px;
-}
-.vr-toolbar .seg svg {
-  width: 15px;
-  height: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
 .vr-linestat {
@@ -6095,19 +6097,17 @@ h4 {
 
 /* The touched scenes, one line each; the one at the top of the text is lit. */
 .vr-tree {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-left: 1px solid var(--line);
 }
 .vr-tree-head {
   flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 46px;
-  padding: 5px 10px 5px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 12px 2px 14px;
 }
 /* What the list shows, as a real button: its name and count, opening the choice. */
 .vr-filter-btn {
@@ -6628,11 +6628,22 @@ h4 {
 }
 
 @media (max-width: 1100px) {
+  .vr-compare {
+    grid-template-columns: minmax(0, 1fr) 248px;
+  }
+}
+/* Too narrow for two columns: the versions and the count head the text, the list goes. */
+@media (max-width: 760px) {
+  .vr-compare {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .vr-side {
+    order: -1;
+    border-left: none;
+  }
   .vr-tree {
     display: none;
-  }
-  .vr-compare.with-tree {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 960px) {
