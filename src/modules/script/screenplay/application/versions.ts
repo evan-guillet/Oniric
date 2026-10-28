@@ -100,6 +100,11 @@ export function versionScenes(v: VersionFile): VersionScene[] {
   return v.scenes.map((s) => ({ id: s.id, heading: s.heading, text: s.text }));
 }
 
+/** Only the name in the list changes: the file keeps the one it was frozen under. */
+export async function renameVersion(id: string, name: string): Promise<void> {
+  await write("Version renommée", ["script_version"], [db.updateTable("script_version").set({ name }).where("id", "=", id)]);
+}
+
 export async function deleteVersionRow(id: string): Promise<void> {
   await write("Version retirée de la liste", ["script_version"], [db.deleteFrom("script_version").where("id", "=", id)]);
 }

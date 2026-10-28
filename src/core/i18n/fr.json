@@ -755,11 +755,10 @@
     "count_other": "{{n}} scènes"
   },
   "versions": {
-    "live": "En cours",
+    "renameVersion": "Renommer la version",
     "copyHash": "Copier l'empreinte",
     "removeFromList": "Retirer de la liste",
     "cuts": "Scènes coupées",
-    "cutsNote": "Une scène supprimée du scénario attend ici. Réintégrée, elle reprend sa place ; supprimée définitivement, elle ne reste que dans les versions figées.",
     "reinstate": "Réintégrer",
     "firstTitle": "Gardez une trace de chaque étape du scénario",
     "firstWhen": "Les bons moments : avant une grande réécriture, avant d'envoyer le scénario à quelqu'un, à la fin d'un jet.",
@@ -845,7 +844,6 @@
     "sceneActions": "Actions pour {{heading}}",
     "tree": "Liste des scènes",
     "removedLine": "Ligne retirée",
-    "versionsIntro": "Chaque version figée est une copie datée du scénario, rangée dans le dossier « versions » du projet. Rien ne la modifie ensuite : comparez-la au texte actuel, ou revenez-y.",
     "compare": "Comparer",
     "noneYet": "Aucune version figée pour l'instant",
     "noneYetText": "Figez la version actuelle avant une grande réécriture ou un envoi : vous verrez ensuite ce qui a changé depuis.",

@@ -755,11 +755,10 @@
     "count_other": "{{n}} escenas"
   },
   "versions": {
-    "live": "En curso",
+    "renameVersion": "Cambiar el nombre de la versión",
     "copyHash": "Copiar la huella",
     "removeFromList": "Quitar de la lista",
     "cuts": "Escenas cortadas",
-    "cutsNote": "Una escena eliminada del guion espera aquí. Reintegrada, recupera su lugar; eliminada definitivamente, solo queda en las versiones fijadas.",
     "reinstate": "Recuperar",
     "firstTitle": "Guarda la huella de cada etapa del guion",
     "firstWhen": "Buenos momentos: antes de una gran reescritura, antes de enviar el guion a alguien, al terminar un borrador.",
@@ -845,7 +844,6 @@
     "sceneActions": "Acciones para {{heading}}",
     "tree": "Lista de escenas",
     "removedLine": "Línea eliminada",
-    "versionsIntro": "Cada versión fijada es una copia fechada del guion, guardada en la carpeta «versions» del proyecto. Después nada la modifica: compárala con el texto actual o vuelve a ella.",
     "compare": "Comparar",
     "noneYet": "Todavía no hay ninguna versión fijada",
     "noneYetText": "Fija la versión actual antes de una gran reescritura o de un envío: después verás qué ha cambiado.",

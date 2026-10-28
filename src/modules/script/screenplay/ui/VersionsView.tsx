@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, PenLine, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, Lock, Pencil, PenLine, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
@@ -13,6 +13,7 @@ import {
   cutScenes,
   currentVersion,
   deleteVersionRow,
+  renameVersion,
   freezeVersion,
   listVersions,
   purgeScene,
@@ -185,6 +186,16 @@ export function VersionsView() {
     }
   };
 
+  const rename = async (v: VersionRow) => {
+    const name = (await prompt(t("versions.renameVersion"), t("versions.name"), v.name))?.trim();
+    if (!name || name === v.name) return;
+    try {
+      await renameVersion(v.id, name);
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  };
+
   const remove = async (v: VersionRow) => {
     const c = await ask({
       title: t("versions.removeAsk", { name: v.name }),
@@ -239,7 +250,7 @@ export function VersionsView() {
       {shownPane === "scenes" ? (
         scenes
       ) : shownPane === "versions" ? (
-        <VersionPane versions={versions} now={now} base={base} onCompare={compareFrom} onRestore={restore} onRemove={remove} />
+        <VersionPane versions={versions} now={now} base={base} onCompare={compareFrom} onRename={rename} onRestore={restore} onRemove={remove} />
       ) : (
         <CutPane cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
       )}
@@ -307,6 +318,7 @@ function VersionPane({
   now,
   base,
   onCompare,
+  onRename,
   onRestore,
   onRemove,
 }: {
@@ -314,6 +326,7 @@ function VersionPane({
   now: VersionFile | null;
   base: string;
   onCompare: (file: string) => void;
+  onRename: (v: VersionRow) => void;
   onRestore: (v: VersionRow) => void;
   onRemove: (v: VersionRow) => void;
 }) {
@@ -329,7 +342,6 @@ function VersionPane({
           <div className="vr-stop-body">
             <span className="vr-stop-title">
               <span className="vr-stop-name">{t("versions.current")}</span>
-              <span className="vr-live">{t("versions.live")}</span>
             </span>
             <span className="vr-stop-meta">
               {now ? (
@@ -354,10 +366,10 @@ function VersionPane({
             <span className="vr-node" aria-hidden="true">
               <Lock />
             </span>
+            <div className="vr-stop-card">
             <button type="button" className="vr-stop-body" aria-pressed={v.file === base} title={t("versions.seeSince", { name: v.name })} onClick={() => onCompare(v.file)}>
               <span className="vr-stop-title">
                 <span className="vr-stop-name">{v.name}</span>
-                {v.file === base && <span className="vr-role">{t("versions.reference")}</span>}
               </span>
               <span className="vr-stop-meta">
                 <span title={dateFormat.format(new Date(v.createdAt))}>{shortDate(v.createdAt)}</span>
@@ -368,6 +380,7 @@ function VersionPane({
             <MoreMenu
               label={t("versions.actionsFor", { name: v.name })}
               items={[
+                { label: t("versions.renameVersion"), icon: Pencil, onClick: () => onRename(v) },
                 { label: t("versions.restore"), icon: Undo2, onClick: () => onRestore(v) },
                 {
                   label: `${t("versions.copyHash")} · ${v.sha256.slice(0, 8)}`,
@@ -377,10 +390,10 @@ function VersionPane({
                 { label: t("versions.removeFromList"), icon: X, danger: true, onClick: () => onRemove(v) },
               ]}
             />
+            </div>
           </li>
         ))}
       </ol>
-      <p className="vr-pane-note">{t("versions.versionsIntro")}</p>
     </div>
   );
 }
@@ -432,7 +445,6 @@ function CutPane({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate
           })}
         </ul>
       )}
-      <p className="vr-pane-note">{t("versions.cutsNote")}</p>
     </div>
   );
 }

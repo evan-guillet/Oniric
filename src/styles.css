@@ -5535,12 +5535,6 @@ h4 {
   font-size: 13px;
   line-height: 1.5;
 }
-.vr-pane-note {
-  margin: 16px 4px 0;
-  color: var(--hint);
-  font-size: 12px;
-  line-height: 1.5;
-}
 
 /* The versions, a thread: a 22px node each, joined by a rule; a frozen one is a button that makes it the reference. */
 .vr-thread {
@@ -5551,7 +5545,7 @@ h4 {
 .vr-stop {
   position: relative;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 22px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
   padding-bottom: 4px;
@@ -5602,25 +5596,36 @@ h4 {
   font: inherit;
   text-align: left;
 }
-button.vr-stop-body {
-  cursor: pointer;
+/* A frozen version: the button that makes it the reference and its « ⋯ », in one card. */
+.vr-stop-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   transition:
     background-color 120ms ease-out,
     border-color 120ms ease-out;
 }
-button.vr-stop-body:hover {
+.vr-stop-card:hover {
   background: var(--hover);
 }
-.vr-stop.base .vr-stop-body {
+.vr-stop.base .vr-stop-card {
   border-color: var(--accent-line);
   background: var(--accent-soft);
+}
+.vr-stop-card > .vr-stop-body {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.vr-stop-card > .more-btn {
+  margin: 4px 4px 0 0;
 }
 button.vr-stop-body:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
-}
-.vr-stop > .more-btn {
-  margin-top: 8px;
 }
 .vr-stop-title {
   display: flex;
@@ -5660,33 +5665,6 @@ button.vr-stop-body:focus-visible {
   font-size: 11px;
   font-weight: 600;
   line-height: 16px;
-}
-.vr-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--ok);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-.vr-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--ok-dot);
-}
-.vr-role {
-  flex: none;
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--panel);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 18px;
-  letter-spacing: 0;
 }
 
 /* A cut scene: its heading and « ⋯ », the first line of its text, when it went and the way back. */
