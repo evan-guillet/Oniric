@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Columns2, GitCompareArrows, Info, ListFilter, Lock, PanelRight, PenLine, Rows2, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowRight, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, GitCompareArrows, Info, ListFilter, Lock, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
@@ -233,6 +233,11 @@ export function VersionsView() {
               onSwap={() => {
                 setBase(head);
                 setHead(base);
+              }}
+              cutIds={new Set(cuts.map((c) => c.id))}
+              onReinstate={(id) => {
+                const c = cuts.find((x) => x.id === id);
+                if (c) reinstateCut(c);
               }}
             />
           )
@@ -485,7 +490,6 @@ function FirstVersion({ onFreeze }: { onFreeze: () => void }) {
 }
 
 type Filter = "changes" | Kind | "all";
-type Layout = "unified" | "split";
 
 /** A choice kept on this computer; the page works the same without it. */
 function stored<T extends string>(key: string, fallback: T, allowed: readonly T[]): T {
@@ -503,12 +507,10 @@ function store(key: string, value: string) {
     // Nowhere to keep it: the choice lasts as long as the page.
   }
 }
-const LAYOUT_KEY = "oniric.versions.layout";
-const TREE_KEY = "oniric.versions.tree";
 
 /**
  * The comparison, laid out like a code review: a bar that says how much changed and between which versions,
- * the touched scenes listed on the left, and each one's text on the right, the identical lines folded away.
+ * each touched scene's text, the identical lines folded away, and the list of them on the right.
  */
 function Compare({
   versions,
@@ -519,6 +521,8 @@ function Compare({
   onBase,
   onHead,
   onSwap,
+  cutIds,
+  onReinstate,
 }: {
   versions: VersionRow[];
   base: string;
@@ -528,16 +532,15 @@ function Compare({
   onBase: (file: string) => void;
   onHead: (file: string) => void;
   onSwap: () => void;
+  cutIds: Set<string>;
+  onReinstate: (id: string) => void;
 }) {
   const { openScene } = useProject();
   const [filter, setFilter] = useState<Filter>("changes");
-  const [search, setSearch] = useState("");
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [active, setActive] = useState("");
-  const [layout, setLayout] = useState<Layout>(() => stored(LAYOUT_KEY, "unified", ["unified", "split"]));
-  const [tree, setTree] = useState(() => stored(TREE_KEY, window.innerWidth >= 1100 ? "1" : "0", ["1", "0"]) === "1");
-  const [menuAt, setMenuAt] = useState<{ top: number; right: number } | null>(null);
+  const [menuAt, setMenuAt] = useState<{ top: number; left: number } | null>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -574,35 +577,7 @@ function Compare({
             <ArrowLeftRight aria-hidden="true" />
           </button>
         </div>
-        {touched.length > 0 && (
-          <Segmented<Layout>
-            label={t("versions.layout")}
-            value={layout}
-            onChange={(v) => {
-              store(LAYOUT_KEY, v);
-              setLayout(v);
-            }}
-            options={[
-              { id: "unified", label: t("versions.unified"), icon: Rows2 },
-              { id: "split", label: t("versions.split"), icon: Columns2 },
-            ]}
-          />
-        )}
-        {touched.length > 0 && (
-          <button
-            type="button"
-            className={`more-btn vr-tree-toggle${tree ? " on" : ""}`}
-            aria-pressed={tree}
-            aria-label={t("versions.tree")}
-            title={t("versions.tree")}
-            onClick={() => {
-              store(TREE_KEY, tree ? "0" : "1");
-              setTree(!tree);
-            }}
-          >
-            <PanelRight aria-hidden="true" />
-          </button>
-        )}
+
       </div>
     </header>
   );
@@ -636,10 +611,8 @@ function Compare({
   const count = (k: Kind) => cmp.scenes.filter((s) => s.diff.kind === k).length;
   const totals = touched.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
   const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || t("dash.noHeading");
-  const needle = search.trim().toLocaleLowerCase();
   const shown = cmp.scenes
-    .filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter))
-    .filter((s) => !needle || heading(s).toLocaleLowerCase().includes(needle));
+    .filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter));
   const setIn = (set: Set<string>, key: string, on: boolean) => {
     const next = new Set(set);
     if (on) next.add(key);
@@ -697,60 +670,53 @@ function Compare({
         </>,
       )}
 
-      <div className={`vr-body${tree ? "" : " no-tree"}`}>
+      <div className="vr-body">
         <div className="vr-files" ref={scroller} onScroll={onScroll}>
-          {shown.length === 0 && <p className="vr-blank">{t("versions.noMatch", { query: search.trim() })}</p>}
           {shown.map((s) => (
             <SceneFile
               key={s.key}
               scene={s}
               heading={heading(s)}
-              layout={layout}
               open={!closed.has(s.key)}
               onToggle={() => setClosed((c) => setIn(c, s.key, !c.has(s.key)))}
               reviewed={reviewed.has(s.key)}
               onReview={(on) => review(s.key, on)}
               onOpen={head === CURRENT && s.diff.right ? () => openScene(s.diff.right!.id) : undefined}
-              baseLabel={label(base)}
-              headLabel={label(head)}
+              onReinstate={head === CURRENT && s.diff.kind === "removed" && cutIds.has(s.diff.left!.id) ? () => onReinstate(s.diff.left!.id) : undefined}
             />
           ))}
         </div>
 
-        {tree && (
-          <nav className="vr-tree" aria-label={t("versions.tree")}>
+        <nav className="vr-tree" aria-label={t("versions.tree")}>
             <div className="vr-tree-head">
-              <input type="search" className="vr-filter" placeholder={t("versions.search")} value={search} onChange={(e) => setSearch(e.target.value)} aria-label={t("versions.searchLabel")} />
               <button
                 ref={filterButton}
                 type="button"
-                className={`more-btn${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
-                aria-label={t("versions.shownScenes")}
+                className={`btn vr-filter-btn${menuAt ? " on" : ""}${filter !== "changes" ? " set" : ""}`}
                 title={t("versions.shownScenes")}
                 aria-haspopup="menu"
                 aria-expanded={!!menuAt}
                 onClick={(e) => {
                   const r = e.currentTarget.getBoundingClientRect();
-                  setMenuAt(menuAt ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+                  setMenuAt(menuAt ? null : { top: r.bottom + 4, left: r.left });
                 }}
               >
                 <ListFilter aria-hidden="true" />
+                <span className="vr-filter-name">{filterName(filter)}</span>
+                <span className="vr-filter-n">{shown.length}</span>
+                <ChevronDown aria-hidden="true" className="vr-filter-caret" />
               </button>
               {menuAt && (
                 <FloatingMenu
                   anchor={filterButton}
-                  style={{ top: menuAt.top, right: menuAt.right }}
+                  style={{ top: menuAt.top, left: menuAt.left }}
                   onClose={() => setMenuAt(null)}
                   items={filters.map((f) => ({ label: `${filterName(f)} (${filterCount(f)})`, checked: filter === f, onClick: () => setFilter(f) }))}
                 />
               )}
-            </div>
-            <div className="vr-tree-scope">
-              <span className="vr-tree-scope-name">{filterName(filter)}</span>
-              <span className="vr-tree-n">{shown.length}</span>
               <button
                 type="button"
-                className="more-btn"
+                className="btn icon-only vr-fold-all"
                 disabled={shown.length === 0}
                 aria-label={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
                 title={allClosed ? t("sceneList.unfold") : t("versions.foldAll")}
@@ -771,7 +737,6 @@ function Compare({
               ))}
             </ul>
           </nav>
-        )}
       </div>
     </div>
   );
@@ -822,25 +787,22 @@ function LineText({ side, marked }: { side: LineSide; marked: boolean }) {
 function SceneFile({
   scene,
   heading,
-  layout,
   open,
   onToggle,
   reviewed,
   onReview,
   onOpen,
-  baseLabel,
-  headLabel,
+  onReinstate,
 }: {
   scene: ComparedScene;
   heading: string;
-  layout: Layout;
   open: boolean;
   onToggle: () => void;
   reviewed: boolean;
   onReview: (on: boolean) => void;
   onOpen?: () => void;
-  baseLabel: string;
-  headLabel: string;
+  /** The scene was removed from the current text and still waits among the cut scenes. */
+  onReinstate?: () => void;
 }) {
   const [unfolded, setUnfolded] = useState<Set<number>>(new Set());
   const hunks = useMemo(() => foldLines(scene.lines), [scene.lines]);
@@ -876,11 +838,17 @@ function SceneFile({
             <input type="checkbox" checked={reviewed} onChange={(e) => onReview(e.target.checked)} />
             {t("versions.reviewed")}
           </label>
+          {onReinstate && (
+            <button type="button" className="btn small" onClick={onReinstate}>
+              <Undo2 aria-hidden="true" />
+              {t("versions.reinstate")}
+            </button>
+          )}
           {onOpen && <MoreMenu label={t("versions.sceneActions", { heading })} items={[{ label: t("versions.openInScript"), icon: PenLine, onClick: onOpen }]} />}
         </span>
       </header>
       {open && kind === "moved" && <div className="vr-split-note">{t("versions.moved")}</div>}
-      {open && layout === "unified" && (
+      {open && (
         <div className="vr-unified" role="table" aria-label={heading}>
           {body((lines) =>
             unify(lines).map((r, k) => (
@@ -896,47 +864,7 @@ function SceneFile({
           )}
         </div>
       )}
-      {open && layout === "split" && (
-        <div className="vr-split" role="table" aria-label={t("versions.sides", { base: baseLabel, head: headLabel })}>
-          <div className="vr-row vr-sides" role="row">
-            <span className="vr-side-name" role="columnheader">
-              {baseLabel}
-            </span>
-            <span className="vr-side-name" role="columnheader">
-              {headLabel}
-            </span>
-          </div>
-          {body((lines) =>
-            lines.map((l, k) => (
-              <div key={k} className={`vr-row ${l.kind}`} role="row">
-                <Side side={l.left} kind={l.kind} which="left" />
-                <Side side={l.right} kind={l.kind} which="right" />
-              </div>
-            )),
-          )}
-        </div>
-      )}
     </section>
   );
 }
 
-function Side({ side, kind, which }: { side: LineSide | null; kind: DiffLine["kind"]; which: "left" | "right" }) {
-  if (!side)
-    return (
-      <>
-        <span className="vr-ln blank" role="cell" />
-        <span className="vr-code blank" role="cell" />
-      </>
-    );
-  const tone = kind === "same" ? "" : which === "left" ? " del" : " ins";
-  return (
-    <>
-      <span className={`vr-ln${tone}`} role="cell">
-        {side.n}
-      </span>
-      <span className={`vr-code${tone}`} role="cell">
-        <LineText side={side} marked={kind === "changed"} />
-      </span>
-    </>
-  );
-}

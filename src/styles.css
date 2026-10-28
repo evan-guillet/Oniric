@@ -5981,9 +5981,6 @@ h4 {
   padding: 7px 12px 7px 16px;
   border-bottom: 1px solid var(--line);
 }
-.vr-tree-toggle {
-  margin-right: -4px;
-}
 .vr-summary {
   display: flex;
   flex-wrap: wrap;
@@ -6084,9 +6081,6 @@ h4 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 264px;
 }
-.vr-body.no-tree {
-  grid-template-columns: minmax(0, 1fr);
-}
 
 /* The touched scenes, one line each; the one at the top of the text is lit. */
 .vr-tree {
@@ -6099,45 +6093,53 @@ h4 {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 12px 10px 4px 12px;
+  gap: 6px;
+  padding: 12px 10px 8px 12px;
 }
-.vr-filter {
+/* What the list shows, as a real button: its name and count, opening the choice. */
+.vr-filter-btn {
   flex: 1;
   min-width: 0;
-  height: 30px;
-  border-radius: 7px;
-  font-size: 12.5px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-inline: 10px 8px;
 }
-.vr-tree-head .more-btn {
-  width: 30px;
-  height: 30px;
-}
-.vr-tree-head .more-btn.set {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.vr-tree-scope {
+.vr-filter-btn > svg:first-child {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 10px 0 18px;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 500;
 }
-.vr-tree-n {
+.vr-filter-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vr-filter-n {
   color: var(--hint);
   font-variant-numeric: tabular-nums;
 }
-.vr-tree-scope .more-btn {
+.vr-filter-btn .vr-filter-caret {
+  width: 14px;
+  height: 14px;
   margin-left: auto;
+  color: var(--muted);
+  transition: transform 160ms ease-out;
 }
-.vr-tree-scope .more-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+.vr-filter-btn.on .vr-filter-caret {
+  transform: rotate(180deg);
+}
+.vr-filter-btn.set {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.vr-filter-btn.set > svg:first-child,
+.vr-filter-btn.set .vr-filter-n {
+  color: var(--accent);
+}
+.vr-fold-all {
+  flex: none;
+  width: 34px;
 }
 .vr-tree-list {
   flex: 1;
@@ -6346,8 +6348,7 @@ h4 {
 }
 
 /* The text: Courier Prime, as on the page, one gutter of line numbers; a removed line is marked « − ». */
-.vr-unified,
-.vr-split {
+.vr-unified {
   display: grid;
   font-family: "Courier Prime", monospace;
   font-size: 12.5px;
@@ -6356,24 +6357,8 @@ h4 {
 .vr-unified {
   grid-template-columns: 52px minmax(0, 1fr);
 }
-.vr-split {
-  grid-template-columns: 44px minmax(0, 1fr) 44px minmax(0, 1fr);
-}
 .vr-row {
   display: contents;
-}
-.vr-side-name {
-  grid-column: span 2;
-  padding: 6px 14px 6px 54px;
-  border-bottom: 1px solid var(--line);
-  background: var(--sunken);
-  color: var(--muted);
-  font-family: var(--ui-font);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.vr-side-name:first-child {
-  border-right: 1px solid var(--line);
 }
 .vr-ln {
   padding: 2px 12px 2px 0;
@@ -6389,9 +6374,6 @@ h4 {
   color: var(--ink);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.vr-split .vr-code:nth-child(2) {
-  border-right: 1px solid var(--line);
 }
 .vr-ln.del,
 .vr-code.del {
@@ -6418,10 +6400,6 @@ h4 {
   color: var(--ink);
   border-radius: 3px;
 }
-.vr-ln.blank,
-.vr-code.blank {
-  background: var(--sunken);
-}
 
 /* Identical lines folded away: a quiet row that opens them, upwards, downwards or both ways between changes. */
 .vr-fold {
@@ -6440,9 +6418,6 @@ h4 {
   font-weight: 500;
   cursor: pointer;
   transition: color 120ms ease-out;
-}
-.vr-split .vr-fold {
-  grid-template-columns: 44px minmax(0, 1fr);
 }
 .vr-fold-icon {
   display: grid;
@@ -6491,11 +6466,6 @@ h4 {
 }
 .vr-split-note:last-child {
   border-bottom: none;
-}
-.vr-blank {
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--muted);
 }
 
 .vr-same {
@@ -6597,8 +6567,7 @@ h4 {
 }
 
 @media (max-width: 1100px) {
-  .vr-tree,
-  .vr-tree-toggle {
+  .vr-tree {
     display: none;
   }
   .vr-body {
