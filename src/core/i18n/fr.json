@@ -707,7 +707,9 @@
       "notes": "Notes",
       "notesHint": "Les notes à la place des scènes",
       "info": "Informations",
-      "infoHint": "Titre, auteurs, contact, mention : ce qu'imprime la page de titre"
+      "infoHint": "Titre, auteurs, contact, mention : ce qu'imprime la page de titre",
+      "display": "Affichage",
+      "displayHint": "Les cartes de scène, les liens de la Bible, le repère d'acte et de séquence"
     },
     "removeScene": "Supprimer la scène ?",
     "removeSceneText": "Elle quitte le scénario mais reste dans la corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.",
@@ -2216,7 +2218,15 @@
     "help": "Aide",
     "helpHint": "Les explications sous chaque étape",
     "writing": "Le scénario compte {{scenes}}, environ {{pages}}, soit {{time}} à l'écran.",
-    "doneOf": "sur {{total}} terminées"
+    "doneOf": "sur {{total}} terminées",
+    "panel": "Panneau",
+    "shownSteps": "Étapes affichées",
+    "panels": {
+      "progress": "Progression",
+      "progressHint": "Les étapes de l'atelier et où vous en êtes",
+      "display": "Affichage",
+      "displayHint": "L'aide et les étapes montrées dans la liste"
+    }
   },
   "fields": {
     "previous": "Versions précédentes de ce champ",

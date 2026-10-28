@@ -1,5 +1,6 @@
-import { Check, Eye } from "lucide-react";
+import { Check, Eye, ListChecks, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { describeError } from "../../../../core/errors";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
@@ -12,15 +13,27 @@ import { StepDocuments } from "./StepDocuments";
 import { StepPreparation } from "./StepPreparation";
 import { StepStructure } from "./StepStructure";
 
-import { CheckMenu } from "../../../../ui-kit/CheckMenu";
+import { CheckList } from "../../../../ui-kit/CheckList";
+import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { Select } from "../../../../ui-kit/Select";
 import { plural, t } from "../../../../core/i18n";
 const STATUSES: StepStatus[] = ["empty", "started", "done"];
 const statusLabel = (s: StepStatus) => t(`workshopView.status.${s}`);
 
+/** What the side panel shows: the steps and where they stand, or what the workshop displays. */
+type Panel = "progress" | "display";
+const PANEL_ICONS: Record<Panel, LucideIcon> = { progress: ListChecks, display: Eye };
+const panelTabs = (): SegmentedOption<Panel>[] =>
+  (["progress", "display"] as const).map((id) => ({
+    id,
+    label: t(`workshopView.panels.${id}`),
+    hint: t(`workshopView.panels.${id}Hint`),
+    icon: PANEL_ICONS[id],
+  }));
+
 /** The writing workshop: nine steps, none compulsory, the first five in this version [ATL-01 to ATL-03]. */
 export function WorkshopView() {
-  const { notify } = useProject();
+  const { notify, headerActions } = useProject();
   const stored = useFields();
   const [local, setLocal] = useState<Map<string, unknown>>(new Map());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -74,6 +87,7 @@ export function WorkshopView() {
 
   const hidden = workshop.get<number[]>("ui.hidden", []);
   const [step, setStep] = useState(1);
+  const [panel, setPanel] = useState<Panel>("progress");
   if (!stored) return <p className="muted view-pad">{t("dash.loading")}</p>;
   const current = STEPS.find((s) => s.n === step) ?? STEPS[0];
   const status = (n: number) => workshop.get<StepStatus>(`step.${n}.status`, "empty");
@@ -83,40 +97,42 @@ export function WorkshopView() {
   return (
     <WorkshopContext.Provider value={workshop}>
       <div className="view split">
-        <nav className="view-side steps" aria-label={t("workshopView.steps")}>
-          <div className="steps-head">
+        {panel === "progress" ? (
+          <nav className="view-side steps" aria-label={t("workshopView.steps")}>
             <p className="steps-count">
               <strong>{ready.filter((s) => status(s.n) === "done").length}</strong> {t("workshopView.doneOf", { total: ready.length })}
             </p>
-            <CheckMenu
-              label={t("script.display")}
-              icon={Eye}
-              items={[
-                { id: "help", label: t("workshopView.help"), hint: t("workshopView.helpHint"), checked: workshop.help },
-                ...STEPS.map((s) => ({ id: String(s.n), label: `${s.n}. ${s.title}`, checked: !hidden.includes(s.n) })),
-              ]}
+            <div className="steps-bar" aria-hidden="true">
+              {ready.map((s) => (
+                <span key={s.n} className={status(s.n)} />
+              ))}
+            </div>
+            <StepList steps={ready.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
+            {later.some((s) => !hidden.includes(s.n)) && (
+              <>
+                <p className="steps-group">{t("app.version", { version: "2.0" })}</p>
+                <StepList steps={later.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
+              </>
+            )}
+          </nav>
+        ) : (
+          <aside className="view-side steps-display" aria-label={t("workshopView.panels.display")}>
+            <CheckList
+              label={t("workshopView.help")}
+              items={[{ id: "help", label: t("workshopView.help"), hint: t("workshopView.helpHint"), checked: workshop.help }]}
+              onToggle={() => workshop.set("ui.help", !workshop.help)}
+            />
+            <p className="check-list-title">{t("workshopView.shownSteps")}</p>
+            <CheckList
+              label={t("workshopView.shownSteps")}
+              items={STEPS.map((s) => ({ id: String(s.n), label: `${s.n}. ${s.title}`, checked: !hidden.includes(s.n) }))}
               onToggle={(id) => {
-                if (id === "help") workshop.set("ui.help", !workshop.help);
-                else {
-                  const n = Number(id);
-                  workshop.set("ui.hidden", hidden.includes(n) ? hidden.filter((x) => x !== n) : [...hidden, n]);
-                }
+                const n = Number(id);
+                workshop.set("ui.hidden", hidden.includes(n) ? hidden.filter((x) => x !== n) : [...hidden, n]);
               }}
             />
-          </div>
-          <div className="steps-bar" aria-hidden="true">
-            {ready.map((s) => (
-              <span key={s.n} className={status(s.n)} />
-            ))}
-          </div>
-          <StepList steps={ready.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
-          {later.some((s) => !hidden.includes(s.n)) && (
-            <>
-              <p className="steps-group">{t("app.version", { version: "2.0" })}</p>
-              <StepList steps={later.filter((s) => !hidden.includes(s.n))} step={step} status={status} onPick={setStep} />
-            </>
-          )}
-        </nav>
+          </aside>
+        )}
         <main className="view-main workshop">
           <header className="step-head">
             <h2>
@@ -139,6 +155,13 @@ export function WorkshopView() {
           {current.n > 5 && <StepLater n={current.n} />}
         </main>
       </div>
+      {headerActions &&
+        createPortal(
+          <div className="header-tools">
+            <Segmented label={t("workshopView.panel")} options={panelTabs()} value={panel} onChange={setPanel} />
+          </div>,
+          headerActions,
+        )}
     </WorkshopContext.Provider>
   );
 }

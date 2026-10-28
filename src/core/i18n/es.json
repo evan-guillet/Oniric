@@ -707,7 +707,9 @@
       "notes": "Notas",
       "notesHint": "Las notas en lugar de las escenas",
       "info": "Información",
-      "infoHint": "Título, autores, contacto, mención: lo que imprime la portada"
+      "infoHint": "Título, autores, contacto, mención: lo que imprime la portada",
+      "display": "Visualización",
+      "displayHint": "Las tarjetas de escena, los enlaces de la Biblia, la marca de acto y secuencia"
     },
     "removeScene": "¿Eliminar la escena?",
     "removeSceneText": "Sale del guion pero se queda en la papelera de escenas cortadas (vista Versiones), desde donde se puede recuperar.",
@@ -2216,7 +2218,15 @@
     "help": "Ayuda",
     "helpHint": "Las explicaciones bajo cada etapa",
     "writing": "El guion tiene {{scenes}}, unas {{pages}}, es decir {{time}} en pantalla.",
-    "doneOf": "de {{total}} terminadas"
+    "doneOf": "de {{total}} terminadas",
+    "panel": "Panel",
+    "shownSteps": "Etapas mostradas",
+    "panels": {
+      "progress": "Progreso",
+      "progressHint": "Las etapas del taller y dónde está usted",
+      "display": "Visualización",
+      "displayHint": "La ayuda y las etapas que muestra la lista"
+    }
   },
   "fields": {
     "previous": "Versiones anteriores de este campo",

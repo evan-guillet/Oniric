@@ -707,7 +707,9 @@
       "notes": "Notes",
       "notesHint": "The notes in place of the scenes",
       "info": "Information",
-      "infoHint": "Title, authors, contact, mention: what the title page prints"
+      "infoHint": "Title, authors, contact, mention: what the title page prints",
+      "display": "Display",
+      "displayHint": "Scene cards, Bible links, the act and sequence marker"
     },
     "removeScene": "Delete the scene?",
     "removeSceneText": "It leaves the screenplay but stays in the bin of cut scenes (Versions view), from where it can be put back.",
@@ -2216,7 +2218,15 @@
     "help": "Help",
     "helpHint": "The explanations under each step",
     "writing": "The script has {{scenes}}, about {{pages}}, or {{time}} on screen.",
-    "doneOf": "of {{total}} done"
+    "doneOf": "of {{total}} done",
+    "panel": "Panel",
+    "shownSteps": "Steps shown",
+    "panels": {
+      "progress": "Progress",
+      "progressHint": "The workshop steps and where you stand",
+      "display": "Display",
+      "displayHint": "The help and the steps shown in the list"
+    }
   },
   "fields": {
     "previous": "Previous versions of this field",

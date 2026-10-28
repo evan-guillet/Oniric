@@ -24,7 +24,7 @@ import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
 import { useWritingPrefs } from "../../../../core/writingPrefs";
 import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
-import { CheckMenu } from "../../../../ui-kit/CheckMenu";
+import { CheckList } from "../../../../ui-kit/CheckList";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile, useProfile, type Profile } from "../../../project/application/profile";
@@ -118,15 +118,16 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
 }
 
 /**
- * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes or the script's
- * information) and what the desk shows (the writing, or the whole script as it prints with « Aperçu »). The notes
- * annotate the text, so they leave the preview; the information can be filled in with the preview beside it.
+ * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes, the script's
+ * information or what the desk displays) and what the desk shows (the writing, or the whole script as it prints with
+ * « Aperçu »). The notes annotate the text, so they leave the preview; the information can be filled in with the
+ * preview beside it.
  */
-type Panel = "scenes" | "notes" | "info";
+type Panel = "scenes" | "notes" | "info" | "display";
 /** The panel's tabs: one is always chosen, and pressing it again keeps it. */
-const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText };
+const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText, display: Eye };
 const panelTabs = (): SegmentedOption<Panel>[] =>
-  (["scenes", "notes", "info"] as const).map((id) => ({
+  (["scenes", "notes", "info", "display"] as const).map((id) => ({
     id,
     label: t(`script.panels.${id}`),
     hint: t(`script.panels.${id}Hint`),
@@ -177,7 +178,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     if (next === panel) return;
     setPanel(next);
     if (next === "notes") setPreview(false);
-    if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
+    if (next !== "info" && next !== "display" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
   };
   /** « Aperçu » shows the whole script as it prints; pressed again, or Échap, it goes back to writing. */
   const togglePreview = () => {
@@ -567,6 +568,17 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           {panel === "info" && titlePage && (
             <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
           )}
+          {panel === "display" && (
+            <CheckList
+              label={t("script.display")}
+              items={[
+                { id: "cards", label: t("script.cards"), hint: t("script.cardsHint"), checked: display.cards },
+                { id: "links", label: t("script.links"), hint: t("script.linksHint"), checked: display.links },
+                { id: "pin", label: t("script.pin"), hint: t("script.pinHint"), checked: display.pin },
+              ]}
+              onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
+            />
+          )}
         </aside>
 
         <main
@@ -671,32 +683,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         headerActions &&
         createPortal(
           <div className="header-tools">
-            <CheckMenu
-              label={t("script.display")}
-              icon={Eye}
-              disabled={body !== "editor"}
-              items={[
-                {
-                  id: "cards",
-                  label: t("script.cards"),
-                  hint: t("script.cardsHint"),
-                  checked: display.cards,
-                },
-                {
-                  id: "links",
-                  label: t("script.links"),
-                  hint: t("script.linksHint"),
-                  checked: display.links,
-                },
-                {
-                  id: "pin",
-                  label: t("script.pin"),
-                  hint: t("script.pinHint"),
-                  checked: display.pin,
-                },
-              ]}
-              onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
-            />
             <button
               type="button"
               className={preview ? "btn on" : "btn"}

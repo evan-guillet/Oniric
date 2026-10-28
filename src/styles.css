@@ -430,7 +430,7 @@ textarea {
   resize: vertical;
   line-height: 1.5;
 }
-/* A choice in a list: the field's box, its value and the caret of « Affichage », which turns over while it is open. */
+/* A choice in a list: the field's box, its value and its caret, which turns over while it is open. */
 .select {
   display: inline-flex;
   align-items: center;
@@ -3108,20 +3108,18 @@ h4 {
   text-underline-offset: 3px;
 }
 
-/* Workshop: progress and display on top, then the steps as a numbered thread */
+/* Workshop: the progress on top, then the steps as a numbered thread; or, under its tab, what it displays */
 .view-side.steps {
   gap: 0;
   padding: 14px 12px 20px;
 }
-.steps-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-left: 2px;
+.view-side.steps-display {
+  gap: 0;
+  padding: 4px 4px 20px;
 }
 .steps-count {
   margin: 0;
+  padding-left: 2px;
   color: var(--muted);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
@@ -5491,14 +5489,6 @@ h4 {
   border-left: 1px solid var(--line);
   background: var(--panel);
 }
-.seg-n {
-  color: var(--hint);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.seg.on .seg-n {
-  color: var(--muted);
-}
 .vr-pane {
   flex: 1;
   min-height: 0;
@@ -6595,62 +6585,56 @@ button.vr-stop-body:focus-visible {
 .header-tools .seg {
   border-radius: 7px;
 }
-/* « Affichage »: a button that opens options with their boxes */
-.check-menu-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 34px;
-  padding: 0 9px 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: var(--panel);
+/* « Affichage » in a panel: one row per option, its box first, the whole row ticks it. */
+.check-list {
+  display: grid;
+  gap: 1px;
+  padding: 10px 8px;
+}
+.check-list button {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
   color: var(--ink-2);
+  font: inherit;
   font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
+  text-align: left;
   cursor: pointer;
-  transition:
-    background-color 120ms ease-out,
-    border-color 120ms ease-out,
-    color 120ms ease-out,
-    box-shadow 120ms ease-out;
+  transition: background-color 120ms ease-out;
 }
-.check-menu-btn svg {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-}
-.check-menu-btn .check-menu-caret {
-  width: 14px;
-  height: 14px;
-  transition: rotate 160ms ease-out;
-}
-.check-menu-btn:hover:not(:disabled),
-.check-menu-btn.on {
-  border-color: var(--control-line-hover);
-  background: var(--panel-2);
+.check-list button:hover {
+  background: var(--hover);
   color: var(--ink);
 }
-.check-menu-btn:hover:not(:disabled) svg,
-.check-menu-btn.on svg {
-  color: var(--ink-2);
-}
-.check-menu-btn:active:not(:disabled) {
-  background: var(--nav-on);
-  box-shadow: none;
-}
-.check-menu-btn:focus-visible {
+.check-list button:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
-.check-menu-btn.on .check-menu-caret {
-  rotate: 180deg;
+.check-list .check-box svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent-ink);
+  stroke-width: 3;
 }
-.check-menu-btn:disabled {
-  cursor: default;
-  opacity: 0.5;
+.check-list button[aria-checked="true"] .check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-list .more-item {
+  max-width: none;
+}
+.check-list-title {
+  margin: 8px 18px 0;
+  color: var(--hint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .check-menu {
   min-width: 260px;
@@ -7467,7 +7451,6 @@ button.vr-stop-body:focus-visible {
   .segmented.compact .seg {
     padding: 0 8px;
   }
-  .check-menu-btn > span,
   .segmented.compact .seg > span {
     position: absolute;
     width: 1px;

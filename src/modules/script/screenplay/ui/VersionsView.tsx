@@ -230,8 +230,8 @@ export function VersionsView() {
   const label = (file: string) => (file === CURRENT ? t("versions.current") : (versions.find((v) => v.file === file)?.name ?? file));
   const panes: SegmentedOption<Pane>[] = [
     ...(versions.length > 0 ? [{ id: "scenes" as const, label: t("versions.paneScenes"), icon: ListTree, hint: t("versions.paneScenesHint") }] : []),
-    { id: "versions", label: t("nav.views.versions"), icon: History, count: versions.length, hint: t("versions.historyHint") },
-    { id: "cuts", label: t("versions.paneCuts"), icon: Scissors, count: cuts.length, hint: t("versions.cutsHint") },
+    { id: "versions", label: t("nav.views.versions"), icon: History, hint: t("versions.historyHint") },
+    { id: "cuts", label: t("versions.paneCuts"), icon: Scissors, hint: t("versions.cutsHint") },
   ];
   const side = (scenes: ReactNode) => (
     <aside className="vr-side" aria-label={t("versions.panel")}>
