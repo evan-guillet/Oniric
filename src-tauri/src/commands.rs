@@ -27,6 +27,10 @@ pub struct Core {
     /// Backup folder when the user chose none [SAV-03].
     pub default_backup_root: PathBuf,
     pub last_backup: Mutex<Instant>,
+    /// Folders the core made outside the open project (restored projects), which may be shown too.
+    pub made_here: Mutex<Vec<PathBuf>>,
+    /// One backup at a time: the timer's and the user's would both write the list of copies.
+    pub backing_up: Mutex<()>,
 }
 
 impl Core {
@@ -43,6 +47,8 @@ impl Core {
             startup_project: Mutex::new(startup_project),
             default_backup_root,
             last_backup: Mutex::new(Instant::now()),
+            made_here: Mutex::new(Vec::new()),
+            backing_up: Mutex::new(()),
         }
     }
 }
@@ -271,13 +277,16 @@ fn backup_root(core: &Core, settings: &backup::Settings) -> PathBuf {
 pub fn backup_current(core: &Core, kind: &str, force: bool) -> Result<Option<backup::Entry>> {
     let settings = backup_settings(core);
     let root = backup_root(core, &settings);
+    let _one = core.backing_up.lock().unwrap();
     let mut slot = core.project.lock().unwrap();
     let Some(p) = slot.as_mut() else { return Ok(None) };
     if !force && !p.needs_backup() {
         return Ok(None);
     }
-    let entry = p.backup(&root, kind, settings.keep).inspect_err(|e| log::error(&format!("sauvegarde : {e}")))?;
+    let copy = p.backup(&root, kind).inspect_err(|e| log::error(&format!("sauvegarde : {e}")))?;
     drop(slot);
+    // The medias are files of their own: copying them does not hold up the writes.
+    let entry = copy.finish(settings.keep).inspect_err(|e| log::error(&format!("sauvegarde : {e}")))?;
     *core.last_backup.lock().unwrap() = Instant::now();
     log::info(&format!("sauvegarde {} ({} octets)", entry.file, entry.bytes));
     Ok(Some(entry))
@@ -287,10 +296,13 @@ pub fn backup_current(core: &Core, kind: &str, force: bool) -> Result<Option<bac
 pub fn backup_tick(app: &AppHandle) {
     let core = app.state::<Core>();
     let every = backup_settings(&core).every_minutes.max(1) as u64 * 60;
-    if core.last_backup.lock().unwrap().elapsed().as_secs() < every {
-        return;
+    {
+        let mut last = core.last_backup.lock().unwrap();
+        if last.elapsed().as_secs() < every {
+            return;
+        }
+        *last = Instant::now();
     }
-    *core.last_backup.lock().unwrap() = Instant::now();
     match backup_current(&core, "auto", false) {
         Ok(Some(entry)) => {
             let _ = BackupDone { entry }.emit(app);
@@ -351,6 +363,9 @@ fn project_dir(core: &Core) -> Result<PathBuf> {
 fn inside(path: &Path, dir: &Path) -> bool {
     path.canonicalize().ok().zip(dir.canonicalize().ok()).is_some_and(|(p, d)| p.starts_with(d))
 }
+
+/// Images above this size are refused rather than sent to the interface as one string.
+const MEDIA_MAX_BYTES: u64 = 64 * 1024 * 1024;
 
 #[tauri::command]
 #[specta::specta]
@@ -621,7 +636,8 @@ pub fn export_text(core: State<'_, Core>, file_name: String, contents: String) -
 #[specta::specta]
 pub fn reveal(core: State<'_, Core>, path: String, open: bool) -> Result<()> {
     let path = PathBuf::from(path);
-    if !inside(&path, &project_dir(&core)?) {
+    let made_here = core.made_here.lock().unwrap().iter().any(|d| inside(&path, d));
+    if !made_here && !project_dir(&core).is_ok_and(|dir| inside(&path, &dir)) {
         return Err(CoreError::Refused("seuls les fichiers du projet ouvert peuvent être montrés".into()));
     }
     let done = if open { tauri_plugin_opener::open_path(&path, None::<&str>) } else { tauri_plugin_opener::reveal_item_in_dir(&path) };
@@ -640,6 +656,9 @@ pub fn app_setting_get(core: State<'_, Core>, key: String) -> Result<Option<Stri
 #[tauri::command]
 #[specta::specta]
 pub fn app_setting_set(core: State<'_, Core>, key: String, value: String) -> Result<()> {
+    if key == BACKUP_SETTING {
+        return Err(CoreError::Refused("les réglages de sauvegarde passent par backup_settings_set".into()));
+    }
     let db = core.app_db.lock().unwrap();
     let conn = db.as_ref().ok_or_else(|| CoreError::Failed("base de l'application indisponible".into()))?;
     Ok(app_data::set_setting(conn, &key, &value)?)
@@ -679,9 +698,10 @@ pub fn backup_now(app: AppHandle, core: State<'_, Core>) -> Result<backup::Entry
 /// Rebuilds a project folder from the copy `file`, inside `dest_parent`, and returns the new folder.
 #[tauri::command]
 #[specta::specta]
-pub fn backup_restore(file: String, dest_parent: String) -> Result<String> {
+pub fn backup_restore(core: State<'_, Core>, file: String, dest_parent: String) -> Result<String> {
     let dir = backup::restore(Path::new(&file), Path::new(&dest_parent))?;
     log::info(&format!("projet restauré depuis {file}"));
+    core.made_here.lock().unwrap().push(dir.clone());
     Ok(dir.display().to_string())
 }
 
@@ -716,7 +736,7 @@ pub fn media_import(core: State<'_, Core>, source: String, kind: String) -> Resu
         target = target_dir.join(format!("{stem} ({n}){ext}"));
         n += 1;
     }
-    let tmp = target_dir.join(format!(".import-{}.tmp", system::now_secs()));
+    let tmp = target_dir.join(format!(".import-{}-{}.tmp", std::process::id(), system::now_nanos()));
     fs::copy(&source, &tmp)?;
     project::fsx::sync_file(&tmp)?;
     project::fsx::replace_atomically(&tmp, &target)?;
@@ -744,6 +764,9 @@ pub fn media_read(core: State<'_, Core>, path: String) -> Result<String> {
     let full = dir.join(&path);
     if !inside(&full, &dir) {
         return Err(CoreError::Refused("seuls les fichiers du projet ouvert peuvent être lus".into()));
+    }
+    if fs::metadata(&full)?.len() > MEDIA_MAX_BYTES {
+        return Err(CoreError::Refused(format!("image de plus de {} Mo", MEDIA_MAX_BYTES >> 20)));
     }
     let bytes = fs::read(&full)?;
     Ok(format!("data:{};base64,{}", mime(&full), base64::engine::general_purpose::STANDARD.encode(bytes)))

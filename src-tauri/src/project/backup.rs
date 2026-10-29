@@ -110,6 +110,14 @@ fn unique(dir: &Path, stem: &str) -> PathBuf {
     path
 }
 
+/// A media edited in place can keep its size: its date tells it apart. A copy carries the date of its source.
+fn changed(source: &fs::Metadata, target: &Path) -> bool {
+    match fs::metadata(target) {
+        Ok(t) => t.len() != source.len() || t.modified().ok() != source.modified().ok(),
+        Err(_) => true,
+    }
+}
+
 /// Copies new or changed files of `from` into `to`, recursively; files already there are not copied again.
 fn mirror(from: &Path, to: &Path) -> io::Result<()> {
     let entries = match fs::read_dir(from) {
@@ -126,9 +134,15 @@ fn mirror(from: &Path, to: &Path) -> io::Result<()> {
         let target = to.join(&name);
         if entry.file_type()?.is_dir() {
             mirror(&entry.path(), &target)?;
-        } else if fs::metadata(&target).map(|m| m.len()).ok() != Some(entry.metadata()?.len()) {
-            fs::create_dir_all(to)?;
-            fsx::copy_atomically(&entry.path(), &target)?;
+        } else {
+            let meta = entry.metadata()?;
+            if changed(&meta, &target) {
+                fs::create_dir_all(to)?;
+                fsx::copy_atomically(&entry.path(), &target)?;
+                if let Ok(at) = meta.modified() {
+                    fs::File::options().write(true).open(&target)?.set_modified(at)?;
+                }
+            }
         }
     }
     Ok(())
@@ -162,8 +176,26 @@ fn record(dir: &Path, manifest: &Manifest, file: &Path, kind: &str, keep: u32) -
     Ok(entry)
 }
 
-/// A complete, checked copy of the open database and of the medias, then the oldest copies beyond `keep` are removed.
-pub fn run(conn: &Connection, project_dir: &Path, manifest: &Manifest, root: &Path, kind: &str, keep: u32) -> Result<Entry> {
+/// A database copy made, whose medias and listing are still to come.
+#[must_use]
+pub struct PendingCopy {
+    dir: PathBuf,
+    project_dir: PathBuf,
+    manifest: Manifest,
+    target: PathBuf,
+    kind: String,
+}
+
+impl PendingCopy {
+    /// Copies the medias, lists the copy, then removes the oldest copies beyond `keep`. Needs no access to the database.
+    pub fn finish(self, keep: u32) -> Result<Entry> {
+        mirror(&self.project_dir.join("medias"), &self.dir.join("medias"))?;
+        record(&self.dir, &self.manifest, &self.target, &self.kind, keep)
+    }
+}
+
+/// A complete, checked copy of the open database; `finish` adds the medias.
+pub fn run(conn: &Connection, project_dir: &Path, manifest: &Manifest, root: &Path, kind: &str) -> Result<PendingCopy> {
     let dir = folder(root, manifest);
     let bases = dir.join("bases");
     fs::create_dir_all(&bases)?;
@@ -178,8 +210,7 @@ pub fn run(conn: &Connection, project_dir: &Path, manifest: &Manifest, root: &Pa
     }
     fsx::sync_file(&tmp)?;
     fsx::replace_atomically(&tmp, &target)?;
-    mirror(&project_dir.join("medias"), &dir.join("medias"))?;
-    record(&dir, manifest, &target, kind, keep)
+    Ok(PendingCopy { dir, project_dir: project_dir.to_path_buf(), manifest: manifest.clone(), target, kind: kind.into() })
 }
 
 /// Stores an existing database file (the copy taken before a migration) among the backups.
@@ -262,7 +293,7 @@ mod tests {
         for i in 0..4 {
             p.write(|tx| tx.execute("INSERT INTO project_setting VALUES (?1, 'x', 'now')", [format!("k{i}")])).unwrap();
             assert!(p.needs_backup());
-            p.backup(&backups, "auto", 3).unwrap();
+            p.backup(&backups, "auto").unwrap().finish(3).unwrap();
             assert!(!p.needs_backup());
         }
         let copies = list(&backups, p.manifest());

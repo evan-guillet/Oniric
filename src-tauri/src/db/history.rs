@@ -349,4 +349,12 @@ mod tests {
         undo(&mut c, &mut h);
         assert_eq!(c.query_row("SELECT count(*) FROM beat_scene", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
     }
+
+    #[test]
+    fn the_interface_cannot_write_the_undo_line_itself() {
+        let mut c = conn();
+        let tx = c.transaction().unwrap();
+        let forged = Statement::new("INSERT INTO oniric_undo (tbl, old, new) VALUES ('act', NULL, '{}')", vec![]);
+        assert!(matches!(write(&tx, &[forged], "x", &[]), Err(crate::db::DbError::Refused(_))));
+    }
 }

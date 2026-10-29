@@ -42,6 +42,10 @@ pub fn now_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
+pub fn now_nanos() -> u128 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)
+}
+
 /// Days since 1970-01-01 to a civil date (Howard Hinnant's algorithm).
 fn civil(days: i64) -> (i64, u32, u32) {
     let z = days + 719_468;
@@ -89,14 +93,24 @@ pub fn file_name(title: &str) -> String {
         .chars()
         .map(|c| if c.is_control() || r#"<>:"/\|?*"#.contains(c) { '-' } else { c })
         .collect();
-    let trimmed = cleaned.trim().trim_end_matches(['.', ' ']).to_string();
-    let reserved = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3"];
-    let stem = trimmed.split('.').next().unwrap_or("").to_ascii_uppercase();
-    if trimmed.is_empty() || reserved.contains(&stem.as_str()) {
+    // Windows drops a final dot or space, so the name asked for would not be the name made.
+    let tidy = |s: &str| s.trim().trim_end_matches(['.', ' ']).to_string();
+    let trimmed = tidy(&cleaned.chars().take(120).collect::<String>());
+    let stem = trimmed.split('.').next().unwrap_or("").trim_end().to_ascii_uppercase();
+    if trimmed.is_empty() || is_reserved(&stem) {
         format!("Projet {trimmed}").trim().to_string()
     } else {
-        trimmed.chars().take(120).collect()
+        trimmed
     }
+}
+
+/// Device names that Windows refuses as file names, with or without an extension.
+fn is_reserved(stem: &str) -> bool {
+    if matches!(stem, "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$") {
+        return true;
+    }
+    let digit = |s: &str| matches!(s, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³");
+    stem.strip_prefix("COM").or_else(|| stem.strip_prefix("LPT")).is_some_and(digit)
 }
 
 #[cfg(test)]
@@ -117,5 +131,10 @@ mod tests {
         assert_eq!(file_name("  Fin...  "), "Fin");
         assert_eq!(file_name("con"), "Projet con");
         assert_eq!(file_name(""), "Projet");
+        assert_eq!(file_name("lpt9.txt"), "Projet lpt9.txt");
+        assert_eq!(file_name("COM²"), "Projet COM²");
+        assert_eq!(file_name("Comète"), "Comète");
+        let long = format!("{}. suite", "a".repeat(119));
+        assert_eq!(file_name(&long), "a".repeat(119));
     }
 }

@@ -181,6 +181,11 @@ pub fn uuid_v7(conn: &Connection) -> rusqlite::Result<String> {
     Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
 }
 
+/// A project id is hexadecimal digits and dashes, as `uuid_v7` makes them.
+pub fn valid_id(id: &str) -> bool {
+    (8..=64).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')
+}
+
 fn quick_check(conn: &Connection) -> std::result::Result<(), String> {
     let res: String = conn.query_row("PRAGMA quick_check", [], |r| r.get(0)).map_err(|e| e.to_string())?;
     if res == "ok" {
@@ -227,9 +232,29 @@ fn mark_synced(conn: &Connection, id: &str) -> rusqlite::Result<()> {
 }
 
 fn set_aside(work_dir: &Path, wc: &Path) -> io::Result<PathBuf> {
-    let target = work_dir.join("mis-de-cote").join(format!("donnees-{}.db", lock::now_secs()));
+    let aside = work_dir.join("mis-de-cote");
+    let target = aside.join(format!("donnees-{}.db", lock::now_secs()));
     fsx::move_database(wc, &target)?;
+    prune_aside(&aside);
     Ok(target)
+}
+
+/// Copies set aside after a crash, kept for this project; the oldest go first, so that they do not pile up.
+const KEEP_ASIDE: usize = 5;
+
+fn prune_aside(aside: &Path) {
+    let Ok(entries) = fs::read_dir(aside) else { return };
+    let mut copies: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "db") && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with("donnees-")))
+        .collect();
+    // The names end with a time in seconds: a shorter one is older.
+    copies.sort_by_key(|p| (p.as_os_str().len(), p.clone()));
+    let excess = copies.len().saturating_sub(KEEP_ASIDE);
+    for old in &copies[..excess] {
+        let _ = fsx::remove_database(old);
+    }
 }
 
 fn is_empty_dir(dir: &Path) -> io::Result<bool> {
@@ -282,6 +307,11 @@ impl Project {
         let manifest: Manifest = serde_json::from_str(&text).map_err(|e| Error::NotAProject(e.to_string()))?;
         if manifest.format != "oniric-project" {
             return Err(Error::NotAProject(format!("format « {} »", manifest.format)));
+        }
+        // The id names the working copy's folder: an id such as `..\autre` would make the core replace and
+        // then delete a database outside it.
+        if !valid_id(&manifest.id) {
+            return Err(Error::NotAProject(format!("identifiant « {} » invalide", manifest.id)));
         }
         Ok(manifest)
     }
@@ -464,10 +494,11 @@ impl Project {
     }
 
     /// A dated copy in the backup folder `root` [SAV-03].
-    pub fn backup(&mut self, root: &Path, kind: &str, keep: u32) -> Result<backup::Entry> {
-        let entry = backup::run(&self.conn, &self.dir, &self.manifest, root, kind, keep)?;
+    /// The database part, which needs the connection; the copy's `finish` adds the medias.
+    pub fn backup(&mut self, root: &Path, kind: &str) -> Result<backup::PendingCopy> {
+        let copy = backup::run(&self.conn, &self.dir, &self.manifest, root, kind)?;
         self.unsaved_in_backup = false;
-        Ok(entry)
+        Ok(copy)
     }
 
     /// Replaces the project folder database by a complete, checked snapshot of the working copy.
@@ -530,5 +561,49 @@ impl fmt::Display for CloseFailure {
 impl fmt::Debug for CloseFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "CloseFailure({:?}, projet rendu : {})", self.error, self.project.is_some())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("oniric-projet-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn an_id_that_leaves_the_working_folder_is_refused() {
+        let root = temp("id");
+        let opts = OpenOptions { work_root: root.join("travail"), on_crash: CrashChoice::Restore, force_lock: false };
+        let victim = root.join("travail").join("victime");
+        fs::create_dir_all(&victim).unwrap();
+        fs::write(victim.join(DB), b"autre projet").unwrap();
+        let p = Project::create(&root.join("Essai"), "Essai", &opts).unwrap();
+        let dir = p.dir().to_path_buf();
+        p.close().unwrap();
+        let text = fs::read_to_string(dir.join(MANIFEST)).unwrap();
+        let mut manifest: Manifest = serde_json::from_str(&text).unwrap();
+        manifest.id = "../victime".into();
+        fs::write(dir.join(MANIFEST), serde_json::to_string(&manifest).unwrap()).unwrap();
+        assert!(matches!(Project::open(&dir, &opts), Err(Error::NotAProject(_))));
+        assert_eq!(fs::read(victim.join(DB)).unwrap(), b"autre projet");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn copies_set_aside_do_not_pile_up() {
+        let aside = temp("aside");
+        for t in [9, 10, 11, 12, 13, 14, 100] {
+            fs::write(aside.join(format!("donnees-{t}.db")), b"x").unwrap();
+        }
+        prune_aside(&aside);
+        let mut left: Vec<String> = fs::read_dir(&aside).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        left.sort();
+        assert_eq!(left, ["donnees-100.db", "donnees-11.db", "donnees-12.db", "donnees-13.db", "donnees-14.db"]);
+        let _ = fs::remove_dir_all(&aside);
     }
 }

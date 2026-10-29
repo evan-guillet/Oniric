@@ -1,12 +1,4 @@
-import {
-  DummyDriver,
-  Kysely,
-  SqliteAdapter,
-  SqliteIntrospector,
-  SqliteQueryCompiler,
-  type Compilable,
-  type InferResult,
-} from "kysely";
+import { DummyDriver, Kysely, SqliteAdapter, SqliteQueryCompiler, type Compilable, type DatabaseIntrospector, type InferResult } from "kysely";
 import { commands, type CoreError, type SqlValue, type Statement } from "../../bindings";
 import type { Database, TableName } from "./schema";
 
@@ -15,7 +7,8 @@ export const db = new Kysely<Database>({
   dialect: {
     createAdapter: () => new SqliteAdapter(),
     createDriver: () => new DummyDriver(),
-    createIntrospector: (k) => new SqliteIntrospector(k),
+    // Never asked: the schema is known in advance (schema.ts).
+    createIntrospector: () => ({}) as DatabaseIntrospector,
     createQueryCompiler: () => new SqliteQueryCompiler(),
   },
 });

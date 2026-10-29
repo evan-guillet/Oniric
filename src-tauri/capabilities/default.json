@@ -1,10 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Fenêtre principale : commandes du cœur, dialogues de fichiers, fermeture contrôlée, barre de titre maison, thème.",
+  "description": "Fenêtre principale : commandes du cœur, événements, version, choix de fichiers, fermeture contrôlée, barre de titre maison, thème. Rien d'autre (menus, icône de notification, chemins, images : inutilisés).",
   "windows": ["main"],
   "permissions": [
-    "core:default",
+    "core:app:allow-version",
+    "core:event:default",
+    "core:window:default",
     "core:window:allow-destroy",
     "core:window:allow-close",
     "core:window:allow-set-title",
@@ -14,8 +16,6 @@
     "core:window:allow-is-maximized",
     "core:window:allow-start-dragging",
     "core:window:allow-set-theme",
-    "dialog:allow-open",
-    "dialog:allow-ask",
-    "dialog:allow-message"
+    "dialog:allow-open"
   ]
 }

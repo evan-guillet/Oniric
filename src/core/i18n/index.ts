@@ -1,9 +1,19 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { readAppSetting, writeAppSetting } from "../appSettings";
-import en from "./en.json";
-import es from "./es.json";
 import fr from "./fr.json";
+
+/** French is always there, as the fallback; the other languages load when chosen, outside the main bundle. */
+const LOADERS = {
+  en: () => import("./en.json"),
+  es: () => import("./es.json"),
+} as const;
+
+async function load(l: Language): Promise<void> {
+  if (l === "fr" || i18next.hasResourceBundle(l, "translation")) return;
+  const { default: strings } = await LOADERS[l]();
+  i18next.addResourceBundle(l, "translation", strings, true, true);
+}
 
 /** The languages of the interface, each named in itself so anyone can find their own. */
 export const LANGUAGES = [
@@ -39,30 +49,41 @@ function cached(): Language {
 }
 
 i18next.use(initReactI18next).init({
-  resources: { fr: { translation: fr }, en: { translation: en }, es: { translation: es } },
-  lng: cached(),
+  resources: { fr: { translation: fr } },
+  lng: "fr",
   fallbackLng: "fr",
+  partialBundledLanguages: true,
   interpolation: { escapeValue: false },
   returnNull: false,
 });
 // Outside a page (the tests), there is no document to mark.
 if (typeof document !== "undefined") document.documentElement.lang = i18next.language;
 
-function apply(l: Language) {
+async function apply(l: Language) {
+  await load(l);
   document.documentElement.lang = l;
   try {
     localStorage.setItem(CACHE, l);
   } catch {
     // Ignored, see above.
   }
-  if (i18next.language !== l) void i18next.changeLanguage(l);
+  if (i18next.language !== l) await i18next.changeLanguage(l);
+}
+
+/** The cached language, ready before the first frame. */
+export async function startLanguage(): Promise<void> {
+  try {
+    await apply(cached());
+  } catch {
+    // Its file could not be read: French, the fallback.
+  }
 }
 
 /** Applies the language saved in the application database, if it differs from the cached one. */
 export async function initLanguage(): Promise<void> {
   try {
     const saved = await readAppSetting<unknown>(SETTING, null);
-    if (isLanguage(saved)) apply(saved);
+    if (isLanguage(saved)) await apply(saved);
   } catch {
     // Keep the cached language.
   }
@@ -95,7 +116,7 @@ export const plural = (key: string, n: number, values: Record<string, unknown> =
   i18next.t(key, { ...values, count: n, n: numberFormat().format(n) });
 
 export async function setLanguage(l: Language): Promise<void> {
-  apply(l);
+  await apply(l);
   await writeAppSetting(SETTING, l);
 }
 

@@ -69,6 +69,8 @@ export async function loadStory(): Promise<Story> {
     query(db.selectFrom("structure_beat").selectAll().orderBy("rank")),
     query(db.selectFrom("beat_scene").selectAll()),
   ]);
+  const scenesOf = new Map<string, string[]>();
+  for (const l of links) scenesOf.set(l.beat_id, [...(scenesOf.get(l.beat_id) ?? []), l.scene_id]);
   const meta = new Map<string, SceneMeta>();
   for (const s of scenes) {
     meta.set(s.id, {
@@ -93,7 +95,7 @@ export async function loadStory(): Promise<Story> {
       rank: b.rank,
       title: b.title,
       notes: b.notes,
-      scenes: links.filter((l) => l.beat_id === b.id).map((l) => l.scene_id),
+      scenes: scenesOf.get(b.id) ?? [],
     })),
   };
 }

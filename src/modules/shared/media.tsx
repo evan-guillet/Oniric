@@ -4,7 +4,18 @@ import { commands } from "../../bindings";
 import { unwrap } from "../../core/db/client";
 import { t } from "../../core/i18n";
 
+/** Images already read, as `data:` URLs; the least recently shown go first beyond this many. */
+const CACHE_SIZE = 48;
 const cache = new Map<string, Promise<string>>();
+
+function cached(path: string): Promise<string> {
+  let image = cache.get(path);
+  if (image) cache.delete(path);
+  else image = commands.mediaRead(path).then(unwrap);
+  cache.set(path, image);
+  while (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
+  return image;
+}
 
 /** Asks for an image and copies it into `medias/images/` of the project; returns its path in the project. */
 export async function pickImage(multiple = false): Promise<string[]> {
@@ -23,9 +34,7 @@ export function MediaImage({ path, alt, className }: { path: string; alt: string
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    if (!cache.has(path)) cache.set(path, commands.mediaRead(path).then(unwrap));
-    cache
-      .get(path)!
+    cached(path)
       .then((s) => alive && setSrc(s))
       .catch(() => {
         cache.delete(path);
