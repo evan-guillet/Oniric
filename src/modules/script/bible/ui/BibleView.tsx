@@ -1,6 +1,5 @@
 import { Archive, ArrowLeft, Pencil, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { Dialog } from "../../../../ui-kit/Dialog";
@@ -15,6 +14,7 @@ import { firstSentence, fold, type EntryType } from "../domain/types";
 import { EntryEditor } from "./EntryEditor";
 import { TypeDialog } from "./TypeEditor";
 import { iconOf } from "./typeIcons";
+import { SearchBox } from "../../../../ui-kit/SearchBox";
 import { Select } from "../../../../ui-kit/Select";
 import { plural, t } from "../../../../core/i18n";
 
@@ -83,7 +83,7 @@ function categoriesOf(types: EntryType[], entries: Entry[]): Category[] {
 
 /** `home` changes each time the Bible is chosen in the side bar, which brings back the categories. */
 export function BibleView({ selected, onSelected, home }: { selected: string | null; onSelected: (id: string | null) => void; home: number }) {
-  const { session, notify, headerActions, setTrail } = useProject();
+  const { session, notify, setTrail } = useProject();
   const loaded = useLive(loadEntries, ["bible_entry"]);
   const saved = loaded ?? [];
   const types = useLive(loadTypes, ["bible_type"]) ?? [];
@@ -180,7 +180,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     lastView.current = view;
     requestAnimationFrame(() => {
       if (view.kind === "home" && was.kind === "type") document.querySelector<HTMLElement>(`.type-card[data-type="${CSS.escape(was.id)}"]`)?.focus();
-      if (view.kind === "type") (document.querySelector<HTMLElement>(".entry-card-open") ?? document.querySelector<HTMLElement>(".header-tools .btn.primary"))?.focus();
+      if (view.kind === "type") (document.querySelector<HTMLElement>(".entry-card-open") ?? document.querySelector<HTMLElement>(".bible-toolbar .btn.primary"))?.focus();
     });
   }, [view]);
 
@@ -225,7 +225,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
   const noMatch = !!search && visible.length === 0;
 
   // When the entry closes, however it closed (button, Escape, deletion), the focus goes back to its card,
-  // or to « Nouvelle fiche », in the header, when the card is gone.
+  // or to « Nouvelle fiche », above the cards, when the card is gone.
   const lastOpen = useRef<string | null>(null);
   useEffect(() => {
     if (current) {
@@ -237,32 +237,12 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
     lastOpen.current = null;
     requestAnimationFrame(() => {
       const card = document.querySelector<HTMLElement>(`.entry-card-open[data-entry="${CSS.escape(id)}"]`);
-      (card ?? document.querySelector<HTMLElement>(".header-tools .btn.primary"))?.focus();
+      (card ?? document.querySelector<HTMLElement>(".bible-toolbar .btn.primary"))?.focus();
     });
   }, [current?.id]);
 
   return (
     <div className="view bible-view">
-      {headerActions &&
-        createPortal(
-          <div className="header-tools">
-            {browsing && entries.length > 0 && (
-              <input
-                type="search"
-                className="header-search"
-                placeholder={category ? t("bible.searchIn", { title: category.title }) : t("bible.search")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label={category ? t("bible.searchInLabel", { title: category.title }) : t("bible.searchLabel")}
-              />
-            )}
-            <button type="button" className="btn primary" onClick={newEntry}>
-              <Plus aria-hidden="true" />
-              {t("bible.newEntry")}
-            </button>
-          </div>,
-          headerActions,
-        )}
       <main className={browsing && entries.length > 0 ? "view-main wide" : "view-main"}>
         {current && (
           <>
@@ -279,6 +259,13 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
         )}
         {browsing && view.kind === "home" && entries.length > 0 && (
           <>
+            <div className="bible-toolbar">
+              <SearchBox value={search} onChange={setSearch} placeholder={t("bible.search")} label={t("bible.searchLabel")} />
+              <button type="button" className="btn primary" title={t("bible.newTypeHint")} onClick={() => setTypeEdit({})}>
+                <Plus aria-hidden="true" />
+                {t("bible.newType")}
+              </button>
+            </div>
             {search ? (
               <EntrySections entries={found} categories={categories} presence={presence} onOpen={(id) => void open(id)} onCategory={(id) => go({ kind: "type", id })} />
             ) : (
@@ -287,18 +274,19 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                 entries={entries}
                 onOpen={(id) => go({ kind: "type", id })}
                 onCreate={setCreating}
-                onNewType={() => setTypeEdit({})}
               />
             )}
           </>
         )}
         {browsing && view.kind === "type" && (
           <>
-            <div className="bible-bar">
-              <button type="button" className="btn text" onClick={() => go({ kind: "home" })}>
-                <ArrowLeft aria-hidden="true" />
-                {t("bible.back")}
-              </button>
+            <div className="bible-toolbar">
+              <SearchBox
+                value={search}
+                onChange={setSearch}
+                placeholder={t("bible.searchIn", { title: category?.title ?? view.id })}
+                label={t("bible.searchInLabel", { title: category?.title ?? view.id })}
+              />
               <div className="bible-bar-tools">
                 {customType && (
                   <button type="button" className="btn small" onClick={() => setTypeEdit({ type: customType })}>
@@ -322,6 +310,10 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
                   </button>
                 )}
               </div>
+              <button type="button" className="btn primary" onClick={newEntry}>
+                <Plus aria-hidden="true" />
+                {t("bible.newEntry")}
+              </button>
             </div>
             <EntryCards entries={visible} types={types} presence={presence} sort={sort} level={2} onOpen={(id) => void open(id)} />
             {shown.length === 0 && <p className="entry-cards-empty muted">{archived ? t("bible.noArchived") : t("bible.noEntryHere")}</p>}
@@ -337,7 +329,7 @@ export function BibleView({ selected, onSelected, home }: { selected: string | n
         {browsing && loaded?.length === 0 && detected.length === 0 && (
           <EmptyState title={t("bible.emptyTitle")}>
             <p className="muted">
-              {t("bible.emptyText")} {t("bible.emptyLinkBefore")} <kbd>@</kbd> {t("settings.or")} <kbd>[[</kbd> {t("bible.emptyLinkAfter")}
+              {t("bible.emptyText")} {t("bible.emptyLinkBefore")} <kbd>/</kbd>, <kbd>@</kbd> {t("settings.or")} <kbd>[[</kbd> {t("bible.emptyLinkAfter")}
             </p>
             <p className="empty-actions">
               <button type="button" className="btn primary" onClick={newEntry}>
@@ -374,21 +366,19 @@ function presenceLabel(type: string, p: Presence | undefined): string | null {
 }
 
 /**
- * The home of the Bible: one card per category, its name and how many entries it holds, opening the category, and
- * « Nouveau type » as the last card; then the categories still empty, each a button that makes their first entry.
+ * The home of the Bible: one card per category, its name and how many entries it holds, opening the category; then
+ * the categories still empty, each a button that makes their first entry.
  */
 function CategoryCards({
   categories,
   entries,
   onOpen,
   onCreate,
-  onNewType,
 }: {
   categories: Category[];
   entries: Entry[];
   onOpen: (id: string) => void;
   onCreate: (type: string) => void;
-  onNewType: () => void;
 }) {
   const cards = categories.map((c) => ({ ...c, n: entries.filter((e) => e.type === c.id && !e.archivedAt).length }));
   const full = cards.filter((c) => c.n > 0);
@@ -410,12 +400,6 @@ function CategoryCards({
             </li>
           );
         })}
-        <li>
-          <button type="button" className="type-card-new" title={t("bible.newTypeHint")} onClick={onNewType}>
-            <Plus aria-hidden="true" />
-            {t("bible.newType")}
-          </button>
-        </li>
       </ul>
 
       {empty.length > 0 && (

@@ -8,7 +8,7 @@ import type { ToastMessage } from "../../../ui-kit/Toast";
 import { projectDirOf } from "../application/projects";
 import { confirmRemoval, useChoice } from "../../../ui-kit/Dialog";
 import { NewProjectDialog } from "./NewProjectDialog";
-import { SettingsDialog } from "./SettingsView";
+import { SettingsScreen } from "./SettingsView";
 import { dateFormat } from "../../../core/i18n";
 import { describeError } from "../../../core/errors";
 import { usePrompt } from "../../../ui-kit/PromptDialog";
@@ -60,6 +60,8 @@ export function Home({
     unwrap(await commands.recentForget(path));
     await refresh();
   };
+
+  if (settings) return <SettingsScreen notify={notify} onOpenProject={onOpen} onClose={() => setSettings(false)} />;
 
   return (
     <main className="home">
@@ -132,7 +134,7 @@ export function Home({
         </button>
       </footer>
 
-      {settings && <SettingsDialog notify={notify} onOpenProject={onOpen} onClose={() => setSettings(false)} />}
+
       {creating && (
         <NewProjectDialog
           onCancel={() => setCreating(false)}

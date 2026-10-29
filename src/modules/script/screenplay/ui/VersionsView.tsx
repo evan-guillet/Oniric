@@ -238,7 +238,16 @@ export function VersionsView() {
       {shownPane === "scenes" ? (
         scenes
       ) : shownPane === "versions" ? (
-        <VersionPane versions={versions} now={now} base={base} onCompare={setBase} onRename={rename} onRestore={restore} onRemove={remove} />
+        <VersionPane
+          versions={versions}
+          now={now}
+          base={base}
+          onFreeze={() => void freeze()}
+          onCompare={setBase}
+          onRename={rename}
+          onRestore={restore}
+          onRemove={remove}
+        />
       ) : (
         <CutPane cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
       )}
@@ -252,12 +261,6 @@ export function VersionsView() {
         createPortal(
           <div className="header-tools">
             <Segmented label={t("versions.panel")} options={panes} value={shownPane} onChange={setPane} />
-            {versions.length > 0 && (
-              <button type="button" className="btn primary" onClick={() => void freeze()}>
-                <Lock aria-hidden="true" />
-                {t("versions.freezeShort")}
-              </button>
-            )}
           </div>,
           headerActions,
         )}
@@ -293,11 +296,15 @@ export function VersionsView() {
 
 const delta = (before: number, after: number) => after !== before && <span className="vr-delta">{signed(after - before)}</span>;
 
-/** The versions, the current one on top, each numbered in the order it was frozen; picking a frozen one compares the current text with it. */
+/**
+ * The versions, the current one on top, each numbered in the order it was frozen; picking a frozen one compares the
+ * current text with it. The current one is frozen from its « ⋯ ».
+ */
 function VersionPane({
   versions,
   now,
   base,
+  onFreeze,
   onCompare,
   onRename,
   onRestore,
@@ -306,6 +313,7 @@ function VersionPane({
   versions: VersionRow[];
   now: VersionFile | null;
   base: string;
+  onFreeze: () => void;
   onCompare: (file: string) => void;
   onRename: (v: VersionRow) => void;
   onRestore: (v: VersionRow) => void;
@@ -323,7 +331,8 @@ function VersionPane({
             </span>
             V{versions.length + 1}
           </span>
-          <div className="vr-stop-card vr-stop-body">
+          <div className="vr-stop-card">
+          <div className="vr-stop-body">
             <span className="vr-stop-title">
               <span className="vr-stop-name">{t("versions.current")}</span>
             </span>
@@ -343,6 +352,8 @@ function VersionPane({
                 t("versions.savedAsTyped")
               )}
             </span>
+          </div>
+          <MoreMenu label={t("versions.actionsFor", { name: t("versions.current") })} items={[{ label: t("versions.freeze"), icon: Lock, onClick: onFreeze }]} />
           </div>
         </li>
         {versions.map((v, i) => (

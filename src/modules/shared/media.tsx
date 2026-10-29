@@ -30,6 +30,37 @@ export async function pickImage(multiple = false): Promise<string[]> {
   return out;
 }
 
+const EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/bmp": "bmp",
+};
+
+/** Whether a pasted or dropped file can be kept as an image of the project. */
+export const isStorableImage = (file: Blob) => file.type in EXTENSIONS;
+
+/**
+ * Writes a picture that has no file of its own (pasted, dropped from another window, drawn) into `medias/<kind>/`
+ * of the project; returns its path in the project.
+ */
+export async function storeImage(image: Blob, kind: string, name: string): Promise<string> {
+  const ext = EXTENSIONS[image.type];
+  if (!ext) throw new Error(t("media.unsupported"));
+  const data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(image);
+  });
+  const path = unwrap(await commands.mediaWrite(kind, name || "image", ext, data));
+  return path;
+}
+
+/** The `data:` URL of an image of the project, read once. */
+export const readImage = cached;
+
 export function MediaImage({ path, alt, className }: { path: string; alt: string; className?: string }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {

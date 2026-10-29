@@ -1,6 +1,6 @@
 # Format d'un projet Oniric
 
-Format 1, schéma de base 2, Oniric 0.5. Un projet de la 0.1 (schéma 1) est mis à jour à sa première ouverture, après une copie de sauvegarde. Ce document permet de lire un projet sans Oniric [FIA-03]. Le schéma fait foi : `src-tauri/migrations/`.
+Format 1, schéma de base 4, Oniric 0.5. Un projet d'un schéma plus ancien (1 à 3) est mis à jour à sa première ouverture, après une copie de sauvegarde. Ce document permet de lire un projet sans Oniric [FIA-03]. Le schéma fait foi : `src-tauri/migrations/`.
 
 ## Le dossier
 
@@ -8,8 +8,8 @@ Format 1, schéma de base 2, Oniric 0.5. Un projet de la 0.1 (schéma 1) est mis
 |---|---|
 | `projet.oniric` | Fichier JSON qui identifie le projet ; un double-clic l'ouvre dans Oniric |
 | `donnees.db` | Toute la donnée du projet, base SQLite 3 ordinaire, non chiffrée |
-| `exports/` | Fichiers produits par « Exporter » (PDF, Fountain, FDX) |
-| `medias/` | Images des fiches de la bible, rangées par sorte (`medias/bible/…`) |
+| `exports/` | Fichiers produits par « Exporter » (PDF, Fountain, FDX, CSV) |
+| `medias/` | Images du projet, rangées par sorte : `images/` (choisies dans un fichier), `moodboard/` (collées ou glissées sur un moodboard), `storyboard/` (cases dessinées dans Oniric, en PNG) |
 | `versions/` | Versions figées du scénario, un fichier JSON chacune (ci-dessous) |
 | `.verrou` | Présent tant qu'Oniric a le projet ouvert : JSON `{"host", "pid", "since"}` (secondes Unix) |
 
@@ -28,7 +28,7 @@ Le dossier peut être copié, renommé, déplacé ou compressé librement, proje
 }
 ```
 
-`id` est un UUID v7. `formatVersion` est la version de l'organisation du dossier ; `PRAGMA user_version` de la base est celle du schéma (2 en 0.5). Un Oniric plus ancien refuse d'ouvrir un projet dont l'un ou l'autre est plus récent, sans le modifier.
+`id` est un UUID v7. `formatVersion` est la version de l'organisation du dossier ; `PRAGMA user_version` de la base est celle du schéma (4 en 0.5). Un Oniric plus ancien refuse d'ouvrir un projet dont l'un ou l'autre est plus récent, sans le modifier.
 
 ## La base
 
@@ -50,6 +50,8 @@ Réglages :
 | `screenplay_format_data` | Le format personnalisé complet, en JSON, pour que le projet s'ouvre pareil sur un autre PC |
 | `title_page` | La page de titre, en JSON : `title`, `authors`, `basedOn`, `version`, `date`, `contact`, `notes`, `include` |
 | `parts_hidden` | Parties masquées dans la navigation, tableau JSON (`realisation`, `production`) |
+| `shot_numbering` | Numéros des plans : `dash` (12-1, 12-2…, par défaut) ou `letter` (12A, 12B…) |
+| `storyboard_ratio` | Format du cadre des cases : `1.85`, `2.39`, `16:9` (par défaut), `4:3` ou `9:16` |
 
 ### `scene`
 
@@ -107,6 +109,12 @@ Notes en marge du scénario : `scene_id`, `quote` (le passage annoté au moment 
 ### `script_version` et le dossier `versions/`
 
 Une ligne par version figée : `name`, `file` (chemin dans le projet), `sha256` (empreinte du fichier), `pages`, `scenes`. Le fichier `versions/<date>_<nom>.json` contient `format: "oniric-screenplay-version"`, le nom, la date, le titre, le format, la page de titre et les scènes (`id`, `content`) : il suffit à relire ou réimprimer la version.
+
+### Réalisation : `moodboard`, `moodboard_item`, `moodboard_link`, `shot`
+
+`moodboard` : une planche (`name` ; `kind` : `general`, `character`, `location`, `sequence`, `light`, `costume`, `color` ou `other` ; `rank` pour l'ordre de la liste). `moodboard_item` : ce qui est posé dessus, à sa place en pixels (`x`, `y`, `w`, `h`, et `z` : plus il est grand, plus l'élément est au-dessus) ; `kind` vaut `image` (`data` : `{"path"}`, un chemin dans `medias/`), `color` (`{"color": "#rrggbb"}`), `text` ou `note` (`{"text"}`). `moodboard_link` rattache une planche à une scène ou à une fiche de la bible, par son id (`target_id`). Supprimer une planche supprime ce qu'elle porte et ses rattachements, jamais les fichiers de `medias/`.
+
+`shot` : un plan du découpage, dans sa scène (`scene_id` ; supprimer définitivement la scène supprime ses plans). `rank` donne l'ordre du montage dans la scène, `shoot_order` l'ordre de tournage (1, 2…, ou vide). `size` (`xcu` très gros plan, `cu` gros plan, `mcu` plan rapproché, `cowboy` plan américain, `medium` plan moyen, `wide` plan d'ensemble, `extreme` plan général), `angle` (`eye`, `high` plongée, `low` contre-plongée, `dutch` oblique), `movement` (`static`, `pan`, `tracking`, `steadicam`, `handheld`, `crane`, `drone`, `zoom`), `support` (`tripod`, `dolly`, `slider`, `gimbal`, `shoulder`, `crane`, `vehicle`) et `sound` (`sync`, `mos`, `playback`) sont vides ou l'une de ces clés ; `lens`, `camera`, `frame_rate`, `action`, `dialogue`, `lighting`, `effects` et `notes` sont du texte libre ; `characters` est un tableau JSON de noms ; `duration` est la durée à l'écran en secondes, `setup` le temps de tournage en minutes. `covers` est le tableau JSON des textes des éléments de la scène que le plan couvre, comparés sans tenir compte des espaces. La case du storyboard est celle du plan : `frame_image` (un chemin dans `medias/`, ou vide) et `frame_notes`. Le numéro d'un plan n'est pas enregistré : c'est celui de sa scène suivi de sa place dans l'ordre du montage.
 
 ### `oniric_journal`
 

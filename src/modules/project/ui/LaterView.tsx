@@ -3,9 +3,6 @@ import { t } from "../../../core/i18n";
 
 /** The version each view arrives in; its name and what it will hold are in the catalog. */
 const LATER: Partial<Record<ViewId, string>> = {
-  moodboard: "2.0",
-  shotlist: "2.0",
-  storyboard: "2.0",
   team: "2.0",
   breakdown: "2.0",
   schedule: "2.0",

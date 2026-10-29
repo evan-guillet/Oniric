@@ -175,6 +175,70 @@ export interface ScriptVersionTable {
   created_at: string;
 }
 
+export type MoodboardItemKind = "image" | "color" | "text" | "note";
+
+export interface MoodboardTable {
+  id: string;
+  rank: string;
+  name: string;
+  kind: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MoodboardItemTable {
+  id: string;
+  board_id: string;
+  kind: MoodboardItemKind;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: Generated<number>;
+  /** JSON: {path} for an image, {color} for a colour, {text} for a text or a note. */
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MoodboardLinkTable {
+  board_id: string;
+  /** A scene or a bible entry. */
+  target_id: string;
+}
+
+export interface ShotTable {
+  id: string;
+  scene_id: string;
+  rank: string;
+  shoot_order: number | null;
+  size: string | null;
+  angle: string | null;
+  movement: string | null;
+  support: string | null;
+  sound: string | null;
+  lens: Generated<string>;
+  camera: Generated<string>;
+  frame_rate: Generated<string>;
+  /** JSON array of character names. */
+  characters: Generated<string>;
+  action: Generated<string>;
+  dialogue: Generated<string>;
+  /** Seconds on screen. */
+  duration: number | null;
+  /** Minutes to shoot. */
+  setup: number | null;
+  lighting: Generated<string>;
+  effects: Generated<string>;
+  notes: Generated<string>;
+  /** JSON array of the texts of the scene elements the shot covers. */
+  covers: Generated<string>;
+  frame_image: string | null;
+  frame_notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   project_setting: ProjectSettingTable;
   scene: SceneTable;
@@ -192,6 +256,10 @@ export interface Database {
   relation: RelationTable;
   note: NoteTable;
   script_version: ScriptVersionTable;
+  moodboard: MoodboardTable;
+  moodboard_item: MoodboardItemTable;
+  moodboard_link: MoodboardLinkTable;
+  shot: ShotTable;
 }
 
 export type TableName = keyof Database;

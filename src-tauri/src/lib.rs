@@ -70,6 +70,7 @@ mod app {
                 commands::backup_reveal,
                 commands::media_import,
                 commands::media_read,
+                commands::media_write,
                 commands::version_save,
                 commands::version_read,
             ])

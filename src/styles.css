@@ -46,6 +46,7 @@
   --paper-link-bg: rgba(59, 95, 232, 0.09);
   --hint: #8f939c;
   --titlebar-h: 32px;
+  --header-h: 48px;
   --titlebar-close: #c42b1c;
   --radius: 6px;
   --radius-lg: 10px;
@@ -537,7 +538,7 @@ kbd {
   color: var(--ink-2);
 }
 
-/* Window frame: our own title bar, merged with the side bar like the rest of the chrome */
+/* Window frame: our own title bar on the home screen; in a project, the view header and the side bar's top take its place */
 .app-frame {
   display: flex;
   flex-direction: column;
@@ -558,9 +559,6 @@ kbd {
   color: var(--muted);
   user-select: none;
   -webkit-user-select: none;
-}
-.titlebar.merged {
-  background: var(--sunken);
 }
 .titlebar-title {
   flex: 1;
@@ -879,18 +877,50 @@ kbd {
 .dialog.wide {
   width: min(560px, calc(100vw - 32px));
 }
-/* Settings, Discord-like: categories on the left, the chosen one on the right */
-.dialog.settings-dialog {
-  width: min(1100px, calc(100vw - 48px));
-  height: min(860px, calc(100vh - 48px));
-  max-width: none;
-  max-height: none;
-  padding: 0;
-  display: none;
-  overflow: hidden;
-}
-.dialog.settings-dialog[open] {
+/* Settings, a page of the window: categories on the left, the chosen one on the right */
+.settings-page {
   display: flex;
+  height: 100%;
+  background: var(--panel);
+  color: var(--ink);
+  animation: settings-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes settings-in {
+  from {
+    opacity: 0;
+  }
+}
+.shell[hidden] {
+  display: none;
+}
+.settings-nav-top {
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--header-h) - 16px);
+  margin: -16px -12px 0;
+  padding: 8px 12px;
+}
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px 0 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-back:hover {
+  background: var(--control-hover);
+  color: var(--ink);
+}
+.settings-back svg {
+  width: 16px;
+  height: 16px;
 }
 .settings-nav {
   flex: none;
@@ -900,7 +930,7 @@ kbd {
   background: var(--canvas);
   border-right: 1px solid var(--line);
 }
-.dialog .settings-nav h2 {
+.settings-nav h2 {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
@@ -962,8 +992,16 @@ kbd {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  padding: 22px 16px 18px 40px;
+  padding: 22px 40px 18px;
   border-bottom: 1px solid var(--line);
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* The window's buttons sit in the corner, as they do in a view's header. */
+.settings-pane-head .titlebar-controls {
+  flex: none;
+  height: var(--header-h);
+  margin: -22px -40px 0 0;
 }
 .settings-pane-title {
   flex: 1;
@@ -981,26 +1019,6 @@ kbd {
   margin: 3px 0 0;
   color: var(--muted);
   font-size: 13px;
-}
-.settings-close {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  margin-left: auto;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-}
-.settings-close:hover {
-  background: var(--control-hover);
-  color: var(--ink);
-}
-.settings-close svg {
-  width: 18px;
-  height: 18px;
 }
 .settings-pane-body {
   flex: 1;
@@ -1035,7 +1053,7 @@ kbd {
   align-items: baseline;
   gap: 8px;
 }
-.dialog .set-group-head h2 {
+.set-group-head h2 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
@@ -1580,14 +1598,17 @@ input.switch:disabled {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 6px 10px 8px;
+  padding: 0 10px 8px;
   background: var(--sunken);
 }
+/* As tall as the view header, and like it, it moves the window. */
 .shell-nav-top {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
+  height: var(--header-h);
+  margin-bottom: 2px;
 }
 .shell-brand {
   display: flex;
@@ -1794,22 +1815,34 @@ input.switch:disabled {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
-/* « Rechercher » is a row like the views under it; its keys say it opens the palette, Ctrl+K. */
+/* « Rechercher… » reads as a field: a raised panel box, its words a placeholder, one key chip saying Ctrl+K opens the palette. */
 .nav-link.nav-search {
   flex: none;
+  height: 36px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  color: var(--muted);
+  transition:
+    border-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.nav-link.nav-search:hover {
+  background: var(--panel);
+  border-color: var(--line-strong);
+  color: var(--ink-2);
 }
 .nav-keys {
   flex: none;
-  display: flex;
-  gap: 3px;
-}
-.nav-keys kbd {
-  min-width: 16px;
-  padding: 0 4px;
-  font-size: 10.5px;
-  line-height: 15px;
-  border-color: var(--line);
-  border-bottom-color: var(--line-strong);
+  min-width: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--sunken);
   color: var(--muted);
 }
 .nav-link.later {
@@ -1917,17 +1950,18 @@ input.switch:disabled {
 
 /* Folded: icons alone, their names in the tooltips; a line stands for each section's heading. */
 .shell-nav.rail {
-  padding: 6px 8px 8px;
+  padding: 0 8px 8px;
 }
 .shell-nav.rail .shell-nav-top {
   position: relative;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
 }
 /* Folded, the button that unfolds sits in the logo, and shows when the pointer comes onto it. */
 .shell-nav.rail .nav-rail-toggle {
   position: absolute;
-  top: 0;
+  top: calc((var(--header-h) - 36px) / 2);
   left: 0;
   width: 40px;
   height: 36px;
@@ -1965,6 +1999,17 @@ input.switch:disabled {
 .shell-nav.rail .nav-link {
   justify-content: center;
   padding: 0;
+}
+/* Folded, the field is an icon like the others. */
+.shell-nav.rail .nav-link.nav-search {
+  height: 32px;
+  margin-bottom: 0;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+}
+.shell-nav.rail .nav-link.nav-search:hover {
+  background: var(--hover);
 }
 .shell-nav.rail .nav-link > span:first-of-type {
   position: absolute;
@@ -2010,31 +2055,52 @@ input.switch:disabled {
   min-height: 0;
   background: var(--panel);
   overflow: hidden;
-  border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
-  border-top-left-radius: var(--radius-lg);
 }
+/*
+ * The window's top band: the breadcrumb, the view's tools, then the window's buttons flush in the corner.
+ * Its empty parts move the window, as a title bar would.
+ */
 .view-header {
   flex: none;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 20px 12px;
+  min-height: var(--header-h);
+  padding-left: 20px;
   border-bottom: 1px solid var(--line);
+  user-select: none;
+  -webkit-user-select: none;
 }
-/* The location keeps its width (up to half the header); the view's tools wrap around it. */
+/* The location keeps its width (up to half the header); the view's tools take the rest. */
 .view-header-text {
   flex-shrink: 0;
   max-width: 50%;
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
   min-width: 0;
+  font-size: 13px;
+}
+.view-header-text > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 6px;
+  color: var(--line-strong);
 }
 .view-header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-left: auto;
+  padding: 7px 0;
+}
+.view-header-actions:empty + .titlebar-controls {
+  margin-left: auto;
+}
+.view-header .titlebar-controls {
+  flex: none;
+  align-self: stretch;
 }
 /* The Structure view switch stays at the far end, where it is whatever the shown view adds before it. */
 .structure-shape {
@@ -2046,9 +2112,18 @@ input.switch:disabled {
 .view-title {
   display: flex;
   align-items: center;
-  font-size: 17px;
-  line-height: 24px;
-  letter-spacing: -0.015em;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.view-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .crumbs {
   display: flex;
@@ -2057,7 +2132,6 @@ input.switch:disabled {
   margin: 0;
   padding: 0;
   min-width: 0;
-  font-size: 12.5px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -3030,6 +3104,20 @@ h4 {
   background: var(--paper-link-bg);
   border-radius: 2px;
 }
+/* What is typed after « / », « @ » or « [[ », until it is chosen: a badge, without moving the text around it */
+.wiki-typing {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--accent-soft), inset 0 0 0 1px var(--accent-line);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.page-column .wiki-typing {
+  color: var(--paper-link);
+  background: var(--paper-link-bg);
+  box-shadow: 0 0 0 2px var(--paper-link-bg), inset 0 0 0 1px currentColor;
+}
 .note-mark {
   background: rgba(245, 190, 40, 0.34);
   border-radius: 2px;
@@ -3072,6 +3160,10 @@ h4 {
 .wiki-name {
   font-weight: 500;
 }
+/* A name the Bible does not know: the rows that make its entry, in the accent */
+.wiki-item.create .wiki-name {
+  color: var(--accent);
+}
 .wiki-type {
   color: var(--muted);
   font-size: 12px;
@@ -3108,14 +3200,10 @@ h4 {
   text-underline-offset: 3px;
 }
 
-/* Workshop: the progress on top, then the steps as a numbered thread; or, under its tab, what it displays */
+/* Workshop: the progress on top, then the steps as a numbered thread */
 .view-side.steps {
   gap: 0;
   padding: 14px 12px 20px;
-}
-.view-side.steps-display {
-  gap: 0;
-  padding: 4px 4px 20px;
 }
 .steps-count {
   margin: 0;
@@ -3547,14 +3635,71 @@ h4 {
 .side-head .btn {
   flex: 1;
 }
-.header-search {
-  width: 280px;
+/* A search field with its magnifier inside, at the head of the list it filters */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 320px;
+  min-width: 0;
+  height: var(--control-h);
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--control-r);
+  background: var(--panel);
+  cursor: text;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.search-box:hover {
+  border-color: var(--muted);
+}
+.search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.search-box svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+.search-box input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  outline: none;
 }
 
 .view-main.wide {
   --main-max: 1240px;
 }
-/* Above a category's cards: back on the left, the sort and the archives on the right. */
+/* Above the cards: the search on the left, then the category's tools, the button that creates on the right. */
+.bible-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.bible-toolbar .search-box {
+  flex: 0 1 320px;
+}
+.bible-toolbar > .bible-bar-tools {
+  margin-left: auto;
+}
+.bible-toolbar > .btn.primary {
+  margin-left: auto;
+  flex: none;
+}
+.bible-toolbar > .bible-bar-tools + .btn.primary {
+  margin-left: 0;
+}
+/* Above an open entry: back on the left. */
 .bible-bar {
   display: flex;
   align-items: center;
@@ -3736,44 +3881,6 @@ h4 {
   outline-offset: 2px;
 }
 
-/* « Nouveau type »: the last card of the grid, dashed, in the accent */
-.type-card-new {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  height: 100%;
-  min-height: 60px;
-  padding: 12px;
-  border: 1px dashed var(--accent-line);
-  border-radius: 10px;
-  background: none;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-  cursor: pointer;
-  transition:
-    border-color 140ms ease-out,
-    background-color 140ms ease-out;
-}
-.type-card-new svg {
-  width: 16px;
-  height: 16px;
-}
-.type-card-new:hover {
-  border-style: solid;
-  background: var(--accent-soft);
-}
-.type-card-new:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.type-card-new:active {
-  scale: 0.99;
-}
-
 /* The categories still empty: dashed pills that make the first entry */
 .type-pills {
   list-style: none;
@@ -3817,7 +3924,6 @@ h4 {
 }
 @media (prefers-reduced-motion: reduce) {
   .type-card,
-  .type-card-new,
   .type-pill {
     transition: none;
   }
@@ -4586,13 +4692,6 @@ h4 {
   box-shadow:
     0 0 0 1px var(--card-edge),
     0 0 18px -2px color-mix(in srgb, var(--card-edge) 65%, transparent);
-}
-.card.lit {
-  --card-edge: var(--warning-dot);
-  box-shadow: 0 0 0 3px var(--warning-soft);
-}
-.card.dim {
-  opacity: 0.35;
 }
 /* The handle is the card's whole left margin, its dots level with the heading line. */
 .card > .grip {
@@ -5582,9 +5681,8 @@ h4 {
   border-color: var(--accent-line);
   background: var(--accent-soft);
 }
-/* The current version is no button: its card stays green, without hover. */
+/* The current version is no button: its card stays green, without hover; its « ⋯ » freezes it. */
 .vr-stop.current .vr-stop-card {
-  grid-template-columns: minmax(0, 1fr);
   border-color: var(--ok-line);
   background: var(--ok-soft);
 }
@@ -5592,6 +5690,9 @@ h4 {
   border: none;
   background: none;
   cursor: pointer;
+}
+.vr-stop.current .vr-stop-card > .vr-stop-body {
+  cursor: default;
 }
 .vr-stop-card > .more-btn {
   margin: 4px 4px 0 0;
@@ -8070,7 +8171,7 @@ button[aria-expanded="true"] .stats-chevron {
 }
 
 /* Boxless icon buttons pressed: a shade deeper than their highlight. Last, so it wins over their hover. */
-.settings-close:active,
+.settings-back:active,
 .toast-close:active,
 .nav-icon-btn:active,
 .head-add:active,
@@ -8461,4 +8562,1656 @@ button[aria-expanded="true"] .stats-chevron {
 .dash-bar,
 .dash-tick {
   pointer-events: none;
+}
+
+/* Réalisation: the Découpage, the Storyboard and the Moodboards. Each view puts its work in the middle and, on the
+   right, a panel that shows one thing at a time, chosen by the tabs of the header, as in the Scénario. */
+.view.split.rz-split {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+.rz-side {
+  padding: 0;
+  gap: 0;
+}
+.rz-main {
+  overflow: auto;
+  min-width: 0;
+  padding: 20px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.icon-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--control-hover);
+  color: var(--ink);
+}
+.icon-btn:active:not(:disabled) {
+  background: var(--control-press);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.check-list button[aria-checked="true"] .check-box.radio {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent-ink) 0 3px, var(--accent) 3.5px);
+}
+
+/* The scene a view works on, above its shots or frames. */
+.rz-scene-head {
+  display: grid;
+  gap: 6px;
+}
+.rz-scene-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.rz-scene-num {
+  flex: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.rz-slug {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.rz-scene-facts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.rz-scene-facts .badge {
+  margin: 0;
+}
+button.badge {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+button.badge.warn:hover {
+  border-color: var(--warning-dot);
+}
+.chip.rz-board-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip.rz-board-chip svg {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+}
+.rz-scenes {
+  overflow: auto;
+}
+.rz-meta-warn {
+  color: var(--warning);
+}
+.rz-empty {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 40px 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+.rz-empty p {
+  margin: 0;
+  max-width: 460px;
+}
+.rz-empty .btn {
+  margin-top: 12px;
+}
+
+/* A field written in place: no box at rest, the box of a field under the pointer and in the focus. */
+.rz-inline {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  height: auto;
+  margin: 0;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: none;
+}
+textarea.rz-inline {
+  resize: none;
+  field-sizing: content;
+  min-height: 30px;
+}
+.rz-inline:hover {
+  border-color: var(--line-strong);
+}
+.rz-inline:focus {
+  border-color: var(--accent);
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+.rz-inline::placeholder,
+.rz-placeholder {
+  color: var(--hint);
+}
+.rz-picker {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rz-num-input {
+  font-variant-numeric: tabular-nums;
+}
+.rz-num {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The table of shots: a spreadsheet whose cells are fields [DEC-04]. */
+.rz-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+/* The table scrolls sideways on its own; the button that adds a shot stays under it, in view. */
+.rz-table-scroll {
+  overflow-x: auto;
+}
+.rz-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.rz-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.rz-table td {
+  padding: 3px 2px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.rz-table tbody tr {
+  transition: background-color 120ms ease-out;
+}
+.rz-table tbody tr:hover {
+  background: var(--sunken);
+}
+.rz-table tbody tr.on {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--panel));
+}
+.rz-table tr.drop-before td {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.rz-table tr.drop-after td {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.rz-table td.rz-col-num {
+  padding: 9px 8px 0;
+}
+.rz-table .rz-shoot {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rz-table td.rz-col-grip {
+  padding: 6px 0 0 4px;
+}
+.rz-table .grip {
+  height: 24px;
+}
+.rz-table tr:hover .grip,
+.rz-card:hover .grip {
+  opacity: 1;
+  color: var(--muted);
+}
+.rz-table td.rz-col-more {
+  padding: 3px 6px 0 0;
+}
+.rz-table .more-btn,
+.rz-card .more-btn {
+  opacity: 0;
+}
+.rz-table tr:hover .more-btn,
+.rz-table tr.on .more-btn,
+.rz-card:hover .more-btn,
+.rz-card.on .more-btn,
+.rz-table .more-btn.on,
+.rz-card .more-btn.on,
+.rz-table .more-btn:focus-visible,
+.rz-card .more-btn:focus-visible {
+  opacity: 1;
+}
+.rz-col-grip {
+  width: 22px;
+}
+.rz-col-num {
+  width: 56px;
+}
+.rz-col-more {
+  width: 36px;
+}
+.rz-col-size,
+.rz-col-angle,
+.rz-col-movement,
+.rz-col-support,
+.rz-col-sound {
+  width: 150px;
+  min-width: 150px;
+}
+.rz-col-lens,
+.rz-col-camera,
+.rz-col-frameRate,
+.rz-col-duration,
+.rz-col-setup {
+  width: 96px;
+  min-width: 96px;
+}
+.rz-col-characters,
+.rz-col-lighting,
+.rz-col-effects {
+  min-width: 170px;
+}
+.rz-col-action {
+  min-width: 280px;
+}
+.rz-col-dialogue,
+.rz-col-notes {
+  min-width: 220px;
+}
+/* A list in a cell: the value alone at rest, the box of a list under the pointer. */
+.select.rz-cell-select {
+  width: 100%;
+  height: 30px;
+  padding: 0 6px 0 7px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+}
+.select.rz-cell-select .select-caret {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.select.rz-cell-select:hover .select-caret,
+.select.rz-cell-select.on .select-caret,
+.select.rz-cell-select:focus-visible .select-caret {
+  opacity: 1;
+}
+.rz-add-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.rz-add-row svg {
+  width: 15px;
+  height: 15px;
+}
+.rz-add-row:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The cards of shots: each shot in full, its frame on top when it has one. */
+.rz-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.rz-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.rz-card:hover {
+  border-color: var(--line-strong);
+}
+.rz-card.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.rz-card.drop-before {
+  box-shadow: -3px 0 0 var(--accent);
+}
+.rz-card.drop-after {
+  box-shadow: 3px 0 0 var(--accent);
+}
+.rz-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.rz-card-head .grip {
+  height: 24px;
+  margin-left: -4px;
+}
+.rz-card-head .rz-num {
+  font-size: 14px;
+}
+.rz-card-time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rz-card-frame {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--sunken);
+}
+.rz-card-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rz-card-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+}
+.rz-field {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+.rz-field.wide {
+  grid-column: 1 / -1;
+}
+.rz-field > span {
+  padding: 4px 8px 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.rz-card-add button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 120px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.rz-card-add button:hover {
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.rz-card-add svg {
+  width: 15px;
+  height: 15px;
+}
+.rz-pop {
+  max-height: 320px;
+  overflow: auto;
+  padding: 0;
+}
+.rz-pop .check-list {
+  padding: 4px;
+}
+.rz-pop-empty {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12.5px;
+}
+
+/* The scene's text beside its shots, each passage with the shots that cover it [DEC-03]. */
+.rz-coverage {
+  display: grid;
+  gap: 8px;
+  padding: 14px 12px 24px;
+}
+.rz-coverage-lead {
+  margin: 0 4px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.rz-coverage-lead strong {
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.rz-passages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.rz-passage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-2);
+  font-family: "Courier Prime", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+.rz-passage:disabled {
+  cursor: default;
+}
+.rz-passage:not(:disabled):hover {
+  background: var(--hover);
+}
+.rz-passage.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.rz-passage-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.rz-passage.el-character .rz-passage-text {
+  padding-left: 32%;
+  text-transform: uppercase;
+}
+.rz-passage.el-parenthetical .rz-passage-text {
+  padding-left: 22%;
+}
+.rz-passage.el-dialogue .rz-passage-text {
+  padding-left: 12%;
+}
+.rz-passage.el-transition .rz-passage-text {
+  text-align: right;
+  text-transform: uppercase;
+}
+.rz-passage-by {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+  max-width: 96px;
+  font-family: var(--ui-font);
+}
+.rz-by {
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.rz-passage.on .rz-by {
+  border-color: var(--accent-line);
+  background: var(--panel);
+}
+.rz-by-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--warning-line);
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.rz-by-missing::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.rz-display {
+  padding: 4px 0 16px;
+}
+
+/* The Storyboard: frames in the ratio of the film, their captions written under them [STB-01 to STB-06]. */
+.sb-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 22px 18px;
+  align-items: start;
+}
+.sb-frame {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.sb-frame-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  min-width: 0;
+}
+.sb-tech {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-frame .more-btn {
+  opacity: 0;
+}
+.sb-frame:hover .more-btn,
+.sb-frame:focus-within .more-btn,
+.sb-frame .more-btn.on {
+  opacity: 1;
+}
+.sb-image {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+.sb-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sb-image.empty {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  background: var(--sunken);
+  box-shadow: none;
+}
+.sb-empty-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+}
+.sb-image-tools {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 8px 8px;
+  background: linear-gradient(transparent, rgba(14, 15, 22, 0.42));
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.sb-image:hover .sb-image-tools,
+.sb-image:focus-within .sb-image-tools {
+  opacity: 1;
+}
+.sb-frame .rz-inline {
+  margin: 0 -7px;
+  width: calc(100% + 14px);
+}
+.sb-caption {
+  color: var(--ink);
+}
+.sb-dialogue {
+  color: var(--ink-2);
+  font-style: italic;
+}
+.sb-notes.rz-inline {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.sb-add {
+  display: grid;
+  gap: 8px;
+  padding-top: 32px;
+}
+.sb-add button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.sb-add button:hover {
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sb-add svg {
+  width: 15px;
+  height: 15px;
+}
+.sb-add p {
+  margin: 0;
+}
+.dialog.sb-picker {
+  width: min(720px, calc(100vw - 48px));
+}
+.sb-picker-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.sb-picker-grid button {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--sunken);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.sb-picker-grid button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.sb-picker-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Drawing a frame: the tools on the left, the frame on the desk [STB-02]. */
+.dialog.draw-dialog {
+  width: min(1200px, calc(100vw - 48px));
+  height: min(840px, calc(100vh - 48px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  display: none;
+  overflow: hidden;
+}
+.dialog.draw-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.draw-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.dialog.draw-dialog .draw-head h2 {
+  margin: 0;
+}
+.draw-ratio {
+  font-size: 12.5px;
+}
+.draw-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+}
+.draw-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px;
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.draw-group {
+  display: grid;
+  gap: 2px;
+}
+.draw-tool {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--control-r);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.draw-tool svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.draw-tool:hover {
+  background: var(--hover);
+}
+.draw-tool.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.draw-tool.on svg {
+  color: var(--accent);
+}
+.draw-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.draw-label svg {
+  width: 14px;
+  height: 14px;
+}
+.draw-layers-head .icon-btn {
+  margin-left: auto;
+}
+.draw-inks,
+.draw-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px;
+}
+.draw-ink {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line-strong);
+  cursor: pointer;
+}
+.draw-ink.on {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.draw-size {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--control-r);
+  background: var(--panel);
+  cursor: pointer;
+}
+.draw-size span {
+  border-radius: 50%;
+  background: var(--ink-2);
+}
+.draw-size.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.draw-size.on span {
+  background: var(--accent);
+}
+.draw-history {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+.draw-layers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+.draw-layers li {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius);
+}
+.draw-layers li.on {
+  background: var(--accent-soft);
+}
+.draw-layer {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+span.draw-layer {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
+.draw-layers li.on .draw-layer {
+  color: var(--accent);
+  font-weight: 500;
+}
+.draw-stage-wrap {
+  container-type: size;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--desk);
+}
+.draw-stage {
+  position: relative;
+  width: min(calc(100cqw - 48px), calc((100cqh - 48px) * var(--ratio, 1.778)));
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: var(--sheet-shadow);
+  touch-action: none;
+  cursor: crosshair;
+}
+.draw-backdrop,
+.draw-layer-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.draw-backdrop {
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+.draw-layer-canvas[hidden] {
+  display: none;
+}
+.dialog-actions.draw-foot {
+  align-items: center;
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.draw-tip,
+.draw-leave {
+  margin-right: auto;
+  font-size: 12.5px;
+}
+.draw-leave {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* The Moodboards: a free board on a dotted canvas, the boards and their palette in the panel [MOO-01 to MOO-06]. */
+.mb-main {
+  position: relative;
+  container: mb-main / inline-size;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.mb-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--canvas);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--hint) 40%, transparent) 1px, transparent 1.3px);
+  cursor: default;
+  outline: none;
+  touch-action: none;
+}
+.mb-canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+.mb-canvas.hand {
+  cursor: grab;
+}
+.mb-canvas.panning {
+  cursor: grabbing;
+}
+.mb-canvas.placing {
+  cursor: crosshair;
+}
+.mb-canvas.hand .mb-item,
+.mb-canvas.panning .mb-item,
+.mb-canvas.placing .mb-item {
+  cursor: inherit;
+}
+.mb-canvas.dropping {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background-color: color-mix(in srgb, var(--accent-soft) 60%, var(--canvas));
+}
+.mb-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+.mb-item {
+  position: absolute;
+  cursor: default;
+  user-select: none;
+}
+.mb-item.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.mb-image {
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--sunken);
+  box-shadow: var(--shadow-md);
+}
+.mb-image.on {
+  overflow: visible;
+}
+.mb-image img,
+.mb-image .media-loading,
+.mb-image .media-missing {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.mb-color {
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+.mb-hex {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.mb-text {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.mb-note {
+  padding: 12px 14px;
+  border: 1px solid var(--warning-line);
+  border-radius: 8px;
+  background: var(--warning-soft);
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-md);
+}
+.mb-note.tinted {
+  border-color: color-mix(in srgb, var(--note), #000 10%);
+  background: var(--note);
+  color: #2b2d34;
+}
+:root[data-theme="dark"] .mb-note.tinted {
+  border-color: color-mix(in srgb, var(--note) 50%, var(--panel));
+  background: color-mix(in srgb, var(--note) 36%, var(--panel));
+  color: var(--ink-2);
+}
+.mb-text-body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mb-text-body.empty {
+  color: var(--hint);
+}
+textarea.mb-edit,
+textarea.mb-edit:hover,
+textarea.mb-edit:focus {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  resize: none;
+  box-shadow: none;
+  outline: none;
+  user-select: text;
+}
+.mb-handle {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: nwse-resize;
+}
+.mb-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+.mb-hint p {
+  max-width: 420px;
+  margin: 0;
+}
+/* The bar of tools, fixed at the bottom of the canvas as in drawing tools; its colours open over it. */
+.mb-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.mb-bar,
+.mb-tray {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  cursor: default;
+  pointer-events: auto;
+}
+.mb-bar {
+  gap: 2px;
+  padding: 5px;
+  border-radius: 14px;
+}
+.mb-bar-sep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  margin: 0 5px;
+  background: var(--line);
+}
+.mb-tool {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
+}
+.mb-tool > svg,
+.mb-tool > span > svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.75;
+}
+.mb-tool:hover:not(.on) {
+  background: var(--control-hover);
+  color: var(--ink);
+}
+.mb-tool:active:not(.on) {
+  background: var(--control-press);
+}
+.mb-tool.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.mb-tool.mb-snap.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.mb-tool:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.mb-tool-swatch,
+.mb-tool-note {
+  display: inline-flex;
+}
+.mb-tool-swatch svg {
+  fill: var(--swatch);
+}
+.mb-tool-note svg {
+  fill: var(--swatch, var(--warning-soft));
+}
+.mb-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--panel);
+  font: 500 12px/16px var(--ui-font);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+  pointer-events: none;
+}
+.mb-tip kbd {
+  min-width: 16px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--panel) 18%, transparent);
+  color: inherit;
+  font: 500 10.5px/16px var(--ui-font);
+}
+.mb-tip.wide {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 9px;
+  white-space: normal;
+  width: 230px;
+}
+.mb-tip.wide small {
+  color: color-mix(in srgb, var(--panel) 72%, transparent);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 15px;
+}
+.mb-tool:hover .mb-tip,
+.mb-tool:focus-visible .mb-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 350ms;
+}
+.mb-dock:has(.mb-tray) .mb-tip {
+  display: none;
+}
+.mb-tray {
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  animation: mb-tray-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mb-tray .mb-bar-sep {
+  height: 18px;
+  margin: 0 2px;
+}
+@keyframes mb-tray-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.mb-dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 50%;
+  background: var(--swatch);
+  cursor: pointer;
+  transition:
+    transform 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.mb-dot.note {
+  background: var(--swatch, var(--warning-soft));
+}
+.mb-dot.note:not([style]) {
+  border-color: var(--warning-line);
+}
+.mb-dot.custom {
+  background: var(--swatch, conic-gradient(#e5484d, #f2c94c, #3fbf74, #2a8af4, #7c5ce0, #ec6fae, #e5484d));
+}
+.mb-dot:hover {
+  transform: scale(1.12);
+}
+.mb-dot.on {
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 4px var(--accent);
+}
+.mb-dot:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+/* What a tool lays down, under the pointer before the click. */
+.mb-preview {
+  opacity: 0.6;
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 3px;
+  pointer-events: none;
+}
+/* The lines an item lines up on while it moves, and the frame a drag on the empty canvas draws. */
+.mb-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.mb-guide {
+  position: absolute;
+  background: var(--danger-dot);
+}
+.mb-guide.x {
+  width: 1px;
+}
+.mb-guide.y {
+  height: 1px;
+}
+.mb-marquee {
+  position: absolute;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.mb-zoom {
+  cursor: default;
+}
+@container mb-main (max-width: 820px) {
+  .mb-dock {
+    left: 16px;
+    align-items: flex-start;
+    transform: none;
+  }
+}
+@container mb-main (max-width: 600px) {
+  .mb-zoom {
+    bottom: 80px;
+  }
+}
+.mb-boards {
+  list-style: none;
+  margin: 0;
+  padding: 10px 8px;
+  display: grid;
+  gap: 1px;
+}
+.mb-board {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 8px;
+  transition: background-color 120ms ease-out;
+}
+.mb-board:hover {
+  background: var(--hover);
+}
+.mb-board.on {
+  background: var(--accent-soft);
+}
+.mb-board .more-btn {
+  margin-right: 4px;
+  opacity: 0;
+}
+.mb-board:hover .more-btn,
+.mb-board.on .more-btn,
+.mb-board .more-btn.on,
+.mb-board .more-btn:focus-visible {
+  opacity: 1;
+}
+.mb-board-open {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mb-cover {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
+  gap: 1px;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sunken);
+  color: var(--hint);
+}
+.mb-cover.n0 {
+  place-items: center;
+  grid-template-columns: 1fr;
+}
+.mb-cover.n0 svg {
+  width: 18px;
+  height: 18px;
+}
+.mb-cover.n1 {
+  grid-template-columns: 1fr;
+}
+.mb-cover.n3 > :first-child {
+  grid-row: span 2;
+}
+.mb-cover img,
+.mb-cover .media-loading {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
+.mb-board-text {
+  display: grid;
+  min-width: 0;
+}
+.mb-board-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mb-board.on .mb-board-name {
+  color: var(--accent);
+}
+.mb-board-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mb-palette,
+.mb-links {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px 16px 24px;
+}
+.mb-palette h3,
+.mb-links h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.mb-palette p,
+.mb-links p {
+  margin: 0;
+}
+.mb-palette h3.mb-own-title {
+  margin-top: 10px;
+}
+.mb-strip {
+  display: flex;
+  height: 40px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.mb-strip span {
+  flex-basis: 0;
+}
+.mb-swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+.mb-swatch {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px 0 5px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.mb-swatch:hover {
+  background: var(--hover);
+}
+.mb-swatch > svg {
+  width: 14px;
+  height: 14px;
+  color: var(--hint);
+  opacity: 0;
+}
+.mb-swatch:hover > svg,
+.mb-swatch:focus-visible > svg {
+  opacity: 1;
+}
+.mb-chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.mb-code {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.mb-share {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mb-palette .btn {
+  justify-self: start;
+}
+.mb-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+.mb-link-list li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 6px;
+}
+.mb-link-list li:hover {
+  background: var(--hover);
+}
+.mb-link-open {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mb-link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mb-link-text.rz-slug {
+  font-size: 11.5px;
+}
+.select.mb-link-add {
+  justify-self: start;
+  height: 28px;
+  font-size: 12.5px;
+}
+.mb-empty .mb-starters {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.mb-starters .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mb-starters .chip svg {
+  width: 13px;
+  height: 13px;
+}
+@media (max-width: 1100px) {
+  .view.split.rz-split {
+    grid-template-columns: minmax(0, 1fr) 264px;
+  }
+  .rz-main {
+    padding: 16px 16px 40px;
+  }
 }

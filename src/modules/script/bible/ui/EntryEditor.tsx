@@ -10,6 +10,8 @@ import { RichText, richSchema } from "../../../../ui-kit/RichText";
 import { MediaImage, pickImage } from "../../../shared/media";
 import { useProject } from "../../../project/ui/projectContext";
 import { useScenes } from "../../screenplay/application/scriptSession";
+import { boardsFor } from "../../../realisation/application/moodboards";
+import { requestBoard } from "../../../realisation/ui/common";
 import { archiveEntry, backlinks, bibleIndex, deleteEntry, duplicateEntry, entryVersions, restoreEntry, saveEntry, type Entry } from "../application/bible";
 import { sceneTexts } from "../application/sceneTexts";
 import { appearances } from "../domain/appearances";
@@ -26,7 +28,7 @@ type SaveState = "idle" | "pending" | "saved" | "error";
 
 /** Edits one entry; changes are saved a moment after the last one [BIB-01]. */
 export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: Entry[]; types: EntryType[] }) {
-  const { notify, ask, openScene, openEntry, session } = useProject();
+  const { notify, ask, openScene, openEntry, session, go } = useProject();
   const [draft, setDraft] = useState(entry);
   const saved = useRef(entry);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,6 +78,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
     [scenes, draft.id, draft.type, draft.name, draft.aliases],
   );
   const links = useLive(() => backlinks(draft.id), ["bible_entry", "scene"], [draft.id]);
+  const boards = useLive(() => boardsFor(draft.id), ["moodboard", "moodboard_link"], [draft.id]);
   const longFields = type?.fields.filter((f) => f.kind === "longtext") ?? [];
   const shortFields = type?.fields.filter((f) => f.kind !== "longtext") ?? [];
   const field = (f: FieldDef) => (
@@ -228,6 +231,29 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
                     <li key={e.id}>
                       <button type="button" className="entry-ref" onClick={() => bibleIndex.open(e.id)}>
                         {e.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {boards && boards.length > 0 && (
+              <>
+                <h3>
+                  {t("nav.views.moodboard")} <span className="entry-refs-count">{boards.length}</span>
+                </h3>
+                <ul className="ref-list">
+                  {boards.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        type="button"
+                        className="entry-ref"
+                        onClick={() => {
+                          requestBoard(b.id);
+                          go("moodboard");
+                        }}
+                      >
+                        {b.name}
                       </button>
                     </li>
                   ))}

@@ -4,7 +4,8 @@
 //   P5  crash (taskkill) then recovery, in both choices, and a window close with unsaved typing;
 //   the 5 reference screenplays of tests/corpus: import, PDF in both formats, PDF checked line by line;
 //   startup time, opening and typing latency on 120 pages;
-//   v0.5 « Écrire »: workshop, bible and wiki links, board, frozen versions, FDX round trip, backups.
+//   v0.5 « Écrire »: workshop, bible and wiki links, board, frozen versions, FDX round trip, shot list, storyboard,
+//   moodboard, backups.
 import { chromium } from "playwright-core";
 import { execFileSync, spawn } from "node:child_process";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -389,6 +390,40 @@ await closeToasts();
 const after = await page.evaluate(() => window.__oniric.editor.doc.textContent.replace(/\s+/g, ""));
 const scenesAfter = await page.evaluate(() => window.__oniric.editor.doc.childCount);
 check(scenesAfter === sceneCount && after.length > 0 && Math.abs(after.length - before.length) / before.length < 0.01, `FDX : export puis import, ${scenesAfter} scènes retrouvées (EDT-10)`);
+
+// Réalisation: a shot of the Découpage is a frame of the Storyboard; the shot list leaves as CSV; a moodboard takes a colour.
+console.log("\nRéalisation");
+const rows = (sql) => page.evaluate((q) => window.__TAURI_INTERNALS__.invoke("db_query", { query: { sql: q, parameters: [] } }).then((r) => r.rows), sql);
+await nav("Découpage");
+await page.locator(".view-header").getByRole("button", { name: "Nouveau plan" }).click();
+await page.waitForSelector(".rz-table tbody tr", { timeout: 15000 });
+await page.locator(".rz-table tbody tr").first().locator("textarea[aria-label='Action']").fill("Plan large sur la boulangerie.");
+await page.keyboard.press("Tab");
+await page.waitForFunction(() => !!document.querySelector(".rz-scene-facts"), null, { timeout: 5000 });
+await sleep(500);
+const [[shotAction]] = await rows("SELECT action FROM shot");
+check(shotAction === "Plan large sur la boulangerie.", "découpage : un plan ajouté à la première scène, son action enregistrée (DEC-01, DEC-02)");
+await nav("Storyboard");
+await page.waitForSelector(".sb-frame", { timeout: 15000 });
+const caption = await page.locator(".sb-frame textarea.sb-caption").first().inputValue();
+check((await page.locator(".sb-frame").count()) === 1 && caption === shotAction, "storyboard : le plan a sa case, avec sa légende (STB-04)");
+await projectMenu("Exporter…");
+await page.locator(".transfer-nav").getByRole("button", { name: /^Réalisation/ }).click();
+await page.locator(".export-kind", { hasText: "Découpage (CSV)" }).click();
+await page.locator("dialog.dialog").getByRole("button", { name: "Exporter", exact: true }).click();
+await toast(".csv");
+await closeToasts();
+const csvFile = (await readdir(exportsDir)).find((f) => f.endsWith(".csv"));
+const csv = csvFile ? await readFile(path.join(exportsDir, csvFile), "utf8") : "";
+check(csv.includes("1-1") && csv.includes(shotAction), `découpage : exporté en CSV (${csvFile}) (DEC-08)`);
+await nav("Moodboard");
+await page.locator(".mb-starters .chip", { hasText: "Lumière" }).click();
+await page.waitForSelector(".mb-canvas", { timeout: 15000 });
+await page.locator(".mb-bar").getByRole("button", { name: "Couleur (C)" }).click();
+await page.locator(".mb-canvas").click({ position: { x: 200, y: 160 } });
+await page.waitForSelector(".mb-item.mb-color", { timeout: 15000 });
+const [[boards, items]] = await rows("SELECT (SELECT count(*) FROM moodboard), (SELECT count(*) FROM moodboard_item)");
+check(boards === 1 && items === 1, "moodboard : créé, une couleur posée dessus (MOO-01, MOO-02)");
 
 await projectMenu("Réglages");
 await page.locator(".settings-nav").getByRole("button", { name: "Sauvegardes" }).click();

@@ -1,6 +1,5 @@
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Diamond, FolderInput, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type DragEvent, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { rankBetween } from "../../../../core/ordering";
@@ -9,7 +8,7 @@ import { Dialog } from "../../../../ui-kit/Dialog";
 import { TagInput } from "../../../../ui-kit/Form";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { useProject } from "../../../project/ui/projectContext";
-import { headingPlace, prettyName } from "../../bible/domain/appearances";
+import { prettyName } from "../../bible/domain/appearances";
 import { useScenes, type SceneInfo } from "../../screenplay/application/scriptSession";
 import { formatEighths } from "../../screenplay/domain/duration";
 import { moveScene, numberedParts, numberedTitles, sceneLabel, type ActGroup, type SequenceGroup } from "../domain/outline";
@@ -36,7 +35,6 @@ import { CanvasSurface } from "./CanvasSurface";
 
 import { Select } from "../../../../ui-kit/Select";
 import { plural, t } from "../../../../core/i18n";
-type FilterKind = "character" | "location" | "plotline" | "tag" | "status";
 type Drag = { kind: "scene"; id: string } | { kind: "sequence"; id: string } | { kind: "act"; id: string };
 /** The act (and sequence) the board is zoomed into, by fold key; null for the whole story. */
 
@@ -105,11 +103,9 @@ function Ghost({ label, className = "", children, ...rest }: { label: string; cl
  * The board (VUE-03 to VUE-09): the story as a tree on a free canvas.
  */
 export function BoardView() {
-  const { project, session, notify, prompt, ask, openScene, headerActions } = useProject();
+  const { project, session, notify, prompt, ask, openScene } = useProject();
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
-  const [filter, setFilter] = useState<{ kind: FilterKind; value: string } | null>(null);
-  const [highlight, setHighlight] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   // Acts and sequences folded on the canvas, by fold key; remembered per project on this computer.
   const foldKey = `oniric.board.folds.${project.id}`;
@@ -163,31 +159,6 @@ export function BoardView() {
 
   const meta = (id: string): SceneMeta =>
     story.meta.get(id) ?? { id, sequenceId: null, summary: "", status: null, color: null, tags: [], plotlines: [], storyTime: null };
-
-  const matches = (s: SceneInfo) => {
-    if (!filter) return true;
-    const m = meta(s.id);
-    switch (filter.kind) {
-      case "character":
-        return s.characters.includes(filter.value);
-      case "location":
-        return headingPlace(s.heading) === filter.value;
-      case "plotline":
-        return m.plotlines.includes(filter.value);
-      case "tag":
-        return m.tags.includes(filter.value);
-      case "status":
-        return (m.status ?? "") === filter.value;
-    }
-  };
-
-  const options: Record<FilterKind, { value: string; label: string }[]> = {
-    character: [...new Set(scenes.flatMap((s) => s.characters))].sort().map((c) => ({ value: c, label: prettyName(c) })),
-    location: [...new Set(scenes.map((s) => headingPlace(s.heading)).filter(Boolean))].sort().map((l) => ({ value: l, label: prettyName(l) })),
-    plotline: [...new Set([...story.meta.values()].flatMap((m) => m.plotlines))].sort().map((p) => ({ value: p, label: p })),
-    tag: [...new Set([...story.meta.values()].flatMap((m) => m.tags))].sort().map((p) => ({ value: p, label: p })),
-    status: SCENE_STATUSES.map((s) => ({ value: s.id, label: s.label })),
-  };
 
   const apply = async (next: ActGroup[], label: string, extra?: Parameters<typeof arrange>[3], tables?: Parameters<typeof arrange>[4]) => {
     try {
@@ -324,8 +295,7 @@ export function BoardView() {
     const s = byId.get(id);
     if (!s) return null;
     const m = meta(id);
-    const ok = matches(s);
-    const cls = ["card", selected === id && "on", !ok && !highlight && "dim", ok && highlight && filter && "lit", dropTarget === `c:${id}` && "drop"].filter(Boolean).join(" ");
+    const cls = ["card", selected === id && "on", dropTarget === `c:${id}` && "drop"].filter(Boolean).join(" ");
     return (
       <li
         key={id}
@@ -692,43 +662,6 @@ export function BoardView() {
 
   return (
     <div className="view board-view">
-      {headerActions &&
-        createPortal(
-          <div className="header-tools" role="toolbar" aria-label={t("structure.board")}>
-            <label>
-              {t("board.filter")}{" "}
-              <Select
-                value={filter ? `${filter.kind}:${filter.value}` : ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return setFilter(null);
-                  const i = v.indexOf(":");
-                  setFilter({ kind: v.slice(0, i) as FilterKind, value: v.slice(i + 1) });
-                }}
-              >
-                <option value="">{t("board.none")}</option>
-                {(["character", "location", "plotline", "tag", "status"] as FilterKind[]).map((k) =>
-                  options[k].length ? (
-                    <optgroup key={k} label={t(`board.filterKinds.${k}`)}>
-                      {options[k].map((o) => (
-                        <option key={o.value} value={`${k}:${o.value}`}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null,
-                )}
-              </Select>
-            </label>
-            {filter && (
-              <label className="choice">
-                <input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} /> {t("board.highlight")}
-              </label>
-            )}
-          </div>,
-          headerActions,
-        )}
-
       <CanvasSurface tools={foldTools} onDragEnd={() => setDropTarget(null)}>
         {canvas()}
       </CanvasSurface>

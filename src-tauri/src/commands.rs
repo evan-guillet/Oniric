@@ -743,6 +743,39 @@ pub fn media_import(core: State<'_, Core>, source: String, kind: String) -> Resu
     Ok(relative(&dir, &target))
 }
 
+/// The image types a pasted, dropped or drawn picture may be written as.
+const MEDIA_WRITE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp"];
+
+/// Writes an image given as base64 into `medias/<kind>/` of the open project, named after `name`, and returns its
+/// path inside the project: a picture pasted or dropped on a moodboard, or a storyboard frame drawn in Oniric [MOO-03].
+#[tauri::command]
+#[specta::specta]
+pub fn media_write(core: State<'_, Core>, kind: String, name: String, extension: String, data: String) -> Result<String> {
+    use base64::Engine;
+    let ext = extension.trim_start_matches('.').to_lowercase();
+    if !MEDIA_WRITE_EXTENSIONS.contains(&ext.as_str()) {
+        return Err(CoreError::Refused(format!("type d'image non pris en charge : {ext}")));
+    }
+    if data.len() as u64 > MEDIA_MAX_BYTES / 3 * 4 {
+        return Err(CoreError::Refused(format!("image de plus de {} Mo", MEDIA_MAX_BYTES >> 20)));
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data.as_bytes())
+        .map_err(|_| CoreError::Refused("image illisible".into()))?;
+    let dir = project_dir(&core)?;
+    let target_dir = dir.join("medias").join(system::file_name(&kind));
+    fs::create_dir_all(&target_dir)?;
+    let stem = system::file_name(&name);
+    let mut target = target_dir.join(format!("{stem}.{ext}"));
+    let mut n = 2;
+    while target.exists() {
+        target = target_dir.join(format!("{stem} ({n}).{ext}"));
+        n += 1;
+    }
+    project::fsx::write_atomically(&target, &bytes)?;
+    Ok(relative(&dir, &target))
+}
+
 fn mime(path: &Path) -> &'static str {
     match path.extension().map(|e| e.to_string_lossy().to_lowercase()).as_deref() {
         Some("png") => "image/png",

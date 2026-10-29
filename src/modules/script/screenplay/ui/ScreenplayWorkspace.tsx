@@ -3,7 +3,6 @@ import {
   ArchiveRestore,
   ChevronRight,
   BookOpen,
-  Eye,
   FileText,
   ListTree,
   Pencil,
@@ -24,7 +23,6 @@ import { describeError } from "../../../../core/errors";
 import { uuidv7 } from "../../../../core/ids";
 import { useWritingPrefs } from "../../../../core/writingPrefs";
 import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
-import { CheckList } from "../../../../ui-kit/CheckList";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
 import { readProfile, useProfile, type Profile } from "../../../project/application/profile";
@@ -70,29 +68,6 @@ import { exportScreenplayPdf } from "./screenplayExport";
 
 import { Select } from "../../../../ui-kit/Select";
 import { t } from "../../../../core/i18n";
-/**
- * How the writing shows on screen, on a white desk: each scene framed in a card or not, the bible links coloured and
- * clickable or not, the act and sequence pinned beside the text or not. The pagination, exports and printing stay
- * the same.
- */
-type Display = { cards: boolean; links: boolean; pin: boolean };
-const DISPLAY_KEY = "oniric.script.display";
-const LINKS_KEY = "oniric.script.links";
-const PIN_KEY = "oniric.script.pin";
-
-function savedDisplay(): Display {
-  try {
-    return {
-      cards: localStorage.getItem(DISPLAY_KEY) === "cards",
-      links: localStorage.getItem(LINKS_KEY) !== "off",
-      pin: localStorage.getItem(PIN_KEY) !== "off",
-    };
-  } catch {
-    // Storage unavailable: the default display.
-    return { cards: false, links: true, pin: true };
-  }
-}
-
 /** How far below the top of the desk the act/sequence pin sticks once the first scene has gone up past it. */
 const PIN_TOP = 28;
 
@@ -118,16 +93,16 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
 }
 
 /**
- * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes, the script's
- * information or what the desk displays) and what the desk shows (the writing, or the whole script as it prints with
+ * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes or the script's
+ * information) and what the desk shows (the writing, or the whole script as it prints with
  * « Aperçu »). The notes annotate the text, so they leave the preview; the information can be filled in with the
  * preview beside it.
  */
-type Panel = "scenes" | "notes" | "info" | "display";
+type Panel = "scenes" | "notes" | "info";
 /** The panel's tabs: one is always chosen, and pressing it again keeps it. */
-const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText, display: Eye };
+const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText };
 const panelTabs = (): SegmentedOption<Panel>[] =>
-  (["scenes", "notes", "info", "display"] as const).map((id) => ({
+  (["scenes", "notes", "info"] as const).map((id) => ({
     id,
     label: t(`script.panels.${id}`),
     hint: t(`script.panels.${id}Hint`),
@@ -160,25 +135,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [panel, setPanel] = useState<Panel>("scenes");
   const [preview, setPreview] = useState(false);
   const body: "editor" | "preview" = preview ? "preview" : "editor";
-  const [display, setDisplayState] = useState<Display>(savedDisplay);
+  // How the writing shows on the desk, chosen in the settings: the pagination, exports and printing stay the same.
+  const display = useWritingPrefs();
   const linksRef = useRef(display.links);
   linksRef.current = display.links;
-  const setDisplay = (d: Display) => {
-    setDisplayState(d);
-    try {
-      localStorage.setItem(DISPLAY_KEY, d.cards ? "cards" : "bare");
-      localStorage.setItem(LINKS_KEY, d.links ? "on" : "off");
-      localStorage.setItem(PIN_KEY, d.pin ? "on" : "off");
-    } catch {
-      // Not remembered: it still applies until the project is closed.
-    }
-  };
   /** A panel's tab shows it in place of the others; pressed again, it stays. */
   const showPanel = (next: Panel) => {
     if (next === panel) return;
     setPanel(next);
     if (next === "notes") setPreview(false);
-    if (next !== "info" && next !== "display" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
+    if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
   };
   /** « Aperçu » shows the whole script as it prints; pressed again, or Échap, it goes back to writing. */
   const togglePreview = () => {
@@ -567,17 +533,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           )}
           {panel === "info" && titlePage && (
             <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
-          )}
-          {panel === "display" && (
-            <CheckList
-              label={t("script.display")}
-              items={[
-                { id: "cards", label: t("script.cards"), hint: t("script.cardsHint"), checked: display.cards },
-                { id: "links", label: t("script.links"), hint: t("script.linksHint"), checked: display.links },
-                { id: "pin", label: t("script.pin"), hint: t("script.pinHint"), checked: display.pin },
-              ]}
-              onToggle={(id) => setDisplay({ ...display, [id]: !display[id] })}
-            />
           )}
         </aside>
 

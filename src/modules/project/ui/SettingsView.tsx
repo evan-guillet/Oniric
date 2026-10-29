@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   Copy,
   DatabaseBackup,
   FileText,
@@ -10,7 +11,6 @@ import {
   Ruler,
   Search,
   UserRound,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -30,7 +30,8 @@ import {
 } from "../../../core/theme";
 import { setWritingPrefs, useWritingPrefs, type WritingPrefs } from "../../../core/writingPrefs";
 import { uuidv7 } from "../../../core/ids";
-import { confirmRemoval, Dialog, useBackdropClose, useChoice } from "../../../ui-kit/Dialog";
+import { confirmRemoval, Dialog, useChoice } from "../../../ui-kit/Dialog";
+import { dragWindow, WindowControls } from "../../../ui-kit/TitleBar";
 import { Labeled } from "../../../ui-kit/Form";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import { readProfile, writeProfile, EMPTY_PROFILE, type Profile } from "../application/profile";
@@ -127,7 +128,11 @@ const fold = (x: string) =>
  * right, each setting on a row with what it does on the left and its control on the right. Reachable from the home
  * screen too, without the pages of the project.
  */
-export function SettingsDialog({
+/**
+ * The settings, as a page of the window rather than a box over it: the pages on the left, the chosen one on the
+ * right. Retour or Échap gives the window back to what it showed.
+ */
+export function SettingsScreen({
   page: initialPage = "profile",
   onClose,
   notify: notifyProp,
@@ -141,16 +146,29 @@ export function SettingsDialog({
 }) {
   const ctx = useContext(ProjectContext);
   const notify = ctx?.notify ?? notifyProp ?? (() => {});
-  const ref = useRef<HTMLDialogElement>(null);
-  const backdrop = useBackdropClose(onClose);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState<PageId>(initialPage);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const d = ref.current!;
-    if (!d.open) d.showModal();
-    return () => d.close();
+    // The focus was in what the page now covers: it starts on the search, and goes back there on leaving.
+    const before = document.activeElement as HTMLElement | null;
+    searchRef.current?.focus();
+    return () => before?.focus?.();
   }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // A window opened from a setting closes first.
+      if (e.key !== "Escape" || e.defaultPrevented || document.querySelector("dialog[open]")) return;
+      // Before the views it covers, which take Échap for their own.
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
 
   const q = fold(search.trim());
   const matches = (id: PageId) => !q || fold(`${pageOf(id).label} ${pageOf(id).keywords}`).includes(q);
@@ -183,20 +201,24 @@ export function SettingsDialog({
   };
 
   return (
-    <dialog
-      ref={ref}
-      className="dialog settings-dialog"
-      aria-label={t("shell.settings")}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      {...backdrop}
-    >
+    <div className="settings-page" role="region" aria-label={t("shell.settings")}>
       <nav className="settings-nav" aria-label={t("settings.pagesNav")}>
+        <div className="settings-nav-top" onMouseDown={ctx ? dragWindow : undefined}>
+          <button
+            type="button"
+            className="settings-back"
+            aria-label={t("settings.closeSettings")}
+            title={t("settings.closeTitle")}
+            onClick={onClose}
+          >
+            <ArrowLeft aria-hidden="true" />
+            <span>{t("settings.back")}</span>
+          </button>
+        </div>
         <label className="settings-search">
           <Search aria-hidden="true" />
           <input
+            ref={searchRef}
             type="search"
             placeholder={t("settings.search")}
             aria-label={t("settings.search")}
@@ -225,20 +247,13 @@ export function SettingsDialog({
         {aboutShown && <div className="settings-nav-foot">{link("about")}</div>}
       </nav>
       <div className="settings-pane">
-        <header className="settings-pane-head">
+        <header className="settings-pane-head" onMouseDown={ctx ? dragWindow : undefined}>
           <div className="settings-pane-title">
             <h1>{current.label}</h1>
             <p>{current.lead}</p>
           </div>
-          <button
-            type="button"
-            className="settings-close"
-            aria-label={t("settings.closeSettings")}
-            title={t("settings.closeTitle")}
-            onClick={onClose}
-          >
-            <X aria-hidden="true" />
-          </button>
+          {/* In a project there is no title bar: the head moves the window and holds its buttons. */}
+          {ctx && <WindowControls />}
         </header>
         <div className="settings-pane-body" key={page}>
           {page === "profile" && <ProfileSettings notify={notify} />}
@@ -258,7 +273,7 @@ export function SettingsDialog({
           {page === "about" && <AboutSettings notify={notify} />}
         </div>
       </div>
-    </dialog>
+    </div>
   );
 }
 
@@ -589,6 +604,17 @@ function WritingSettings({ notify }: { notify: Notify }) {
               </option>
             ))}
           </Select>
+        </Row>
+      </Group>
+      <Group title={t("settings.onScreen")}>
+        <Row id="w-cards" title={t("script.cards")} help={t("script.cardsHint")}>
+          <Switch id="w-cards" checked={prefs.cards} onChange={(v) => void set({ cards: v })} />
+        </Row>
+        <Row id="w-links" title={t("script.links")} help={t("script.linksHint")}>
+          <Switch id="w-links" checked={prefs.links} onChange={(v) => void set({ links: v })} />
+        </Row>
+        <Row id="w-pin" title={t("script.pin")} help={t("script.pinHint")}>
+          <Switch id="w-pin" checked={prefs.pin} onChange={(v) => void set({ pin: v })} />
         </Row>
       </Group>
       <Group title={t("settings.goal")}>
@@ -1142,7 +1168,7 @@ function ShortcutSettings() {
         ["Ctrl+Z", t("settings.sc.undo")],
         ["Ctrl+Y Ctrl+Maj+Z", t("settings.sc.redo")],
         ["Échap", t("settings.sc.preview")],
-        ["@ [[", t("settings.sc.link")],
+        ["/ @ [[", t("settings.sc.link")],
         ["Ctrl+Clic", t("settings.sc.openLink")],
       ],
     },

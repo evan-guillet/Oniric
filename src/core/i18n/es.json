@@ -136,7 +136,8 @@
     "save": "Guardar",
     "add": "Añadir",
     "more": "Más acciones",
-    "addEllipsis": "Añadir…"
+    "addEllipsis": "Añadir…",
+    "removeAction": "Quitar"
   },
   "nav": {
     "parts": {
@@ -177,7 +178,7 @@
     "shortcutsTitle": "Atajos de teclado (Ctrl /)",
     "fold": "Contraer el menú",
     "unfold": "Desplegar el menú",
-    "search": "Buscar",
+    "search": "Buscar…",
     "searchTitle": "Buscar (Ctrl K)",
     "later": "Próximamente",
     "comesIn": "{{view}} · llega en la {{version}}",
@@ -266,7 +267,8 @@
   "media": {
     "choose": "Elegir una imagen",
     "images": "Imágenes",
-    "missing": "Imagen no encontrada"
+    "missing": "Imagen no encontrada",
+    "unsupported": "Este tipo de imagen no es compatible (PNG, JPEG, GIF, WebP o BMP)."
   },
   "transfer": {
     "pdfHelp": "Para leer, imprimir y enviar el guion.",
@@ -290,7 +292,22 @@
     "chooseFile": "Elegir el archivo…",
     "kind": "{{section}}: tipo de archivo",
     "current": " (actual)",
-    "noTitlePage": "(sin portada)"
+    "noTitlePage": "(sin portada)",
+    "shotlistPdf": "Planificación (PDF)",
+    "shotlistPdfHelp": "Los planos de cada escena, con los campos que muestra la tabla",
+    "shotlistCsv": "Planificación (CSV)",
+    "shotlistCsvHelp": "Todos los planos y todos sus campos, para abrir en una hoja de cálculo",
+    "storyboardPdf": "Storyboard (PDF)",
+    "storyboardPdfHelp": "Las viñetas, escena por escena, con su leyenda",
+    "moodboardPdf": "Moodboard (PDF)",
+    "moodboardPdfHelp": "Un moodboard en una página, tal como está dispuesto",
+    "perPage": "Viñetas por página",
+    "perPageN": "{{count}}",
+    "orientation": "Orientación",
+    "landscape": "Horizontal",
+    "portrait": "Vertical",
+    "board": "Moodboard",
+    "noBoard": "Ningún moodboard en el proyecto."
   },
   "languages": {
     "fr": "Francés",
@@ -302,8 +319,9 @@
     "pagesNav": "Páginas de ajustes",
     "search": "Buscar un ajuste",
     "none": "Ningún ajuste coincide.",
-    "closeSettings": "Cerrar los ajustes",
-    "closeTitle": "Cerrar (Esc)",
+    "back": "Volver",
+    "closeSettings": "Salir de los ajustes",
+    "closeTitle": "Volver (Esc)",
     "profile": {
       "name": "Nombre",
       "nameHelp": "Se imprime bajo «Escrito por» y al principio del contacto.",
@@ -332,6 +350,7 @@
       "off": "Nunca"
     },
     "whileTyping": "Al escribir",
+    "onScreen": "En pantalla",
     "typewriter": "Desplazamiento de máquina de escribir",
     "typewriterHelp": "La línea que escribes se queda en el centro de la pantalla; la página sube bajo ella.",
     "spellcheck": "Corrector ortográfico",
@@ -388,7 +407,7 @@
       "undo": "Deshacer",
       "redo": "Rehacer",
       "preview": "Salir de la vista previa",
-      "link": "Vincular un nombre a su ficha de la Biblia",
+      "link": "Vincular un nombre a su ficha de la Biblia; Intro crea la ficha de un nombre desconocido",
       "openLink": "Abrir la ficha de un nombre vinculado",
       "elements": "Elementos del guion",
       "next": "Elemento siguiente: tras un personaje el diálogo, tras el diálogo un personaje…",
@@ -434,7 +453,7 @@
       "writing": {
         "label": "Escritura",
         "lead": "Cómo se comporta el Guion mientras escribes.",
-        "keywords": "máquina de escribir desplazamiento centrado ortografía corrector tipografía espacios objetivo palabras al día"
+        "keywords": "máquina de escribir desplazamiento centrado ortografía corrector tipografía espacios objetivo palabras al día tarjetas de escena enlaces biblia acto secuencia visualización"
       },
       "formats": {
         "label": "Formatos de guion",
@@ -646,7 +665,6 @@
     }
   },
   "script": {
-    "display": "Visualización",
     "cards": "Tarjetas de escena",
     "cardsHint": "Cada escena en su tarjeta, con el color del Tablero",
     "links": "Vínculos de la Biblia",
@@ -707,9 +725,7 @@
       "notes": "Notas",
       "notesHint": "Las notas en lugar de las escenas",
       "info": "Información",
-      "infoHint": "Título, autores, contacto, mención: lo que imprime la portada",
-      "display": "Visualización",
-      "displayHint": "Las tarjetas de escena, los enlaces de la Biblia, la marca de acto y secuencia"
+      "infoHint": "Título, autores, contacto, mención: lo que imprime la portada"
     },
     "removeScene": "¿Eliminar la escena?",
     "removeSceneText": "Sale del guion pero se queda en la papelera de escenas cortadas (vista Versiones), desde donde se puede recuperar.",
@@ -852,7 +868,6 @@
     "cutsEmpty": "No hay escenas cortadas",
     "moreLines_one": "{{n}} línea más",
     "moreLines_other": "{{n}} líneas más",
-    "freezeShort": "Fijar",
     "cutsHint": "Las escenas eliminadas del guion, para reintegrar"
   },
   "bible": {
@@ -1175,6 +1190,7 @@
     "scenesShort": "{{n}} esc.",
     "createFirst": "Crear una primera ficha: {{name}}",
     "createEntry": "Crear la ficha",
+    "createNamed": "Crear «{{name}}»",
     "type": "Tipo",
     "openEntry": "Abrir la ficha",
     "openEntryNamed": "Abrir la ficha {{name}}"
@@ -1352,7 +1368,6 @@
     "actMoved": "Acto movido: el guion se ha reordenado.",
     "unfoldAll": "Desplegar todo",
     "foldAll": "Contraer todo",
-    "none": "Ninguno",
     "to": "Hacia",
     "position": "Posición",
     "card": "Tarjeta de escena",
@@ -1395,15 +1410,13 @@
       "tag": "Etiqueta",
       "status": "Estado"
     },
-    "highlight": "Colorear en lugar de atenuar",
     "alone": "Sola en este lugar",
     "first": "En primer lugar",
     "after": "Después de {{name}}",
     "move": "Mover",
     "currentPlace": "{{place}} (actual)",
     "length": "{{eighths}} de página · p. {{page}}",
-    "colorNamed": "Color {{color}}",
-    "filter": "Filtro"
+    "colorNamed": "Color {{color}}"
   },
   "workshop": {
     "models": {
@@ -2215,18 +2228,8 @@
       "started": "Empezada",
       "done": "Terminada"
     },
-    "help": "Ayuda",
-    "helpHint": "Las explicaciones bajo cada etapa",
     "writing": "El guion tiene {{scenes}}, unas {{pages}}, es decir {{time}} en pantalla.",
-    "doneOf": "de {{total}} terminadas",
-    "panel": "Panel",
-    "shownSteps": "Etapas mostradas",
-    "panels": {
-      "progress": "Progreso",
-      "progressHint": "Las etapas del taller y dónde está usted",
-      "display": "Visualización",
-      "displayHint": "La ayuda y las etapas que muestra la lista"
-    }
+    "doneOf": "de {{total}} terminadas"
   },
   "fields": {
     "previous": "Versiones anteriores de este campo",
@@ -2243,5 +2246,327 @@
     "nothingToUndo": "Nada que deshacer.",
     "nothingToRedo": "Nada que rehacer.",
     "textChanged": "El texto cambió desde entonces: deshazlo primero en el Guion, con Ctrl+Z."
+  },
+  "shot": {
+    "size": {
+      "xcu": "Primerísimo primer plano",
+      "cu": "Primer plano",
+      "mcu": "Plano medio corto",
+      "cowboy": "Plano americano",
+      "medium": "Plano medio",
+      "wide": "Plano de conjunto",
+      "extreme": "Plano general"
+    },
+    "angle": {
+      "eye": "Altura de los ojos",
+      "high": "Picado",
+      "low": "Contrapicado",
+      "dutch": "Aberrante"
+    },
+    "movement": {
+      "static": "Fijo",
+      "pan": "Panorámica",
+      "tracking": "Travelling",
+      "steadicam": "Steadicam",
+      "handheld": "Cámara en mano",
+      "crane": "Grúa",
+      "drone": "Dron",
+      "zoom": "Zoom"
+    },
+    "support": {
+      "tripod": "Trípode",
+      "dolly": "Dolly",
+      "slider": "Slider",
+      "gimbal": "Estabilizador",
+      "shoulder": "Hombro",
+      "crane": "Grúa",
+      "vehicle": "Vehículo"
+    },
+    "sound": {
+      "sync": "Sonido directo",
+      "mos": "Sin sonido",
+      "playback": "Playback"
+    }
+  },
+  "shotlist": {
+    "scenes": "Escenas del guion",
+    "panel": "Panel",
+    "panels": {
+      "scenes": "Escenas",
+      "text": "Texto",
+      "textHint": "El texto de la escena y los planos que lo cubren",
+      "display": "Visualización"
+    },
+    "shape": "Visualización de la planificación",
+    "shapes": {
+      "table": "Tabla",
+      "cards": "Tarjetas"
+    },
+    "add": "Nuevo plano",
+    "addFirst": "Añadir el primer plano",
+    "emptyTitle": "La planificación parte del guion",
+    "emptyText": "Escriba al menos una escena: cada escena recibe aquí sus planos, y cada plano su viñeta del storyboard.",
+    "toScript": "Ir al Guion",
+    "sceneNum": "Esc. {{n}}",
+    "shots_zero": "Ningún plano",
+    "shots_one": "{{count}} plano",
+    "shots_other": "{{count}} planos",
+    "onScreen": "{{time}} en pantalla",
+    "toShoot": "{{time}} de rodaje",
+    "uncovered_one": "{{count}} pasaje sin cubrir",
+    "uncovered_other": "{{count}} pasajes sin cubrir",
+    "allCovered": "Todo el texto está cubierto",
+    "openBoard": "Abrir el moodboard",
+    "order": "Orden de los planos",
+    "orders": {
+      "edit": "Montaje",
+      "editHint": "En el orden de la película",
+      "shoot": "Rodaje",
+      "shootHint": "En el orden en que se rodarán; arrástrelos para cambiarlo"
+    },
+    "noShot": "Ningún plano para esta escena.",
+    "noShotHint": "Divídala en planos: tamaño, movimiento, óptica, duración. Cada plano tiene también su viñeta en el Storyboard.",
+    "noShotShort": "Ningún plano",
+    "move": "Mover",
+    "actions": "Acciones",
+    "columns": {
+      "number": "N.º",
+      "shoot": "Orden",
+      "scene": "Escena",
+      "heading": "Encabezado",
+      "size": "Tamaño",
+      "angle": "Ángulo",
+      "movement": "Movimiento",
+      "support": "Soporte",
+      "lens": "Óptica",
+      "camera": "Cámara",
+      "frameRate": "Cadencia",
+      "sound": "Sonido",
+      "characters": "Personajes",
+      "action": "Acción",
+      "dialogue": "Diálogo cubierto",
+      "duration": "Duración",
+      "setup": "Tiempo de rodaje",
+      "lighting": "Luz",
+      "effects": "Efectos",
+      "notes": "Notas"
+    },
+    "placeholders": {
+      "action": "Lo que se ve",
+      "characters": "—"
+    },
+    "insertAfter": "Insertar un plano después",
+    "duplicate": "Duplicar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "openFrame": "Ver su viñeta del storyboard",
+    "delete": "Eliminar el plano…",
+    "deleteTitle": "¿Eliminar el plano {{n}}?",
+    "deleteText": "Se eliminan el plano y su viñeta del storyboard. Ctrl + Z los recupera.",
+    "shotMenu": "Acciones del plano {{n}}",
+    "shootN": "Orden {{n}}",
+    "noCharacter": "Ningún personaje en esta escena.",
+    "coverFor": "Pasajes cubiertos por el plano",
+    "coverHint": "Elija un plano en la lista y luego haga clic en los pasajes que cubre.",
+    "noText": "Esta escena aún no tiene texto.",
+    "notCovered": "Sin cubrir",
+    "numbering": "Numeración",
+    "numberings": {
+      "dash": "12-1, 12-2…",
+      "dashHint": "El número de la escena, un guion y luego el del plano",
+      "letter": "12A, 12B…",
+      "letterHint": "El número de la escena seguido de una letra"
+    },
+    "shownColumns": "Campos mostrados",
+    "exportEmpty": "Ningún plano en la planificación."
+  },
+  "storyboard": {
+    "panel": "Panel",
+    "emptyTitle": "El storyboard parte del guion",
+    "toShotlist": "Abrir la planificación",
+    "frameOf": "Viñeta del plano {{n}}",
+    "import": "Importar una imagen",
+    "fromBoard": "Tomar una imagen de un moodboard",
+    "fromBoardShort": "Moodboard",
+    "clear": "Quitar la imagen",
+    "clearTitle": "¿Quitar la imagen del plano {{n}}?",
+    "clearText": "La viñeta vuelve a estar vacía; el archivo se queda en la carpeta medias del proyecto.",
+    "drawOver": "Dibujar encima",
+    "change": "Cambiar",
+    "drawIt": "Dibujar",
+    "caption": "Descripción del plano {{n}}",
+    "captionPlaceholder": "Lo que muestra la viñeta",
+    "dialogueOf": "Diálogo del plano {{n}}",
+    "dialoguePlaceholder": "Diálogo",
+    "notesOf": "Notas de la viñeta {{n}}",
+    "notesPlaceholder": "Notas",
+    "addFirst": "Primera viñeta",
+    "addHint": "Cada viñeta es un plano de la planificación: añadirla aquí la añade también allí.",
+    "noFrame": "Ninguna viñeta",
+    "framesDone_one": "{{count}} viñeta, {{done}} ilustrada",
+    "framesDone_other": "{{count}} viñetas, {{done}} ilustradas",
+    "ratio": "Formato del encuadre",
+    "ratios": {
+      "1_85": "1,85:1",
+      "2_39": "2,39:1",
+      "16_9": "16/9",
+      "4_3": "4/3",
+      "9_16": "9/16"
+    },
+    "ratioHints": {
+      "1_85": "Panorámico, el formato habitual del cine",
+      "2_39": "Scope, para los grandes espacios",
+      "16_9": "Televisión y plataformas",
+      "4_3": "El antiguo formato de la televisión",
+      "9_16": "Vertical, para los teléfonos"
+    },
+    "perRow": "Viñetas por fila",
+    "perRowN_one": "{{count}} viñeta",
+    "perRowN_other": "{{count}} viñetas",
+    "underFrame": "Bajo cada viñeta",
+    "shown": {
+      "technique": "Tamaño, ángulo y movimiento",
+      "techniqueHint": "Tomados de la planificación",
+      "action": "Descripción",
+      "actionHint": "Lo que muestra el plano",
+      "dialogue": "Diálogo",
+      "dialogueHint": "Las réplicas que cubre el plano",
+      "notes": "Notas",
+      "notesHint": "Las notas propias de la viñeta"
+    },
+    "noBoardImage": "Ninguna imagen en los moodboards del proyecto.",
+    "frameRatio": "Encuadre {{ratio}}",
+    "draw": {
+      "open": "Dibujar la viñeta",
+      "title": "Dibujar la viñeta {{n}}",
+      "tools": "Herramientas de dibujo",
+      "tool": "Herramienta",
+      "pencil": "Lápiz",
+      "pencilHint": "Dibujar; un lápiz óptico traza más fino cuando presiona menos",
+      "eraser": "Goma",
+      "eraserHint": "Borrar en la capa elegida",
+      "arrow": "Flecha",
+      "arrowHint": "Trazar una flecha, para un movimiento de cámara o de personaje",
+      "ink": "Tinta",
+      "inks": {
+        "0": "Mina",
+        "1": "Gris",
+        "2": "Rojo",
+        "3": "Azul"
+      },
+      "size": "Grosor",
+      "sizeN": "{{n}} px",
+      "undo": "Deshacer el trazo (Ctrl + Z)",
+      "redo": "Rehacer el trazo (Ctrl + Y)",
+      "layers": "Capas",
+      "addLayer": "Añadir una capa",
+      "layerN": "Capa {{n}}",
+      "hideLayer": "Ocultar la capa {{n}}",
+      "showLayer": "Mostrar la capa {{n}}",
+      "removeLayer": "Eliminar la capa {{n}}",
+      "clear": "Borrar la capa",
+      "backdrop": "Imagen de la viñeta",
+      "hideBackdrop": "Ocultar la imagen de la viñeta",
+      "showBackdrop": "Mostrar la imagen de la viñeta",
+      "tip": "Ctrl + Z deshace el último trazo.",
+      "save": "Guardar la viñeta",
+      "leaveText": "¿Abandonar este dibujo?",
+      "keepDrawing": "Seguir",
+      "discard": "Abandonar"
+    }
+  },
+  "moodboard": {
+    "kinds": {
+      "general": "General",
+      "character": "Personaje",
+      "location": "Lugar",
+      "sequence": "Secuencia",
+      "light": "Luz",
+      "costume": "Vestuario",
+      "color": "Colores",
+      "other": "Otro"
+    },
+    "panel": "Panel",
+    "panels": {
+      "boards": "Moodboards",
+      "palette": "Paleta",
+      "paletteHint": "Los colores de las imágenes, con su código",
+      "links": "Vínculos",
+      "linksHint": "Las escenas y fichas donde aparece el moodboard"
+    },
+    "new": "Nuevo moodboard",
+    "create": "Crear",
+    "edit": "Modificar el moodboard",
+    "delete": "Eliminar el moodboard…",
+    "deleteTitle": "¿Eliminar «{{name}}»?",
+    "deleteText_zero": "Se elimina el moodboard. Ctrl + Z lo recupera.",
+    "deleteText_one": "Se eliminan el moodboard y su elemento; los archivos se quedan en la carpeta medias. Ctrl + Z los recupera.",
+    "deleteText_other": "Se eliminan el moodboard y sus {{count}} elementos; los archivos se quedan en la carpeta medias. Ctrl + Z los recupera.",
+    "menu": "Acciones de «{{name}}»",
+    "itemCount_zero": "vacío",
+    "itemCount_one": "{{count}} elemento",
+    "itemCount_other": "{{count}} elementos",
+    "emptyTitle": "Las imágenes de su película",
+    "emptyText": "Un moodboard reúne imágenes, colores y notas: una luz, un vestuario, un decorado… Empiece por uno de ellos:",
+    "emptyBoard": "Este moodboard está vacío.",
+    "emptyBoardHint": "Arrastre imágenes desde el Explorador, pegue una copiada en un navegador (Ctrl + V) o colóquelas con la barra de abajo.",
+    "canvas": "lienzo",
+    "canvasLabel": "Moodboard «{{name}}»",
+    "tools": "Herramientas del moodboard",
+    "addImage": "Imagen",
+    "addColor": "Color",
+    "addText": "Texto",
+    "addNote": "Nota",
+    "toolSelect": "Selección",
+    "toolHand": "Mano",
+    "snap": "Ajustar a la cuadrícula",
+    "snapHint": "Los elementos se alinean con la cuadrícula y entre sí; Alt los deja libres.",
+    "noteColors": "Colores de las notas",
+    "colorChoices": "Colores",
+    "customColor": "Otro color…",
+    "swatch": {
+      "yellow": "Amarillo",
+      "orange": "Naranja",
+      "red": "Rojo",
+      "pink": "Rosa",
+      "violet": "Violeta",
+      "blue": "Azul",
+      "teal": "Turquesa",
+      "green": "Verde",
+      "gray": "Gris",
+      "black": "Negro",
+      "white": "Blanco"
+    },
+    "placeholder": {
+      "text": "Texto",
+      "note": "Nota"
+    },
+    "editText": "Modificar el texto",
+    "editColor": "Cambiar el color",
+    "front": "Traer al frente",
+    "back": "Enviar al fondo",
+    "duplicate": "Duplicar (Ctrl + D)",
+    "removeTitle": {
+      "image": "¿Quitar la imagen del moodboard?",
+      "color": "¿Quitar el color del moodboard?",
+      "text": "¿Quitar el texto del moodboard?",
+      "note": "¿Quitar la nota del moodboard?"
+    },
+    "removeItemsTitle_one": "¿Quitar {{count}} elemento del moodboard?",
+    "removeItemsTitle_other": "¿Quitar {{count}} elementos del moodboard?",
+    "removeImageText": "El archivo de la imagen se queda en la carpeta medias del proyecto. Ctrl + Z lo devuelve.",
+    "removeText": "Ctrl + Z lo devuelve.",
+    "paletteTitle": "Paleta de las imágenes",
+    "paletteEmpty": "Añada imágenes al moodboard: sus colores principales aparecerán aquí.",
+    "paletteReading": "Leyendo los colores…",
+    "paletteAdd": "Añadir la paleta al moodboard",
+    "ownColors": "Colores del moodboard",
+    "copy": "Copiar el código",
+    "copied": "{{hex}} copiado",
+    "linksTitle": "Vinculado a",
+    "link": "+ Vincular…",
+    "unlink": "Desvincular {{name}}",
+    "kind": "Tipo",
+    "name": "Nombre"
   }
 }

@@ -1,4 +1,4 @@
-import { BookOpen, FileText, NotebookPen, type LucideIcon } from "lucide-react";
+import { BookOpen, Clapperboard, FileText, NotebookPen, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
@@ -14,6 +14,13 @@ import { exportScreenplayPdf, exportScreenplayText } from "../../script/screenpl
 import { loadDocument } from "../../script/workshop/application/workshop";
 import { exportDocumentPdf } from "../../script/workshop/ui/documentExport";
 import { useProject, type TransferMode, type TransferSection } from "./projectContext";
+import { BOARD_TABLES, loadBoards } from "../../realisation/application/moodboards";
+import type { StoryboardLayout } from "../../realisation/ui/realisationExport";
+
+/** The exports of the Réalisation, read when one is asked for. */
+const realisation = () => import("../../realisation/ui/realisationExport");
+import { Segmented } from "../../../ui-kit/Segmented";
+import { readStored } from "../../../ui-kit/useStoredState";
 
 import { Select } from "../../../ui-kit/Select";
 import { t } from "../../../core/i18n";
@@ -56,6 +63,17 @@ const exportSections = (): Section[] => [
       { id: "treatment", label: t("transfer.treatment"), help: t("transfer.treatmentHelp") },
     ],
   },
+  {
+    id: "realisation",
+    label: t("nav.parts.realisation"),
+    icon: Clapperboard,
+    options: [
+      { id: "shotlist-pdf", label: t("transfer.shotlistPdf"), help: t("transfer.shotlistPdfHelp") },
+      { id: "shotlist-csv", label: t("transfer.shotlistCsv"), help: t("transfer.shotlistCsvHelp") },
+      { id: "storyboard-pdf", label: t("transfer.storyboardPdf"), help: t("transfer.storyboardPdfHelp") },
+      { id: "moodboard-pdf", label: t("transfer.moodboardPdf"), help: t("transfer.moodboardPdfHelp") },
+    ],
+  },
 ];
 
 const importSections = (): Section[] => [
@@ -82,11 +100,14 @@ const fileOf = (path: string) => path.split(/[\\/]/).slice(-2).join("\\");
 export function TransferDialog({
   mode,
   section,
+  option: initialOption,
   onImport,
   onClose,
 }: {
   mode: TransferMode;
   section?: TransferSection;
+  /** The kind chosen at first in the section, when the view calls for one (the Storyboard's PDF). */
+  option?: string;
   onImport: (kind: "script" | "bible") => void;
   onClose: () => void;
 }) {
@@ -94,7 +115,7 @@ export function TransferDialog({
   const sections = mode === "export" ? exportSections() : importSections();
   const [at, setAt] = useState<TransferSection>(sections.find((s) => s.id === section)?.id ?? sections[0].id);
   const current = sections.find((s) => s.id === at)!;
-  const [choice, setChoice] = useState<Record<string, string>>({});
+  const [choice, setChoice] = useState<Record<string, string>>(initialOption && section ? { [section]: initialOption } : {});
   const option = choice[at] ?? current.options[0].id;
   const formats = useLive(availableFormats, ["project_setting"]) ?? [];
   const tp = useLive(readTitlePage, ["project_setting"]);
@@ -102,6 +123,11 @@ export function TransferDialog({
   const currentFormat = api.session.editor?.currentFormat;
   const [formatId, setFormatId] = useState(currentFormat?.id ?? "");
   const [withTitle, setWithTitle] = useState(true);
+  const [layout, setLayout] = useState<StoryboardLayout>({ perPage: 6, orientation: "landscape" });
+  const boards = useLive(loadBoards, [...BOARD_TABLES]) ?? [];
+  // The board open in the Moodboards, at first.
+  const [boardId, setBoardId] = useState(() => readStored<string | null>(`oniric.moodboard.board.${api.project.id}`, null) ?? "");
+  const board = boards.find((b) => b.id === boardId) ?? boards[0];
 
   const saved = (path: string) =>
     api.notify({
@@ -122,6 +148,14 @@ export function TransferDialog({
       } else if (option === "synopsis" || option === "treatment") {
         const doc = await loadDocument(option);
         await exportDocumentPdf(api, option === "synopsis" ? "Synopsis" : "Traitement", doc.content);
+      } else if (option === "shotlist-pdf") {
+        await (await realisation()).exportShotlistPdf(api);
+      } else if (option === "shotlist-csv") {
+        saved(await (await realisation()).exportShotlistCsv(api));
+      } else if (option === "storyboard-pdf") {
+        await (await realisation()).exportStoryboardPdf(api, layout);
+      } else if (option === "moodboard-pdf" && board) {
+        await (await realisation()).exportMoodboardPdf(api, board.id);
       }
     } catch (e) {
       api.notify({ text: describeError(e), tone: "error" });
@@ -190,6 +224,49 @@ export function TransferDialog({
                 {t("transfer.withTitle")}
                 {!titled && <span className="muted small"> {t("transfer.noTitlePage")}</span>}
               </label>
+            </div>
+          )}
+          {option === "storyboard-pdf" && (
+            <div className="form transfer-options">
+              <div className="field">
+                <span>{t("transfer.perPage")}</span>
+                <Segmented
+                  label={t("transfer.perPage")}
+                  value={String(layout.perPage) as "2" | "3" | "4" | "6"}
+                  onChange={(v) => setLayout({ ...layout, perPage: Number(v) as StoryboardLayout["perPage"] })}
+                  options={(["2", "3", "4", "6"] as const).map((n) => ({ id: n, label: t("transfer.perPageN", { count: Number(n) }) }))}
+                />
+              </div>
+              <div className="field">
+                <span>{t("transfer.orientation")}</span>
+                <Segmented
+                  label={t("transfer.orientation")}
+                  value={layout.orientation}
+                  onChange={(orientation) => setLayout({ ...layout, orientation })}
+                  options={[
+                    { id: "landscape", label: t("transfer.landscape") },
+                    { id: "portrait", label: t("transfer.portrait") },
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+          {option === "moodboard-pdf" && (
+            <div className="form transfer-options">
+              {board ? (
+                <label className="field">
+                  <span>{t("transfer.board")}</span>
+                  <Select value={board.id} onChange={(e) => setBoardId(e.target.value)}>
+                    {boards.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              ) : (
+                <p className="muted small">{t("transfer.noBoard")}</p>
+              )}
             </div>
           )}
           {mode === "export" && <p className="muted small transfer-where">{t("transfer.where")}</p>}

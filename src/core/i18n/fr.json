@@ -136,7 +136,8 @@
     "save": "Enregistrer",
     "add": "Ajouter",
     "more": "Plus d'actions",
-    "addEllipsis": "Ajouter…"
+    "addEllipsis": "Ajouter…",
+    "removeAction": "Retirer"
   },
   "nav": {
     "parts": {
@@ -177,7 +178,7 @@
     "shortcutsTitle": "Raccourcis clavier (Ctrl /)",
     "fold": "Plier le menu",
     "unfold": "Déplier le menu",
-    "search": "Rechercher",
+    "search": "Rechercher…",
     "searchTitle": "Rechercher (Ctrl K)",
     "later": "À venir",
     "comesIn": "{{view}} · arrive en {{version}}",
@@ -266,7 +267,8 @@
   "media": {
     "choose": "Choisir une image",
     "images": "Images",
-    "missing": "Image introuvable"
+    "missing": "Image introuvable",
+    "unsupported": "Ce type d'image n'est pas pris en charge (PNG, JPEG, GIF, WebP ou BMP)."
   },
   "transfer": {
     "pdfHelp": "Pour lire, imprimer et envoyer le scénario.",
@@ -290,14 +292,30 @@
     "chooseFile": "Choisir le fichier…",
     "kind": "{{section}} : type de fichier",
     "current": " (actuel)",
-    "noTitlePage": "(aucune page de titre)"
+    "noTitlePage": "(aucune page de titre)",
+    "shotlistPdf": "Découpage (PDF)",
+    "shotlistPdfHelp": "Les plans de chaque scène, avec les champs affichés dans le tableau",
+    "shotlistCsv": "Découpage (CSV)",
+    "shotlistCsvHelp": "Tous les plans et tous leurs champs, à ouvrir dans un tableur",
+    "storyboardPdf": "Storyboard (PDF)",
+    "storyboardPdfHelp": "Les cases, scène par scène, avec leur légende",
+    "moodboardPdf": "Moodboard (PDF)",
+    "moodboardPdfHelp": "Un moodboard sur une page, tel qu'il est disposé",
+    "perPage": "Cases par page",
+    "perPageN": "{{count}}",
+    "orientation": "Orientation",
+    "landscape": "Paysage",
+    "portrait": "Portrait",
+    "board": "Moodboard",
+    "noBoard": "Aucun moodboard dans le projet."
   },
   "settings": {
     "pagesNav": "Pages des réglages",
     "search": "Rechercher un réglage",
     "none": "Aucun réglage ne correspond.",
-    "closeSettings": "Fermer les réglages",
-    "closeTitle": "Fermer (Échap)",
+    "back": "Retour",
+    "closeSettings": "Quitter les réglages",
+    "closeTitle": "Retour (Échap)",
     "profile": {
       "name": "Nom",
       "nameHelp": "Imprimé sous « Écrit par » et en tête du contact.",
@@ -326,6 +344,7 @@
       "off": "Jamais"
     },
     "whileTyping": "Pendant la frappe",
+    "onScreen": "À l'écran",
     "typewriter": "Défilement machine à écrire",
     "typewriterHelp": "La ligne que vous tapez reste au milieu de l'écran ; la page monte sous elle.",
     "spellcheck": "Correcteur orthographique",
@@ -382,7 +401,7 @@
       "undo": "Annuler",
       "redo": "Rétablir",
       "preview": "Quitter l'aperçu",
-      "link": "Lier un nom à sa fiche de la Bible",
+      "link": "Lier un nom à sa fiche de la Bible ; Entrée crée la fiche d'un nom inconnu",
       "openLink": "Ouvrir la fiche d'un nom lié",
       "elements": "Éléments du scénario",
       "next": "Élément suivant : après un personnage le dialogue, après le dialogue un personnage…",
@@ -428,7 +447,7 @@
       "writing": {
         "label": "Écriture",
         "lead": "Comment se comporte le Scénario pendant que vous tapez.",
-        "keywords": "machine à écrire défilement centré orthographe correcteur typographie espaces insécables objectif mots par jour"
+        "keywords": "machine à écrire défilement centré orthographe correcteur typographie espaces insécables objectif mots par jour cartes de scène liens bible acte séquence affichage"
       },
       "formats": {
         "label": "Formats de scénario",
@@ -646,7 +665,6 @@
     }
   },
   "script": {
-    "display": "Affichage",
     "cards": "Cartes de scène",
     "cardsHint": "Chaque scène dans sa carte, à la couleur du Tableau",
     "links": "Liens de la Bible",
@@ -707,9 +725,7 @@
       "notes": "Notes",
       "notesHint": "Les notes à la place des scènes",
       "info": "Informations",
-      "infoHint": "Titre, auteurs, contact, mention : ce qu'imprime la page de titre",
-      "display": "Affichage",
-      "displayHint": "Les cartes de scène, les liens de la Bible, le repère d'acte et de séquence"
+      "infoHint": "Titre, auteurs, contact, mention : ce qu'imprime la page de titre"
     },
     "removeScene": "Supprimer la scène ?",
     "removeSceneText": "Elle quitte le scénario mais reste dans la corbeille des scènes coupées (vue Versions), d'où elle peut être réintégrée.",
@@ -852,7 +868,6 @@
     "cutsEmpty": "Aucune scène coupée",
     "moreLines_one": "{{n}} ligne de plus",
     "moreLines_other": "{{n}} lignes de plus",
-    "freezeShort": "Figer",
     "cutsHint": "Les scènes supprimées du scénario, à réintégrer"
   },
   "bible": {
@@ -1175,6 +1190,7 @@
     "scenesShort": "{{n}} sc.",
     "createFirst": "Créer une première fiche : {{name}}",
     "createEntry": "Créer la fiche",
+    "createNamed": "Créer « {{name}} »",
     "type": "Type",
     "openEntry": "Ouvrir la fiche",
     "openEntryNamed": "Ouvrir la fiche {{name}}"
@@ -1352,7 +1368,6 @@
     "actMoved": "Acte déplacé : le scénario est réordonné.",
     "unfoldAll": "Tout déplier",
     "foldAll": "Tout plier",
-    "none": "Aucun",
     "to": "Vers",
     "position": "Position",
     "card": "Carte de scène",
@@ -1395,15 +1410,13 @@
       "tag": "Étiquette",
       "status": "Statut"
     },
-    "highlight": "Colorer au lieu de griser",
     "alone": "Seule à cet endroit",
     "first": "En premier",
     "after": "Après {{name}}",
     "move": "Déplacer",
     "currentPlace": "{{place}} (actuelle)",
     "length": "{{eighths}} de page · p. {{page}}",
-    "colorNamed": "Couleur {{color}}",
-    "filter": "Filtre"
+    "colorNamed": "Couleur {{color}}"
   },
   "workshop": {
     "models": {
@@ -2215,18 +2228,8 @@
       "started": "Commencée",
       "done": "Terminée"
     },
-    "help": "Aide",
-    "helpHint": "Les explications sous chaque étape",
     "writing": "Le scénario compte {{scenes}}, environ {{pages}}, soit {{time}} à l'écran.",
-    "doneOf": "sur {{total}} terminées",
-    "panel": "Panneau",
-    "shownSteps": "Étapes affichées",
-    "panels": {
-      "progress": "Progression",
-      "progressHint": "Les étapes de l'atelier et où vous en êtes",
-      "display": "Affichage",
-      "displayHint": "L'aide et les étapes montrées dans la liste"
-    }
+    "doneOf": "sur {{total}} terminées"
   },
   "fields": {
     "previous": "Versions précédentes de ce champ",
@@ -2243,5 +2246,327 @@
     "nothingToUndo": "Rien à annuler.",
     "nothingToRedo": "Rien à rétablir.",
     "textChanged": "Le texte a changé depuis : annulez d'abord dans le Scénario, avec Ctrl+Z."
+  },
+  "shot": {
+    "size": {
+      "xcu": "Très gros plan",
+      "cu": "Gros plan",
+      "mcu": "Plan rapproché",
+      "cowboy": "Plan américain",
+      "medium": "Plan moyen",
+      "wide": "Plan d'ensemble",
+      "extreme": "Plan général"
+    },
+    "angle": {
+      "eye": "Niveau des yeux",
+      "high": "Plongée",
+      "low": "Contre-plongée",
+      "dutch": "Oblique"
+    },
+    "movement": {
+      "static": "Fixe",
+      "pan": "Panoramique",
+      "tracking": "Travelling",
+      "steadicam": "Steadicam",
+      "handheld": "Caméra à l'épaule",
+      "crane": "Grue",
+      "drone": "Drone",
+      "zoom": "Zoom"
+    },
+    "support": {
+      "tripod": "Pied",
+      "dolly": "Dolly",
+      "slider": "Slider",
+      "gimbal": "Stabilisateur",
+      "shoulder": "Épaule",
+      "crane": "Grue",
+      "vehicle": "Véhicule"
+    },
+    "sound": {
+      "sync": "Son direct",
+      "mos": "Sans son",
+      "playback": "Playback"
+    }
+  },
+  "shotlist": {
+    "scenes": "Scènes du scénario",
+    "panel": "Panneau",
+    "panels": {
+      "scenes": "Scènes",
+      "text": "Texte",
+      "textHint": "Le texte de la scène et les plans qui le couvrent",
+      "display": "Affichage"
+    },
+    "shape": "Affichage du découpage",
+    "shapes": {
+      "table": "Tableau",
+      "cards": "Cartes"
+    },
+    "add": "Nouveau plan",
+    "addFirst": "Ajouter le premier plan",
+    "emptyTitle": "Le découpage part du scénario",
+    "emptyText": "Écrivez au moins une scène : chaque scène reçoit ici ses plans, et chaque plan sa case du storyboard.",
+    "toScript": "Aller au Scénario",
+    "sceneNum": "Scè. {{n}}",
+    "shots_zero": "Aucun plan",
+    "shots_one": "{{count}} plan",
+    "shots_other": "{{count}} plans",
+    "onScreen": "{{time}} à l'écran",
+    "toShoot": "{{time}} de tournage",
+    "uncovered_one": "{{count}} passage non couvert",
+    "uncovered_other": "{{count}} passages non couverts",
+    "allCovered": "Tout le texte est couvert",
+    "openBoard": "Ouvrir le moodboard",
+    "order": "Ordre des plans",
+    "orders": {
+      "edit": "Montage",
+      "editHint": "Dans l'ordre du film",
+      "shoot": "Tournage",
+      "shootHint": "Dans l'ordre où ils seront tournés ; glissez-les pour le changer"
+    },
+    "noShot": "Aucun plan pour cette scène.",
+    "noShotHint": "Découpez-la en plans : valeur, mouvement, optique, durée. Chaque plan a aussi sa case dans le Storyboard.",
+    "noShotShort": "Aucun plan",
+    "move": "Déplacer",
+    "actions": "Actions",
+    "columns": {
+      "number": "N°",
+      "shoot": "Ordre",
+      "scene": "Scène",
+      "heading": "En-tête",
+      "size": "Valeur",
+      "angle": "Angle",
+      "movement": "Mouvement",
+      "support": "Support",
+      "lens": "Optique",
+      "camera": "Caméra",
+      "frameRate": "Cadence",
+      "sound": "Son",
+      "characters": "Personnages",
+      "action": "Action",
+      "dialogue": "Dialogue couvert",
+      "duration": "Durée",
+      "setup": "Temps de tournage",
+      "lighting": "Lumière",
+      "effects": "Effets",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "action": "Ce que l'on voit",
+      "characters": "—"
+    },
+    "insertAfter": "Insérer un plan après",
+    "duplicate": "Dupliquer",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "openFrame": "Voir sa case du storyboard",
+    "delete": "Supprimer le plan…",
+    "deleteTitle": "Supprimer le plan {{n}} ?",
+    "deleteText": "Le plan et sa case du storyboard sont supprimés. Ctrl + Z les fait revenir.",
+    "shotMenu": "Actions du plan {{n}}",
+    "shootN": "Ordre {{n}}",
+    "noCharacter": "Aucun personnage dans cette scène.",
+    "coverFor": "Passages couverts par le plan",
+    "coverHint": "Choisissez un plan dans la liste, puis cliquez les passages qu'il couvre.",
+    "noText": "Cette scène n'a pas encore de texte.",
+    "notCovered": "Non couvert",
+    "numbering": "Numérotation",
+    "numberings": {
+      "dash": "12-1, 12-2…",
+      "dashHint": "Le numéro de la scène, un tiret, puis celui du plan",
+      "letter": "12A, 12B…",
+      "letterHint": "Le numéro de la scène suivi d'une lettre"
+    },
+    "shownColumns": "Champs affichés",
+    "exportEmpty": "Aucun plan dans le découpage."
+  },
+  "storyboard": {
+    "panel": "Panneau",
+    "emptyTitle": "Le storyboard part du scénario",
+    "toShotlist": "Ouvrir le découpage",
+    "frameOf": "Case du plan {{n}}",
+    "import": "Importer une image",
+    "fromBoard": "Prendre une image d'un moodboard",
+    "fromBoardShort": "Moodboard",
+    "clear": "Retirer l'image",
+    "clearTitle": "Retirer l'image du plan {{n}} ?",
+    "clearText": "La case redevient vide ; le fichier reste dans le dossier medias du projet.",
+    "drawOver": "Dessiner dessus",
+    "change": "Changer",
+    "drawIt": "Dessiner",
+    "caption": "Description du plan {{n}}",
+    "captionPlaceholder": "Ce que montre la case",
+    "dialogueOf": "Dialogue du plan {{n}}",
+    "dialoguePlaceholder": "Dialogue",
+    "notesOf": "Notes de la case {{n}}",
+    "notesPlaceholder": "Notes",
+    "addFirst": "Première case",
+    "addHint": "Chaque case est un plan du découpage : l'ajouter ici l'ajoute aussi là-bas.",
+    "noFrame": "Aucune case",
+    "framesDone_one": "{{count}} case, {{done}} illustrée",
+    "framesDone_other": "{{count}} cases, {{done}} illustrées",
+    "ratio": "Format du cadre",
+    "ratios": {
+      "1_85": "1,85:1",
+      "2_39": "2,39:1",
+      "16_9": "16/9",
+      "4_3": "4/3",
+      "9_16": "9/16"
+    },
+    "ratioHints": {
+      "1_85": "Panoramique, le format courant du cinéma",
+      "2_39": "Scope, pour les grands espaces",
+      "16_9": "Télévision et plateformes",
+      "4_3": "L'ancien format de la télévision",
+      "9_16": "Vertical, pour les téléphones"
+    },
+    "perRow": "Cases par ligne",
+    "perRowN_one": "{{count}} case",
+    "perRowN_other": "{{count}} cases",
+    "underFrame": "Sous chaque case",
+    "shown": {
+      "technique": "Valeur, angle et mouvement",
+      "techniqueHint": "Repris du découpage",
+      "action": "Description",
+      "actionHint": "Ce que montre le plan",
+      "dialogue": "Dialogue",
+      "dialogueHint": "Les répliques que couvre le plan",
+      "notes": "Notes",
+      "notesHint": "Les notes propres à la case"
+    },
+    "noBoardImage": "Aucune image dans les moodboards du projet.",
+    "frameRatio": "Cadre {{ratio}}",
+    "draw": {
+      "open": "Dessiner la case",
+      "title": "Dessiner la case {{n}}",
+      "tools": "Outils de dessin",
+      "tool": "Outil",
+      "pencil": "Crayon",
+      "pencilHint": "Dessiner ; un stylet trace plus fin quand il appuie moins",
+      "eraser": "Gomme",
+      "eraserHint": "Effacer sur le calque choisi",
+      "arrow": "Flèche",
+      "arrowHint": "Tirer une flèche, pour un mouvement de caméra ou de personnage",
+      "ink": "Encre",
+      "inks": {
+        "0": "Mine",
+        "1": "Gris",
+        "2": "Rouge",
+        "3": "Bleu"
+      },
+      "size": "Épaisseur",
+      "sizeN": "{{n}} px",
+      "undo": "Annuler le trait (Ctrl + Z)",
+      "redo": "Rétablir le trait (Ctrl + Y)",
+      "layers": "Calques",
+      "addLayer": "Ajouter un calque",
+      "layerN": "Calque {{n}}",
+      "hideLayer": "Masquer le calque {{n}}",
+      "showLayer": "Afficher le calque {{n}}",
+      "removeLayer": "Supprimer le calque {{n}}",
+      "clear": "Effacer le calque",
+      "backdrop": "Image de la case",
+      "hideBackdrop": "Masquer l'image de la case",
+      "showBackdrop": "Afficher l'image de la case",
+      "tip": "Ctrl + Z annule le dernier trait.",
+      "save": "Enregistrer la case",
+      "leaveText": "Abandonner ce dessin ?",
+      "keepDrawing": "Continuer",
+      "discard": "Abandonner"
+    }
+  },
+  "moodboard": {
+    "kinds": {
+      "general": "Général",
+      "character": "Personnage",
+      "location": "Lieu",
+      "sequence": "Séquence",
+      "light": "Lumière",
+      "costume": "Costumes",
+      "color": "Couleurs",
+      "other": "Autre"
+    },
+    "panel": "Panneau",
+    "panels": {
+      "boards": "Moodboards",
+      "palette": "Palette",
+      "paletteHint": "Les couleurs des images, avec leur code",
+      "links": "Liens",
+      "linksHint": "Les scènes et les fiches où le moodboard apparaît"
+    },
+    "new": "Nouveau moodboard",
+    "create": "Créer",
+    "edit": "Modifier le moodboard",
+    "delete": "Supprimer le moodboard…",
+    "deleteTitle": "Supprimer « {{name}} » ?",
+    "deleteText_zero": "Le moodboard est supprimé. Ctrl + Z le fait revenir.",
+    "deleteText_one": "Le moodboard et son élément sont supprimés ; les fichiers restent dans le dossier medias. Ctrl + Z les fait revenir.",
+    "deleteText_other": "Le moodboard et ses {{count}} éléments sont supprimés ; les fichiers restent dans le dossier medias. Ctrl + Z les fait revenir.",
+    "menu": "Actions de « {{name}} »",
+    "itemCount_zero": "vide",
+    "itemCount_one": "{{count}} élément",
+    "itemCount_other": "{{count}} éléments",
+    "emptyTitle": "Les images de votre film",
+    "emptyText": "Un moodboard rassemble images, couleurs et notes : une lumière, des costumes, un décor… Commencez par l'un d'eux :",
+    "emptyBoard": "Ce moodboard est vide.",
+    "emptyBoardHint": "Glissez des images depuis l'Explorateur, collez-en une copiée dans un navigateur (Ctrl + V) ou posez-en avec la barre en bas.",
+    "canvas": "canevas",
+    "canvasLabel": "Moodboard « {{name}} »",
+    "tools": "Outils du moodboard",
+    "addImage": "Image",
+    "addColor": "Couleur",
+    "addText": "Texte",
+    "addNote": "Note",
+    "toolSelect": "Sélection",
+    "toolHand": "Main",
+    "snap": "Aimanter à la grille",
+    "snapHint": "Les éléments s'alignent sur la grille et entre eux ; Alt les laisse libres.",
+    "noteColors": "Couleurs des notes",
+    "colorChoices": "Couleurs",
+    "customColor": "Autre couleur…",
+    "swatch": {
+      "yellow": "Jaune",
+      "orange": "Orange",
+      "red": "Rouge",
+      "pink": "Rose",
+      "violet": "Violet",
+      "blue": "Bleu",
+      "teal": "Turquoise",
+      "green": "Vert",
+      "gray": "Gris",
+      "black": "Noir",
+      "white": "Blanc"
+    },
+    "placeholder": {
+      "text": "Texte",
+      "note": "Note"
+    },
+    "editText": "Modifier le texte",
+    "editColor": "Changer la couleur",
+    "front": "Mettre au premier plan",
+    "back": "Mettre à l'arrière-plan",
+    "duplicate": "Dupliquer (Ctrl + D)",
+    "removeTitle": {
+      "image": "Retirer l'image du moodboard ?",
+      "color": "Retirer la couleur du moodboard ?",
+      "text": "Retirer le texte du moodboard ?",
+      "note": "Retirer la note du moodboard ?"
+    },
+    "removeItemsTitle_one": "Retirer {{count}} élément du moodboard ?",
+    "removeItemsTitle_other": "Retirer {{count}} éléments du moodboard ?",
+    "removeImageText": "Le fichier de l'image reste dans le dossier medias du projet. Ctrl + Z le remet.",
+    "removeText": "Ctrl + Z le remet.",
+    "paletteTitle": "Palette des images",
+    "paletteEmpty": "Ajoutez des images au moodboard : leurs couleurs principales s'afficheront ici.",
+    "paletteReading": "Lecture des couleurs…",
+    "paletteAdd": "Ajouter la palette au moodboard",
+    "ownColors": "Couleurs du moodboard",
+    "copy": "Copier le code",
+    "copied": "{{hex}} copié",
+    "linksTitle": "Rattaché à",
+    "link": "+ Lier…",
+    "unlink": "Délier {{name}}",
+    "kind": "Sorte",
+    "name": "Nom"
   }
 }

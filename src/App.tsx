@@ -156,7 +156,7 @@ export function App() {
 
   return (
     <div className="app-frame">
-      <TitleBar title={screen.kind === "project" ? screen.state.dir : "Oniric"} merged={screen.kind === "project"} />
+      {screen.kind !== "project" && <TitleBar title="Oniric" />}
       <div className="app-body">
         {screen.kind === "home" && <Home startup={startup} onOpen={(dir) => void openFlow(dir)} onCreate={create} notify={notify} />}
         {screen.kind === "loading" && (

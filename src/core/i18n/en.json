@@ -136,7 +136,8 @@
     "save": "Save",
     "add": "Add",
     "more": "More actions",
-    "addEllipsis": "Add…"
+    "addEllipsis": "Add…",
+    "removeAction": "Remove"
   },
   "nav": {
     "parts": {
@@ -177,7 +178,7 @@
     "shortcutsTitle": "Keyboard shortcuts (Ctrl /)",
     "fold": "Collapse the menu",
     "unfold": "Expand the menu",
-    "search": "Search",
+    "search": "Search…",
     "searchTitle": "Search (Ctrl K)",
     "later": "Coming soon",
     "comesIn": "{{view}} · coming in {{version}}",
@@ -266,7 +267,8 @@
   "media": {
     "choose": "Choose an image",
     "images": "Images",
-    "missing": "Image not found"
+    "missing": "Image not found",
+    "unsupported": "This kind of image is not supported (PNG, JPEG, GIF, WebP or BMP)."
   },
   "transfer": {
     "pdfHelp": "To read, print and send the screenplay.",
@@ -290,7 +292,22 @@
     "chooseFile": "Choose the file…",
     "kind": "{{section}}: file type",
     "current": " (current)",
-    "noTitlePage": "(no title page)"
+    "noTitlePage": "(no title page)",
+    "shotlistPdf": "Shot list (PDF)",
+    "shotlistPdfHelp": "The shots of each scene, with the fields the table shows",
+    "shotlistCsv": "Shot list (CSV)",
+    "shotlistCsvHelp": "Every shot and all its fields, to open in a spreadsheet",
+    "storyboardPdf": "Storyboard (PDF)",
+    "storyboardPdfHelp": "The frames, scene by scene, with their captions",
+    "moodboardPdf": "Moodboard (PDF)",
+    "moodboardPdfHelp": "One moodboard on a page, as it is laid out",
+    "perPage": "Frames per page",
+    "perPageN": "{{count}}",
+    "orientation": "Orientation",
+    "landscape": "Landscape",
+    "portrait": "Portrait",
+    "board": "Moodboard",
+    "noBoard": "No moodboard in the project."
   },
   "languages": {
     "fr": "French",
@@ -302,8 +319,9 @@
     "pagesNav": "Settings pages",
     "search": "Search settings",
     "none": "No setting matches.",
-    "closeSettings": "Close settings",
-    "closeTitle": "Close (Esc)",
+    "back": "Back",
+    "closeSettings": "Leave settings",
+    "closeTitle": "Back (Esc)",
     "profile": {
       "name": "Name",
       "nameHelp": "Printed under “Written by” and at the top of the contact.",
@@ -332,6 +350,7 @@
       "off": "Never"
     },
     "whileTyping": "While typing",
+    "onScreen": "On screen",
     "typewriter": "Typewriter scrolling",
     "typewriterHelp": "The line you type stays in the middle of the screen; the page moves up beneath it.",
     "spellcheck": "Spell checker",
@@ -388,7 +407,7 @@
       "undo": "Undo",
       "redo": "Redo",
       "preview": "Leave the preview",
-      "link": "Link a name to its Bible entry",
+      "link": "Link a name to its Bible entry; Enter creates the entry of an unknown name",
       "openLink": "Open the entry of a linked name",
       "elements": "Screenplay elements",
       "next": "Next element: after a character the dialogue, after the dialogue a character…",
@@ -434,7 +453,7 @@
       "writing": {
         "label": "Writing",
         "lead": "How the Screenplay behaves while you type.",
-        "keywords": "typewriter scrolling centered spelling checker typography non-breaking spaces goal words per day"
+        "keywords": "typewriter scrolling centered spelling checker typography non-breaking spaces goal words per day scene cards bible links act sequence display"
       },
       "formats": {
         "label": "Screenplay formats",
@@ -646,7 +665,6 @@
     }
   },
   "script": {
-    "display": "Display",
     "cards": "Scene cards",
     "cardsHint": "Each scene in its card, in the Board’s color",
     "links": "Bible links",
@@ -707,9 +725,7 @@
       "notes": "Notes",
       "notesHint": "The notes in place of the scenes",
       "info": "Information",
-      "infoHint": "Title, authors, contact, mention: what the title page prints",
-      "display": "Display",
-      "displayHint": "Scene cards, Bible links, the act and sequence marker"
+      "infoHint": "Title, authors, contact, mention: what the title page prints"
     },
     "removeScene": "Delete the scene?",
     "removeSceneText": "It leaves the screenplay but stays in the bin of cut scenes (Versions view), from where it can be put back.",
@@ -852,7 +868,6 @@
     "cutsEmpty": "No cut scenes",
     "moreLines_one": "{{n}} more line",
     "moreLines_other": "{{n}} more lines",
-    "freezeShort": "Freeze",
     "cutsHint": "The scenes deleted from the screenplay, to put back"
   },
   "bible": {
@@ -1175,6 +1190,7 @@
     "scenesShort": "{{n}} sc.",
     "createFirst": "Create a first entry: {{name}}",
     "createEntry": "Create entry",
+    "createNamed": "Create “{{name}}”",
     "type": "Type",
     "openEntry": "Open the entry",
     "openEntryNamed": "Open the entry {{name}}"
@@ -1352,7 +1368,6 @@
     "actMoved": "Act moved: the screenplay is reordered.",
     "unfoldAll": "Expand all",
     "foldAll": "Collapse all",
-    "none": "None",
     "to": "To",
     "position": "Position",
     "card": "Scene card",
@@ -1395,15 +1410,13 @@
       "tag": "Tag",
       "status": "Status"
     },
-    "highlight": "Color instead of graying out",
     "alone": "Alone in this place",
     "first": "First",
     "after": "After {{name}}",
     "move": "Move",
     "currentPlace": "{{place}} (current)",
     "length": "{{eighths}} of a page · p. {{page}}",
-    "colorNamed": "Color {{color}}",
-    "filter": "Filter"
+    "colorNamed": "Color {{color}}"
   },
   "workshop": {
     "models": {
@@ -2215,18 +2228,8 @@
       "started": "Started",
       "done": "Done"
     },
-    "help": "Help",
-    "helpHint": "The explanations under each step",
     "writing": "The script has {{scenes}}, about {{pages}}, or {{time}} on screen.",
-    "doneOf": "of {{total}} done",
-    "panel": "Panel",
-    "shownSteps": "Steps shown",
-    "panels": {
-      "progress": "Progress",
-      "progressHint": "The workshop steps and where you stand",
-      "display": "Display",
-      "displayHint": "The help and the steps shown in the list"
-    }
+    "doneOf": "of {{total}} done"
   },
   "fields": {
     "previous": "Previous versions of this field",
@@ -2243,5 +2246,327 @@
     "nothingToUndo": "Nothing to undo.",
     "nothingToRedo": "Nothing to redo.",
     "textChanged": "The text changed since: undo it first in the Screenplay, with Ctrl+Z."
+  },
+  "shot": {
+    "size": {
+      "xcu": "Extreme close-up",
+      "cu": "Close-up",
+      "mcu": "Medium close-up",
+      "cowboy": "Cowboy shot",
+      "medium": "Medium shot",
+      "wide": "Wide shot",
+      "extreme": "Extreme wide shot"
+    },
+    "angle": {
+      "eye": "Eye level",
+      "high": "High angle",
+      "low": "Low angle",
+      "dutch": "Dutch angle"
+    },
+    "movement": {
+      "static": "Static",
+      "pan": "Pan",
+      "tracking": "Tracking",
+      "steadicam": "Steadicam",
+      "handheld": "Handheld",
+      "crane": "Crane",
+      "drone": "Drone",
+      "zoom": "Zoom"
+    },
+    "support": {
+      "tripod": "Tripod",
+      "dolly": "Dolly",
+      "slider": "Slider",
+      "gimbal": "Gimbal",
+      "shoulder": "Shoulder",
+      "crane": "Crane",
+      "vehicle": "Vehicle"
+    },
+    "sound": {
+      "sync": "Sync sound",
+      "mos": "MOS",
+      "playback": "Playback"
+    }
+  },
+  "shotlist": {
+    "scenes": "Scenes of the screenplay",
+    "panel": "Panel",
+    "panels": {
+      "scenes": "Scenes",
+      "text": "Text",
+      "textHint": "The scene's text and the shots that cover it",
+      "display": "Display"
+    },
+    "shape": "Shot list display",
+    "shapes": {
+      "table": "Table",
+      "cards": "Cards"
+    },
+    "add": "New shot",
+    "addFirst": "Add the first shot",
+    "emptyTitle": "The shot list starts from the screenplay",
+    "emptyText": "Write at least one scene: each scene gets its shots here, and each shot its storyboard frame.",
+    "toScript": "Go to the Screenplay",
+    "sceneNum": "Sc. {{n}}",
+    "shots_zero": "No shots",
+    "shots_one": "{{count}} shot",
+    "shots_other": "{{count}} shots",
+    "onScreen": "{{time}} on screen",
+    "toShoot": "{{time}} to shoot",
+    "uncovered_one": "{{count}} passage not covered",
+    "uncovered_other": "{{count}} passages not covered",
+    "allCovered": "All the text is covered",
+    "openBoard": "Open the moodboard",
+    "order": "Order of the shots",
+    "orders": {
+      "edit": "Edit",
+      "editHint": "In the order of the film",
+      "shoot": "Shooting",
+      "shootHint": "In the order they will be shot; drag them to change it"
+    },
+    "noShot": "No shot for this scene.",
+    "noShotHint": "Break it down into shots: size, movement, lens, length. Each shot also gets its frame in the Storyboard.",
+    "noShotShort": "No shot",
+    "move": "Move",
+    "actions": "Actions",
+    "columns": {
+      "number": "No.",
+      "shoot": "Order",
+      "scene": "Scene",
+      "heading": "Heading",
+      "size": "Size",
+      "angle": "Angle",
+      "movement": "Movement",
+      "support": "Support",
+      "lens": "Lens",
+      "camera": "Camera",
+      "frameRate": "Frame rate",
+      "sound": "Sound",
+      "characters": "Characters",
+      "action": "Action",
+      "dialogue": "Dialogue covered",
+      "duration": "Length",
+      "setup": "Shooting time",
+      "lighting": "Lighting",
+      "effects": "Effects",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "action": "What we see",
+      "characters": "—"
+    },
+    "insertAfter": "Insert a shot after",
+    "duplicate": "Duplicate",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "openFrame": "See its storyboard frame",
+    "delete": "Delete the shot…",
+    "deleteTitle": "Delete shot {{n}}?",
+    "deleteText": "The shot and its storyboard frame are deleted. Ctrl + Z brings them back.",
+    "shotMenu": "Actions for shot {{n}}",
+    "shootN": "Order {{n}}",
+    "noCharacter": "No character in this scene.",
+    "coverFor": "Passages covered by shot",
+    "coverHint": "Choose a shot in the list, then click the passages it covers.",
+    "noText": "This scene has no text yet.",
+    "notCovered": "Not covered",
+    "numbering": "Numbering",
+    "numberings": {
+      "dash": "12-1, 12-2…",
+      "dashHint": "The scene's number, a dash, then the shot's",
+      "letter": "12A, 12B…",
+      "letterHint": "The scene's number followed by a letter"
+    },
+    "shownColumns": "Fields shown",
+    "exportEmpty": "No shot in the shot list."
+  },
+  "storyboard": {
+    "panel": "Panel",
+    "emptyTitle": "The storyboard starts from the screenplay",
+    "toShotlist": "Open the shot list",
+    "frameOf": "Frame of shot {{n}}",
+    "import": "Import an image",
+    "fromBoard": "Take an image from a moodboard",
+    "fromBoardShort": "Moodboard",
+    "clear": "Remove the image",
+    "clearTitle": "Remove the image of shot {{n}}?",
+    "clearText": "The frame becomes empty again; the file stays in the project's medias folder.",
+    "drawOver": "Draw over it",
+    "change": "Change",
+    "drawIt": "Draw",
+    "caption": "Description of shot {{n}}",
+    "captionPlaceholder": "What the frame shows",
+    "dialogueOf": "Dialogue of shot {{n}}",
+    "dialoguePlaceholder": "Dialogue",
+    "notesOf": "Notes of frame {{n}}",
+    "notesPlaceholder": "Notes",
+    "addFirst": "First frame",
+    "addHint": "Each frame is a shot of the shot list: adding it here adds it there too.",
+    "noFrame": "No frame",
+    "framesDone_one": "{{count}} frame, {{done}} illustrated",
+    "framesDone_other": "{{count}} frames, {{done}} illustrated",
+    "ratio": "Frame format",
+    "ratios": {
+      "1_85": "1.85:1",
+      "2_39": "2.39:1",
+      "16_9": "16:9",
+      "4_3": "4:3",
+      "9_16": "9:16"
+    },
+    "ratioHints": {
+      "1_85": "Widescreen, the usual cinema format",
+      "2_39": "Scope, for wide open spaces",
+      "16_9": "Television and streaming",
+      "4_3": "The former television format",
+      "9_16": "Vertical, for phones"
+    },
+    "perRow": "Frames per row",
+    "perRowN_one": "{{count}} frame",
+    "perRowN_other": "{{count}} frames",
+    "underFrame": "Under each frame",
+    "shown": {
+      "technique": "Size, angle and movement",
+      "techniqueHint": "Taken from the shot list",
+      "action": "Description",
+      "actionHint": "What the shot shows",
+      "dialogue": "Dialogue",
+      "dialogueHint": "The lines the shot covers",
+      "notes": "Notes",
+      "notesHint": "The frame's own notes"
+    },
+    "noBoardImage": "No image in the project's moodboards.",
+    "frameRatio": "Frame {{ratio}}",
+    "draw": {
+      "open": "Draw the frame",
+      "title": "Draw frame {{n}}",
+      "tools": "Drawing tools",
+      "tool": "Tool",
+      "pencil": "Pencil",
+      "pencilHint": "Draw; a pen draws thinner when it presses lighter",
+      "eraser": "Eraser",
+      "eraserHint": "Erase on the chosen layer",
+      "arrow": "Arrow",
+      "arrowHint": "Drag an arrow, for a camera or character movement",
+      "ink": "Ink",
+      "inks": {
+        "0": "Lead",
+        "1": "Grey",
+        "2": "Red",
+        "3": "Blue"
+      },
+      "size": "Width",
+      "sizeN": "{{n}} px",
+      "undo": "Undo the stroke (Ctrl + Z)",
+      "redo": "Redo the stroke (Ctrl + Y)",
+      "layers": "Layers",
+      "addLayer": "Add a layer",
+      "layerN": "Layer {{n}}",
+      "hideLayer": "Hide layer {{n}}",
+      "showLayer": "Show layer {{n}}",
+      "removeLayer": "Delete layer {{n}}",
+      "clear": "Clear the layer",
+      "backdrop": "Frame's image",
+      "hideBackdrop": "Hide the frame's image",
+      "showBackdrop": "Show the frame's image",
+      "tip": "Ctrl + Z undoes the last stroke.",
+      "save": "Save the frame",
+      "leaveText": "Discard this drawing?",
+      "keepDrawing": "Keep drawing",
+      "discard": "Discard"
+    }
+  },
+  "moodboard": {
+    "kinds": {
+      "general": "General",
+      "character": "Character",
+      "location": "Location",
+      "sequence": "Sequence",
+      "light": "Light",
+      "costume": "Costumes",
+      "color": "Colours",
+      "other": "Other"
+    },
+    "panel": "Panel",
+    "panels": {
+      "boards": "Moodboards",
+      "palette": "Palette",
+      "paletteHint": "The colours of the images, with their codes",
+      "links": "Links",
+      "linksHint": "The scenes and entries the moodboard shows on"
+    },
+    "new": "New moodboard",
+    "create": "Create",
+    "edit": "Edit the moodboard",
+    "delete": "Delete the moodboard…",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleteText_zero": "The moodboard is deleted. Ctrl + Z brings it back.",
+    "deleteText_one": "The moodboard and its item are deleted; the files stay in the medias folder. Ctrl + Z brings them back.",
+    "deleteText_other": "The moodboard and its {{count}} items are deleted; the files stay in the medias folder. Ctrl + Z brings them back.",
+    "menu": "Actions for “{{name}}”",
+    "itemCount_zero": "empty",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "emptyTitle": "The images of your film",
+    "emptyText": "A moodboard gathers images, colours and notes: a light, costumes, a set… Start with one of them:",
+    "emptyBoard": "This moodboard is empty.",
+    "emptyBoardHint": "Drag images from the Explorer, paste one copied in a browser (Ctrl + V) or place some with the bar at the bottom.",
+    "canvas": "canvas",
+    "canvasLabel": "Moodboard “{{name}}”",
+    "tools": "Moodboard tools",
+    "addImage": "Image",
+    "addColor": "Colour",
+    "addText": "Text",
+    "addNote": "Note",
+    "toolSelect": "Select",
+    "toolHand": "Hand",
+    "snap": "Snap to grid",
+    "snapHint": "Items line up on the grid and with each other; Alt leaves them free.",
+    "noteColors": "Note colours",
+    "colorChoices": "Colours",
+    "customColor": "Other colour…",
+    "swatch": {
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "violet": "Violet",
+      "blue": "Blue",
+      "teal": "Teal",
+      "green": "Green",
+      "gray": "Grey",
+      "black": "Black",
+      "white": "White"
+    },
+    "placeholder": {
+      "text": "Text",
+      "note": "Note"
+    },
+    "editText": "Edit the text",
+    "editColor": "Change the colour",
+    "front": "Bring to front",
+    "back": "Send to back",
+    "duplicate": "Duplicate (Ctrl + D)",
+    "removeTitle": {
+      "image": "Remove the image from the moodboard?",
+      "color": "Remove the colour from the moodboard?",
+      "text": "Remove the text from the moodboard?",
+      "note": "Remove the note from the moodboard?"
+    },
+    "removeItemsTitle_one": "Remove {{count}} item from the moodboard?",
+    "removeItemsTitle_other": "Remove {{count}} items from the moodboard?",
+    "removeImageText": "The image's file stays in the project's medias folder. Ctrl + Z puts it back.",
+    "removeText": "Ctrl + Z puts it back.",
+    "paletteTitle": "Palette of the images",
+    "paletteEmpty": "Add images to the moodboard: their main colours will show here.",
+    "paletteReading": "Reading the colours…",
+    "paletteAdd": "Add the palette to the moodboard",
+    "ownColors": "Colours of the moodboard",
+    "copy": "Copy the code",
+    "copied": "{{hex}} copied",
+    "linksTitle": "Tied to",
+    "link": "+ Link…",
+    "unlink": "Unlink {{name}}",
+    "kind": "Kind",
+    "name": "Name"
   }
 }

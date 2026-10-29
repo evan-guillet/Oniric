@@ -336,7 +336,7 @@ export async function importBible(text: string): Promise<{ added: number; update
 /** Entries known to the wiki links of every editor, kept up to date. */
 class BibleIndex implements WikiSource {
   private entries: Entry[] = [];
-  private types = new Map<string, string>();
+  private typeNames = new Map<string, string>();
   private stop: (() => void) | null = null;
   opener: (id: string) => void = () => {};
 
@@ -355,11 +355,11 @@ class BibleIndex implements WikiSource {
   private async refresh() {
     const [entries, types] = await Promise.all([loadEntries(), loadTypes()]);
     this.entries = entries.filter((e) => !e.archivedAt);
-    this.types = new Map(types.map((t) => [t.id, t.name]));
+    this.typeNames = new Map(types.map((t) => [t.id, t.name]));
   }
 
   private target(e: Entry): WikiTarget {
-    return { id: e.id, name: e.name, typeName: this.types.get(e.type) ?? e.type, summary: e.summary };
+    return { id: e.id, name: e.name, typeName: this.typeNames.get(e.type) ?? e.type, summary: e.summary };
   }
 
   all(): Entry[] {
@@ -386,6 +386,15 @@ class BibleIndex implements WikiSource {
 
   open(id: string): void {
     this.opener(id);
+  }
+
+  types(): { id: string; name: string }[] {
+    return [...this.typeNames].map(([id, name]) => ({ id, name }));
+  }
+
+  async create(type: string, name: string): Promise<WikiTarget> {
+    const id = await createEntry(type, name);
+    return { id, name: name.trim(), typeName: this.typeNames.get(type) ?? type, summary: "" };
   }
 }
 

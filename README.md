@@ -5,14 +5,15 @@ Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer
 **Version 0.5** : écrire. En plus du socle de la 0.1 (projet, éditeur aux formats français et américain, PDF, enregistrement automatique, survie aux plantages) :
 
 - l'**Atelier d'écriture**, étapes 1 à 5 : préparation, personnages, structure, documents préparatoires (synopsis, séquencier, traitement, continuité dialoguée), écriture ;
-- la **Bible** : personnages, lieux, objets… et liens `@` ou `[[` depuis le scénario et les documents ;
+- la **Bible** : personnages, lieux, objets… et liens `/`, `@` ou `[[` depuis le scénario et les documents, qui créent la fiche d'un nom inconnu ;
 - la **Structure**, vue en **Tableau** (actes, séquences, cartes de scène, lignes d'intrigue) ou en **Chronologie** ;
 - les **Versions** figées, leur comparaison, et les **notes** en marge du scénario ;
 - la **page de titre**, les **formats personnalisés** et le **profil** ;
 - l'export **FDX** (Final Draft), l'import FDX et Fountain ;
-- les **sauvegardes** automatiques dans un dossier à part, et leur restauration.
+- les **sauvegardes** automatiques dans un dossier à part, et leur restauration ;
+- la **Réalisation** : des **moodboards** libres (images glissées ou collées, couleurs, textes, notes, palette tirée des images), le **découpage technique** de chaque scène en plans (tableau ou cartes, ordre de tournage, couverture du texte) et le **storyboard**, une case par plan, dessinée dans Oniric ou importée, avec leurs exports PDF et CSV.
 
-Les parties Réalisation et Production sont visibles dans la navigation ; elles arrivent dans les versions 2.0 et 3.0.
+La partie Production est visible dans la navigation ; elle arrive dans les versions 2.0 et 3.0.
 
 Les choix techniques sont décrits dans le [document d'architecture](docs/Architecture_Oniric.md) ; le besoin, dans le [PRD](docs/PRD_Oniric.md) et le [cahier des charges](docs/Cahier_des_charges_Oniric.md).
 

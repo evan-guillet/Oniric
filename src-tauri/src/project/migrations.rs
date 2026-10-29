@@ -8,6 +8,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0001_initial.sql"),
     include_str!("../../migrations/0002_ecrire.sql"),
     include_str!("../../migrations/0003_icone_type.sql"),
+    include_str!("../../migrations/0004_realisation.sql"),
 ];
 
 pub const LATEST: u32 = MIGRATIONS.len() as u32;

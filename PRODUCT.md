@@ -12,7 +12,7 @@ Scénaristes et réalisateurs, souvent seuls, qui écrivent un film sur leur PC 
 
 ## Product Purpose
 
-Oniric est un logiciel libre (GPL-3.0) de création de films : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. La version 0.5 couvre l'écriture : Atelier d'écriture en étapes, Bible du film, éditeur de scénario aux formats français et américain, Structure (Tableau et Chronologie), Versions, notes, exports PDF, FDX et Fountain.
+Oniric est un logiciel libre (GPL-3.0) de création de films : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. La version 0.5 couvre l'écriture : Atelier d'écriture en étapes, Bible du film, éditeur de scénario aux formats français et américain, Structure (Tableau et Chronologie), Versions, notes, exports PDF, FDX et Fountain ; et la préparation de la mise en scène : moodboards, découpage technique, storyboard.
 
 ## Positioning
 
@@ -29,7 +29,7 @@ Tout le parcours d'un film dans une seule application locale : l'Atelier guide l
 
 - Interface entièrement en français ; code et commentaires en anglais.
 - La page de scénario à l'écran suit la pagination de l'impression (Courier Prime, marges du format) : ses métriques ne doivent pas changer.
-- Les parties Réalisation et Production sont visibles dans la navigation mais arrivent en 2.0 et 3.0.
+- La Réalisation (moodboards, découpage technique, storyboard) est là ; la Production est visible dans la navigation mais arrive en 2.0 et 3.0.
 - Clair et sombre, selon le réglage de Windows.
 
 ## Brand Commitments

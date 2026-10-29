@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -102,8 +104,10 @@ import {
   type SettingsPage,
   type ViewId,
 } from "./projectContext";
-import { PARTS_HIDDEN_SETTING, SettingsDialog } from "./SettingsView";
+import { PARTS_HIDDEN_SETTING, SettingsScreen } from "./SettingsView";
 import { TransferDialog } from "./TransferDialog";
+import { useStoredState } from "../../../ui-kit/useStoredState";
+import { dragWindow, WindowControls } from "../../../ui-kit/TitleBar";
 
 export interface WorkspaceHandle {
   /** Writes whatever the editor has not saved yet. */
@@ -159,9 +163,9 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
     navItem("stats", ChartColumn),
   ]),
   navPart("realisation", [
-    navItem("moodboard", Images, "2.0"),
-    navItem("shotlist", Clapperboard, "2.0"),
-    navItem("storyboard", LayoutPanelTop, "2.0"),
+    navItem("moodboard", Images),
+    navItem("shotlist", Clapperboard),
+    navItem("storyboard", LayoutPanelTop),
   ]),
   navPart("production", [
     navItem("team", Users, "2.0"),
@@ -175,6 +179,11 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
 ];
 
 const DAY_MS = 24 * 3600 * 1000;
+
+// The Réalisation is read when it is first opened, outside the main bundle.
+const MoodboardView = lazy(() => import("../../realisation/ui/MoodboardView").then((m) => ({ default: m.MoodboardView })));
+const ShotlistView = lazy(() => import("../../realisation/ui/ShotlistView").then((m) => ({ default: m.ShotlistView })));
+const StoryboardView = lazy(() => import("../../realisation/ui/StoryboardView").then((m) => ({ default: m.StoryboardView })));
 
 /** An open project: navigation between the views, the shared screenplay session, the status bar. */
 export function ProjectShell({
@@ -196,8 +205,9 @@ export function ProjectShell({
   const [view, setView] = useState<ViewId>("dashboard");
   const [entry, setEntry] = useState<string | null>(null);
   const [bibleHome, setBibleHome] = useState(0);
-  // The settings window and the page it opens on.
+  // The settings, shown in place of the views, and the page they open on.
   const [settings, setSettings] = useState<SettingsPage | null>(null);
+  const closeSettings = useCallback(() => setSettings(null), []);
   const [promptReq, setPromptReq] = useState<PromptRequest | null>(null);
   const [print, setPrint] = useState<{
     content: ReactNode;
@@ -216,7 +226,11 @@ export function ProjectShell({
         // Sans section précise, la fenêtre s'ouvre sur la vue en cours.
         section:
           section ??
-          (view === "bible" || view === "workshop" ? view : "script"),
+          (view === "bible" || view === "workshop"
+            ? view
+            : view === "moodboard" || view === "shotlist" || view === "storyboard"
+              ? "realisation"
+              : "script"),
       }),
     [view],
   );
@@ -569,12 +583,13 @@ export function ProjectShell({
 
   return (
     <ProjectContext.Provider value={api}>
-      <div className="shell">
+      {/* Hidden, not taken down: a view keeps its place and its unsaved text behind the settings. */}
+      <div className="shell" hidden={settings !== null}>
         <nav
           className={railed ? "shell-nav rail" : "shell-nav"}
           aria-label={t("shell.views")}
         >
-          <div className="shell-nav-top">
+          <div className="shell-nav-top" onMouseDown={dragWindow}>
             <ProjectMenu
               title={project.title}
               dir={project.dir}
@@ -635,10 +650,9 @@ export function ProjectShell({
           >
             <Search aria-hidden="true" />
             <span>{t("shell.search")}</span>
-            <span className="nav-keys" aria-hidden="true">
-              <kbd>Ctrl</kbd>
-              <kbd>K</kbd>
-            </span>
+            <kbd className="nav-keys" aria-hidden="true">
+              Ctrl K
+            </kbd>
           </button>
           <input
             ref={fileRef}
@@ -747,7 +761,6 @@ export function ProjectShell({
           <ViewHeader
             project={project}
             view={view}
-            session={session}
             trail={trail}
             actionsRef={setHeaderActions}
           />
@@ -763,6 +776,11 @@ export function ProjectShell({
             {view === "structure" && <StructureView />}
             {view === "versions" && <VersionsView />}
             {view === "stats" && <StatsView />}
+            <Suspense fallback={null}>
+              {view === "moodboard" && <MoodboardView />}
+              {view === "shotlist" && <ShotlistView />}
+              {view === "storyboard" && <StoryboardView />}
+            </Suspense>
             {LATER.has(view) && <LaterView view={view} />}
           </div>
 
@@ -776,11 +794,12 @@ export function ProjectShell({
           {print.content}
         </div>
       )}
-      {settings && <SettingsDialog page={settings} onClose={() => setSettings(null)} />}
+      {settings && <SettingsScreen page={settings} onClose={closeSettings} />}
       {transferReq && (
         <TransferDialog
           mode={transferReq.mode}
           section={transferReq.section}
+          option={view === "storyboard" ? "storyboard-pdf" : view === "moodboard" ? "moodboard-pdf" : undefined}
           onImport={(kind) =>
             (kind === "script" ? fileRef : bibleFileRef).current?.click()
           }
@@ -936,30 +955,6 @@ type Shown = "light" | "dark";
 /** The theme button swaps one for the other. */
 const THEME_NEXT: Record<Shown, Shown> = { light: "dark", dark: "light" };
 
-/** A state kept in this computer's storage; without it, it still holds for the session. */
-function useStoredState<T>(key: string, initial: T): [T, (v: T) => void] {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw === null ? initial : (JSON.parse(raw) as T);
-    } catch {
-      return initial;
-    }
-  });
-  const set = useCallback(
-    (v: T) => {
-      setValue(v);
-      try {
-        localStorage.setItem(key, JSON.stringify(v));
-      } catch {
-        // Not remembered, still applied.
-      }
-    },
-    [key],
-  );
-  return [value, set];
-}
-
 function NavButton({
   item,
   on,
@@ -991,41 +986,35 @@ function NavButton({
   );
 }
 
-const SCENE_VIEWS = new Set<ViewId>(["script", "structure"]);
-
-/** Where the user is: project, part, view, and how many things the view holds. */
+/**
+ * The band at the top of the window, which moves it: where the user is (project › part › view, and how many entries
+ * the Bible holds), the view's own tools, then the window's buttons.
+ */
 function ViewHeader({
   project,
   view,
-  session,
   trail,
   actionsRef,
 }: {
   project: OpenState;
   view: ViewId;
-  session: ScriptSession;
   trail: Crumb[] | null;
   actionsRef: (el: HTMLElement | null) => void;
 }) {
-  useSessionState(session);
   const entries = useLive(
     async () => (await loadEntries()).filter((e) => !e.archivedAt).length,
     ["bible_entry"],
   );
   const group = NAV.find((g) => g.items.some((i) => i.id === view));
   const label = view === "dashboard" ? DASHBOARD.label : (group?.items.find((i) => i.id === view)?.label ?? t("shell.settings"));
-  const viewCount = SCENE_VIEWS.has(view)
-    ? session.snapshot?.headings.length
-    : view === "bible"
-      ? entries
-      : undefined;
+  const viewCount = view === "bible" ? entries : undefined;
   // A view that went down a level (an act on the board…) names it; the levels above become links.
   const here = trail?.at(-1);
   const count = here ? here.count : viewCount;
   return (
-    <header className="view-header">
-      <div className="view-header-text">
-        <ol className="crumbs" aria-label={t("shell.crumbs")}>
+    <header className="view-header" onMouseDown={dragWindow}>
+      <nav className="view-header-text" aria-label={t("shell.crumbs")}>
+        <ol className="crumbs">
           <li>{project.title}</li>
           {group && (
             <li>
@@ -1042,22 +1031,21 @@ function ViewHeader({
             </li>
           ))}
         </ol>
+        <ChevronRight aria-hidden="true" />
         <h1 className="view-title">
-          {here?.label ?? label}
+          <span className="view-title-text">{here?.label ?? label}</span>
           {count !== undefined && count > 0 && (
             <span className="count">{count}</span>
           )}
         </h1>
-      </div>
+      </nav>
       <div ref={actionsRef} className="view-header-actions" />
+      <WindowControls />
     </header>
   );
 }
 
 const LATER = new Set<ViewId>([
-  "moodboard",
-  "shotlist",
-  "storyboard",
   "team",
   "breakdown",
   "schedule",

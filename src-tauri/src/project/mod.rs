@@ -595,6 +595,28 @@ mod tests {
     }
 
     #[test]
+    fn the_shots_and_the_boards_go_with_what_holds_them() {
+        let root = temp("realisation");
+        let opts = OpenOptions { work_root: root.join("travail"), on_crash: CrashChoice::Restore, force_lock: false };
+        let p = Project::create(&root.join("Essai"), "Essai", &opts).unwrap();
+        let c = p.conn();
+        c.execute_batch(
+            "INSERT INTO scene (id, rank, content, created_at, updated_at) VALUES ('s1', 'a', '[]', 'd', 'd');
+             INSERT INTO shot (id, scene_id, rank, created_at, updated_at) VALUES ('p1', 's1', 'a', 'd', 'd'), ('p2', 's1', 'b', 'd', 'd');
+             INSERT INTO moodboard (id, rank, name, created_at, updated_at) VALUES ('m1', 'a', 'Lumière', 'd', 'd');
+             INSERT INTO moodboard_item (id, board_id, kind, x, y, w, h, data, created_at, updated_at)
+               VALUES ('i1', 'm1', 'color', 0, 0, 10, 10, '{\"color\":\"#112233\"}', 'd', 'd');
+             INSERT INTO moodboard_link (board_id, target_id) VALUES ('m1', 's1');",
+        )
+        .unwrap();
+        assert!(c.execute("INSERT INTO moodboard_item (id, board_id, kind, x, y, w, h, created_at, updated_at) VALUES ('i2', 'm1', 'video', 0, 0, 1, 1, 'd', 'd')", []).is_err());
+        c.execute_batch("DELETE FROM scene WHERE id = 's1'; DELETE FROM moodboard WHERE id = 'm1';").unwrap();
+        let count = |table: &str| c.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((count("shot"), count("moodboard_item"), count("moodboard_link")), (0, 0, 0));
+        p.close().unwrap();
+    }
+
+    #[test]
     fn copies_set_aside_do_not_pile_up() {
         let aside = temp("aside");
         for t in [9, 10, 11, 12, 13, 14, 100] {

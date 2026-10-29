@@ -54,6 +54,11 @@ export const commands = {
 	mediaImport: (source: string, kind: string) => typedError<string, CoreError>(__TAURI_INVOKE("media_import", { source, kind })),
 	/**  A file of the open project as a `data:` URL, to show an image. */
 	mediaRead: (path: string) => typedError<string, CoreError>(__TAURI_INVOKE("media_read", { path })),
+	/**
+	 *  Writes an image given as base64 into `medias/<kind>/` of the open project, named after `name`, and returns its
+	 *  path inside the project: a picture pasted or dropped on a moodboard, or a storyboard frame drawn in Oniric [MOO-03].
+	 */
+	mediaWrite: (kind: string, name: string, extension: string, data: string) => typedError<string, CoreError>(__TAURI_INVOKE("media_write", { kind, name, extension, data })),
 	/**  Writes a frozen version of the screenplay in `versions/`, with its SHA-256 fingerprint [REE-01]. */
 	versionSave: (name: string, contents: string) => typedError<SavedFile, CoreError>(__TAURI_INVOKE("version_save", { name, contents })),
 	versionRead: (path: string) => typedError<string, CoreError>(__TAURI_INVOKE("version_read", { path })),
