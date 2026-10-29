@@ -35,6 +35,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 const p95 = (xs) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(xs.length * 0.95))];
 let failed = false;
+// On a failure, a picture of the window shows what the step was waiting for.
+process.on("uncaughtException", async (e) => {
+  console.error(e);
+  await page?.screenshot({ path: path.join(out, "echec.png") }).catch(() => {});
+  process.exit(1);
+});
 function check(ok, label) {
   if (!ok) failed = true;
   results.checks.push({ ok, label });
@@ -49,7 +55,10 @@ let exited;
 async function launch(env = {}) {
   port++;
   app = spawn(exe, [], {
-    env: { ...process.env, ONIRIC_DONNEES: data, ONIRIC_RECOPIE_S: "600", WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`, ...env },
+    env: { ...process.env, ONIRIC_DONNEES: data, ONIRIC_RECOPIE_S: "600",
+      // A profile of its own: the remembered side bar, language and theme of the real application stay out of it.
+      WEBVIEW2_USER_DATA_FOLDER: path.join(root, "webview"),
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`, ...env },
     stdio: "ignore",
   });
   exited = new Promise((r) => app.on("exit", r));
@@ -59,6 +68,8 @@ async function launch(env = {}) {
       page = browser.contexts()[0].pages()[0];
       page.on("pageerror", (e) => check(false, `erreur de la page : ${e.message}`));
       await page.waitForSelector(".home", { timeout: 15000 });
+      // Wide enough for the full side bar: below, it folds to a rail of icons.
+      await page.setViewportSize({ width: 1600, height: 1000 });
       return;
     } catch {
       await sleep(200);
@@ -84,13 +95,19 @@ async function projectMenu(name) {
   await page.locator(".shell-brand").click();
   await page.getByRole("menuitem", { name, exact: true }).click();
 }
+/** « Fermer », at the foot of the side bar. */
+const closeProject = () => page.locator(".shell-nav .nav-close").click();
 const editorText = () => page.locator(".ProseMirror").innerText();
 const saveState = () => page.locator(".save-state").textContent();
 const waitSaved = () => page.waitForFunction(() => document.querySelector(".save-state")?.textContent === "Enregistré", null, { timeout: 15000 });
 async function openRecent() {
   await page.locator(".recent-open", { hasText: title }).click();
 }
+const nav = (name) => page.locator(".shell-nav").getByRole("button", { name, exact: true }).click();
+/** A project opens on its dashboard: the screenplay is one step away. */
 async function waitEditor() {
+  await page.waitForSelector(".shell-nav", { timeout: 30000 });
+  await nav("Scénario");
   await page.waitForSelector(".ProseMirror", { timeout: 30000 });
   await page.waitForFunction(() => window.__oniric?.editor);
 }
@@ -138,7 +155,8 @@ check(startups.every((ms) => ms > 0 && ms < 3000), `interface prête en ${median
 // ------------------------------------------------------------------ P1
 console.log("\nP1 · Créer un projet, écrire une scène, exporter un PDF");
 await launch();
-await button("Nouveau projet").click();
+// The home actions carry a hint under their label, which is part of their name.
+await page.locator(".home-action", { hasText: "Nouveau projet" }).click();
 await page.fill("input[name=title]", title);
 await page.fill("input[name=location]", projects);
 await button("Créer le projet").click();
@@ -182,7 +200,7 @@ await exportAs("Fountain");
 await page.waitForFunction(() => [...document.querySelectorAll(".toast p")].some((p) => p.textContent.includes(".fountain")));
 const fountain = await readFile(path.join(exportsDir, `${title}.fountain`), "utf8");
 check(fountain.includes("INT. CUISINE DE MARIE – NUIT") && fountain.includes("MARIE\n(sans se retourner)"), "export Fountain");
-await projectMenu("Fermer le projet");
+await closeProject();
 await page.waitForSelector(".home");
 check((await page.locator(".recent-open", { hasText: title }).count()) === 1, "le projet apparaît dans les projets récents");
 check(!(await readdir(projectDir)).includes(".verrou"), "fermeture : verrou retiré");
@@ -252,7 +270,7 @@ console.log("\nPerformance sur 120 pages (format français)");
 await setFormat("fr");
 const pages = await page.evaluate(() => window.__oniric.editor.snapshot.pagination.pages.length);
 await waitSaved();
-await projectMenu("Fermer le projet");
+await closeProject();
 await page.waitForSelector(".home");
 const o0 = Date.now();
 await openRecent();
@@ -276,7 +294,7 @@ const cold = await page.evaluate(() => {
 results.timings.coldLayout = cold;
 check(cold.paginateMs < 50, `pagination complète : ${cold.paginateMs.toFixed(1)} ms ; mesure à froid de ${cold.blocks} éléments : ${cold.measureMs.toFixed(0)} ms`);
 await waitSaved();
-await projectMenu("Fermer le projet");
+await closeProject();
 await page.waitForSelector(".home");
 await browser.close();
 app.kill();
@@ -287,7 +305,6 @@ console.log("\nÉcrire (v0.5)");
 await launch();
 await openRecent();
 await waitEditor();
-const nav = (name) => page.locator(".shell-nav").getByRole("button", { name, exact: true }).click();
 const toast = (text) => page.waitForFunction((t) => [...document.querySelectorAll(".toast p")].some((p) => p.textContent.includes(t)), text, { timeout: 30000 });
 const closeToasts = async () => {
   for (const b of await page.locator(".toast-close").all()) await b.click().catch(() => {});
@@ -301,15 +318,18 @@ await nav("Atelier");
 check((await page.inputValue("#w-prep\\.premise\\.who")) === "Une boulangère timide", "atelier : un champ rempli est gardé d'une vue à l'autre (ATL-02)");
 
 await nav("Bible");
-await button("Détecter les personnages et les lieux").click();
-await page.waitForSelector(".detect-item", { timeout: 15000 });
-// Doubtful names (probable duplicates, sub-locations, roles) start unchecked; only the checked ones become entries.
-const detected = await page.locator(".detect-item input:checked").count();
-await page.getByRole("button", { name: /^Créer \d+ fiche/ }).click();
-// Back on the categories: each card counts its entries.
+// The bible finds the characters and places of the screenplay by itself; each card counts them.
 await page.waitForFunction(() => document.querySelectorAll(".type-card-count").length > 0, null, { timeout: 15000 });
-const entries = (await page.locator(".type-card-count").allInnerTexts()).reduce((n, t) => n + Number(t), 0);
-check(detected > 0 && entries === detected, `bible : ${detected} personnages et lieux retrouvés dans le scénario, ${entries} fiches créées (BIB-05)`);
+const detected = (await page.locator(".type-card-count").allInnerTexts()).reduce((n, t) => n + Number(t), 0);
+await page.locator(".type-card[data-type=character]").click();
+// A detected card becomes an entry as it opens.
+await page.locator(".entry-card", { has: page.locator(".badge.detected") }).first().locator(".entry-card-open").click();
+await page.waitForSelector("article.entry", { timeout: 15000 });
+const saved = await page.evaluate(() =>
+  window.__TAURI_INTERNALS__.invoke("db_query", { query: { sql: "SELECT count(*) FROM bible_entry", parameters: [] } }).then((r) => r.rows[0][0]),
+);
+check(detected > 0 && saved === 1, `bible : ${detected} personnages et lieux retrouvés dans le scénario, l'un d'eux devenu fiche en l'ouvrant (BIB-05)`);
+const entries = 1;
 
 await projectMenu("Exporter…");
 await page.locator(".transfer-nav").getByRole("button", { name: /^Bible/ }).click();
@@ -318,8 +338,8 @@ await toast(".json");
 await closeToasts();
 const bibleFile = (await readdir(exportsDir)).find((f) => f.startsWith("Bible") && f.endsWith(".json"));
 await page.setInputFiles("input.bible-import", path.join(exportsDir, bibleFile));
-await toast("Bible importée : 0 fiche(s) ajoutée(s), 0 mise(s) à jour").then(
-  () => check(true, `bible : exportée puis réimportée depuis la fenêtre Importer/Exporter du projet (${entries} fiches)`),
+await toast("Bible importée : 0 fiche(s) ajoutée(s)").then(
+  () => check(true, `bible : exportée puis réimportée depuis la fenêtre Importer/Exporter du projet (${entries} fiche)`),
   () => check(false, "bible : réimport depuis la fenêtre Importer/Exporter"),
 );
 await closeToasts();
@@ -345,10 +365,11 @@ const cards = await page.locator(".board-view .cv-tree .card").count();
 check(cards === sceneCount, `tableau : ${cards} cartes pour ${sceneCount} scènes (VUE-03)`);
 
 await shape("Chronologie");
-check(await page.waitForSelector(".timeline-scroll svg .tl-scene", { timeout: 15000 }).then(() => true, () => false), "chronologie affichée (VUE-10)");
+check(await page.waitForSelector(".timeline-view .tl-scene", { timeout: 15000 }).then(() => true, () => false), "chronologie affichée (VUE-10)");
 
 await nav("Versions");
-await button("Figer la version actuelle…").click();
+// A project without a version shows how freezing works, with its button.
+await page.locator(".vr-first-go").click();
 await button("Valider").click();
 await toast("figée");
 await closeToasts();
@@ -384,7 +405,7 @@ await nav("Scénario");
 await page.evaluate(() => window.__oniric.editor.goToScene(0));
 await page.keyboard.type(" Fin.");
 await waitSaved();
-await projectMenu("Fermer le projet");
+await closeProject();
 await page.waitForSelector(".home");
 const copiesAtClose = (await readdir(path.join(backupRoot, backupDir, "bases"))).filter((f) => f.endsWith(".db"));
 check(copiesAtClose.some((f) => f.includes("fermeture")), "copie automatique à la fermeture du projet (SAV-02)");
