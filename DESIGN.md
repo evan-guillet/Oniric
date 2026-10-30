@@ -84,10 +84,10 @@ typography:
     fontWeight: 400
 rounded:
   xs: "4px"
-  sm: "6px"
-  md: "8px"
-  lg: "10px"
-  xl: "12px"
+  sm: "8px"
+  md: "10px"
+  lg: "12px"
+  xl: "14px"
   pill: "999px"
 spacing:
   hairline: "1px"
@@ -244,7 +244,7 @@ Le thème sombre (`prefers-color-scheme: dark`) redéfinit chaque jeton sur des 
 
 **La règle du triplet d'état.** Un état s'exprime par un point plein (`*-dot`) sur un fond doux (`*-soft`) cerclé d'un trait doux (`*-line`), texte en couleur foncée (`ok`, `warning`, `danger`). Jamais d'aplat saturé ni de bordure colorée épaisse.
 
-**La règle de la feuille blanche.** La page de scénario reste `paper` sur `desk` dans les deux thèmes ; aucune couleur d'interface n'entre sur la feuille, sauf les liens vers la Bible en bleu. À l'écriture, le Scénario s'affiche sans feuille, ou en cartes de scène ; la feuille blanche reste celle de l'aperçu, de la page de titre et de l'impression.
+**La règle de la feuille blanche.** La page de scénario reste `paper` sur `desk` dans les deux thèmes ; aucune couleur d'interface n'entre sur la feuille, sauf les liens vers la Bible en bleu. À l'écriture, le Scénario s'affiche sans feuille, ou en cartes de scène ; la feuille blanche reste celle de l’aperçu, de la page de titre et de l’impression : dans l’aperçu, elle est blanche à encre noire même en sombre, aux coins arrondis de 6px, séparée de la suivante par 36px de bureau.
 
 ## Typography
 
@@ -299,13 +299,13 @@ Hybride, à dominante tonale. La profondeur vient d'abord de la superposition de
 
 ## Shapes
 
-Coins doucement arrondis, toujours plus ronds à mesure que l'objet est grand : 4px pour les touches clavier et étiquettes de version, 6px (`--radius`) pour les contrôles (boutons, champs, éléments de navigation), 8px pour les cartes, séquences et encarts, 10px (`--radius-lg`) pour les cadres de structure (navigation, panneau de vue, panneaux, listes, notifications), 12px pour les dialogues et le logo. Tout ce qui est une étiquette (chips, pastilles d'état) est en pilule (999px). Les points d'état sont des cercles de 6 à 8px. Bordures toujours à 1px ; seule la touche clavier porte un bas de 2px. Les groupes de boutons se collent bord à bord et n'arrondissent que leurs extrémités.
+Coins doucement arrondis, toujours plus ronds à mesure que l'objet est grand : 4px pour les touches clavier et étiquettes de version, 8px (`--radius`) pour les contrôles (boutons, champs, éléments de navigation), 10px pour les cartes, séquences et encarts, 12px (`--radius-lg`) pour les cadres de structure (navigation, panneau de vue, panneaux, listes, notifications), 14px pour les dialogues et le logo. Tout ce qui est une étiquette (chips, pastilles d'état) est en pilule (999px). Les points d'état sont des cercles de 6 à 8px. Bordures toujours à 1px ; seule la touche clavier porte un bas de 2px. Les groupes de boutons se collent bord à bord et n'arrondissent que leurs extrémités.
 
 ## Components
 
 ### Buttons
 Précis et discrets : la plupart des boutons sont blancs, seul le principal est bleu.
-- **Shape :** hauteur `--control-h` (32px) et coins `--control-r` (8px), 0 12px de marge, 13px 500, icône de 16px en `muted` à 7px du libellé ; 28px / 7px en petit, 38px / 9px en grand, 22px / 6px en minuscule. Dans l'en-tête de vue (`header-tools`), boutons, champs, sélecteurs et choix segmentés montent à 34px / 9px, comme sur la Bible.
+- **Shape :** hauteur `--control-h` (32px) et coins `--control-r` (10px), 0 12px de marge, 13px 500, icône de 16px en `muted` à 7px du libellé ; 28px / 9px en petit, 38px / 11px en grand, 22px / 8px en minuscule. Dans l'en-tête de vue (`header-tools`), boutons, champs, sélecteurs et choix segmentés montent à 34px / 11px, comme sur la Bible.
 - **Secondaire (par défaut) :** fond `panel`, bordure `line-strong`, texte `ink-2` en 500, ombre `--shadow-sm`.
 - **Principal :** fond et bordure `accent`, texte `accent-ink`, icône en couleur du texte, un liseré clair de 1px en haut (inset) et une ombre bleutée légère.
 - **Hover / Focus :** un seul jeu d'états pour tous les contrôles, boutons, listes de choix (`Select`) et boutons de menu (« Affichage ») : survol en `panel-2`, bordure `--control-line-hover` (`line-strong` mêlé de 30 % de `muted`) et texte `ink` (principal : `accent-hover`), pression en `nav-on` sans ombre (principal : `--accent-press`), transitions de 120ms `ease-out` ; ouverts, une liste ou un bouton de menu gardent l'aspect du survol et retournent leur chevron ; focus par contour de 2px `focus` décalé de 2px. Les boutons sans cadre (fantômes, icônes, « ⋯ », croix de fermeture, plier et déplier) se surlignent de `--control-hover` (`ink` à 11 %), et de `--control-press` (16 %) pressés.
@@ -331,7 +331,7 @@ Précis et discrets : la plupart des boutons sont blancs, seul le principal est 
 - **Détection de la Bible :** un groupe par sorte de nom (Personnages, Lieux), chacun avec une case « tout cocher » à trois états et le compte coché / trouvé. Les noms douteux (doublon probable, sous-lieu, rôle sans nom) restent décochés, leur nom en `ink-2` et la raison en badge gris à droite ; un doublon propose « Ajouter comme autre nom ». Le bouton « Créer N fiches » est à gauche d'un pied de page collé en bas de la zone qui défile, hors de portée des notifications. La suppression d'une fiche passe par la modale de confirmation, puis la notification propose encore « Annuler ».
 
 ### Inputs / Fields
-- **Style :** 32px, bordure 1px `line-strong`, fond `panel`, coins de 8px ; listes de choix (`Select`, jamais le `<select>` natif) avec la même ombre basse que les boutons, la valeur tronquée, le chevron Lucide gris de 14px qui se retourne à l'ouverture et les états des boutons ; elles ouvrent le menu d'« Affichage » (même surface, mêmes rangées) avec une case ronde par option, la choisie remplie de bleu atelier, des intitulés de groupe en petites capitales `muted` ; dès 12 options en plusieurs groupes, chaque intitulé devient un bouton qui plie et déplie son groupe (chevron qui tourne d'un quart, compte en `hint`, collé en haut en défilant), seul le groupe du choix en cours s'ouvre avec la liste, → et ← le déplient et le replient, et taper un nom ouvre son groupe, au plus 400px de haut, sous le champ ou au-dessus faute de place ; flèches, Début, Fin, premières lettres, Entrée et Échap au clavier ; recherche avec loupe à gauche.
+- **Style :** 32px, bordure 1px `line-strong`, fond `panel`, coins de 10px ; listes de choix (`Select`, jamais le `<select>` natif) avec la même ombre basse que les boutons, la valeur tronquée, le chevron Lucide gris de 14px qui se retourne à l'ouverture et les états des boutons ; elles ouvrent le menu d'« Affichage » (même surface, mêmes rangées) avec une case ronde par option, la choisie remplie de bleu atelier, des intitulés de groupe en petites capitales `muted` ; dès 12 options en plusieurs groupes, chaque intitulé devient un bouton qui plie et déplie son groupe (chevron qui tourne d'un quart, compte en `hint`, collé en haut en défilant), seul le groupe du choix en cours s'ouvre avec la liste, → et ← le déplient et le replient, et taper un nom ouvre son groupe, au plus 400px de haut, sous le champ ou au-dessus faute de place ; flèches, Début, Fin, premières lettres, Entrée et Échap au clavier ; recherche avec loupe à gauche.
 - **Focus :** champs de saisie en bordure `accent` et halo de 3px `accent-soft`, sans contour natif, survol en bordure `muted` ; une liste de choix prend le contour de focus des boutons.
 - **Error :** encart `danger-soft` cerclé de `danger-line`, texte `danger`.
 

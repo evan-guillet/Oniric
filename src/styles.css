@@ -48,10 +48,10 @@
   --titlebar-h: 32px;
   --header-h: 48px;
   --titlebar-close: #c42b1c;
-  --radius: 6px;
-  --radius-lg: 10px;
+  --radius: 8px;
+  --radius-lg: 12px;
   --control-h: 32px;
-  --control-r: 8px;
+  --control-r: 10px;
   /* The states every control shares. A boxed one (button, list, menu button) takes a firmer border under the pointer
      and sinks pressed; a boxless one (ghost, icon, « ⋯ ») is highlighted, a shade deeper pressed. */
   --control-line-hover: color-mix(in srgb, var(--line-strong), var(--muted) 30%);
@@ -67,6 +67,7 @@
   --shadow-lg: 0 2px 6px rgba(16, 18, 27, 0.06), 0 18px 48px -10px rgba(16, 18, 27, 0.24);
   --backdrop: rgba(14, 15, 22, 0.32);
   --sheet-shadow: 0 0 0 1px rgba(16, 18, 27, 0.06), 0 2px 4px rgba(16, 18, 27, 0.04), 0 14px 36px -14px rgba(16, 18, 27, 0.22);
+  --print-shadow: 0 0 0 1px rgba(16, 18, 27, 0.07), 0 1px 3px rgba(16, 18, 27, 0.06), 0 18px 44px -18px rgba(16, 18, 27, 0.28);
   --ui-font: "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23767a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --magnifier: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23767a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
@@ -126,6 +127,7 @@
   --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 20px 50px -10px rgba(0, 0, 0, 0.6);
   --backdrop: rgba(0, 0, 0, 0.62);
   --sheet-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+  --print-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35), 0 24px 56px -20px rgba(0, 0, 0, 0.8);
   --paper: #222226;
   --paper-ink: #e2e2e8;
   --paper-caret: #a3b6ff;
@@ -179,7 +181,7 @@ h2 {
 }
 ::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--line-strong) padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -370,7 +372,7 @@ svg.lucide {
 .btn.small {
   height: 28px;
   padding: 0 10px;
-  border-radius: 7px;
+  border-radius: 9px;
   font-size: 12.5px;
   gap: 6px;
 }
@@ -381,7 +383,7 @@ svg.lucide {
 .btn.large {
   height: 38px;
   padding: 0 16px;
-  border-radius: 9px;
+  border-radius: 11px;
   font-size: 13.5px;
   gap: 8px;
 }
@@ -392,7 +394,7 @@ svg.lucide {
 .btn.tiny {
   height: 22px;
   padding: 0 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 11.5px;
   color: var(--muted);
 }
@@ -636,7 +638,7 @@ kbd {
   width: 44px;
   height: 44px;
   box-shadow: var(--shadow-md);
-  border-radius: 11px;
+  border-radius: 13px;
 }
 .home-head h1 {
   font-size: 24px;
@@ -690,7 +692,7 @@ kbd {
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--sunken);
   border: 1px solid var(--line);
   color: var(--ink-2);
@@ -787,7 +789,7 @@ kbd {
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--accent-soft);
   color: var(--accent);
 }
@@ -860,7 +862,7 @@ kbd {
   width: min(440px, calc(100vw - 32px));
   padding: 20px 22px 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--panel);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
@@ -1435,7 +1437,7 @@ input.switch:disabled {
   font-variant-numeric: tabular-nums;
 }
 .about-logo {
-  border-radius: 10px;
+  border-radius: 12px;
 }
 .dialog::backdrop {
   background: var(--backdrop);
@@ -1633,7 +1635,7 @@ input.switch:disabled {
 }
 .shell-brand img {
   flex: none;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: var(--shadow-sm);
 }
 .shell-brand-title {
@@ -1690,7 +1692,7 @@ input.switch:disabled {
   max-width: 320px;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   box-shadow: var(--shadow-lg);
   animation: element-bar-in 120ms ease-out;
@@ -1821,7 +1823,7 @@ input.switch:disabled {
   height: 36px;
   margin-bottom: 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   box-shadow: var(--shadow-sm);
   color: var(--muted);
@@ -2299,7 +2301,7 @@ input.switch:disabled {
 .header-tools input[type="search"] {
   --control-h: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: 11px;
   font-size: 13px;
   color: var(--ink);
 }
@@ -2310,7 +2312,7 @@ input.switch:disabled {
 }
 .header-tools .btn {
   height: 34px;
-  border-radius: 9px;
+  border-radius: 11px;
   font-size: 13px;
 }
 .view-toolbar,
@@ -2327,7 +2329,7 @@ input.switch:disabled {
 }
 .view-toolbar .select {
   height: 30px;
-  border-radius: 7px;
+  border-radius: 9px;
   font-size: 12.5px;
   color: var(--ink);
   font-weight: 500;
@@ -3033,7 +3035,7 @@ h4 {
   background: var(--sunken);
   color: var(--ink-2);
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin: 0 0 14px;
   line-height: 1.5;
 }
@@ -3053,7 +3055,7 @@ h4 {
 /* Rich text */
 .rich {
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   overflow: hidden;
 }
@@ -3290,7 +3292,7 @@ h4 {
   z-index: 30;
   width: 320px;
   max-width: calc(100vw - 16px);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
@@ -3534,7 +3536,7 @@ h4 {
   padding: 10px 12px;
   background: var(--sunken);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   margin: 0;
   font-style: italic;
   line-height: 1.55;
@@ -3580,10 +3582,10 @@ h4 {
     border-color 120ms ease-out;
 }
 .notch:first-child {
-  border-radius: 9px 4px 4px 9px;
+  border-radius: 11px 4px 4px 11px;
 }
 .notch:last-child {
-  border-radius: 4px 9px 9px 4px;
+  border-radius: 4px 11px 11px 4px;
 }
 /* The middle notch carries a small tick, so the balance point reads at a glance. */
 .notch.mid::after {
@@ -3690,7 +3692,7 @@ h4 {
   gap: 6px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
 }
 .beat-head {
@@ -3744,7 +3746,7 @@ h4 {
   width: 100%;
   height: auto;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--sunken);
 }
 .relation-map line {
@@ -3881,7 +3883,7 @@ h4 {
 }
 .bible-sort .select {
   height: 30px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ink);
@@ -3978,7 +3980,7 @@ h4 {
   min-width: 0;
   padding: 12px 14px 12px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--panel);
   font: inherit;
   color: var(--ink);
@@ -4001,7 +4003,7 @@ h4 {
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--sunken);
   color: var(--ink-2);
 }
@@ -4091,7 +4093,7 @@ h4 {
   gap: 6px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
   cursor: pointer;
   transition:
@@ -4121,7 +4123,7 @@ h4 {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 /* Next to the name: the type's icon, or the entry's own picture in its place, cropped to the same square. */
 .entry-card-icon {
@@ -4130,7 +4132,7 @@ h4 {
   flex: none;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--sunken);
   color: var(--muted);
   overflow: hidden;
@@ -4229,7 +4231,7 @@ h4 {
   height: 100%;
   padding: 0;
   border: 1px dashed var(--line-strong);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--sunken);
   color: var(--muted);
   overflow: hidden;
@@ -4428,7 +4430,7 @@ h4 {
   width: 96px;
   height: 96px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--line);
 }
 .media-missing,
@@ -4437,7 +4439,7 @@ h4 {
   place-items: center;
   width: 96px;
   height: 96px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px dashed var(--line-strong);
   color: var(--muted);
   font-size: 11px;
@@ -4478,7 +4480,7 @@ h4 {
   margin: 0 -6px;
   padding: 3px 6px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   color: var(--ink);
   font-size: 13px;
@@ -4524,7 +4526,7 @@ h4 {
   height: 34px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   background: none;
   color: var(--ink-2);
   cursor: pointer;
@@ -4788,7 +4790,7 @@ h4 {
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--sunken);
 }
@@ -4823,7 +4825,7 @@ h4 {
 .card {
   display: flex;
   min-width: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--scene, var(--panel)) 16%, var(--panel));
   color: var(--ink);
   /* One edge colour for the frame and the line over the badges, following the scene's colour and the card's state. */
@@ -4851,7 +4853,7 @@ h4 {
   width: 22px;
   padding-top: 11px;
   align-items: flex-start;
-  border-radius: 7px 0 0 7px;
+  border-radius: 9px 0 0 9px;
 }
 .card-body {
   flex: 1;
@@ -5182,7 +5184,7 @@ h4 {
   width: 280px;
   min-height: 92px;
   padding: 11px 12px 10px 22px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .cv-cards > .card-add .cv-ghost-icon {
   width: 18px;
@@ -5239,7 +5241,7 @@ h4 {
   height: calc(50% + 24px + var(--wire-w) / 2);
   border-left-width: var(--wire-w);
   border-bottom-width: var(--wire-w);
-  border-bottom-left-radius: 12px;
+  border-bottom-left-radius: 14px;
 }
 /* On: the trunk carries on down past this node to the next one. */
 .cv-wire.on {
@@ -5256,7 +5258,7 @@ h4 {
   height: calc(58px + var(--wire-w) / 2);
   border-left-width: var(--wire-w);
   border-bottom-width: var(--wire-w);
-  border-bottom-left-radius: 12px;
+  border-bottom-left-radius: 14px;
 }
 /* The arrowhead's point touches the node it leads to. */
 .cv-wire.in::after,
@@ -6546,7 +6548,7 @@ button.vr-stop-body:focus-visible {
   min-height: 30px;
   padding: 0 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   font: inherit;
   font-size: 12.5px;
@@ -6593,7 +6595,7 @@ button.vr-stop-body:focus-visible {
   width: 100%;
   padding: 10px 12px;
   border: 1px dashed var(--warning-line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink-2);
   font: inherit;
@@ -6643,7 +6645,7 @@ button.vr-stop-body:focus-visible {
   display: grid;
   gap: 6px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--warning-line);
   background: var(--warning-soft);
 }
@@ -6834,7 +6836,7 @@ button.vr-stop-body:focus-visible {
 }
 .header-tools .segmented {
   height: 34px;
-  border-radius: 9px;
+  border-radius: 11px;
 }
 .seg {
   display: inline-flex;
@@ -6856,7 +6858,7 @@ button.vr-stop-body:focus-visible {
     box-shadow 120ms ease-out;
 }
 .header-tools .seg {
-  border-radius: 7px;
+  border-radius: 9px;
 }
 /* « Affichage » in a panel: one row per option, its box first, the whole row ticks it. */
 .check-list {
@@ -6871,7 +6873,7 @@ button.vr-stop-body:focus-visible {
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   color: var(--ink-2);
   font: inherit;
@@ -7103,7 +7105,7 @@ button.vr-stop-body:focus-visible {
 .desk.display-cards .mount .scene {
   margin: 0 -0.6in;
   padding: 0.2in 0.6in 0.22in;
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--scene, var(--line)) 14%, var(--panel));
   border: 1px solid color-mix(in srgb, var(--scene, var(--line-strong)) 45%, var(--line));
   box-shadow: var(--shadow-sm);
@@ -7409,7 +7411,7 @@ button.vr-stop-body:focus-visible {
   height: 36px;
   padding: 0 9px;
   border: none;
-  border-radius: 9px;
+  border-radius: 11px;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -7633,12 +7635,29 @@ button.vr-stop-body:focus-visible {
   position: absolute;
   white-space: pre;
 }
-/* The pages as they print, on the desk: the title page alone, or the whole script */
+/* The pages as they print, on the desk: white paper and black ink in both themes, slightly rounded, with air
+   between them. They rise into place when the preview opens. */
+.desk-print {
+  padding-top: 40px;
+}
+.desk-print .print-pages {
+  animation: pages-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pages-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
 .desk-print .print-page {
-  margin: 0 auto 24px;
-  background: var(--paper);
-  color: var(--paper-ink);
-  box-shadow: var(--sheet-shadow);
+  margin: 0 auto 36px;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111111;
+  box-shadow: var(--print-shadow);
+}
+.desk-print .print-page ::selection {
+  background: #d8e0fd;
 }
 .print-caption {
   margin: -12px auto 14px;
@@ -7805,7 +7824,7 @@ button.vr-stop-body:focus-visible {
   max-height: min(520px, 76vh);
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--panel);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
@@ -8274,7 +8293,7 @@ button[aria-expanded="true"] .stats-chevron {
   overflow: auto;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--sunken);
   scrollbar-width: thin;
 }
@@ -8297,7 +8316,7 @@ button[aria-expanded="true"] .stats-chevron {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background 120ms ease-out;
 }
@@ -9801,7 +9820,7 @@ span.draw-layer {
   display: flex;
   align-items: flex-end;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: var(--shadow-md);
 }
 .mb-hex {
@@ -9820,7 +9839,7 @@ span.draw-layer {
 .mb-note {
   padding: 12px 14px;
   border: 1px solid var(--warning-line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--warning-soft);
   color: var(--ink-2);
   font-size: 14px;
@@ -9935,7 +9954,7 @@ textarea.mb-edit:focus {
   height: 38px;
   padding: 0;
   border: none;
-  border-radius: 9px;
+  border-radius: 11px;
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -9986,7 +10005,7 @@ textarea.mb-edit:focus {
   align-items: center;
   gap: 6px;
   padding: 4px 6px 4px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--ink);
   color: var(--panel);
   font: 500 12px/16px var(--ui-font);
@@ -10033,7 +10052,7 @@ textarea.mb-edit:focus {
 .mb-tray {
   gap: 6px;
   padding: 7px 10px;
-  border-radius: 12px;
+  border-radius: 14px;
   animation: mb-tray-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .mb-tray .mb-bar-sep {
@@ -10136,7 +10155,7 @@ textarea.mb-edit:focus {
   display: flex;
   align-items: center;
   gap: 2px;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background-color 120ms ease-out;
 }
 .mb-board:hover {
@@ -10164,7 +10183,7 @@ textarea.mb-edit:focus {
   min-width: 0;
   padding: 7px 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: none;
   color: inherit;
   font: inherit;
@@ -10180,7 +10199,7 @@ textarea.mb-edit:focus {
   height: 44px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--sunken);
   color: var(--hint);
 }
@@ -10251,7 +10270,7 @@ textarea.mb-edit:focus {
   height: 40px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .mb-strip span {
   flex-basis: 0;
@@ -10272,7 +10291,7 @@ textarea.mb-edit:focus {
   height: 36px;
   padding: 0 8px 0 5px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   color: var(--ink);
   font: inherit;
@@ -10296,7 +10315,7 @@ textarea.mb-edit:focus {
 .mb-chip {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 .mb-code {
@@ -10324,7 +10343,7 @@ textarea.mb-edit:focus {
   display: flex;
   align-items: center;
   gap: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 .mb-link-list li:hover {
   background: var(--hover);
