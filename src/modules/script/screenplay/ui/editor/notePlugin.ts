@@ -10,6 +10,8 @@ export interface NoteHost {
   archived(): ReadonlySet<string>;
   /** Draws the card of note `id` in `card`, or empties it with null. */
   render(id: string | null, card: HTMLElement): void;
+  /** Ctrl+click on the passage: the note, in the notes panel. */
+  reveal(id: string): void;
 }
 
 const noteKey = new PluginKey<DecorationSet>("notes");
@@ -29,6 +31,7 @@ interface Span {
  * The note on a passage, in a card under the line: while the caret is in the passage, or the pointer on it.
  * The card is the one of the notes panel, with its « ⋯ » menu; it only shows the note. A link to the Bible keeps its
  * own preview. An archived note leaves the text: its passage is no longer highlighted and opens nothing.
+ * Ctrl+click on the passage opens the note in the notes panel; while Ctrl is held, the passage takes the pointer of a link.
  */
 export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost | null): Plugin {
   let view: EditorView | null = null;
@@ -80,6 +83,9 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
     if (!(e.target as HTMLElement).closest("textarea, input")) e.preventDefault();
   });
   // The focus gone elsewhere than the text, the card or its menu: the card goes too.
+  // Ctrl held: the passages of notes can be clicked.
+  const onMod = (e: KeyboardEvent) => view?.dom.classList.toggle("mod", e.ctrlKey || e.metaKey);
+  const offMod = () => view?.dom.classList.remove("mod");
   const onFocus = (e: FocusEvent) => {
     const to = e.target as HTMLElement;
     if (!shownId || card.contains(to) || view?.dom.contains(to) || to.closest?.(".more-menu")) return;
@@ -153,6 +159,9 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
       view = v;
       window.addEventListener("scroll", onScroll, true);
       document.addEventListener("focusin", onFocus);
+      window.addEventListener("keydown", onMod);
+      window.addEventListener("keyup", onMod);
+      window.addEventListener("blur", offMod);
       return {
         update(v) {
           view = v;
@@ -163,6 +172,9 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
           hide();
           window.removeEventListener("scroll", onScroll, true);
           document.removeEventListener("focusin", onFocus);
+          window.removeEventListener("keydown", onMod);
+          window.removeEventListener("keyup", onMod);
+          window.removeEventListener("blur", offMod);
           view = null;
         },
       };
@@ -177,6 +189,17 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
         return true;
       },
       handleDOMEvents: {
+        // Ctrl+click on an open note: the panel, and the caret stays where it was.
+        mousedown(_v, e) {
+          if (!(e.ctrlKey || e.metaKey) || e.button !== 0) return false;
+          const target = e.target as HTMLElement;
+          const id = (target.closest?.(".note-mark") as HTMLElement | null)?.dataset.note;
+          if (!id || !host()?.open(id) || target.closest(".wikilink")) return false;
+          e.preventDefault();
+          hide();
+          host()?.reveal(id);
+          return true;
+        },
         mouseover(_v, e) {
           const target = e.target as HTMLElement;
           const span = target.closest?.(".note-mark") as HTMLElement | null;

@@ -3152,6 +3152,10 @@ h4 {
   box-decoration-break: clone;
 }
 /* An archived note leaves the text: its passage reads as plain text again */
+/* Ctrl held: an open note can be clicked, to show it in the notes panel */
+.ProseMirror.mod .note-mark:not(:has(.note-off)) {
+  cursor: pointer;
+}
 .note-mark:has(.note-off) {
   background: none;
   border-bottom-color: transparent;
@@ -6642,6 +6646,25 @@ button.vr-stop-body:focus-visible {
   border-color: var(--ok-line);
   background: var(--ok-soft);
 }
+/* The note a Ctrl+click on its passage asked for: a ring that fades */
+.note.flash {
+  animation: note-flash 1400ms ease-out;
+}
+@keyframes note-flash {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--warning-line);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note.flash {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--warning-line);
+  }
+}
 .note-top {
   display: flex;
   align-items: flex-start;
@@ -7357,33 +7380,39 @@ button.vr-stop-body:focus-visible {
   pointer-events: none;
   font-style: normal;
 }
-/* Kinds of element, floating above the current line */
+/* Kinds of element, in a bar fixed at the bottom of the desk, as the tools of the moodboard; over the desk, not in its scroll */
 .element-bar {
-  position: absolute;
+  grid-area: desk;
+  align-self: end;
+  justify-self: center;
+  position: relative;
   z-index: 5;
   display: flex;
-  gap: 1px;
-  padding: 3px;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 32px);
+  margin-bottom: 16px;
+  padding: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
   box-shadow: var(--shadow-md);
   font-family: var(--ui-font);
   white-space: nowrap;
-  animation: element-bar-in 120ms ease-out;
-}
-.element-bar[hidden] {
-  display: none;
 }
 .element-bar button {
+  flex: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  min-width: 30px;
-  height: 30px;
-  padding: 0 7px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
   border: none;
-  border-radius: 6px;
+  border-radius: 9px;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -7393,11 +7422,12 @@ button.vr-stop-body:focus-visible {
   transition: background-color 90ms ease-out, color 90ms ease-out;
 }
 .element-bar button svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
 }
 .element-bar button.on {
-  padding-right: 9px;
+  padding-right: 10px;
   background: var(--accent-soft);
   color: var(--accent);
 }

@@ -127,7 +127,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const { t } = useTranslation();
   const { project, session, notify, printPdf, headerActions } = useProject();
   const mountRef = useRef<HTMLDivElement>(null);
-  const columnRef = useRef<HTMLDivElement>(null);
   const deskRef = useRef<HTMLElement>(null);
   const editorRef = useRef<ScriptEditor | null>(null);
   const [format, setFormat] = useState<ScreenplayFormat | null>(null);
@@ -144,6 +143,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const showPanel = (next: Panel) => {
     if (next === panel) return;
     setPanel(next);
+    setShownNote(null);
     if (next === "notes") setPreview(false);
     if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
   };
@@ -162,6 +162,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const notes = useLive(loadNotes, ["note"]);
   const [popped, setPopped] = useState<{ id: string; card: HTMLElement } | null>(null);
   const [popEditing, setPopEditing] = useState(false);
+  // The note a Ctrl+click on its passage brought up in the panel; `at` tells two clicks on the same one apart.
+  const [shownNote, setShownNote] = useState<{ id: string; at: number } | null>(null);
   const noteHost = useRef<NoteHost | null>(null);
   noteHost.current = {
     open: (id) => !!notes?.some((n) => n.id === id && !n.resolved),
@@ -169,6 +171,10 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     render: (id, card) => {
       setPopEditing(false);
       setPopped(id ? { id, card } : null);
+    },
+    reveal: (id) => {
+      setPanel("notes");
+      setShownNote({ id, at: Date.now() });
     },
   };
   useEffect(() => {
@@ -548,7 +554,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             />
           )}
           {panel === "notes" && (
-            <NotesPanel editor={editorRef.current} />
+            <NotesPanel editor={editorRef.current} shown={shownNote} />
           )}
           {panel === "info" && titlePage && (
             <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
@@ -614,7 +620,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           )}
           {format && (
             <div
-              ref={columnRef}
               className="fmt page-column"
               hidden={body !== "editor"}
               style={{
@@ -632,11 +637,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                   paddingBottom: typewriter ? "45vh" : undefined,
                 }}
               />
-              <ElementBar
-                editor={editorRef.current}
-                column={columnRef}
-                snap={snap}
-              />
             </div>
           )}
           {format && body === "preview" && snap && (
@@ -651,6 +651,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             </div>
           )}
         </main>
+        {/* The kinds of element, fixed at the bottom of the desk while writing. */}
+        {format && body === "editor" && <ElementBar editor={editorRef.current} snap={snap} />}
       </div>
 
       {/* The card of the note under the caret or the pointer, drawn where the editor placed it. */}
@@ -912,11 +914,23 @@ async function loadNotes(): Promise<NoteRow[]> {
 }
 
 /** Margin notes anchored to a passage of the screenplay [EDT-07]. */
-function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
+function NotesPanel({ editor, shown }: { editor: ScriptEditor | null; shown: { id: string; at: number } | null }) {
   const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
   const [archives, setArchives] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  // The note asked for from the text: brought into view, and lit for a moment.
+  useEffect(() => {
+    if (!shown || !notes) return;
+    const card = listRef.current?.querySelector<HTMLElement>(`[data-note="${CSS.escape(shown.id)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    setFlash(shown.id);
+    const timer = window.setTimeout(() => setFlash(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [shown, !!notes]);
   const docVersion = useRef(0);
   const [, force] = useState(0);
   useEffect(() => {
@@ -925,7 +939,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
       stop();
     };
   }, [session]);
-  if (!notes) return <div className="notes-panel" />;
+  if (!notes) return <div className="notes-panel" ref={listRef} />;
   const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
@@ -978,11 +992,12 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
       editor={editor}
       editing={editing === n.id}
       onEditing={(on) => setEditing(on ? n.id : null)}
+      flash={flash === n.id}
     />
   );
 
   return (
-    <div className="notes-panel">
+    <div className="notes-panel" ref={listRef}>
       <ul className="notes">
         {/* The next note, as a card still to fill: it says where the note will go. */}
         <li>
@@ -1022,6 +1037,7 @@ function NoteCard({
   editing,
   onEditing,
   inText = false,
+  flash = false,
 }: {
   note: NoteRow;
   span: { from: number; to: number; text: string } | null;
@@ -1029,6 +1045,7 @@ function NoteCard({
   editing: boolean;
   onEditing: (on: boolean) => void;
   inText?: boolean;
+  flash?: boolean;
 }) {
   const { notify, ask } = useProject();
   const Tag = inText ? "div" : "li";
@@ -1038,7 +1055,7 @@ function NoteCard({
     );
   const quote = t("dash.quote", { quote: span?.text ?? n.quote });
   return (
-    <Tag className={n.resolved ? "note resolved" : "note"}>
+    <Tag className={["note", n.resolved && "resolved", flash && "flash"].filter(Boolean).join(" ")} data-note={inText ? undefined : n.id}>
       <div className="note-top">
         {inText ? (
           <p className="note-quote">{quote}</p>
