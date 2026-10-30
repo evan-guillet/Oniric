@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHeading } from "./heading";
+import { isTimeOfDay, parseHeading } from "./heading";
 
 describe("parseHeading", () => {
   it.each([
@@ -16,5 +16,15 @@ describe("parseHeading", () => {
 
   it("returns nothing for an empty heading", () => {
     expect(parseHeading("  ")).toEqual({ intExt: null, location: null, time: null });
+  });
+});
+
+describe("isTimeOfDay", () => {
+  it("tells a time of day from a place", () => {
+    expect(isTimeOfDay("NUIT")).toBe(true);
+    expect(isTimeOfDay("crépuscule")).toBe(true);
+    expect(isTimeOfDay("PLUS TARD")).toBe(true);
+    expect(isTimeOfDay("COURSIVE PRINCIPALE")).toBe(false);
+    expect(isTimeOfDay("AU-DESSUS DE TATOOINE")).toBe(false);
   });
 });

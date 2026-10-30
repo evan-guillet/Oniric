@@ -3,6 +3,7 @@ import { memo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ContextMenu } from "../../../../ui-kit/MoreMenu";
 import { formatEighths } from "../domain/duration";
+import { isTimeOfDay, parseHeading } from "../domain/heading";
 import { plural, t } from "../../../../core/i18n";
 
 export interface SceneRow {
@@ -26,6 +27,24 @@ export interface ListGroup {
 
 /** What a right click in the list is on. */
 export type ListTarget = { kind: "act" | "seq"; part: PartLabel } | { kind: "scene"; index: number };
+
+/** The heading read at a glance: the place carries it, INT./EXT. and the time of day step back around it. */
+function SceneHeading({ text }: { text: string }) {
+  if (!text.trim()) return <span className="scene-heading empty">{t("workspace.noHeading")}</span>;
+  const parsed = parseHeading(text);
+  // Only a real time of day steps back: « COURSIVE – SUITE » does, « TANTIVE IV – COURSIVE » stays a place.
+  const time = parsed.time && isTimeOfDay(parsed.time) ? parsed.time : null;
+  const place = [parsed.location, time ? null : parsed.time].filter(Boolean).join(" – ");
+  if (!parsed.intExt && !time) return <span className="scene-heading">{text}</span>;
+  return (
+    <span className="scene-heading">
+      {parsed.intExt && <span className="scene-ie">{parsed.intExt.split("/").map((p) => `${p}.`).join("/")}</span>}
+      {parsed.intExt && place && " "}
+      {place}
+      {time && <span className="scene-time">{" – "}{time}</span>}
+    </span>
+  );
+}
 
 const removeLabel = (kind: "act" | "seq" | "scene") => t(`sceneList.remove.${kind}`);
 
@@ -98,7 +117,7 @@ export const SceneList = memo(function SceneList({
           aria-current={i === current ? "location" : undefined}
         >
           <span className="scene-num">{i + 1}</span>
-          <span className="scene-heading">{s.heading || t("workspace.noHeading")}</span>
+          <SceneHeading text={s.heading} />
           <span className="scene-meta">
             {t("workspace.scenePage", { page: s.page })} · {formatEighths(s.eighths)}
           </span>

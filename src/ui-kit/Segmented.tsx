@@ -27,13 +27,12 @@ export function Segmented<T extends string>({
   compact?: boolean;
   /** The choice does not apply to what is shown; it is kept for when it does again. */
   disabled?: boolean;
-  /** A toggle of its own at the head of the track (`.seg`), set apart from the choice by a thin rule. */
+  /** A toggle of its own at the head of the track (`.seg`), set like the other buttons. */
   lead?: ReactNode;
 }) {
   return (
     <div className={compact ? "segmented compact" : "segmented"} role="group" aria-label={label}>
       {lead}
-      {lead && <span className="seg-sep" aria-hidden="true" />}
       {options.map((o) => (
         <button
           key={o.id}

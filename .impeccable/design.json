@@ -4,11 +4,11 @@
   "title": "Design System: Oniric",
   "extensions": {
     "colorMeta": {
-      "accent": { "role": "primary", "displayName": "Bleu atelier", "canonical": "#3b5fe8", "dark": "#6d8cff", "tonalRamp": ["#0c1230", "#1d2a75", "#2f50d4", "#3b5fe8", "#6d8cff", "#a3b6fb", "#c8d3fb", "#eef2ff"] },
-      "accent-hover": { "role": "primary", "displayName": "Bleu atelier appuyé", "canonical": "#2f50d4", "dark": "#86a0ff" },
+      "accent": { "role": "primary", "displayName": "Bleu atelier", "canonical": "#3b5fe8", "dark": "#a3b6ff", "tonalRamp": ["#0c1230", "#1d2a75", "#2f50d4", "#3b5fe8", "#6d8cff", "#a3b6fb", "#c8d3fb", "#eef2ff"] },
+      "accent-hover": { "role": "primary", "displayName": "Bleu atelier appuyé", "canonical": "#2f50d4", "dark": "#bccbff" },
       "accent-ink": { "role": "primary", "displayName": "Encre sur bleu", "canonical": "#ffffff", "dark": "#0c1230" },
-      "accent-soft": { "role": "primary", "displayName": "Voile bleu", "canonical": "#eef2ff", "dark": "#1d2445" },
-      "accent-line": { "role": "primary", "displayName": "Trait bleu", "canonical": "#c8d3fb", "dark": "#33407a" },
+      "accent-soft": { "role": "primary", "displayName": "Voile bleu", "canonical": "#eef2ff", "dark": "#2c3872" },
+      "accent-line": { "role": "primary", "displayName": "Trait bleu", "canonical": "#c8d3fb", "dark": "#4c5daa" },
       "plot": { "role": "tertiary", "displayName": "Violet intrigue", "canonical": "#6941c6", "dark": "#b9a2ff", "tonalRamp": ["#1e1240", "#3f3470", "#5132a0", "#6941c6", "#8f6fe0", "#b9a2ff", "#ddd2fb", "#f4f0fe"] },
       "plot-soft": { "role": "tertiary", "displayName": "Voile intrigue", "canonical": "#f4f0fe", "dark": "#251f3d" },
       "plot-line": { "role": "tertiary", "displayName": "Trait intrigue", "canonical": "#ddd2fb", "dark": "#3f3470" },
