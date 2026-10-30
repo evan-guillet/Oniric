@@ -94,10 +94,8 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
 }
 
 /**
- * Two choices that do not depend on each other: what the side panel shows (the scenes, the notes or the script's
- * information) and what the desk shows (the writing, or the whole script as it prints with
- * « Aperçu »). The notes annotate the text, so they leave the preview; the information can be filled in with the
- * preview beside it.
+ * What the side panel shows while writing: the scenes, the notes or the script's information. « Aperçu », at the
+ * head of the same tabs, shows the whole script as it prints across the desk, with no panel beside it.
  */
 type Panel = "scenes" | "notes" | "info";
 /** The panel's tabs: one is always chosen, and pressing it again keeps it. */
@@ -139,22 +137,22 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const display = useWritingPrefs();
   const linksRef = useRef(display.links);
   linksRef.current = display.links;
-  /** A panel's tab shows it in place of the others; pressed again, it stays. */
+  /** A panel's tab shows it in place of the others; pressed again, it stays. From the preview, it goes back to writing. */
   const showPanel = (next: Panel) => {
-    if (next === panel) return;
-    setPanel(next);
-    setShownNote(null);
-    if (next === "notes") setPreview(false);
-    if (next !== "info" && (!preview || next === "notes")) requestAnimationFrame(() => editorRef.current?.focus());
+    if (next === panel && !preview) return;
+    setPreview(false);
+    if (next !== panel) {
+      setPanel(next);
+      setShownNote(null);
+    }
+    if (next !== "info") requestAnimationFrame(() => editorRef.current?.focus());
   };
-  /** « Aperçu » shows the whole script as it prints; pressed again, or Échap, it goes back to writing. */
+  /** « Aperçu » shows the whole script as it prints, without the panel; pressed again, or Échap, it goes back to writing. */
   const togglePreview = () => {
     const next = !preview;
     setPreview(next);
-    if (next) {
-      if (panel === "notes") setPanel("scenes");
-      requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
-    } else requestAnimationFrame(() => editorRef.current?.focus());
+    if (next) requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
+    else requestAnimationFrame(() => editorRef.current?.focus());
   };
   const togglePreviewRef = useRef(togglePreview);
   togglePreviewRef.current = togglePreview;
@@ -401,18 +399,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     }));
   }, [story, sceneInfos]);
 
-  const selectScene = useCallback(
-    (i: number) => {
-      if (preview) {
-        // The preview has no cursor: it scrolls to the page the scene starts on.
-        const page = rowsRef.current[i]?.page ?? 1;
-        deskRef.current
-          ?.querySelectorAll(".print-page:not(.title-page)")
-          [page - 1]?.scrollIntoView({ block: "start" });
-      } else editorRef.current?.goToScene(i);
-    },
-    [preview],
-  );
+  const selectScene = useCallback((i: number) => editorRef.current?.goToScene(i), []);
 
 
   // A right click in the list deletes, as the board's « ⋯ » menus do: acts and sequences leave their scenes in
@@ -541,25 +528,26 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       {format && <style>{formatCss(format, false)}</style>}
       {display.cards && story && <style>{cardCss}</style>}
       {choice}
-      <div className="workspace">
-        <aside className="sidebar" aria-label={t(`script.panels.${panel}`)}>
-          {panel === "scenes" && (
-            <SceneList
-              scenes={rows}
-              groups={groups}
-              current={snap?.sceneIndex ?? 0}
-              onSelect={selectScene}
-              foldKey={`oniric.script.folds.${project.id}`}
-              onRemove={(target) => void removeFromList(target)}
-            />
-          )}
-          {panel === "notes" && (
-            <NotesPanel editor={editorRef.current} shown={shownNote} />
-          )}
-          {panel === "info" && titlePage && (
-            <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
-          )}
-        </aside>
+      <div className={preview ? "workspace previewing" : "workspace"}>
+        {/* The preview takes the whole desk: no panel beside it. */}
+        {!preview && (
+          <aside className="sidebar" aria-label={t(`script.panels.${panel}`)}>
+            {panel === "scenes" && (
+              <SceneList
+                scenes={rows}
+                groups={groups}
+                current={snap?.sceneIndex ?? 0}
+                onSelect={selectScene}
+                foldKey={`oniric.script.folds.${project.id}`}
+                onRemove={(target) => void removeFromList(target)}
+              />
+            )}
+            {panel === "notes" && <NotesPanel editor={editorRef.current} shown={shownNote} />}
+            {panel === "info" && titlePage && (
+              <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
+            )}
+          </aside>
+        )}
 
         <main
           ref={deskRef}
@@ -689,7 +677,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             <Segmented
               label={t("script.panel")}
               options={panelTabs()}
-              value={panel}
+              value={preview ? null : panel}
               onChange={showPanel}
               compact
               lead={

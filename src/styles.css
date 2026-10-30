@@ -2391,6 +2391,11 @@ input.switch:disabled {
   grid-template-areas: "desk side";
   min-height: 0;
 }
+/* The preview takes the whole width: no panel beside the printed pages */
+.workspace.previewing {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "desk";
+}
 .desk {
   grid-area: desk;
 }
@@ -2454,23 +2459,6 @@ input.switch:disabled {
 }
 .scene-list li.on .scene-heading {
   color: var(--ink);
-}
-/* INT./EXT. and the time of day step back: the eye runs down the places */
-.scene-ie,
-.scene-time {
-  font-weight: 500;
-  color: var(--muted);
-}
-.scene-heading.empty {
-  font-weight: 500;
-  font-style: italic;
-  text-transform: none;
-  color: var(--muted);
-}
-.scene-list li.on .scene-ie,
-.scene-list li.on .scene-time,
-.scene-list li.on .scene-meta {
-  color: color-mix(in srgb, var(--accent), var(--ink) 35%);
 }
 .scene-meta {
   font-size: 11px;
@@ -2549,11 +2537,6 @@ input.switch:disabled {
   margin: 1px 0 4px 11px;
   padding: 0 0 0 4px;
   border-left: 1px solid var(--line);
-  transition: border-color 160ms ease-out;
-}
-/* The guide lines lead down to the current scene */
-.outline-part.here > ol {
-  border-left-color: var(--accent-line);
 }
 .scene-list .outline-head {
   display: flex;
