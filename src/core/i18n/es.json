@@ -475,6 +475,11 @@
         "lead": "La maquetación y la impresión del guion de este proyecto.",
         "keywords": "formato números de escena impresión pdf fdx fountain margen"
       },
+      "shotlist": {
+        "label": "Planificación",
+        "lead": "Cómo la planificación muestra los planos de este proyecto.",
+        "keywords": "planos orden rodaje montaje numeración campos columnas tabla vista"
+      },
       "parts": {
         "label": "Partes mostradas",
         "lead": "Lo que muestra la navegación de este proyecto.",
@@ -535,7 +540,13 @@
     },
     "linkCopied": "Enlace copiado.",
     "versionUnknown": "Versión desconocida",
-    "typographyRow": "Tipografía francesa"
+    "typographyRow": "Tipografía francesa",
+    "shotlist": {
+      "listing": "Lista de planos",
+      "focus": "Abrir una escena pliega el resto",
+      "focusHelp": "Las demás escenas, secuencias y actos se pliegan, y pasa a ser la escena en la que se trabaja.",
+      "note": "Los campos mostrados también se aplican a la exportación de la planificación. El orden y los campos se guardan en este ordenador; la numeración, en el proyecto."
+    }
   },
   "dash": {
     "progress": "Avance",

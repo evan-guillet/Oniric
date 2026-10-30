@@ -73,5 +73,6 @@ export type SettingsPage =
   | "backups"
   | "shortcuts"
   | "script"
+  | "shotlist"
   | "parts"
   | "about";

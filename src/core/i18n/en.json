@@ -475,6 +475,11 @@
         "lead": "The layout and printing of this project’s script.",
         "keywords": "format scene numbers printing pdf fdx fountain margin"
       },
+      "shotlist": {
+        "label": "Shot list",
+        "lead": "How the shot list shows the shots of this project.",
+        "keywords": "shots order shooting edit numbering fields columns table display"
+      },
       "parts": {
         "label": "Parts shown",
         "lead": "What this project’s navigation shows.",
@@ -535,7 +540,13 @@
     },
     "linkCopied": "Link copied.",
     "versionUnknown": "Unknown version",
-    "typographyRow": "French typography"
+    "typographyRow": "French typography",
+    "shotlist": {
+      "listing": "List of shots",
+      "focus": "Opening a scene folds the rest",
+      "focusHelp": "The other scenes, sequences and acts fold, and it becomes the scene you work on.",
+      "note": "The fields shown also apply to the shot list export. The order and fields are kept on this computer, the numbering in the project."
+    }
   },
   "dash": {
     "progress": "Progress",

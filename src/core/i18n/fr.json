@@ -469,6 +469,11 @@
         "lead": "La mise en page et l'impression du script de ce projet.",
         "keywords": "format numéros de scène impression pdf fdx fountain marge"
       },
+      "shotlist": {
+        "label": "Découpage",
+        "lead": "Comment le découpage liste les plans de ce projet.",
+        "keywords": "plans ordre tournage montage numérotation champs colonnes tableau affichage"
+      },
       "parts": {
         "label": "Parties affichées",
         "lead": "Ce que montre la navigation de ce projet.",
@@ -529,7 +534,13 @@
     },
     "linkCopied": "Lien copié.",
     "versionUnknown": "Version inconnue",
-    "typographyRow": "Typographie française"
+    "typographyRow": "Typographie française",
+    "shotlist": {
+      "listing": "Liste des plans",
+      "focus": "Ouvrir une scène replie le reste",
+      "focusHelp": "Les autres scènes, séquences et actes se plient, et elle devient la scène où l'on travaille.",
+      "note": "Les champs affichés valent aussi pour l'export du découpage. L'ordre et les champs sont gardés sur cet ordinateur, la numérotation dans le projet."
+    }
   },
   "languages": {
     "fr": "Français",

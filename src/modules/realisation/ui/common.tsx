@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "../../../core/i18n";
 import type { SceneInfo } from "../../script/screenplay/application/scriptSession";
 import { useStoredState } from "../../../ui-kit/useStoredState";
@@ -98,13 +98,15 @@ export function SceneRail({
   );
 }
 
-/** A field written in place, saved when it is left or with Enter; Escape puts back what it held. */
+/** A field written in place, saved when it is left or with Enter; Escape puts back what it held. A clamped one shows
+    its first two lines at rest and unfolds whole to be written. */
 export function InlineText({
   value,
   onCommit,
   label,
   placeholder,
   multiline,
+  clamp,
   className,
   format,
   parse,
@@ -114,6 +116,7 @@ export function InlineText({
   label: string;
   placeholder?: string;
   multiline?: boolean;
+  clamp?: boolean;
   className?: string;
   /** How a value that is not being written shows. */
   format?: (v: string) => string;
@@ -122,6 +125,16 @@ export function InlineText({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+  const opening = useRef(false);
+  // The clamped text gave way to the field: the focus follows, the caret at the end.
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!opening.current || !el) return;
+    opening.current = false;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [draft]);
   const shown = draft ?? (format ? format(value) : value);
   const commit = () => {
     if (draft === null || cancelled.current) {
@@ -152,5 +165,22 @@ export function InlineText({
       }
     },
   };
-  return multiline ? <textarea rows={1} {...common} /> : <input type="text" {...common} />;
+  if (multiline && clamp && draft === null) {
+    return (
+      <div
+        role="textbox"
+        aria-multiline="true"
+        aria-label={label}
+        tabIndex={0}
+        className={`rz-inline rz-clamp ${className ?? ""}`}
+        onFocus={() => {
+          opening.current = true;
+          setDraft(value);
+        }}
+      >
+        {shown ? <span className="rz-clamp-text">{shown}</span> : <span className="rz-placeholder">{placeholder}</span>}
+      </div>
+    );
+  }
+  return multiline ? <textarea ref={area} rows={1} {...common} /> : <input type="text" {...common} />;
 }

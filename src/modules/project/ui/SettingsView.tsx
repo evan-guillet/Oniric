@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Clapperboard,
   Copy,
   DatabaseBackup,
   FileText,
@@ -58,6 +59,10 @@ import {
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext, type SettingsPage } from "./projectContext";
+import { useNumbering, writeNumbering } from "../../realisation/application/shots";
+import { columnLabel, DEFAULT_HIDDEN, FOCUS_KEY, HIDDEN_KEY, ORDER_KEY, SHOT_COLUMNS, type ShotColumn, type ShotOrder } from "../../realisation/ui/ShotlistView";
+import type { ShotNumbering } from "../../realisation/domain/shots";
+import { useStoredState } from "../../../ui-kit/useStoredState";
 
 import { Select } from "../../../ui-kit/Select";
 export const PARTS_HIDDEN_SETTING = "parts_hidden";
@@ -97,6 +102,7 @@ const PAGE_ICONS: Record<PageId, LucideIcon> = {
   backups: DatabaseBackup,
   shortcuts: Keyboard,
   script: FileText,
+  shotlist: Clapperboard,
   parts: LayoutGrid,
   about: Info,
 };
@@ -114,7 +120,7 @@ function pageOf(id: PageId): Page {
 
 const GROUPS: { id: string; pages: PageId[]; projectOnly?: boolean }[] = [
   { id: "application", pages: ["profile", "appearance", "writing", "formats", "backups", "shortcuts"] },
-  { id: "project", projectOnly: true, pages: ["script", "parts"] },
+  { id: "project", projectOnly: true, pages: ["script", "shotlist", "parts"] },
 ];
 
 const fold = (x: string) =>
@@ -269,6 +275,7 @@ export function SettingsScreen({
           )}
           {page === "shortcuts" && <ShortcutSettings />}
           {page === "script" && ctx && <ScriptSettings notify={notify} />}
+          {page === "shotlist" && ctx && <ShotlistSettings notify={notify} />}
           {page === "parts" && ctx && <PartsSettings />}
           {page === "about" && <AboutSettings notify={notify} />}
         </div>
@@ -1294,6 +1301,59 @@ function ScriptSettings({ notify }: { notify: Notify }) {
           </div>
         </Row>
       </Group>
+    </>
+  );
+}
+
+/** How the Découpage lists the shots: their order and numbers, kept in the project, and the fields it shows. */
+function ShotlistSettings({ notify }: { notify: Notify }) {
+  const numbering = useNumbering();
+  const [order, setOrder] = useStoredState<ShotOrder>(ORDER_KEY, "edit");
+  const [hidden, setHidden] = useStoredState<ShotColumn[]>(HIDDEN_KEY, DEFAULT_HIDDEN);
+  const [focus, setFocus] = useStoredState(FOCUS_KEY, true);
+  return (
+    <>
+      <Group title={t("settings.shotlist.listing")}>
+        <Row title={t("shotlist.order")} help={t(`shotlist.orders.${order}Hint`)}>
+          <Select aria-label={t("shotlist.order")} value={order} onChange={(e) => setOrder(e.target.value as ShotOrder)}>
+            {(["edit", "shoot"] as const).map((v) => (
+              <option key={v} value={v}>
+                {t(`shotlist.orders.${v}`)}
+              </option>
+            ))}
+          </Select>
+        </Row>
+        <Row title={t("shotlist.numbering")} help={t(`shotlist.numberings.${numbering}Hint`)}>
+          <Select
+            aria-label={t("shotlist.numbering")}
+            value={numbering}
+            onChange={(e) =>
+              void writeNumbering(e.target.value as ShotNumbering).catch((x) => notify({ text: describeError(x), tone: "error" }))
+            }
+          >
+            {(["dash", "letter"] as const).map((v) => (
+              <option key={v} value={v}>
+                {t(`shotlist.numberings.${v}`)}
+              </option>
+            ))}
+          </Select>
+        </Row>
+        <Row id="shot-focus" title={t("settings.shotlist.focus")} help={t("settings.shotlist.focusHelp")}>
+          <Switch id="shot-focus" checked={focus} onChange={setFocus} />
+        </Row>
+      </Group>
+      <Group title={t("shotlist.shownColumns")}>
+        {SHOT_COLUMNS.map((c) => (
+          <Row key={c} id={`shot-col-${c}`} title={columnLabel(c)}>
+            <Switch
+              id={`shot-col-${c}`}
+              checked={!hidden.includes(c)}
+              onChange={(on) => setHidden(on ? hidden.filter((x) => x !== c) : [...hidden, c])}
+            />
+          </Row>
+        ))}
+      </Group>
+      <p className="set-note">{t("settings.shotlist.note")}</p>
     </>
   );
 }

@@ -31,7 +31,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { useLive } from "../../../core/db/live";
 import { describeError } from "../../../core/errors";
 import { t } from "../../../core/i18n";
@@ -64,7 +63,7 @@ import {
 import { extractPalette, inkOn, mergePalettes, type Swatch } from "../domain/palette";
 import { takeBoardRequest } from "./common";
 
-type Panel = "boards" | "palette" | "links";
+type Panel = "palette" | "links";
 type Geometry = Pick<BoardItem, "x" | "y" | "w" | "h">;
 type View = { x: number; y: number; k: number };
 
@@ -261,22 +260,31 @@ function fitView(items: Geometry[], width: number, height: number, margin = 48, 
   };
 }
 
-/** The moodboards: free boards of images, colours, texts and notes, each tied to scenes or entries [MOO-01 to MOO-06]. */
+/**
+ * The moodboards: free boards of images, colours, texts and notes, each tied to scenes or entries [MOO-01 to MOO-06].
+ * The view opens on all the boards, as cards; one opens on its canvas, its palette and its links in the panel.
+ */
 export function MoodboardView() {
-  const { project, headerActions, ask, notify } = useProject();
+  const { ask, notify, setTrail } = useProject();
   const boards = useLive(loadBoards, [...BOARD_TABLES]);
-  const [stored, setStored] = useStoredState<string | null>(`oniric.moodboard.board.${project.id}`, null);
-  const [boardId, setBoardId] = useState<string | null>(() => takeBoardRequest() ?? stored);
-  const [panel, setPanel] = useStoredState<Panel>("oniric.moodboard.panel", "boards");
+  const [boardId, setBoardId] = useState<string | null>(() => takeBoardRequest());
+  const [panel, setPanel] = useStoredState<Panel>("oniric.moodboard.tab", "palette");
   const [editing, setEditing] = useState<Board | "new" | null>(null);
-  const board = boards?.find((b) => b.id === boardId) ?? boards?.[0] ?? null;
+  const board = boards?.find((b) => b.id === boardId) ?? null;
   const items = useLive(() => (board ? loadItems(board.id) : Promise.resolve([])), ["moodboard_item"], [board?.id]);
   const fail = useCallback((e: unknown) => notify({ text: describeError(e), tone: "error" }), [notify]);
 
-  const choose = (id: string) => {
-    setBoardId(id);
-    setStored(id);
-  };
+  // On a board, the header leads back to all of them; on all of them, it counts them.
+  const viewLabel = t("nav.views.moodboard");
+  const count = boards?.length ?? 0;
+  useEffect(() => {
+    setTrail(
+      board
+        ? [{ label: viewLabel, onClick: () => setBoardId(null) }, { label: board.name }]
+        : [{ label: viewLabel, count }],
+    );
+  }, [board?.id, board?.name, count, viewLabel, setTrail]);
+  useEffect(() => () => setTrail(null), [setTrail]);
 
   const remove = async (b: Board) => {
     if (
@@ -303,51 +311,13 @@ export function MoodboardView() {
     },
   ];
 
-  const header = headerActions
-    ? createPortal(
-        <div className="header-tools">
-          {boards && boards.length > 0 && (
-            <Segmented
-              label={t("moodboard.panel")}
-              value={panel}
-              onChange={setPanel}
-              options={[
-                {
-                  id: "boards",
-                  label: t("moodboard.panels.boards"),
-                  icon: LayoutGrid,
-                },
-                {
-                  id: "palette",
-                  label: t("moodboard.panels.palette"),
-                  icon: Palette,
-                  hint: t("moodboard.panels.paletteHint"),
-                },
-                {
-                  id: "links",
-                  label: t("moodboard.panels.links"),
-                  icon: Link2,
-                  hint: t("moodboard.panels.linksHint"),
-                },
-              ]}
-            />
-          )}
-          <button type="button" className="btn primary" onClick={() => setEditing("new")}>
-            <Plus aria-hidden="true" />
-            {t("moodboard.new")}
-          </button>
-        </div>,
-        headerActions,
-      )
-    : null;
-
   const editor = editing && (
     <BoardDialog
       board={editing === "new" ? null : editing}
       onClose={() => setEditing(null)}
       onSave={async (name, kind) => {
         try {
-          if (editing === "new") choose(await addBoard(boards ?? [], name, kind));
+          if (editing === "new") setBoardId(await addBoard(boards ?? [], name, kind));
           else await updateBoard(editing.id, { name, kind });
         } catch (e) {
           fail(e);
@@ -359,14 +329,13 @@ export function MoodboardView() {
   if (boards && boards.length === 0) {
     return (
       <div className="view view-pad">
-        {header}
         <div className="empty-state mb-empty">
           <h2>{t("moodboard.emptyTitle")}</h2>
           <p className="muted">{t("moodboard.emptyText")}</p>
           <ul className="mb-starters">
             {(["general", "light", "costume", "location"] as const).map((k) => (
               <li key={k}>
-                <button type="button" className="chip" onClick={() => void addBoard([], kindName(k), k).then(choose, fail)}>
+                <button type="button" className="chip" onClick={() => void addBoard([], kindName(k), k).then(setBoardId, fail)}>
                   <Plus aria-hidden="true" />
                   {kindName(k)}
                 </button>
@@ -379,35 +348,69 @@ export function MoodboardView() {
     );
   }
 
+  if (!board) {
+    return (
+      <div className="view view-pad mb-home">
+        <ul className="mb-cards">
+          {(boards ?? []).map((b) => (
+            <li key={b.id} className="mb-card">
+              <button type="button" className="mb-card-open" onClick={() => setBoardId(b.id)}>
+                <span className={`mb-cover n${Math.min(4, b.cover.length)}`} aria-hidden="true">
+                  {b.cover.length === 0 ? <LayoutGrid /> : b.cover.map((p) => <MediaImage key={p} path={p} alt="" />)}
+                </span>
+                <span className="mb-card-text">
+                  <span className="mb-card-name">{b.name}</span>
+                  <span className="mb-card-meta">
+                    {kindName(b.kind)} · {t("moodboard.itemCount", { count: b.items })}
+                  </span>
+                </span>
+              </button>
+              <MoreMenu label={t("moodboard.menu", { name: b.name })} items={boardMenu(b)} />
+            </li>
+          ))}
+          {boards && (
+            <li className="mb-card-add">
+              <button type="button" onClick={() => setEditing("new")}>
+                <Plus aria-hidden="true" />
+                {t("moodboard.new")}
+              </button>
+            </li>
+          )}
+        </ul>
+        {editor}
+      </div>
+    );
+  }
+
   return (
     <div className="view split rz-split mb-split">
-      {header}
-      <main className="mb-main" aria-label={board?.name ?? t("nav.views.moodboard")}>
-        {board && items && <BoardCanvas key={board.id} board={board} items={items} onFail={fail} />}
+      <main className="mb-main" aria-label={board.name}>
+        {items && <BoardCanvas key={board.id} board={board} items={items} onFail={fail} />}
       </main>
       <aside className="view-side rz-side" aria-label={t(`moodboard.panels.${panel}`)}>
-        {panel === "boards" && (
-          <ul className="mb-boards">
-            {(boards ?? []).map((b) => (
-              <li key={b.id} className={b.id === board?.id ? "mb-board on" : "mb-board"}>
-                <button type="button" className="mb-board-open" aria-current={b.id === board?.id} onClick={() => choose(b.id)}>
-                  <span className={`mb-cover n${Math.min(4, b.cover.length)}`} aria-hidden="true">
-                    {b.cover.length === 0 ? <LayoutGrid /> : b.cover.map((p) => <MediaImage key={p} path={p} alt="" />)}
-                  </span>
-                  <span className="mb-board-text">
-                    <span className="mb-board-name">{b.name}</span>
-                    <span className="mb-board-meta">
-                      {kindName(b.kind)} · {t("moodboard.itemCount", { count: b.items })}
-                    </span>
-                  </span>
-                </button>
-                <MoreMenu label={t("moodboard.menu", { name: b.name })} items={boardMenu(b)} />
-              </li>
-            ))}
-          </ul>
-        )}
-        {panel === "palette" && board && items && <PalettePanel board={board} items={items} onFail={fail} />}
-        {panel === "links" && board && <LinksPanel board={board} onFail={fail} />}
+        <div className="side-tabs">
+          <Segmented
+            label={t("moodboard.panel")}
+            value={panel}
+            onChange={setPanel}
+            options={[
+              {
+                id: "palette",
+                label: t("moodboard.panels.palette"),
+                icon: Palette,
+                hint: t("moodboard.panels.paletteHint"),
+              },
+              {
+                id: "links",
+                label: t("moodboard.panels.links"),
+                icon: Link2,
+                hint: t("moodboard.panels.linksHint"),
+              },
+            ]}
+          />
+        </div>
+        {panel === "palette" && items && <PalettePanel board={board} items={items} onFail={fail} />}
+        {panel === "links" && <LinksPanel board={board} onFail={fail} />}
       </aside>
       {editor}
     </div>
