@@ -706,7 +706,6 @@
       "edit": "Edit",
       "unarchive": "Unarchive",
       "archive": "Archive",
-      "archiveHint": "Puts the note away under the list, in “Archived”, without erasing it.",
       "delete": "Delete",
       "deleteAsk": "Delete the note?",
       "deleteText": "It leaves the screenplay and the list of notes.",
@@ -715,9 +714,7 @@
       "createHint": "On the selected passage, or the cursor’s line",
       "archived": "Archived",
       "note": "Note",
-      "placeholder": "Your note…",
-      "justNow": "Just now",
-      "write": "Write the note…"
+      "placeholder": "Your note…"
     },
     "panels": {
       "scenes": "Scenes",

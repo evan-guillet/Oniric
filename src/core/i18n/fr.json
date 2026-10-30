@@ -706,7 +706,6 @@
       "edit": "Modifier",
       "unarchive": "Désarchiver",
       "archive": "Archiver",
-      "archiveHint": "Range la note sous la liste, dans « Archivées », sans l'effacer.",
       "delete": "Supprimer",
       "deleteAsk": "Supprimer la note ?",
       "deleteText": "Elle quitte le scénario et la liste des notes.",
@@ -715,9 +714,7 @@
       "createHint": "Sur le passage sélectionné, ou la ligne du curseur",
       "archived": "Archivées",
       "note": "Note",
-      "placeholder": "Votre note…",
-      "justNow": "À l'instant",
-      "write": "Écrire la note…"
+      "placeholder": "Votre note…"
     },
     "panels": {
       "scenes": "Scènes",

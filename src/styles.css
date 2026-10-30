@@ -3151,6 +3151,11 @@ h4 {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+/* An archived note leaves the text: its passage reads as plain text again */
+.note-mark:has(.note-off) {
+  background: none;
+  border-bottom-color: transparent;
+}
 .wiki-popup,
 .wiki-preview {
   position: fixed;
@@ -3270,17 +3275,13 @@ h4 {
   font-size: 12px;
   font-weight: 400;
 }
-/* A note's card, under the line of its passage: who and when, the passage quoted, then the note, written in place */
+/* A note's card over the text, under the line of its passage: the card of the notes panel, lifted off the page */
 .note-pop {
   position: fixed;
   z-index: 30;
-  display: grid;
-  gap: 8px;
-  width: 380px;
+  width: 320px;
   max-width: calc(100vw - 16px);
-  padding: 12px 14px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
@@ -3288,65 +3289,25 @@ h4 {
   font-size: 13px;
   line-height: 1.45;
   font-style: normal;
+  font-weight: 400;
   text-transform: none;
   text-align: left;
   animation: wiki-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.note-pop-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+.note-pop:empty {
+  display: none;
 }
-.note-pop-head strong {
-  overflow: hidden;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.note-pop-avatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 11px;
-  font-weight: 600;
-}
-.note-pop-time {
-  flex: none;
-  color: var(--muted);
-  font-size: 12px;
-}
-.note-pop-quote {
+.note-pop .note-quote {
   display: -webkit-box;
-  margin-left: 30px;
-  padding-left: 10px;
+  margin: 0;
   overflow: hidden;
-  border-left: 2px solid rgba(232, 184, 0, 0.85);
-  color: var(--ink-2);
+  cursor: default;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
-.note-pop-field {
-  width: calc(100% - 30px);
-  min-height: 22px;
-  margin-left: 30px;
-  padding: 2px 0;
-  border: none;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 13.5px;
-  resize: none;
-  overflow: hidden;
-  outline: none;
-}
-.note-pop-field::placeholder {
-  color: var(--hint);
+.note-pop .note-body {
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 /* The way to the entry: the pointer moves onto it from the link, a click opens the entry */

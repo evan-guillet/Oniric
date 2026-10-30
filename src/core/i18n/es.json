@@ -706,7 +706,6 @@
       "edit": "Modificar",
       "unarchive": "Desarchivar",
       "archive": "Archivar",
-      "archiveHint": "Guarda la nota bajo la lista, en «Archivadas», sin borrarla.",
       "delete": "Eliminar",
       "deleteAsk": "¿Eliminar la nota?",
       "deleteText": "Sale del guion y de la lista de notas.",
@@ -715,9 +714,7 @@
       "createHint": "En el fragmento seleccionado, o en la línea del cursor",
       "archived": "Archivadas",
       "note": "Nota",
-      "placeholder": "Tu nota…",
-      "justNow": "Ahora mismo",
-      "write": "Escribir la nota…"
+      "placeholder": "Tu nota…"
     },
     "panels": {
       "scenes": "Escenas",

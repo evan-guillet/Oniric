@@ -57,7 +57,7 @@ import {
 import { schema } from "./editor/schema";
 import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
 import { sceneGapsPlugin } from "./editor/sceneGaps";
-import { notePlugin, type NoteSource } from "./editor/notePlugin";
+import { notePlugin, refreshNotes, type NoteHost } from "./editor/notePlugin";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
 import { PrintPages } from "./PrintPages";
@@ -158,20 +158,23 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   };
   const togglePreviewRef = useRef(togglePreview);
   togglePreviewRef.current = togglePreview;
-  // The notes and the profile's name, for the card a note opens in the text.
+  // The notes, for the card a passage opens in the text; an archived one leaves the text.
   const notes = useLive(loadNotes, ["note"]);
-  const author = useProfile()?.name ?? "";
-  const noteSource = useRef<NoteSource | null>(null);
-  noteSource.current = {
-    get: (id) => {
-      const n = notes?.find((x) => x.id === id);
-      return n && { body: n.body, createdAt: n.createdAt, author };
+  const [popped, setPopped] = useState<{ id: string; card: HTMLElement } | null>(null);
+  const [popEditing, setPopEditing] = useState(false);
+  const noteHost = useRef<NoteHost | null>(null);
+  noteHost.current = {
+    open: (id) => !!notes?.some((n) => n.id === id && !n.resolved),
+    archived: () => new Set(notes?.filter((n) => n.resolved).map((n) => n.id)),
+    render: (id, card) => {
+      setPopEditing(false);
+      setPopped(id ? { id, card } : null);
     },
-    save: (id, text) =>
-      void write("Note", ["note"], [db.updateTable("note").set({ body: text, updated_at: nowIso() }).where("id", "=", id)]).catch((e) =>
-        notify({ text: describeError(e), tone: "error" }),
-      ),
   };
+  useEffect(() => {
+    const view = editorRef.current?.view;
+    if (view && notes) refreshNotes(view);
+  }, [notes]);
   const rowsRef = useRef<SceneRow[]>([]);
   /** « + Nouvelle scène » between two cards: set once the story is loaded. */
   const addAfterRef = useRef<(afterId: string) => void>(() => {});
@@ -179,7 +182,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     () => [
       wikiPlugin(schema.marks.wikilink, () => bibleIndex, () => linksRef.current),
       sceneGapsPlugin((id) => addAfterRef.current(id)),
-      notePlugin(schema.marks.note, schema.marks.wikilink, () => noteSource.current),
+      notePlugin(schema.marks.note, schema.marks.wikilink, () => noteHost.current),
     ],
     [],
   );
@@ -650,6 +653,33 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         </main>
       </div>
 
+      {/* The card of the note under the caret or the pointer, drawn where the editor placed it. */}
+      {popped &&
+        (() => {
+          const n = notes?.find((x) => x.id === popped.id);
+          const editor = editorRef.current;
+          if (!n) return null;
+          return createPortal(
+            <NoteCard
+              key={n.id}
+              note={n}
+              span={editor?.marks("note").find((s) => s.id === n.id) ?? null}
+              editor={editor}
+              editing={popEditing}
+              onEditing={(on) => {
+                setPopEditing(on);
+                // Written, the note gives the caret back to the text, unless the focus went elsewhere.
+                if (!on)
+                  requestAnimationFrame(() => {
+                    if (!document.activeElement || document.activeElement === document.body) editor?.focus();
+                  });
+              }}
+              inText
+            />,
+            popped.card,
+          );
+        })()}
+
       {active &&
         headerActions &&
         createPortal(
@@ -883,7 +913,7 @@ async function loadNotes(): Promise<NoteRow[]> {
 
 /** Margin notes anchored to a passage of the screenplay [EDT-07]. */
 function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
-  const { session, notify, ask } = useProject();
+  const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
   const [archives, setArchives] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -899,7 +929,7 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
   const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
-  // `resolved` holds « archivée »: the note leaves the list, its passage stays marked.
+  // `resolved` holds « archivée »: the note leaves the list and the text; its passage keeps the mark, unhighlighted.
   const sorted = [...notes].sort((a, b) => order(a) - order(b));
   const open = sorted.filter((n) => !n.resolved);
   const archived = sorted.filter((n) => n.resolved);
@@ -940,90 +970,16 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
     }
   };
 
-  const update = (
-    id: string,
-    patch: { body?: string; resolved?: number; deleted_at?: string },
-  ) =>
-    write(
-      "Note",
-      ["note"],
-      [
-        db
-          .updateTable("note")
-          .set({ ...patch, updated_at: nowIso() })
-          .where("id", "=", id),
-      ],
-    ).catch((e) => notify({ text: describeError(e), tone: "error" }));
-
-  const card = (n: NoteRow) => {
-    const span = spans.get(n.id);
-    const isEditing = editing === n.id;
-    return (
-      <li key={n.id} className={n.resolved ? "note resolved" : "note"}>
-        <div className="note-top">
-          <button
-            type="button"
-            className="note-quote"
-            disabled={!span}
-            onClick={() => span && editor?.reveal(span.from, span.to)}
-            title={
-              span ? t("script.notes.show") : t("script.notes.gone")
-            }
-          >
-            {t("dash.quote", { quote: span?.text ?? n.quote })}
-            {!span && (
-              <span className="badge warn">{t("script.notes.goneBadge")}</span>
-            )}
-          </button>
-          <MoreMenu
-            label={t("script.notes.actions")}
-            items={[
-              {
-                label: t("script.notes.edit"),
-                icon: Pencil,
-                onClick: () => setEditing(n.id),
-              },
-              n.resolved
-                ? {
-                    label: t("script.notes.unarchive"),
-                    icon: ArchiveRestore,
-                    onClick: () => void update(n.id, { resolved: 0 }),
-                  }
-                : {
-                    label: t("script.notes.archive"),
-                    icon: Archive,
-                    hint: t("script.notes.archiveHint"),
-                    onClick: () => void update(n.id, { resolved: 1 }),
-                  },
-              {
-                label: t("script.notes.delete"),
-                icon: Trash2,
-                danger: true,
-                onClick: async () => {
-                  if (!(await confirmRemoval(ask, { title: t("script.notes.deleteAsk"), text: t("script.notes.deleteText") }))) return;
-                  editor?.removeMarkById("note", n.id);
-                  void update(n.id, { deleted_at: nowIso() });
-                },
-              },
-            ]}
-          />
-        </div>
-        {isEditing ? (
-          <NoteBody
-            value={n.body}
-            onDone={(body) => {
-              setEditing(null);
-              if (body !== n.body) void update(n.id, { body });
-            }}
-          />
-        ) : n.body.trim() ? (
-          <p className="note-body">{n.body}</p>
-        ) : (
-          <p className="note-body muted">{t("script.notes.empty")}</p>
-        )}
-      </li>
-    );
-  };
+  const card = (n: NoteRow) => (
+    <NoteCard
+      key={n.id}
+      note={n}
+      span={spans.get(n.id) ?? null}
+      editor={editor}
+      editing={editing === n.id}
+      onEditing={(on) => setEditing(on ? n.id : null)}
+    />
+  );
 
   return (
     <div className="notes-panel">
@@ -1052,6 +1008,86 @@ function NotesPanel({ editor }: { editor: ScriptEditor | null }) {
         </section>
       )}
     </div>
+  );
+}
+
+/**
+ * A note's card, the same in the notes panel and over the text: the passage quoted, the « ⋯ » menu, the note.
+ * Over the text (`inText`) the passage is right under it: it is quoted, not a way to reach it.
+ */
+function NoteCard({
+  note: n,
+  span,
+  editor,
+  editing,
+  onEditing,
+  inText = false,
+}: {
+  note: NoteRow;
+  span: { from: number; to: number; text: string } | null;
+  editor: ScriptEditor | null;
+  editing: boolean;
+  onEditing: (on: boolean) => void;
+  inText?: boolean;
+}) {
+  const { notify, ask } = useProject();
+  const Tag = inText ? "div" : "li";
+  const update = (patch: { body?: string; resolved?: number; deleted_at?: string }) =>
+    write("Note", ["note"], [db.updateTable("note").set({ ...patch, updated_at: nowIso() }).where("id", "=", n.id)]).catch((e) =>
+      notify({ text: describeError(e), tone: "error" }),
+    );
+  const quote = t("dash.quote", { quote: span?.text ?? n.quote });
+  return (
+    <Tag className={n.resolved ? "note resolved" : "note"}>
+      <div className="note-top">
+        {inText ? (
+          <p className="note-quote">{quote}</p>
+        ) : (
+          <button
+            type="button"
+            className="note-quote"
+            disabled={!span}
+            onClick={() => span && editor?.reveal(span.from, span.to)}
+            title={span ? t("script.notes.show") : t("script.notes.gone")}
+          >
+            {quote}
+            {!span && <span className="badge warn">{t("script.notes.goneBadge")}</span>}
+          </button>
+        )}
+        <MoreMenu
+          label={t("script.notes.actions")}
+          items={[
+            { label: t("script.notes.edit"), icon: Pencil, onClick: () => onEditing(true) },
+            n.resolved
+              ? { label: t("script.notes.unarchive"), icon: ArchiveRestore, onClick: () => void update({ resolved: 0 }) }
+              : { label: t("script.notes.archive"), icon: Archive, onClick: () => void update({ resolved: 1 }) },
+            {
+              label: t("script.notes.delete"),
+              icon: Trash2,
+              danger: true,
+              onClick: async () => {
+                if (!(await confirmRemoval(ask, { title: t("script.notes.deleteAsk"), text: t("script.notes.deleteText") }))) return;
+                editor?.removeMarkById("note", n.id);
+                void update({ deleted_at: nowIso() });
+              },
+            },
+          ]}
+        />
+      </div>
+      {editing ? (
+        <NoteBody
+          value={n.body}
+          onDone={(body) => {
+            onEditing(false);
+            if (body !== n.body) void update({ body });
+          }}
+        />
+      ) : n.body.trim() ? (
+        <p className="note-body">{n.body}</p>
+      ) : (
+        <p className="note-body muted">{t("script.notes.empty")}</p>
+      )}
+    </Tag>
   );
 }
 
