@@ -57,6 +57,7 @@ import {
 import { schema } from "./editor/schema";
 import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
 import { sceneGapsPlugin } from "./editor/sceneGaps";
+import { notePlugin, type NoteSource } from "./editor/notePlugin";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
 import { PrintPages } from "./PrintPages";
@@ -157,6 +158,20 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   };
   const togglePreviewRef = useRef(togglePreview);
   togglePreviewRef.current = togglePreview;
+  // The notes and the profile's name, for the card a note opens in the text.
+  const notes = useLive(loadNotes, ["note"]);
+  const author = useProfile()?.name ?? "";
+  const noteSource = useRef<NoteSource | null>(null);
+  noteSource.current = {
+    get: (id) => {
+      const n = notes?.find((x) => x.id === id);
+      return n && { body: n.body, createdAt: n.createdAt, author };
+    },
+    save: (id, text) =>
+      void write("Note", ["note"], [db.updateTable("note").set({ body: text, updated_at: nowIso() }).where("id", "=", id)]).catch((e) =>
+        notify({ text: describeError(e), tone: "error" }),
+      ),
+  };
   const rowsRef = useRef<SceneRow[]>([]);
   /** « + Nouvelle scène » between two cards: set once the story is loaded. */
   const addAfterRef = useRef<(afterId: string) => void>(() => {});
@@ -164,6 +179,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     () => [
       wikiPlugin(schema.marks.wikilink, () => bibleIndex, () => linksRef.current),
       sceneGapsPlugin((id) => addAfterRef.current(id)),
+      notePlugin(schema.marks.note, schema.marks.wikilink, () => noteSource.current),
     ],
     [],
   );
@@ -638,23 +654,24 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         headerActions &&
         createPortal(
           <div className="header-tools">
-            <button
-              type="button"
-              className={preview ? "btn on" : "btn"}
-              aria-pressed={preview}
-              title={t("script.previewTitle")}
-              onClick={togglePreview}
-            >
-              <BookOpen aria-hidden="true" />
-              <span>{t("script.preview")}</span>
-            </button>
-            <span className="bar-sep" aria-hidden="true" />
             <Segmented
               label={t("script.panel")}
               options={panelTabs()}
               value={panel}
               onChange={showPanel}
               compact
+              lead={
+                <button
+                  type="button"
+                  className={preview ? "seg on" : "seg"}
+                  aria-pressed={preview}
+                  title={t("script.previewTitle")}
+                  onClick={togglePreview}
+                >
+                  <BookOpen aria-hidden="true" />
+                  <span>{t("script.preview")}</span>
+                </button>
+              }
             />
           </div>,
           headerActions,

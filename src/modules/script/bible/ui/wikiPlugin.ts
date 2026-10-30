@@ -329,7 +329,7 @@ export function wikiPlugin(mark: MarkType, source: () => WikiSource | null, link
         const h = a ? null : here(state);
         if (h) return DecorationSet.create(state.doc, [Decoration.inline(h.from, h.to, { class: "wiki-current" })]);
         if (!a) return null;
-        const marks = [Decoration.inline(a.from, a.to, { class: "wiki-typing" })];
+        const marks = [Decoration.inline(a.from, a.to, { class: a.bare ? "wiki-typing bare" : "wiki-typing" })];
         if (a.bare) marks.push(Decoration.widget(a.to, () => el("span", "wiki-ghost", t("bible.menuPlaceholder")), { side: 1, key: "ghost" }));
         return DecorationSet.create(state.doc, marks);
       },

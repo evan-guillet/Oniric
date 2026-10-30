@@ -715,7 +715,9 @@
       "createHint": "On the selected passage, or the cursor’s line",
       "archived": "Archived",
       "note": "Note",
-      "placeholder": "Your note…"
+      "placeholder": "Your note…",
+      "justNow": "Just now",
+      "write": "Write the note…"
     },
     "panels": {
       "scenes": "Scenes",
@@ -1196,7 +1198,7 @@
     "menuCreate": "New entry",
     "menuClose": "Close menu",
     "menuCloseKey": "Esc",
-    "menuPlaceholder": "Type a name to search"
+    "menuPlaceholder": "Type to search"
   },
   "entry": {
     "archivedBadge": "Archived",

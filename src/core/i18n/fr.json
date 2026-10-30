@@ -715,7 +715,9 @@
       "createHint": "Sur le passage sélectionné, ou la ligne du curseur",
       "archived": "Archivées",
       "note": "Note",
-      "placeholder": "Votre note…"
+      "placeholder": "Votre note…",
+      "justNow": "À l'instant",
+      "write": "Écrire la note…"
     },
     "panels": {
       "scenes": "Scènes",
@@ -1196,7 +1198,7 @@
     "menuCreate": "Nouvelle fiche",
     "menuClose": "Fermer le menu",
     "menuCloseKey": "Échap",
-    "menuPlaceholder": "Saisissez un nom pour chercher"
+    "menuPlaceholder": "Saisissez du texte pour chercher"
   },
   "entry": {
     "archivedBadge": "Archivée",

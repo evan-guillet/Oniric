@@ -3112,23 +3112,32 @@ h4 {
   background: color-mix(in srgb, var(--link) 20%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--link) 20%, transparent);
 }
-/* What is typed after « / », « @ » or « [[ », until it is chosen: a badge, without moving the text around it */
+/* What is typed after « / », « @ » or « [[ », until it is chosen: a quiet field in the text, the colour of the ink
+   lightly laid under it and drawn 2px past its edges, without moving the text around it */
 .wiki-typing {
-  color: var(--accent);
-  background: var(--accent-soft);
+  --field: color-mix(in srgb, currentColor 9%, transparent);
+  background: var(--field);
   border-radius: 4px;
-  box-shadow: 0 0 0 2px var(--accent-soft), inset 0 0 0 1px var(--accent-line);
+  box-shadow: 0 0 0 2px var(--field);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
-.page-column .wiki-typing {
-  color: var(--paper-link);
-  background: var(--paper-link-bg);
-  box-shadow: 0 0 0 2px var(--paper-link-bg), inset 0 0 0 1px currentColor;
+/* « / » alone: the field goes on under what to type next; the two halves meet at the caret without overlapping */
+.wiki-typing.bare {
+  border-radius: 4px 0 0 4px;
+  box-shadow:
+    -2px 0 0 var(--field),
+    0 -2px 0 var(--field),
+    0 2px 0 var(--field);
 }
-/* After « / » alone, what to type next, in the place of the text */
 .wiki-ghost {
-  margin-left: 4px;
+  --field: color-mix(in srgb, currentColor 9%, transparent);
+  padding-right: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--field);
+  box-shadow:
+    0 -2px 0 var(--field),
+    0 2px 0 var(--field);
   color: var(--hint);
   pointer-events: none;
   user-select: none;
@@ -3261,6 +3270,85 @@ h4 {
   font-size: 12px;
   font-weight: 400;
 }
+/* A note's card, under the line of its passage: who and when, the passage quoted, then the note, written in place */
+.note-pop {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: 380px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--ui-font);
+  font-size: 13px;
+  line-height: 1.45;
+  font-style: normal;
+  text-transform: none;
+  text-align: left;
+  animation: wiki-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.note-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.note-pop-head strong {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.note-pop-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+.note-pop-time {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.note-pop-quote {
+  display: -webkit-box;
+  margin-left: 30px;
+  padding-left: 10px;
+  overflow: hidden;
+  border-left: 2px solid rgba(232, 184, 0, 0.85);
+  color: var(--ink-2);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.note-pop-field {
+  width: calc(100% - 30px);
+  min-height: 22px;
+  margin-left: 30px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+.note-pop-field::placeholder {
+  color: var(--hint);
+}
+
 /* The way to the entry: the pointer moves onto it from the link, a click opens the entry */
 .wiki-preview {
   display: grid;
@@ -6780,6 +6868,14 @@ button.vr-stop-body:focus-visible {
 }
 .header-tools .seg {
   border-radius: 7px;
+}
+/* Between a toggle of its own and the choice, in the same track */
+.seg-sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--line-strong);
 }
 /* « Affichage » in a panel: one row per option, its box first, the whole row ticks it. */
 .check-list {

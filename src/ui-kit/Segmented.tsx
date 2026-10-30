@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 export interface SegmentedOption<T extends string> {
   id: T;
@@ -15,6 +16,7 @@ export function Segmented<T extends string>({
   onChange,
   compact,
   disabled,
+  lead,
 }: {
   label: string;
   options: SegmentedOption<T>[];
@@ -25,9 +27,13 @@ export function Segmented<T extends string>({
   compact?: boolean;
   /** The choice does not apply to what is shown; it is kept for when it does again. */
   disabled?: boolean;
+  /** A toggle of its own at the head of the track (`.seg`), set apart from the choice by a thin rule. */
+  lead?: ReactNode;
 }) {
   return (
     <div className={compact ? "segmented compact" : "segmented"} role="group" aria-label={label}>
+      {lead}
+      {lead && <span className="seg-sep" aria-hidden="true" />}
       {options.map((o) => (
         <button
           key={o.id}

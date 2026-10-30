@@ -715,7 +715,9 @@
       "createHint": "En el fragmento seleccionado, o en la línea del cursor",
       "archived": "Archivadas",
       "note": "Nota",
-      "placeholder": "Tu nota…"
+      "placeholder": "Tu nota…",
+      "justNow": "Ahora mismo",
+      "write": "Escribir la nota…"
     },
     "panels": {
       "scenes": "Escenas",
@@ -1196,7 +1198,7 @@
     "menuCreate": "Nueva ficha",
     "menuClose": "Cerrar el menú",
     "menuCloseKey": "Esc",
-    "menuPlaceholder": "Escribe un nombre para buscar"
+    "menuPlaceholder": "Escribe para buscar"
   },
   "entry": {
     "archivedBadge": "Archivada",
