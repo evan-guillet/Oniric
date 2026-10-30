@@ -675,8 +675,6 @@
     "preview": "Aperçu",
     "panel": "Panneau",
     "info": {
-      "fromProfile": "Repris de votre profil ; un champ changé ici ne vaut que pour ce script.",
-      "editProfile": "Modifier le profil",
       "takeBackButton": "Reprendre le profil",
       "otherLines": "Autres lignes",
       "otherLinesPlaceholder": "Production, site, dépôt…",
@@ -1193,7 +1191,12 @@
     "createNamed": "Créer « {{name}} »",
     "type": "Type",
     "openEntry": "Ouvrir la fiche",
-    "openEntryNamed": "Ouvrir la fiche {{name}}"
+    "openEntryNamed": "Ouvrir la fiche {{name}}",
+    "menuEntries": "Fiches de la Bible",
+    "menuCreate": "Nouvelle fiche",
+    "menuClose": "Fermer le menu",
+    "menuCloseKey": "Échap",
+    "menuPlaceholder": "Saisissez un nom pour chercher"
   },
   "entry": {
     "archivedBadge": "Archivée",

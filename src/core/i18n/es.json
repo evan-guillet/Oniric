@@ -675,8 +675,6 @@
     "preview": "Vista previa",
     "panel": "Panel",
     "info": {
-      "fromProfile": "Tomado de tu perfil; un campo cambiado aquí solo vale para este guion.",
-      "editProfile": "Modificar el perfil",
       "takeBackButton": "Volver al perfil",
       "otherLines": "Otras líneas",
       "otherLinesPlaceholder": "Producción, web, registro…",
@@ -1193,7 +1191,12 @@
     "createNamed": "Crear «{{name}}»",
     "type": "Tipo",
     "openEntry": "Abrir la ficha",
-    "openEntryNamed": "Abrir la ficha {{name}}"
+    "openEntryNamed": "Abrir la ficha {{name}}",
+    "menuEntries": "Fichas de la Biblia",
+    "menuCreate": "Nueva ficha",
+    "menuClose": "Cerrar el menú",
+    "menuCloseKey": "Esc",
+    "menuPlaceholder": "Escribe un nombre para buscar"
   },
   "entry": {
     "archivedBadge": "Archivada",

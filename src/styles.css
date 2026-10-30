@@ -3092,17 +3092,25 @@ h4 {
   margin: 0 auto;
   padding: 22px 28px;
 }
+/* A link to the Bible reads in the link colour; it shines while the caret or the pointer is in it */
 .wikilink {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-line);
-  text-underline-offset: 3px;
+  --link: var(--accent);
+  color: var(--link);
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition:
+    background-color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 .page-column .wikilink {
-  color: var(--paper-link);
-  text-decoration: none;
-  background: var(--paper-link-bg);
-  border-radius: 2px;
+  --link: var(--paper-link);
+}
+.wikilink:hover,
+.wikilink .wiki-current,
+.wiki-current .wikilink {
+  background: color-mix(in srgb, var(--link) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--link) 20%, transparent);
 }
 /* What is typed after « / », « @ » or « [[ », until it is chosen: a badge, without moving the text around it */
 .wiki-typing {
@@ -3118,16 +3126,26 @@ h4 {
   background: var(--paper-link-bg);
   box-shadow: 0 0 0 2px var(--paper-link-bg), inset 0 0 0 1px currentColor;
 }
+/* After « / » alone, what to type next, in the place of the text */
+.wiki-ghost {
+  margin-left: 4px;
+  color: var(--hint);
+  pointer-events: none;
+  user-select: none;
+  font-style: normal;
+  text-transform: none;
+}
+/* The words a note is about: a highlighter tint and a line under them */
 .note-mark {
-  background: rgba(245, 190, 40, 0.34);
-  border-radius: 2px;
+  background: rgba(255, 206, 0, 0.16);
+  border-bottom: 2px solid rgba(232, 184, 0, 0.85);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 .wiki-popup,
 .wiki-preview {
   position: fixed;
   z-index: 30;
-  min-width: 220px;
-  max-width: 340px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -3138,16 +3156,45 @@ h4 {
   line-height: 1.4;
   text-transform: none;
   font-style: normal;
+  text-align: left;
 }
+/* The « / » menu: sections, rows with the type's icon, and a way out at the foot */
 .wiki-popup {
-  padding: 4px;
-  max-height: 260px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-height: min(360px, calc(100vh - 16px));
+  overflow: hidden;
+  animation: wiki-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes wiki-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+.wiki-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.wiki-section {
+  padding: 6px 8px 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.wiki-sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--line);
 }
 .wiki-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   height: 32px;
   padding: 0 8px;
@@ -3155,23 +3202,71 @@ h4 {
   cursor: pointer;
 }
 .wiki-item.on {
-  background: var(--accent-soft);
+  background: var(--hover);
+}
+.wiki-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--ink-2);
+}
+.wiki-label {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+.wiki-label .wiki-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiki-label .wiki-type::before {
+  content: "·";
+  margin: 0 6px;
 }
 .wiki-name {
   font-weight: 500;
 }
 /* A name the Bible does not know: the rows that make its entry, in the accent */
-.wiki-item.create .wiki-name {
+.wiki-item.create .wiki-name,
+.wiki-item.create .wiki-icon {
   color: var(--accent);
 }
 .wiki-type {
+  flex: none;
   color: var(--muted);
   font-size: 12px;
+}
+.wiki-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+.wiki-foot:hover {
+  background: var(--hover);
+}
+.wiki-foot kbd {
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
 }
 /* The way to the entry: the pointer moves onto it from the link, a click opens the entry */
 .wiki-preview {
   display: grid;
   gap: 6px;
+  min-width: 220px;
+  max-width: 340px;
   padding: 10px 12px;
   cursor: pointer;
   transition:
@@ -6894,13 +6989,14 @@ button.vr-stop-body:focus-visible {
   background: var(--accent-soft);
 }
 .desk.sheetless .page-column .wikilink {
-  color: var(--accent);
-  background: var(--accent-soft);
+  --link: var(--accent);
 }
 /* « Liens Bible » off: the links read as the text around them */
-.desk.links-off .page-column .wikilink {
+.desk.links-off .page-column .wikilink,
+.desk.links-off .page-column .wikilink .wiki-current {
   color: inherit;
   background: none;
+  box-shadow: none;
 }
 /* No page break to open, so an element keeps its space even at the top of a printed page */
 .desk.sheetless .mount .ProseMirror .el.page-top {
@@ -7504,21 +7600,6 @@ button.vr-stop-body:focus-visible {
 /* The contact, field by field: what the profile gives, unless this script changes it. */
 .contact-fields {
   gap: 10px;
-}
-.contact-from {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 8px;
-  margin: -6px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--muted);
-}
-.contact-from .btn.small.text {
-  height: auto;
-  font-size: 12px;
-  color: var(--accent);
 }
 .contact-field {
   display: grid;

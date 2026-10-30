@@ -691,7 +691,7 @@ function TitlePagePanel({
   profile: Profile | null;
   onChange: (p: TitlePage) => void;
 }) {
-  const { ask, openSettings } = useProject();
+  const { ask } = useProject();
   // A field typed back to the profile's value follows the profile again.
   const setContact = (k: ContactKey, value: string) => {
     const fields = { ...page.contactFields };
@@ -773,12 +773,6 @@ function TitlePagePanel({
       {field("basedOn", t("script.info.basedOn"), 1, t("script.info.basedOnPlaceholder"))}
       <fieldset className="field contact-fields">
         <legend>{t("script.info.contact")}</legend>
-        <p className="contact-from">
-          <span>{t("script.info.fromProfile")}</span>
-          <button type="button" className="btn small text" onClick={() => openSettings("profile")}>
-            {t("script.info.editProfile")}
-          </button>
-        </p>
         {CONTACT_FIELDS.map((f) => {
           const id = `title-contact-${f.key}`;
           const value = contactValue(page, profile, f.key);

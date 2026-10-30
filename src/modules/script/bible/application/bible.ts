@@ -336,7 +336,7 @@ export async function importBible(text: string): Promise<{ added: number; update
 /** Entries known to the wiki links of every editor, kept up to date. */
 class BibleIndex implements WikiSource {
   private entries: Entry[] = [];
-  private typeNames = new Map<string, string>();
+  private typeOf = new Map<string, { name: string; icon?: string }>();
   private stop: (() => void) | null = null;
   opener: (id: string) => void = () => {};
 
@@ -355,11 +355,12 @@ class BibleIndex implements WikiSource {
   private async refresh() {
     const [entries, types] = await Promise.all([loadEntries(), loadTypes()]);
     this.entries = entries.filter((e) => !e.archivedAt);
-    this.typeNames = new Map(types.map((t) => [t.id, t.name]));
+    this.typeOf = new Map(types.map((t) => [t.id, { name: t.name, icon: t.icon }]));
   }
 
   private target(e: Entry): WikiTarget {
-    return { id: e.id, name: e.name, typeName: this.typeNames.get(e.type) ?? e.type, summary: e.summary };
+    const type = this.typeOf.get(e.type);
+    return { id: e.id, name: e.name, typeName: type?.name ?? e.type, icon: type?.icon, summary: e.summary };
   }
 
   all(): Entry[] {
@@ -388,13 +389,14 @@ class BibleIndex implements WikiSource {
     this.opener(id);
   }
 
-  types(): { id: string; name: string }[] {
-    return [...this.typeNames].map(([id, name]) => ({ id, name }));
+  types(): { id: string; name: string; icon?: string }[] {
+    return [...this.typeOf].map(([id, x]) => ({ id, ...x }));
   }
 
   async create(type: string, name: string): Promise<WikiTarget> {
     const id = await createEntry(type, name);
-    return { id, name: name.trim(), typeName: this.typeNames.get(type) ?? type, summary: "" };
+    const x = this.typeOf.get(type);
+    return { id, name: name.trim(), typeName: x?.name ?? type, icon: x?.icon, summary: "" };
   }
 }
 

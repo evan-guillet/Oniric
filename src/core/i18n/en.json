@@ -675,8 +675,6 @@
     "preview": "Preview",
     "panel": "Panel",
     "info": {
-      "fromProfile": "Taken from your profile; a field changed here applies to this script only.",
-      "editProfile": "Edit profile",
       "takeBackButton": "Use the profile",
       "otherLines": "Other lines",
       "otherLinesPlaceholder": "Production, website, registration…",
@@ -1193,7 +1191,12 @@
     "createNamed": "Create “{{name}}”",
     "type": "Type",
     "openEntry": "Open the entry",
-    "openEntryNamed": "Open the entry {{name}}"
+    "openEntryNamed": "Open the entry {{name}}",
+    "menuEntries": "Bible entries",
+    "menuCreate": "New entry",
+    "menuClose": "Close menu",
+    "menuCloseKey": "Esc",
+    "menuPlaceholder": "Type a name to search"
   },
   "entry": {
     "archivedBadge": "Archived",
