@@ -8780,14 +8780,43 @@ button[aria-expanded="true"] .stats-chevron {
   height: 20px;
   margin: 0 3px;
 }
-.rz-dock button.rz-dock-icon {
-  width: 36px;
-  padding: 0;
+/* The search, as wide as the two shapes, sunk in the bar; how many scenes it finds beside it. */
+.rz-dock .rz-search {
+  flex: none;
+  width: 264px;
+  height: 36px;
+  padding: 0 8px 0 32px;
+  border: none;
+  border-radius: 11px;
+  background: var(--sunken) var(--magnifier) no-repeat 10px center / 15px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  box-shadow: none;
+  transition: background-color 90ms ease-out;
 }
-.rz-dock button.rz-dock-icon:disabled {
-  color: var(--hint);
-  background: none;
-  cursor: default;
+.rz-dock .rz-search::placeholder {
+  color: var(--muted);
+}
+.rz-dock .rz-search:hover {
+  background-color: var(--hover);
+}
+.rz-dock .rz-search:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  background-color: var(--panel);
+}
+.rz-search-count {
+  padding: 0 8px 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rz-none {
+  margin: 0;
+  padding: 32px 16px;
+  color: var(--muted);
+  text-align: center;
 }
 .rz-side {
   padding: 0;
@@ -9114,6 +9143,14 @@ textarea.rz-inline {
 }
 .rz-head-scene.here .rz-head-title {
   color: var(--ink);
+}
+/* A scene opened among folded ones: every other line steps back, and comes forward under the pointer or the keyboard. */
+.rz-main.focused .rz-head:not(.open) {
+  opacity: 0.42;
+  transition: opacity 140ms ease-out;
+}
+.rz-main.focused .rz-head:not(.open):is(:hover, :focus-within) {
+  opacity: 1;
 }
 
 /* In cards, each scene's line then its cards, under the same indent. */

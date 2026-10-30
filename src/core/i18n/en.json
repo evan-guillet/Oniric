@@ -2340,6 +2340,9 @@
     "noShot": "No shot for this scene.",
     "noShotHint": "Break it down into shots: size, movement, lens, length. Each shot also gets its frame in the Storyboard.",
     "noShotShort": "No shot",
+    "search": "Search a shot, a scene…",
+    "searchLabel": "Search the breakdown",
+    "noMatch": "Nothing matches “{{query}}”.",
     "move": "Move",
     "actions": "Actions",
     "columns": {

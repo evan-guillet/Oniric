@@ -2340,6 +2340,9 @@
     "noShot": "Ningún plano para esta escena.",
     "noShotHint": "Divídala en planos: tamaño, movimiento, óptica, duración. Cada plano tiene también su viñeta en el Storyboard.",
     "noShotShort": "Ningún plano",
+    "search": "Buscar un plano, una escena…",
+    "searchLabel": "Buscar en el desglose",
+    "noMatch": "Nada coincide con «{{query}}».",
     "move": "Mover",
     "actions": "Acciones",
     "columns": {

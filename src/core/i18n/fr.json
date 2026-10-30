@@ -2340,6 +2340,9 @@
     "noShot": "Aucun plan pour cette scène.",
     "noShotHint": "Découpez-la en plans : valeur, mouvement, optique, durée. Chaque plan a aussi sa case dans le Storyboard.",
     "noShotShort": "Aucun plan",
+    "search": "Rechercher un plan, une scène…",
+    "searchLabel": "Rechercher dans le découpage",
+    "noMatch": "Rien ne correspond à « {{query}} ».",
     "move": "Déplacer",
     "actions": "Actions",
     "columns": {

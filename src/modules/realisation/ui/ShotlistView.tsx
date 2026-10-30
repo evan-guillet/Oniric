@@ -1,7 +1,5 @@
 import {
   ChevronRight,
-  ChevronsDownUp,
-  ChevronsUpDown,
   Copy,
   GripVertical,
   LayoutGrid,
@@ -130,6 +128,26 @@ function moved(list: Shot[], from: string, to: string, after: boolean): Shot[] {
 
 const isEmpty = (s: Shot) => !s.action && !s.dialogue && !s.notes && !s.frameImage && s.characters.length === 0;
 
+/** Lower case and without accents, so « eclair » finds « Éclair ». */
+const plain = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Everything a search can find in a shot: its texts, its characters and the names of its choices. */
+const shotText = (s: Shot) =>
+  plain(
+    [
+      s.action,
+      s.dialogue,
+      s.notes,
+      s.lighting,
+      s.effects,
+      s.lens,
+      s.camera,
+      s.frameRate,
+      ...s.characters,
+      ...(Object.keys(SHOT_CHOICES) as ChoiceField[]).map((f) => (s[f] ? choiceLabel(f, s[f]) : "")),
+    ].join("\n"),
+  );
+
 /** A line of the breakdown above shots: an act, a sequence or a scene, each folding what follows it. */
 type Head =
   | { kind: "act" | "seq"; id: string; num: string; title: string; level: number; scenes: string[] }
@@ -162,6 +180,25 @@ export function ShotlistView() {
   const perScene = useMemo(() => byScene(shots ?? []), [shots]);
   const listOf = (sceneId: string) => perScene.get(sceneId) ?? [];
   const shownOf = (sceneId: string) => (order === "shoot" ? inShootOrder(listOf(sceneId)) : listOf(sceneId));
+
+  // While searching, the scenes whose heading or shots hold the text, with only those shots unless the heading holds it.
+  const [query, setQuery] = useState("");
+  const needle = plain(query.trim());
+  const found = useMemo(() => {
+    if (!needle) return null;
+    const m = new Map<string, Set<string>>();
+    for (const sc of scenes) {
+      const all = perScene.get(sc.id) ?? [];
+      const hits = String(sc.index + 1) === needle || plain(sc.heading).includes(needle) ? all : all.filter((s) => shotText(s).includes(needle));
+      if (hits.length || plain(sc.heading).includes(needle)) m.set(sc.id, new Set(hits.map((s) => s.id)));
+    }
+    return m;
+  }, [needle, scenes, perScene]);
+  const seenOf = (sceneId: string) => {
+    const shown = shownOf(sceneId);
+    const hits = found?.get(sceneId);
+    return hits ? shown.filter((s) => hits.has(s.id)) : shown;
+  };
   const numbers = useMemo(() => {
     const m = new Map<string, string>();
     for (const sc of scenes) (perScene.get(sc.id) ?? []).forEach((s, i) => m.set(s.id, shotNumber(sc.index + 1, i, numbering)));
@@ -178,21 +215,31 @@ export function ShotlistView() {
     const parts = numberedParts(groups);
     const sceneOf = new Map(scenes.map((s) => [s.id, s]));
     const out: Head[] = [];
+    // A search unfolds what it finds and leaves out the rest.
+    const has = (ids: string[]) => !found || ids.some((id) => found.has(id));
+    const shut = (id: string) => !found && folded.has(id);
     for (const g of groups) {
-      if (g.act) out.push({ kind: "act", id: g.act.id, ...parts.get(g.act.id)!, level: 0, scenes: g.sequences.flatMap((q) => q.scenes) });
-      if (g.act && folded.has(g.act.id)) continue;
+      const all = g.sequences.flatMap((q) => q.scenes);
+      if (!has(all)) continue;
+      if (g.act) out.push({ kind: "act", id: g.act.id, ...parts.get(g.act.id)!, level: 0, scenes: all });
+      if (g.act && shut(g.act.id)) continue;
       for (const q of g.sequences) {
+        if (!has(q.scenes)) continue;
         const level = g.act ? 1 : 0;
         if (q.sequence) out.push({ kind: "seq", id: q.sequence.id, ...parts.get(q.sequence.id)!, level, scenes: q.scenes });
-        if (q.sequence && folded.has(q.sequence.id)) continue;
+        if (q.sequence && shut(q.sequence.id)) continue;
         for (const id of q.scenes) {
+          if (!has([id])) continue;
           const scene = sceneOf.get(id);
           if (scene) out.push({ kind: "scene", id, scene, level: level + (q.sequence ? 1 : 0) });
         }
       }
     }
     return out;
-  }, [groups, scenes, folded]);
+  }, [groups, scenes, folded, found]);
+  const isShut = (id: string) => !found && folded.has(id);
+  // Once a scene is opened among folded ones, the lines around it step back.
+  const focused = !found && heads.some((h) => h.kind === "scene" && !folded.has(h.id)) && foldList.length > 0;
   const foldable = useMemo(
     () => [
       ...groups.flatMap((g) => [g.act?.id, ...g.sequences.map((q) => q.sequence?.id)].filter((x): x is string => !!x)),
@@ -218,6 +265,24 @@ export function ShotlistView() {
     main.current?.querySelector(`[data-scene="${reveal}"]`)?.scrollIntoView({ block: "nearest" });
     setReveal(null);
   }, [reveal, heads]);
+
+  // Ctrl+F goes to the search, unless a dialog is open.
+  const searchField = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f") return;
+      if (document.querySelector("dialog[open]")) return;
+      e.preventDefault();
+      searchField.current?.focus();
+      searchField.current?.select();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  // A search starts from the top of what it finds.
+  useLayoutEffect(() => {
+    if (needle && main.current) main.current.scrollTop = 0;
+  }, [needle]);
 
   // Opened from the Storyboard or a moodboard, the page starts at the scene it was on.
   const arrived = useRef(false);
@@ -355,16 +420,23 @@ export function ShotlistView() {
 
   /** The folding line of an act, a sequence or a scene. */
   const headLine = (h: Head) => {
-    const open = !folded.has(h.id);
+    const open = !isShut(h.id);
     const here = h.kind === "scene" ? h.id === current?.id : !!current && h.scenes.includes(current.id);
+    // Searching, a scene's line ends the search and opens that scene alone.
+    const click = () => {
+      if (found) {
+        if (h.kind !== "scene") return;
+        setQuery("");
+        openScene(h.id);
+      } else if (focus && h.kind === "scene" && !open) openScene(h.id);
+      else toggle(h.id);
+    };
     return (
-      <div className={`rz-head rz-head-${h.kind}${here ? " here" : ""}`} style={{ "--level": h.level } as CSSProperties}>
-        <button
-          type="button"
-          className="rz-fold"
-          aria-expanded={open}
-          onClick={() => (focus && h.kind === "scene" && !open ? openScene(h.id) : toggle(h.id))}
-        >
+      <div
+        className={`rz-head rz-head-${h.kind}${here ? " here" : ""}${h.kind === "scene" && open ? " open" : ""}`}
+        style={{ "--level": h.level } as CSSProperties}
+      >
+        <button type="button" className="rz-fold" aria-expanded={open} onClick={click}>
           <ChevronRight className="rz-chevron" aria-hidden="true" />
           {h.kind === "scene" ? (
             <>
@@ -385,7 +457,7 @@ export function ShotlistView() {
     );
   };
 
-  // Table or cards, in a bar at the bottom of the page as the tools of the canvases; then unfold and fold all.
+  // Table or cards, in a bar at the bottom of the page as the tools of the canvases; then the search.
   const dock = (
     <div className="rz-dock" role="toolbar" aria-label={t("shotlist.shape")}>
       {(
@@ -400,26 +472,26 @@ export function ShotlistView() {
         </button>
       ))}
       <span className="mb-bar-sep" aria-hidden="true" />
-      <button
-        type="button"
-        className="rz-dock-icon"
-        aria-label={t("sceneList.unfold")}
-        title={t("sceneList.unfold")}
-        disabled={foldList.length === 0}
-        onClick={() => setFoldList([])}
-      >
-        <ChevronsUpDown aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="rz-dock-icon"
-        aria-label={t("sceneList.fold")}
-        title={t("sceneList.fold")}
-        disabled={foldable.every((id) => folded.has(id))}
-        onClick={() => setFoldList(foldable)}
-      >
-        <ChevronsDownUp aria-hidden="true" />
-      </button>
+      <input
+        ref={searchField}
+        type="search"
+        className="rz-search"
+        value={query}
+        placeholder={t("shotlist.search")}
+        aria-label={t("shotlist.searchLabel")}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && query) {
+            e.preventDefault();
+            setQuery("");
+          }
+        }}
+      />
+      {found && (
+        <span className="rz-search-count" aria-live="polite">
+          {plural("sceneList.count", found.size)}
+        </span>
+      )}
     </div>
   );
 
@@ -448,11 +520,12 @@ export function ShotlistView() {
         </th>
       </tr>
     );
-    if (h.kind !== "scene" || folded.has(h.id)) return <tbody key={h.id}>{head}</tbody>;
+    if (h.kind !== "scene" || isShut(h.id)) return <tbody key={h.id}>{head}</tbody>;
+    const shown = shownOf(h.id);
     return (
       <tbody key={h.id} data-scene={h.id} className="rz-scene" style={{ "--level": h.level } as CSSProperties}>
         {head}
-        {shownOf(h.id).map((s, i) => (
+        {seenOf(h.id).map((s) => (
           <tr
             key={s.id}
             {...dragProps(s)}
@@ -468,7 +541,7 @@ export function ShotlistView() {
             <td className="rz-col-num">
               <span className="rz-num">{numbers.get(s.id)}</span>
             </td>
-            {order === "shoot" && <td className="rz-col-num rz-shoot">{i + 1}</td>}
+            {order === "shoot" && <td className="rz-col-num rz-shoot">{shown.indexOf(s) + 1}</td>}
             {columns.map((c, ci) => (
               <td key={c} className={`rz-col-${c}`}>
                 <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} clamp onPatch={(p) => patch(s, p)} />
@@ -497,12 +570,13 @@ export function ShotlistView() {
   };
 
   const cardBlock = (h: Head) => {
-    if (h.kind !== "scene" || folded.has(h.id)) return <div key={h.id}>{headLine(h)}</div>;
+    if (h.kind !== "scene" || isShut(h.id)) return <div key={h.id}>{headLine(h)}</div>;
+    const shown = shownOf(h.id);
     return (
       <section key={h.id} data-scene={h.id} className="rz-scene">
         {headLine(h)}
         <ol className="rz-cards" style={{ "--level": h.level } as CSSProperties}>
-          {shownOf(h.id).map((s, i) => (
+          {seenOf(h.id).map((s) => (
             <li
               key={s.id}
               {...dragProps(s)}
@@ -515,7 +589,7 @@ export function ShotlistView() {
                   <GripVertical />
                 </span>
                 <span className="rz-num">{numbers.get(s.id)}</span>
-                {order === "shoot" && <span className="badge">{t("shotlist.shootN", { n: i + 1 })}</span>}
+                {order === "shoot" && <span className="badge">{t("shotlist.shootN", { n: shown.indexOf(s) + 1 })}</span>}
                 <span className="spacer" />
                 {(s.duration || s.setup) && (
                   <span className="muted rz-card-time">{[formatSeconds(s.duration), formatMinutes(s.setup)].filter(Boolean).join(" · ")}</span>
@@ -550,7 +624,11 @@ export function ShotlistView() {
 
   return (
     <div className="view rz-view">
-      <main ref={main} className={shape === "table" ? "rz-main flush" : "rz-main"} aria-label={t("nav.views.shotlist")}>
+      <main
+        ref={main}
+        className={["rz-main", shape === "table" && "flush", focused && "focused"].filter(Boolean).join(" ")}
+        aria-label={t("nav.views.shotlist")}
+      >
         {shape === "table" ? (
           <table className="rz-table" style={{ minWidth: tableMin }}>
             <colgroup>
@@ -580,6 +658,7 @@ export function ShotlistView() {
         ) : (
           <div className="rz-outline">{heads.map(cardBlock)}</div>
         )}
+        {found?.size === 0 && <p className="rz-none">{t("shotlist.noMatch", { query: query.trim() })}</p>}
       </main>
       {dock}
     </div>
