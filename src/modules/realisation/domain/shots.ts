@@ -1,7 +1,32 @@
 /** The vocabularies of a shot [DEC-02], kept by id in the project; their names are in the catalog (shot.<field>.<id>). */
-export const SHOT_SIZES = ["xcu", "cu", "mcu", "cowboy", "medium", "wide", "extreme"] as const;
+export const SHOT_SIZES = ["xcu", "cu", "mcu", "waist", "cowboy", "medium", "wide", "extreme", "insert"] as const;
 export const SHOT_ANGLES = ["eye", "high", "low", "dutch"] as const;
-export const SHOT_MOVEMENTS = ["static", "pan", "tracking", "steadicam", "handheld", "crane", "drone", "zoom"] as const;
+/** The movements that go one way or another, each with its directions; the family's own id says no direction. */
+export const MOVEMENT_FAMILIES = {
+  pan: ["pan", "pan-left", "pan-right", "tilt-up", "tilt-down"],
+  tracking: [
+    "tracking",
+    "tracking-in",
+    "tracking-out",
+    "tracking-left",
+    "tracking-right",
+    "tracking-up",
+    "tracking-down",
+    "tracking-arc",
+  ],
+  crane: ["crane", "crane-up", "crane-down"],
+  zoom: ["zoom", "zoom-in", "zoom-out", "dolly-zoom"],
+} as const;
+export const SHOT_MOVEMENTS = [
+  "static",
+  "steadicam",
+  "handheld",
+  "drone",
+  ...MOVEMENT_FAMILIES.pan,
+  ...MOVEMENT_FAMILIES.tracking,
+  ...MOVEMENT_FAMILIES.crane,
+  ...MOVEMENT_FAMILIES.zoom,
+] as const;
 export const SHOT_SUPPORTS = ["tripod", "dolly", "slider", "gimbal", "shoulder", "crane", "vehicle"] as const;
 export const SHOT_SOUNDS = ["sync", "mos", "playback"] as const;
 

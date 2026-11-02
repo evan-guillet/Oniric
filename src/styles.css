@@ -1139,6 +1139,11 @@ label.set-row-title {
 .set-row-control > .select {
   min-width: 220px;
 }
+/* An abbreviation of the Découpage: a few letters */
+.set-row-control > input.set-abbr {
+  width: 96px;
+  text-align: center;
+}
 .set-row.stack .set-row-control {
   justify-content: flex-start;
 }
@@ -1713,15 +1718,18 @@ input.switch:disabled {
   box-shadow: var(--shadow-lg);
   animation: element-bar-in 120ms ease-out;
 }
-/* The project the menu acts on; its folder shows under « Ouvrir le dossier du projet ». */
+/* The project the menu acts on, renamed by the pencil beside it; its folder shows under « Ouvrir le dossier du projet ». */
 .project-menu-head {
-  display: grid;
-  gap: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 -4px 4px;
-  padding: 6px 14px 9px;
+  padding: 2px 6px 5px 14px;
   border-bottom: 1px solid var(--line);
 }
 .project-menu-title {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
@@ -1741,7 +1749,9 @@ input.switch:disabled {
   font-size: 11.5px;
   line-height: 1.4;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   user-select: text;
 }
 .project-menu button {
@@ -1767,6 +1777,18 @@ input.switch:disabled {
 .project-menu button svg {
   width: 16px;
   height: 16px;
+}
+.project-menu .project-menu-rename {
+  flex: none;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--muted);
+}
+.project-menu .project-menu-rename svg {
+  width: 15px;
+  height: 15px;
 }
 .project-menu button.separated {
   position: relative;
@@ -2233,20 +2255,6 @@ input.switch:disabled {
   display: flex;
   flex-direction: column;
 }
-.statusbar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  height: 28px;
-  padding: 0 16px;
-  border-top: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  min-width: 0;
-}
 .save-state {
   display: inline-flex;
   align-items: center;
@@ -2262,10 +2270,6 @@ input.switch:disabled {
   background: var(--ok-dot);
   box-shadow: 0 0 0 3px var(--ok-soft);
 }
-.save-state.busy::before {
-  background: var(--gray-dot);
-  box-shadow: 0 0 0 3px var(--panel-2);
-}
 .save-state.warning {
   color: var(--warning);
 }
@@ -2280,15 +2284,6 @@ input.switch:disabled {
   background: var(--danger-dot);
   box-shadow: 0 0 0 3px var(--danger-soft);
 }
-.statusbar-dir {
-  margin-left: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  direction: rtl;
-  text-align: left;
-}
-
 /* Toolbars */
 .view-toolbar {
   flex: none;
@@ -2479,7 +2474,7 @@ input.switch:disabled {
   text-wrap: pretty;
 }
 .scene-list li.on .scene-heading {
-  color: var(--ink);
+  color: var(--accent);
 }
 .scene-meta {
   font-size: 11px;
@@ -2543,7 +2538,7 @@ input.switch:disabled {
   width: 15px;
   height: 15px;
 }
-/* Acts and sequences around the scenes: folding heads, a guide line down each open part */
+/* Acts and sequences around the scenes: folding heads, each open part set in under its head */
 .scene-list .outlined,
 .outline-part ol {
   grid-template-columns: minmax(0, 1fr);
@@ -2557,7 +2552,6 @@ input.switch:disabled {
   gap: 1px;
   margin: 1px 0 4px 11px;
   padding: 0 0 0 4px;
-  border-left: 1px solid var(--line);
 }
 .scene-list .outline-head {
   display: flex;
@@ -3752,70 +3746,27 @@ h4 {
   display: grid;
   gap: 12px;
 }
-/* Relation map: a canvas only, its kinds as filters above it; it can fill the window */
+/* Relation map: a canvas only, its filters laid on it; in full screen it fills the body of the page */
 .rel-stage {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 .rel-stage.full {
-  position: fixed;
-  inset: var(--titlebar-h) 0 0 0;
-  z-index: 40;
-  padding: 12px 16px 16px;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  padding: 16px;
   background: var(--panel);
-  animation: rel-full-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: rel-full-in 160ms ease-out;
 }
 @keyframes rel-full-in {
   from {
     opacity: 0;
-    transform: scale(0.985);
   }
 }
-.rel-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  min-height: var(--control-h);
-}
-.rel-keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.rel-key {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease-out,
-    border-color 120ms ease-out,
-    color 120ms ease-out;
-}
-.rel-key:hover {
-  border-color: var(--control-line-hover);
-  color: var(--ink);
-}
-.rel-key.off {
-  border-style: dashed;
-  background: transparent;
-  color: var(--hint);
-}
-.rel-key.off .rel-swatch {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--k);
+.rel-ghost {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
 }
 .rel-swatch {
   width: 8px;
@@ -3824,19 +3775,29 @@ h4 {
   background: var(--k);
   flex: none;
 }
-.rel-key-n {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
+/* The tools sit on the canvas: the filters on the left, the actions on the right. The gap between stays the canvas's. */
 .rel-tools {
   position: absolute;
   top: 10px;
+  left: 10px;
   right: 10px;
   z-index: 3;
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+.rel-filters,
+.rel-actions {
+  display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  pointer-events: auto;
+}
+.rel-actions {
+  flex: none;
 }
 .rel-tools .icon-btn {
   width: var(--control-h);
@@ -3847,8 +3808,72 @@ h4 {
   color: var(--ink-2);
   box-shadow: var(--shadow-sm);
 }
-.rel-tools .select {
-  min-width: 190px;
+.rel-filters .select {
+  min-width: 0;
+  max-width: 220px;
+  box-shadow: var(--shadow-sm);
+}
+/* A targeted character: the field says so in the accent, like the pill it lights. */
+.rel-filters .select.rel-aimed {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.rel-kinds {
+  position: relative;
+  flex: none;
+}
+.rel-kinds-btn {
+  gap: 8px;
+}
+.rel-dots {
+  display: inline-flex;
+  flex: none;
+}
+.rel-dots .rel-swatch {
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.rel-dots .rel-swatch + .rel-swatch {
+  margin-left: -2px;
+}
+.rel-dots:empty {
+  display: none;
+}
+.rel-kinds-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 4;
+  width: 240px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  animation: rel-pop 120ms ease-out;
+}
+.rel-kinds-menu .check-list {
+  padding: 4px;
+}
+.rel-kinds-menu .check-list button {
+  align-items: center;
+  padding: 7px 10px;
+}
+.rel-kinds-menu .check-box {
+  margin-top: 0;
+}
+.rel-kind-name {
+  flex: 1;
+}
+.rel-kind-n {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rel-kinds-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px;
+  border-top: 1px solid var(--line);
 }
 .rel-canvas {
   position: relative;
@@ -3869,7 +3894,11 @@ h4 {
   height: auto;
   min-height: 0;
 }
+/* Out of the flow, so the drawing never widens its frame: leaving full screen, it is still at the old size for a frame. */
 .relation-map {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   touch-action: none;
   user-select: none;
@@ -6812,20 +6841,77 @@ button.vr-stop-body:focus-visible {
   }
 }
 
-/* Notes, in the side panel in place of the scenes */
-.notes-panel {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Notes, in the side panel in place of the scenes: the margin of the text, each card level with its passage and
+   scrolling with it; « Créer une note » above, the cards sliding under it, and what has no passage folded at the foot */
+.sidebar:has(> .notes-panel) {
+  overflow: hidden;
 }
-/* The archived notes, folded under the open ones behind a quiet row */
-.notes-archived {
+.notes-panel {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.notes-margin {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.notes-track {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notes-track > .note {
+  position: absolute;
+  left: 0;
+  right: 0;
+  cursor: pointer;
+  transition:
+    top 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    translate 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms ease-out;
+}
+/* The card of the passage the caret is in: stepped out of the column, toward the text */
+.notes-track > .note.lead {
+  translate: -8px 0;
+  box-shadow: var(--shadow-md);
+  cursor: default;
+}
+.notes-track .note-top > .note-body,
+.notes-track .note-top > textarea {
+  flex: 1;
+  min-width: 0;
+}
+.notes-head {
+  position: relative;
+  z-index: 1;
+  padding: 12px 14px 16px;
+  background: linear-gradient(var(--panel) calc(100% - 12px), transparent);
+}
+.notes-foot {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   gap: 8px;
-  margin-top: 4px;
-  padding-top: 10px;
+  padding: 8px 14px 10px;
   border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.notes-foot-list {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.notes-foot-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .notes-archived-toggle {
   display: flex;
@@ -6870,7 +6956,8 @@ button.vr-stop-body:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 @media (prefers-reduced-motion: reduce) {
-  .notes-archived-chevron {
+  .notes-archived-chevron,
+  .notes-track > .note {
     transition: none;
   }
 }
@@ -7494,8 +7581,10 @@ button.vr-stop-body:focus-visible {
 .scene-gap-add:active {
   scale: 0.97;
 }
-/* The act and sequence of the scene at the top, pinned to the left of the text */
-.desk.sheetless {
+/* The act and sequence of the scene at the top, pinned to the left of the text, and under them the length of the
+   whole screenplay */
+.desk.sheetless,
+.desk.desk-print {
   container: desk / inline-size;
 }
 .story-pin-rail {
@@ -7507,26 +7596,31 @@ button.vr-stop-body:focus-visible {
   pointer-events: none;
 }
 /* Its top, set inline: level with the first scene, then 28px under the top of the desk */
-/* A thread in the act's colour, a node on it for the act (filled) and the sequence (ringed), and where the scene
-   stands in its sequence. */
 .story-pin {
   --pin: var(--act, var(--muted));
   position: absolute;
   top: 28px;
   display: grid;
-  gap: 14px;
+  gap: 20px;
   width: max-content;
   padding: 0 16px 0 0;
   text-align: right;
   font: 12px/1.35 var(--ui-font);
+}
+/* A thread in the act's colour, a node on it for the act (filled) and the sequence (ringed), and where the scene
+   stands in its sequence. */
+.story-pin-thread {
+  position: relative;
+  display: grid;
+  gap: 14px;
   animation: pin-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.story-pin::before {
+.story-pin-thread::before {
   content: "";
   position: absolute;
   top: 8px;
   bottom: 0;
-  right: 3px;
+  right: -13px;
   width: 2px;
   border-radius: 1px;
   background: linear-gradient(
@@ -7616,6 +7710,12 @@ button.vr-stop-body:focus-visible {
   border-color: transparent;
   background: var(--pin);
 }
+.story-pin-alert {
+  justify-self: end;
+  margin-top: 6px;
+  font-size: 11.5px;
+  pointer-events: auto;
+}
 @keyframes pin-in {
   from {
     opacity: 0;
@@ -7628,7 +7728,7 @@ button.vr-stop-body:focus-visible {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .story-pin,
+  .story-pin-thread,
   .story-pin-dots > span,
   .note-new,
   .desk.display-cards .scene-gap,
@@ -7666,8 +7766,7 @@ button.vr-stop-body:focus-visible {
   font-style: normal;
 }
 /* Kinds of element, in a bar fixed at the bottom of the desk, as the tools of the moodboard; over the desk, not in its scroll */
-.element-bar,
-.rz-dock {
+.element-bar {
   grid-area: desk;
   align-self: end;
   justify-self: center;
@@ -7688,8 +7787,7 @@ button.vr-stop-body:focus-visible {
   font-family: var(--ui-font);
   white-space: nowrap;
 }
-.element-bar button,
-.rz-dock button {
+.element-bar button {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -7708,25 +7806,21 @@ button.vr-stop-body:focus-visible {
   cursor: pointer;
   transition: background-color 90ms ease-out, color 90ms ease-out;
 }
-.element-bar button svg,
-.rz-dock button svg {
+.element-bar button svg {
   width: 18px;
   height: 18px;
   stroke-width: 1.75;
 }
-.element-bar button.on,
-.rz-dock button.on {
+.element-bar button.on {
   padding-right: 10px;
   background: var(--accent-soft);
   color: var(--accent);
 }
-.element-bar button:hover:not(.on),
-.rz-dock button:hover:not(.on) {
+.element-bar button:hover:not(.on) {
   background: var(--hover);
   color: var(--ink);
 }
-.element-bar button:focus-visible,
-.rz-dock button:focus-visible {
+.element-bar button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
@@ -9041,50 +9135,60 @@ button[aria-expanded="true"] .stats-chevron {
 }
 
 /* Réalisation: the Découpage, the Storyboard and the Moodboards. The Storyboard and a moodboard put their work in the
-   middle and, on the right, a panel that shows one thing at a time, chosen by its tabs; the Découpage is one page. */
+   middle and, on the right, a panel that shows one thing at a time, chosen by its tabs; the Découpage keeps on the
+   right the tree of acts, sequences and scenes, as the Scénario does. */
 .view.split.rz-split {
   grid-template-columns: minmax(0, 1fr) 300px;
 }
-/* The Découpage: every scene down one page; table or cards in a bar at the bottom, over the page, not in its scroll. */
+/* The Découpage: the shots of the chosen scene, in a table or in cards, beside the tree; the search over them while it is open. */
 .view.rz-view {
   display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr) 340px;
   overflow: hidden;
 }
+.rz-tree {
+  grid-area: 1 / 2;
+}
 .rz-view > .rz-main,
-.rz-dock {
+.rz-find {
   grid-area: 1 / 1;
 }
-.rz-dock button,
-.rz-dock button.on {
-  padding: 0 12px 0 10px;
+.rz-main:focus {
+  outline: none;
 }
-.rz-dock .mb-bar-sep {
-  height: 20px;
-  margin: 0 3px;
+/* Below the names of the columns, at the right of the page, as the search of a browser. */
+.rz-find {
+  align-self: start;
+  justify-self: end;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  margin: 46px 20px 0 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  animation: rel-pop 140ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* The search, as wide as the two shapes, sunk in the bar; how many scenes it finds beside it. */
-.rz-dock .rz-search {
+.rz-find .rz-search {
   flex: none;
   width: 264px;
-  height: 36px;
+  height: 32px;
   padding: 0 8px 0 32px;
   border: none;
-  border-radius: 11px;
+  border-radius: 9px;
   background: var(--sunken) var(--magnifier) no-repeat 10px center / 15px;
   color: var(--ink);
   font: inherit;
   font-size: 12.5px;
   box-shadow: none;
-  transition: background-color 90ms ease-out;
 }
-.rz-dock .rz-search::placeholder {
+.rz-find .rz-search::placeholder {
   color: var(--muted);
 }
-.rz-dock .rz-search:hover {
-  background-color: var(--hover);
-}
-.rz-dock .rz-search:focus {
+.rz-find .rz-search:focus {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
   background-color: var(--panel);
@@ -9122,7 +9226,7 @@ button[aria-expanded="true"] .stats-chevron {
 .rz-main {
   overflow: auto;
   min-width: 0;
-  padding: 20px 24px 84px;
+  padding: 20px 24px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -9220,8 +9324,12 @@ button.badge.warn:hover {
   height: 13px;
   color: var(--muted);
 }
-.rz-scenes {
-  overflow: auto;
+/* The tree of acts, sequences and scenes of the Découpage and the Storyboard: its tools stay on top, the list scrolls. */
+.scene-tree {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* A field written in place: no box at rest, the box of a field under the pointer and in the focus. */
@@ -9295,7 +9403,7 @@ textarea.rz-inline {
 /* The table of shots: a spreadsheet whose cells are fields [DEC-04], set in the page edge to edge, without a frame. */
 .rz-main.flush {
   display: block;
-  padding: 0 0 72px;
+  padding: 0 0 24px;
   background: var(--panel);
 }
 /* Edge to edge, the first and last columns keep the gutter of the page. */
@@ -9321,9 +9429,6 @@ textarea.rz-inline {
 .rz-table tbody tr.rz-add-line:hover {
   background: none;
 }
-.rz-table tr.rz-head-row-act > th {
-  background: var(--sunken);
-}
 .rz-main.flush .rz-head,
 .rz-main.flush .rz-add-row {
   position: sticky;
@@ -9333,22 +9438,31 @@ textarea.rz-inline {
 }
 .rz-main.flush .rz-add-row {
   height: 34px;
-  padding: 0 14px 0 calc(16px + var(--level, 0) * 20px);
+  padding: 0 14px 0 16px;
 }
 .rz-main.flush .rz-scene {
-  scroll-margin-top: 34px;
+  scroll-margin-top: 36px;
+}
+/* Below the table, the page is dragged sideways. */
+.rz-main.flush.pans {
+  cursor: ew-resize;
+}
+.rz-main.flush.pans > * {
+  cursor: auto;
+}
+.rz-main.flush.pans.panning,
+.rz-main.flush.pans.panning > * {
+  cursor: ew-resize;
+  user-select: none;
 }
 
-/* The line of an act, a sequence or a scene: its chevron folds what follows; indented by its depth. */
+/* The line of the scene above its shots; among the scenes a search found, a button that opens it. */
 .rz-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 40px;
-  padding: 4px 16px 4px calc(8px + var(--level) * 20px);
-}
-.rz-head-act {
   min-height: 44px;
+  padding: 4px 16px 4px 8px;
 }
 .rz-fold {
   display: inline-flex;
@@ -9365,23 +9479,15 @@ textarea.rz-inline {
   cursor: pointer;
   transition: background-color 120ms ease-out;
 }
-.rz-fold:hover {
+span.rz-fold {
+  cursor: default;
+}
+button.rz-fold:hover {
   background: var(--hover);
 }
 .rz-fold:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
-}
-.rz-chevron {
-  flex: none;
-  align-self: center;
-  width: 14px;
-  height: 14px;
-  color: var(--muted);
-  transition: rotate 140ms ease-out;
-}
-.rz-fold[aria-expanded="true"] .rz-chevron {
-  rotate: 90deg;
 }
 .rz-head-num {
   flex: none;
@@ -9394,17 +9500,8 @@ textarea.rz-inline {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.rz-head-act .rz-head-title {
-  color: var(--ink);
-  font-size: 13.5px;
-  font-weight: 600;
-}
-.rz-head-seq .rz-head-title {
-  font-size: 13px;
-  font-weight: 500;
-}
 .rz-head-scene .rz-head-title {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: uppercase;
@@ -9416,42 +9513,21 @@ textarea.rz-inline {
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
-/* The scene worked on, and a folded part that holds it, marked as in the list of scenes. */
-.rz-head-scene.here .rz-head-num,
-.rz-head.here:has(.rz-fold[aria-expanded="false"]) :is(.rz-head-num, .rz-chevron) {
-  color: var(--accent);
-}
+/* The scene worked on, in ink. */
 .rz-head-scene.here .rz-head-num {
+  color: var(--ink);
   font-weight: 600;
 }
 .rz-head-scene.here .rz-head-title {
   color: var(--ink);
 }
-/* A scene opened among folded ones: every other line steps back, and comes forward under the pointer or the keyboard. */
-.rz-main.focused .rz-head:not(.open) {
-  opacity: 0.42;
-  transition: opacity 140ms ease-out;
-}
-.rz-main.focused .rz-head:not(.open):is(:hover, :focus-within) {
-  opacity: 1;
-}
 
-/* In cards, each scene's line then its cards, under the same indent. */
+/* In cards, the scene's line then its cards. */
 .rz-outline .rz-head {
   border-bottom: 1px solid var(--line);
 }
-.rz-outline .rz-head-act {
-  margin-top: 8px;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--sunken);
-}
-.rz-outline > :first-child .rz-head-act,
-.rz-outline > .rz-scene:first-child .rz-head {
-  margin-top: 0;
-}
 .rz-outline .rz-cards {
   margin: 12px 0 20px;
-  padding-left: calc(var(--level) * 20px);
 }
 .rz-card-add.alone button {
   min-height: 52px;
@@ -9467,16 +9543,18 @@ textarea.rz-inline {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 8px 8px;
+  /* As high as the head of the side panel, so that their lines meet. */
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 8px;
   border-bottom: 1px solid var(--line);
   background: var(--sunken);
   color: var(--muted);
   font-size: 11.5px;
   font-weight: 500;
   text-align: left;
+  /* On one line and whole: the column is at least as wide as its name. */
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .rz-table td {
   padding: 3px 2px;
@@ -9485,6 +9563,44 @@ textarea.rz-inline {
 }
 .rz-table tbody tr {
   transition: background-color 120ms ease-out;
+}
+/* The grip and the number of a shot stay at the left of the page however far it scrolls sideways; once it has, the
+   cells passing under them fade into their edge. */
+.rz-table .rz-col-grip,
+.rz-table .rz-col-num {
+  --sticky-bg: var(--panel);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--sticky-bg);
+  transition: background-color 120ms ease-out;
+}
+.rz-table .rz-col-num {
+  left: var(--grip-w);
+}
+.rz-table .rz-col-num + .rz-col-num {
+  left: calc(var(--grip-w) + var(--num-w));
+}
+.rz-table thead .rz-col-grip,
+.rz-table thead .rz-col-num {
+  --sticky-bg: var(--sunken);
+  z-index: 3;
+}
+.rz-table tbody tr:hover > :is(.rz-col-grip, .rz-col-num) {
+  --sticky-bg: var(--sunken);
+}
+.rz-table tbody tr.on > :is(.rz-col-grip, .rz-col-num) {
+  --sticky-bg: color-mix(in srgb, var(--accent-soft) 70%, var(--panel));
+}
+.rz-main.scrolled .rz-table tr > .rz-col-num:not(:has(+ .rz-col-num))::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 24px;
+  background: linear-gradient(to right, var(--sticky-bg), transparent);
+  pointer-events: none;
 }
 .rz-table tbody tr:hover {
   background: var(--sunken);

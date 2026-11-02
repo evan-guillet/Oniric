@@ -81,19 +81,9 @@
     "dismiss": "Cerrar el mensaje"
   },
   "status": {
-    "saved": "Guardado",
-    "savedTitle": "Tu trabajo está guardado en este PC. Última copia en la carpeta del proyecto: {{time}}.",
-    "savedNoFlush": "Tu trabajo está guardado en este PC; se copiará en la carpeta del proyecto en unos segundos.",
-    "pending": "Cambios en curso…",
-    "saving": "Guardando…",
     "error": "No se puede guardar, reintentando…",
     "notInFolder": "Sin copiar en la carpeta del proyecto",
-    "notInFolderTitle": "No se puede acceder a la carpeta del proyecto ({{detail}}). Tu trabajo sigue guardado en este PC; Oniric lo reintenta cada 30 segundos.",
-    "pages_one": "{{count}} página",
-    "pages_other": "{{count}} páginas",
-    "duration": "≈ {{duration}}",
-    "scene": "Escena {{n}} de {{total}}",
-    "backupAt": "Copia de seguridad hecha a las {{time}}"
+    "notInFolderTitle": "No se puede acceder a la carpeta del proyecto ({{detail}}). Tu trabajo sigue guardado en este PC; Oniric lo reintenta cada 30 segundos."
   },
   "elements": {
     "scene_heading": "Encabezado de escena",
@@ -478,7 +468,7 @@
       "shotlist": {
         "label": "Planificación",
         "lead": "Cómo la planificación muestra los planos de este proyecto.",
-        "keywords": "planos orden rodaje montaje numeración campos columnas tabla vista"
+        "keywords": "planos orden rodaje montaje numeración campos columnas tabla vista abreviaturas"
       },
       "parts": {
         "label": "Partes mostradas",
@@ -543,9 +533,10 @@
     "typographyRow": "Tipografía francesa",
     "shotlist": {
       "listing": "Lista de planos",
-      "focus": "Abrir una escena pliega el resto",
-      "focusHelp": "Las demás escenas, secuencias y actos se pliegan, y pasa a ser la escena en la que se trabaja.",
-      "note": "Los campos mostrados también se aplican a la exportación de la planificación. El orden y los campos se guardan en este ordenador; la numeración, en el proyecto."
+      "note": "Los campos mostrados también se aplican a la exportación de la planificación. El orden y los campos se guardan en este ordenador; la numeración y las abreviaturas, en el proyecto.",
+      "abbreviations": "Abreviaturas",
+      "abbreviationsHelp": "Lo que la celda de la planificación muestra en lugar del nombre; vacía, conserva el nombre completo.",
+      "abbreviationsList": "Lista"
     }
   },
   "dash": {
@@ -725,7 +716,8 @@
       "createHint": "En el fragmento seleccionado, o en la línea del cursor",
       "archived": "Archivadas",
       "note": "Nota",
-      "placeholder": "Tu nota…"
+      "placeholder": "Tu nota…",
+      "unanchored": "Sin pasaje"
     },
     "panels": {
       "scenes": "Escenas",
@@ -2118,11 +2110,9 @@
     "addSecondary": "Añadir un personaje secundario",
     "addSecondaryOption": "+ Añadir un personaje secundario…",
     "relations": "Mapa de relaciones",
-    "relationsHelp": "Los vínculos entre personajes: familia, amor, rivalidad, jerarquía… Un vínculo puede valer solo a partir de un acto, para ver cómo evolucionan las relaciones. Arrastre un personaje para colocarlo, haga clic en él para aislar sus vínculos, haga clic en un vínculo para verlo.",
+    "relationsHelp": "Los vínculos entre personajes: familia, amor, rivalidad, jerarquía… Un vínculo puede valer solo a partir de un acto. Arrastre un personaje para colocarlo, haga clic en él para aislar sus vínculos, haga clic en un vínculo para verlo.",
     "needTwo": "Crea al menos dos personajes en la biblia para dibujar sus relaciones.",
     "mapLabel": "Mapa de relaciones entre personajes",
-    "showRelations": "Mostrar las relaciones",
-    "wholeFilm": "De toda la película",
     "removeRelation": "Quitar la relación",
     "first": "Primer personaje",
     "characterOption": "Personaje…",
@@ -2137,8 +2127,14 @@
     "fullScreen": "Pantalla completa",
     "leaveFull": "Salir de pantalla completa",
     "kindFilter": "Tipos de vínculo mostrados",
+    "kindsAll": "Todos los vínculos",
+    "kindsSome": "{{n}} tipos de {{total}}",
+    "showAllKinds": "Mostrar todo",
+    "target": "Centrarse en un personaje",
+    "everyone": "Todos los personajes",
+    "noTiesOf": "{{name}} no tiene ninguno de los vínculos mostrados.",
     "resetLayout": "Reorganizar",
-    "noTies": "Aún no hay vínculos. Añada uno abajo: los personajes vinculados aparecerán aquí.",
+    "noTies": "Aún no hay vínculos. Añada uno con «Nuevo vínculo»: los personajes vinculados aparecerán aquí.",
     "allKindsHidden": "Todos los tipos de vínculo están ocultos.",
     "unlinked_one": "{{n}} personaje sin vínculos no está en el mapa.",
     "unlinked_other": "{{n}} personajes sin vínculos no están en el mapa.",
@@ -2156,7 +2152,6 @@
       "motivations": "Motivaciones"
     },
     "openFull": "Abrir la ficha completa de {{name}}",
-    "until": "Hasta {{act}}",
     "since": "desde {{act}}",
     "removeRelationAsk": "¿Quitar la relación?",
     "from": "A partir de {{act}}"
@@ -2273,11 +2268,13 @@
     "size": {
       "xcu": "Primerísimo primer plano",
       "cu": "Primer plano",
-      "mcu": "Plano medio corto",
-      "cowboy": "Plano americano",
-      "medium": "Plano medio",
-      "wide": "Plano de conjunto",
-      "extreme": "Plano general"
+      "mcu": "Medio corto",
+      "waist": "Medio",
+      "cowboy": "Americano",
+      "medium": "Entero",
+      "wide": "Conjunto",
+      "extreme": "General",
+      "insert": "Detalle"
     },
     "angle": {
       "eye": "Altura de los ojos",
@@ -2287,13 +2284,29 @@
     },
     "movement": {
       "static": "Fijo",
-      "pan": "Panorámica",
-      "tracking": "Travelling",
       "steadicam": "Steadicam",
       "handheld": "Cámara en mano",
-      "crane": "Grúa",
       "drone": "Dron",
-      "zoom": "Zoom"
+      "pan": "Panorámica",
+      "pan-left": "Panorámica izquierda",
+      "pan-right": "Panorámica derecha",
+      "tilt-up": "Panorámica arriba",
+      "tilt-down": "Panorámica abajo",
+      "tracking": "Travelling",
+      "tracking-in": "Travelling de avance",
+      "tracking-out": "Travelling de retroceso",
+      "tracking-left": "Travelling izquierda",
+      "tracking-right": "Travelling derecha",
+      "tracking-up": "Travelling ascendente",
+      "tracking-down": "Travelling descendente",
+      "tracking-arc": "Travelling circular",
+      "crane": "Grúa",
+      "crane-up": "Grúa ascendente",
+      "crane-down": "Grúa descendente",
+      "zoom": "Zoom",
+      "zoom-in": "Zoom de acercamiento",
+      "zoom-out": "Zoom de alejamiento",
+      "dolly-zoom": "Efecto vértigo"
     },
     "support": {
       "tripod": "Trípode",
@@ -2351,6 +2364,7 @@
     "noShotShort": "Ningún plano",
     "search": "Buscar un plano, una escena…",
     "searchLabel": "Buscar en el desglose",
+    "lensOther": "Otra focal…",
     "noMatch": "Nada coincide con «{{query}}».",
     "move": "Mover",
     "actions": "Acciones",
@@ -2377,7 +2391,6 @@
       "notes": "Notas"
     },
     "placeholders": {
-      "action": "Lo que se ve",
       "characters": "—"
     },
     "insertAfter": "Insertar un plano después",

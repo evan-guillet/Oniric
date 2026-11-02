@@ -1,6 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLive } from "../../../core/db/live";
 import { t } from "../../../core/i18n";
 import type { SceneInfo } from "../../script/screenplay/application/scriptSession";
+import { SceneList, type ListGroup } from "../../script/screenplay/ui/SceneList";
+import { STORY_TABLES, loadStory, storyOutline } from "../../script/views/application/story";
+import { numberedParts } from "../../script/views/domain/outline";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import type { SceneElement } from "../domain/shots";
 import type { ChoiceField } from "../domain/shots";
@@ -69,32 +73,54 @@ export function shotTotals(shots: Shot[]): string {
     .join(" · ");
 }
 
-/** The scenes of the screenplay, one button each, the chosen one marked; `meta` is the line under the heading. */
-export function SceneRail({
+/** The scenes of the screenplay under their acts and sequences, as the Scénario lists them, the chosen one marked and
+ *  kept in view; `meta` is the line under each heading. The folds are the same in every view of the Réalisation. */
+export function SceneTree({
+  projectId,
   scenes,
   current,
   onSelect,
   meta,
 }: {
+  projectId: string;
   scenes: SceneInfo[];
   current: string | null;
   onSelect: (id: string) => void;
   meta: (scene: SceneInfo) => ReactNode;
 }) {
+  const story = useLive(loadStory, [...STORY_TABLES]);
+  const groups = useMemo<ListGroup[]>(() => {
+    const index = new Map(scenes.map((s, i) => [s.id, i]));
+    // The scenes alone until the story loads.
+    if (!story) return [{ act: null, sequences: [{ sequence: null, scenes: scenes.map((_s, i) => i) }] }];
+    const outlined = storyOutline(story, scenes.map((s) => s.id));
+    const parts = numberedParts(outlined);
+    const label = (id: string) => ({ id, ...parts.get(id)! });
+    return outlined.map((g) => ({
+      act: g.act ? label(g.act.id) : null,
+      sequences: g.sequences.map((q) => ({
+        sequence: q.sequence ? label(q.sequence.id) : null,
+        scenes: q.scenes.map((id) => index.get(id)).filter((i): i is number => i !== undefined),
+      })),
+    }));
+  }, [story, scenes]);
+  const rows = useMemo(() => scenes.map((s) => ({ heading: s.heading, page: s.page, eighths: s.eighths })), [scenes]);
+  const at = scenes.findIndex((s) => s.id === current);
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    box.current?.querySelector(".scene-list li.on")?.scrollIntoView({ block: "nearest" });
+  }, [current, story]);
   return (
-    <nav className="scene-list rz-scenes" aria-label={t("shotlist.scenes")}>
-      <ol>
-        {scenes.map((s) => (
-          <li key={s.id} className={s.id === current ? "on" : undefined}>
-            <button type="button" onClick={() => onSelect(s.id)} aria-current={s.id === current ? "location" : undefined}>
-              <span className="scene-num">{s.index + 1}</span>
-              <span className="scene-heading">{s.heading || t("workspace.noHeading")}</span>
-              <span className="scene-meta">{meta(s)}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <div ref={box} className="scene-tree">
+      <SceneList
+        scenes={rows}
+        groups={groups}
+        current={at}
+        onSelect={(i) => onSelect(scenes[i].id)}
+        foldKey={`oniric.realisation.tree.${projectId}`}
+        meta={(i) => meta(scenes[i])}
+      />
+    </div>
   );
 }
 

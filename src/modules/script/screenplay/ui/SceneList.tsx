@@ -40,7 +40,8 @@ function savedFolds(key: string): Set<string> {
 /**
  * The scenes of the screenplay, under their acts and sequences when the story has some.
  * Acts and sequences fold, one by one or all at once; the folds are remembered per project on this computer.
- * A right click on an act, a sequence or a scene offers to delete it; `onRemove` asks before doing so.
+ * A right click on an act, a sequence or a scene offers to delete it; `onRemove` asks before doing so. Without it,
+ * there is no menu. `meta` replaces the page and length under each heading.
  */
 export const SceneList = memo(function SceneList({
   scenes,
@@ -49,18 +50,21 @@ export const SceneList = memo(function SceneList({
   onSelect,
   foldKey,
   onRemove,
+  meta,
 }: {
   scenes: SceneRow[];
   groups: ListGroup[];
   current: number;
   onSelect: (index: number) => void;
   foldKey: string;
-  onRemove: (target: ListTarget) => void;
+  onRemove?: (target: ListTarget) => void;
+  meta?: (index: number) => ReactNode;
 }) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<{ x: number; y: number; target: ListTarget; key: string } | null>(null);
   const anchor = useRef<HTMLElement | null>(null);
   const openMenu = (e: MouseEvent<HTMLButtonElement>, target: ListTarget, key: string) => {
+    if (!onRemove) return;
     e.preventDefault();
     anchor.current = e.currentTarget;
     // From the keyboard the event has no pointer: the menu opens under the row.
@@ -100,7 +104,7 @@ export const SceneList = memo(function SceneList({
           <span className="scene-num">{i + 1}</span>
           <span className="scene-heading">{s.heading || t("workspace.noHeading")}</span>
           <span className="scene-meta">
-            {t("workspace.scenePage", { page: s.page })} · {formatEighths(s.eighths)}
+            {meta ? meta(i) : `${t("workspace.scenePage", { page: s.page })} · ${formatEighths(s.eighths)}`}
           </span>
         </button>
       </li>
@@ -167,7 +171,7 @@ export const SceneList = memo(function SceneList({
           ? scenes.map((_s, i) => scene(i))
           : groups.flatMap((g) => (g.act ? [part("act", g.act, g.sequences.flatMap((s) => s.scenes), sequences(g))] : sequences(g)))}
       </ol>
-      {menu && (
+      {menu && onRemove && (
         <ContextMenu
           at={menu}
           anchor={anchor}

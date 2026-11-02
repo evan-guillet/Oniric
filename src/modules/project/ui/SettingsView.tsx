@@ -59,9 +59,20 @@ import {
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext, type SettingsPage } from "./projectContext";
-import { useNumbering, writeNumbering } from "../../realisation/application/shots";
-import { columnLabel, DEFAULT_HIDDEN, FOCUS_KEY, HIDDEN_KEY, ORDER_KEY, SHOT_COLUMNS, type ShotColumn, type ShotOrder } from "../../realisation/ui/ShotlistView";
-import type { ShotNumbering } from "../../realisation/domain/shots";
+import { useAbbreviations, useNumbering, writeAbbreviation, writeNumbering } from "../../realisation/application/shots";
+import { choiceLabel } from "../../realisation/ui/common";
+import {
+  columnLabel,
+  DEFAULT_HIDDEN,
+  HIDDEN_KEY,
+  ORDER_KEY,
+  SHAPE_KEY,
+  SHOT_COLUMNS,
+  type ShotColumn,
+  type ShotOrder,
+  type ShotShape,
+} from "../../realisation/ui/ShotlistView";
+import { SHOT_CHOICES, type ChoiceField, type ShotNumbering } from "../../realisation/domain/shots";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 
 import { Select } from "../../../ui-kit/Select";
@@ -1310,10 +1321,19 @@ function ShotlistSettings({ notify }: { notify: Notify }) {
   const numbering = useNumbering();
   const [order, setOrder] = useStoredState<ShotOrder>(ORDER_KEY, "edit");
   const [hidden, setHidden] = useStoredState<ShotColumn[]>(HIDDEN_KEY, DEFAULT_HIDDEN);
-  const [focus, setFocus] = useStoredState(FOCUS_KEY, true);
+  const [shape, setShape] = useStoredState<ShotShape>(SHAPE_KEY, "table");
   return (
     <>
       <Group title={t("settings.shotlist.listing")}>
+        <Row title={t("shotlist.shape")}>
+          <Select aria-label={t("shotlist.shape")} value={shape} onChange={(e) => setShape(e.target.value as ShotShape)}>
+            {(["table", "cards"] as const).map((v) => (
+              <option key={v} value={v}>
+                {t(`shotlist.shapes.${v}`)}
+              </option>
+            ))}
+          </Select>
+        </Row>
         <Row title={t("shotlist.order")} help={t(`shotlist.orders.${order}Hint`)}>
           <Select aria-label={t("shotlist.order")} value={order} onChange={(e) => setOrder(e.target.value as ShotOrder)}>
             {(["edit", "shoot"] as const).map((v) => (
@@ -1338,9 +1358,6 @@ function ShotlistSettings({ notify }: { notify: Notify }) {
             ))}
           </Select>
         </Row>
-        <Row id="shot-focus" title={t("settings.shotlist.focus")} help={t("settings.shotlist.focusHelp")}>
-          <Switch id="shot-focus" checked={focus} onChange={setFocus} />
-        </Row>
       </Group>
       <Group title={t("shotlist.shownColumns")}>
         {SHOT_COLUMNS.map((c) => (
@@ -1353,8 +1370,70 @@ function ShotlistSettings({ notify }: { notify: Notify }) {
           </Row>
         ))}
       </Group>
+      <AbbreviationSettings notify={notify} />
       <p className="set-note">{t("settings.shotlist.note")}</p>
     </>
+  );
+}
+
+/** What the Découpage shows in place of the names of a list’s choices, one list at a time, kept in the project. */
+function AbbreviationSettings({ notify }: { notify: Notify }) {
+  const abbr = useAbbreviations();
+  const [field, setField] = useState<ChoiceField>("size");
+  return (
+    <Group title={t("settings.shotlist.abbreviations")}>
+      <Row title={t("settings.shotlist.abbreviationsList")} help={t("settings.shotlist.abbreviationsHelp")}>
+        <Select aria-label={t("settings.shotlist.abbreviationsList")} value={field} onChange={(e) => setField(e.target.value as ChoiceField)}>
+          {(Object.keys(SHOT_CHOICES) as ChoiceField[]).map((c) => (
+            <option key={c} value={c}>
+              {columnLabel(c)}
+            </option>
+          ))}
+        </Select>
+      </Row>
+      {SHOT_CHOICES[field].map((id) => {
+        const key = `${field}.${id}`;
+        return (
+          <Row key={key} id={`abbr-${field}-${id}`} title={choiceLabel(field, id)}>
+            <AbbreviationField
+              key={abbr[key] ?? ""}
+              id={`abbr-${field}-${id}`}
+              value={abbr[key] ?? ""}
+              onSave={(v) => void writeAbbreviation(key, v).catch((x) => notify({ text: describeError(x), tone: "error" }))}
+            />
+          </Row>
+        );
+      })}
+    </Group>
+  );
+}
+
+/** An abbreviation, saved when the field is left or Entrée is pressed; Échap puts back what it held. */
+function AbbreviationField({ id, value, onSave }: { id: string; value: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const commit = () => {
+    if (draft.trim() !== value) onSave(draft);
+  };
+  return (
+    <input
+      id={id}
+      type="text"
+      className="set-abbr"
+      value={draft}
+      maxLength={12}
+      placeholder="—"
+      spellCheck={false}
+      autoComplete="off"
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        else if (e.key === "Escape" && draft !== value) {
+          e.stopPropagation();
+          setDraft(value);
+        }
+      }}
+    />
   );
 }
 

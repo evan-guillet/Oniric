@@ -81,19 +81,9 @@
     "dismiss": "Dismiss message"
   },
   "status": {
-    "saved": "Saved",
-    "savedTitle": "Your work is saved on this PC. Last copied into the project folder: {{time}}.",
-    "savedNoFlush": "Your work is saved on this PC; it will be copied into the project folder in a few seconds.",
-    "pending": "Changes in progress…",
-    "saving": "Saving…",
     "error": "Can’t save, trying again…",
     "notInFolder": "Not copied into the project folder",
-    "notInFolderTitle": "The project folder can’t be reached ({{detail}}). Your work is still saved on this PC; Oniric tries again every 30 seconds.",
-    "pages_one": "{{count}} page",
-    "pages_other": "{{count}} pages",
-    "duration": "≈ {{duration}}",
-    "scene": "Scene {{n}} of {{total}}",
-    "backupAt": "Backed up at {{time}}"
+    "notInFolderTitle": "The project folder can’t be reached ({{detail}}). Your work is still saved on this PC; Oniric tries again every 30 seconds."
   },
   "elements": {
     "scene_heading": "Scene heading",
@@ -478,7 +468,7 @@
       "shotlist": {
         "label": "Shot list",
         "lead": "How the shot list shows the shots of this project.",
-        "keywords": "shots order shooting edit numbering fields columns table display"
+        "keywords": "shots order shooting edit numbering fields columns table display abbreviations"
       },
       "parts": {
         "label": "Parts shown",
@@ -543,9 +533,10 @@
     "typographyRow": "French typography",
     "shotlist": {
       "listing": "List of shots",
-      "focus": "Opening a scene folds the rest",
-      "focusHelp": "The other scenes, sequences and acts fold, and it becomes the scene you work on.",
-      "note": "The fields shown also apply to the shot list export. The order and fields are kept on this computer, the numbering in the project."
+      "note": "The fields shown also apply to the shot list export. The order and fields are kept on this computer, the numbering and abbreviations in the project.",
+      "abbreviations": "Abbreviations",
+      "abbreviationsHelp": "What the shot list's cell shows instead of the name; left empty, it keeps the whole name.",
+      "abbreviationsList": "List"
     }
   },
   "dash": {
@@ -725,7 +716,8 @@
       "createHint": "On the selected passage, or the cursor’s line",
       "archived": "Archived",
       "note": "Note",
-      "placeholder": "Your note…"
+      "placeholder": "Your note…",
+      "unanchored": "No passage"
     },
     "panels": {
       "scenes": "Scenes",
@@ -2118,11 +2110,9 @@
     "addSecondary": "Add a supporting character",
     "addSecondaryOption": "+ Add a supporting character…",
     "relations": "Relationship map",
-    "relationsHelp": "The ties between characters: family, love, rivalry, hierarchy… A tie can apply only from a given act on, to watch relationships evolve. Drag a character to place it, click it to isolate its ties, click a tie to see it.",
+    "relationsHelp": "The ties between characters: family, love, rivalry, hierarchy… A tie can apply only from a given act on. Drag a character to place it, click it to isolate its ties, click a tie to see it.",
     "needTwo": "Create at least two characters in the bible to draw their relationships.",
     "mapLabel": "Map of relationships between characters",
-    "showRelations": "Show relationships",
-    "wholeFilm": "Across the whole film",
     "removeRelation": "Remove relationship",
     "first": "First character",
     "characterOption": "Character…",
@@ -2137,8 +2127,14 @@
     "fullScreen": "Full screen",
     "leaveFull": "Leave full screen",
     "kindFilter": "Kinds of tie shown",
+    "kindsAll": "All ties",
+    "kindsSome": "{{n}} of {{total}} kinds",
+    "showAllKinds": "Show all",
+    "target": "Focus on a character",
+    "everyone": "All characters",
+    "noTiesOf": "{{name}} has none of the ties shown.",
     "resetLayout": "Rearrange",
-    "noTies": "No ties yet. Add one below: tied characters will appear here.",
+    "noTies": "No ties yet. Add one with “New tie”: tied characters will appear here.",
     "allKindsHidden": "Every kind of tie is hidden.",
     "unlinked_one": "{{n}} character without ties is not on the map.",
     "unlinked_other": "{{n}} characters without ties are not on the map.",
@@ -2156,7 +2152,6 @@
       "motivations": "Motivations"
     },
     "openFull": "Open {{name}}'s full entry",
-    "until": "Until {{act}}",
     "since": "from {{act}}",
     "removeRelationAsk": "Remove the relationship?",
     "from": "From {{act}}"
@@ -2274,10 +2269,12 @@
       "xcu": "Extreme close-up",
       "cu": "Close-up",
       "mcu": "Medium close-up",
-      "cowboy": "Cowboy shot",
-      "medium": "Medium shot",
-      "wide": "Wide shot",
-      "extreme": "Extreme wide shot"
+      "waist": "Medium",
+      "cowboy": "Cowboy",
+      "medium": "Full",
+      "wide": "Wide",
+      "extreme": "Extreme wide",
+      "insert": "Insert"
     },
     "angle": {
       "eye": "Eye level",
@@ -2287,13 +2284,29 @@
     },
     "movement": {
       "static": "Static",
-      "pan": "Pan",
-      "tracking": "Tracking",
       "steadicam": "Steadicam",
       "handheld": "Handheld",
-      "crane": "Crane",
       "drone": "Drone",
-      "zoom": "Zoom"
+      "pan": "Pan",
+      "pan-left": "Pan left",
+      "pan-right": "Pan right",
+      "tilt-up": "Tilt up",
+      "tilt-down": "Tilt down",
+      "tracking": "Tracking",
+      "tracking-in": "Push in",
+      "tracking-out": "Pull out",
+      "tracking-left": "Track left",
+      "tracking-right": "Track right",
+      "tracking-up": "Pedestal up",
+      "tracking-down": "Pedestal down",
+      "tracking-arc": "Arc shot",
+      "crane": "Crane",
+      "crane-up": "Crane up",
+      "crane-down": "Crane down",
+      "zoom": "Zoom",
+      "zoom-in": "Zoom in",
+      "zoom-out": "Zoom out",
+      "dolly-zoom": "Dolly zoom"
     },
     "support": {
       "tripod": "Tripod",
@@ -2351,6 +2364,7 @@
     "noShotShort": "No shot",
     "search": "Search a shot, a scene…",
     "searchLabel": "Search the breakdown",
+    "lensOther": "Other focal length…",
     "noMatch": "Nothing matches “{{query}}”.",
     "move": "Move",
     "actions": "Actions",
@@ -2377,7 +2391,6 @@
       "notes": "Notes"
     },
     "placeholders": {
-      "action": "What we see",
       "characters": "—"
     },
     "insertAfter": "Insert a shot after",

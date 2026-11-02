@@ -186,6 +186,28 @@ export function useNumbering(): ShotNumbering {
   return useLive(readNumbering, ["project_setting"]) ?? "dash";
 }
 
+/** What the Découpage shows of a choice in place of its name, by « field.id » (« size.cu »: « GP »), kept in the project. */
+export type Abbreviations = Readonly<Record<string, string>>;
+
+const ABBREVIATIONS = "shot_abbreviations";
+const NO_ABBREVIATION: Abbreviations = {};
+
+export async function readAbbreviations(): Promise<Abbreviations> {
+  const v = parseJson<unknown>(await readSetting(ABBREVIATIONS), null);
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Abbreviations) : NO_ABBREVIATION;
+}
+
+/** Sets the abbreviation of one choice; an empty one gives it back its name. */
+export async function writeAbbreviation(key: string, value: string): Promise<number> {
+  const { [key]: _old, ...rest } = await readAbbreviations();
+  const v = value.trim();
+  return writeSetting(ABBREVIATIONS, JSON.stringify(v ? { ...rest, [key]: v } : rest));
+}
+
+export function useAbbreviations(): Abbreviations {
+  return useLive(readAbbreviations, ["project_setting"]) ?? NO_ABBREVIATION;
+}
+
 /** The frame of the storyboard [STB-02]: the ratio of its image, kept in the project. */
 export const FRAME_RATIOS = ["1.85", "2.39", "16:9", "4:3", "9:16"] as const;
 export type FrameRatio = (typeof FRAME_RATIOS)[number];

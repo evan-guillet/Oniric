@@ -1,5 +1,6 @@
-import { Maximize2, Minimize2, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Maximize2, Minimize2, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { plural, t } from "../../../../core/i18n";
@@ -171,21 +172,24 @@ function layout(nodes: Node[], ties: [string, string][], placed: Placed, W: numb
   return pos;
 }
 
-/** The map of ties between characters [PER-05]: a canvas only, filtered by kind and by act, that can fill the window. */
+/** The map of ties between characters [PER-05]: a canvas only, filtered by kind and by character, that can fill the page. */
 export function RelationMap({ characters, protagonistId, antagonistId }: { characters: Entry[]; protagonistId?: string; antagonistId?: string }) {
   const w = useWorkshop();
   const { notify, ask } = useProject();
   const relations = useLive(loadRelations, ["relation"]) ?? [];
   const story = useLive(loadStory, [...STORY_TABLES]);
   const acts = story?.acts ?? [];
-  const [act, setAct] = useState("");
   const [hiddenKinds, setHiddenKinds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [hoverTie, setHoverTie] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [full, setFull] = useState(false);
+  const [target, setTarget] = useState("");
+  const [kindsOpen, setKindsOpen] = useState(false);
+  const kindsRef = useRef<HTMLDivElement>(null);
+  /** In full screen the map fills the body of the page, between its header and the status bar. */
+  const [full, setFull] = useState<{ host: HTMLElement; h: number } | null>(null);
   const [dragAt, setDragAt] = useState<{ id: string; p: Point } | null>(null);
   const drag = useRef<{ id: string; dx: number; dy: number; x0: number; y0: number; moved: boolean } | null>(null);
   const [form, setForm] = useState({ from: "", to: "", kind: "Famille", note: "", actId: "" });
@@ -201,29 +205,43 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
     ro.observe(el);
     measure();
     return () => ro.disconnect();
-  }, [characters.length >= 2]);
+  }, [characters.length >= 2, full]);
 
-  // Escape steps back one layer at a time: the open card, then the full window.
+  // Escape steps back one layer at a time: the filter menu, the open card, then full screen.
   useEffect(() => {
-    if (!full && !adding && !picked) return;
+    if (!full && !adding && !picked && !kindsOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
       e.preventDefault();
-      if (adding) setAdding(false);
+      if (kindsOpen) setKindsOpen(false);
+      else if (adding) setAdding(false);
       else if (picked) setPicked(null);
-      else setFull(false);
+      else setFull(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [full, adding, picked]);
+  }, [full, adding, picked, kindsOpen]);
+
+  // The filter menu closes on a click anywhere else.
+  useEffect(() => {
+    if (!kindsOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!kindsRef.current?.contains(e.target as globalThis.Node)) setKindsOpen(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [kindsOpen]);
 
   const byId = useMemo(() => new Map(characters.map((c) => [c.id, c])), [characters]);
   const name = (id: string) => byId.get(id)?.name ?? "?";
-  const actIndex = (id: string | null) => (id ? acts.findIndex((a) => a.id === id) : -1);
-  // The ties of the chosen moment between characters still in the bible.
-  const inTime = relations.filter((r) => byId.has(r.fromId) && byId.has(r.toId) && (!act || actIndex(r.actId) <= actIndex(act)));
+  // The ties between characters still in the bible.
+  const inTime = relations.filter((r) => byId.has(r.fromId) && byId.has(r.toId));
   const kinds = RELATION_KINDS.filter((k) => inTime.some((r) => r.kind === k));
-  const drawn = inTime.filter((r) => !hiddenKinds.has(r.kind));
+  const shownKinds = kinds.filter((k) => !hiddenKinds.has(k)).length;
+  // The characters worth aiming at: those with at least one tie at this moment.
+  const tied = characters.filter((c) => inTime.some((r) => r.fromId === c.id || r.toId === c.id));
+  const aim = target && byId.has(target) ? target : "";
+  const drawn = inTime.filter((r) => !hiddenKinds.has(r.kind) && (!aim || r.fromId === aim || r.toId === aim));
 
   const nodes: Node[] = useMemo(() => {
     const ids = new Set(drawn.flatMap((r) => [r.fromId, r.toId]));
@@ -241,7 +259,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
 
   // What the eye is on: a hovered or opened tie, else a hovered or chosen character.
   const focusTie = drawn.find((r) => r.id === (hoverTie ?? picked));
-  const focusId = focusTie ? null : (hover ?? selected);
+  const focusId = focusTie ? null : (hover ?? selected ?? (aim || null));
   const lit = (r: Relation) => (focusTie ? r.id === focusTie.id : focusId ? r.fromId === focusId || r.toId === focusId : false);
   const near = new Set<string>(focusTie ? [focusTie.fromId, focusTie.toId] : focusId ? [focusId, ...drawn.flatMap((r) => (r.fromId === focusId ? [r.toId] : r.toId === focusId ? [r.fromId] : []))] : []);
   const dimmed = near.size > 0;
@@ -326,57 +344,89 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
   const card = picked ? drawn.find((r) => r.id === picked) : undefined;
   const cardAt = card ? curve(card).mid : null;
   const tieLabel = (r: Relation) => `${name(r.fromId)} — ${choiceLabel("relations", r.kind).toLowerCase()} — ${name(r.toId)}`;
+  const toggleKind = (k: string) => {
+    const next = new Set(hiddenKinds);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
+    setHiddenKinds(next);
+  };
+  const toggleFull = () => {
+    if (full) return setFull(null);
+    const host = box.current?.closest<HTMLElement>(".shell-main");
+    if (host) setFull({ host, h: box.current!.offsetHeight });
+  };
 
-  return (
+  const stage = (
     <div className={`rel-stage${full ? " full" : ""}`} role={full ? "dialog" : undefined} aria-label={full ? t("chars.relations") : undefined}>
-      {kinds.length > 0 && (
-        <div className="rel-bar">
-          <div className="rel-keys" role="group" aria-label={t("chars.kindFilter")}>
-            {kinds.map((k) => {
-              const off = hiddenKinds.has(k);
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  className={`rel-key${off ? " off" : ""}`}
-                  aria-pressed={!off}
-                  style={{ "--k": kindColor(k) } as CSSProperties}
-                  onClick={() => {
-                    const next = new Set(hiddenKinds);
-                    if (off) next.delete(k);
-                    else next.add(k);
-                    setHiddenKinds(next);
-                  }}
-                >
-                  <span className="rel-swatch" aria-hidden="true" />
-                  {choiceLabel("relations", k)}
-                  <span className="rel-key-n">{inTime.filter((r) => r.kind === k).length}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       <div className={`rel-canvas${nodes.length > 22 ? " tall" : ""}`} ref={box}>
         <div className="rel-tools">
-          {acts.length > 0 && (
-            <Select value={act} onChange={(e) => setAct(e.target.value)} aria-label={t("chars.showRelations")}>
-              <option value="">{t("chars.wholeFilm")}</option>
-              {acts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {t("chars.until", { act: a.title })}
-                </option>
-              ))}
-            </Select>
-          )}
-          <button type="button" className={`btn${adding ? " on" : ""}`} aria-expanded={adding} onClick={() => setAdding(!adding)}>
-            <Plus aria-hidden="true" />
-            {t("chars.newTie")}
-          </button>
-          <button type="button" className="icon-btn" onClick={() => setFull(!full)} aria-label={full ? t("chars.leaveFull") : t("chars.fullScreen")} title={full ? t("chars.leaveFull") : t("chars.fullScreen")}>
-            {full ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-          </button>
+          <div className="rel-filters">
+            {kinds.length > 0 && (
+              <div className="rel-kinds" ref={kindsRef}>
+                <button type="button" className={`select rel-kinds-btn${kindsOpen ? " on" : ""}`} aria-haspopup="true" aria-expanded={kindsOpen} onClick={() => setKindsOpen(!kindsOpen)}>
+                  <span className="rel-dots" aria-hidden="true">
+                    {kinds.filter((k) => !hiddenKinds.has(k)).map((k) => (
+                      <span key={k} className="rel-swatch" style={{ "--k": kindColor(k) } as CSSProperties} />
+                    ))}
+                  </span>
+                  <span className="select-value">{shownKinds === kinds.length ? t("chars.kindsAll") : t("chars.kindsSome", { n: shownKinds, total: kinds.length })}</span>
+                  <ChevronDown className="select-caret" aria-hidden="true" />
+                </button>
+                {kindsOpen && (
+                  <div className="rel-kinds-menu">
+                    <div className="check-list" role="group" aria-label={t("chars.kindFilter")}>
+                      {kinds.map((k) => {
+                        const on = !hiddenKinds.has(k);
+                        return (
+                          <button key={k} type="button" role="checkbox" aria-checked={on} onClick={() => toggleKind(k)}>
+                            <span className="check-box" aria-hidden="true">
+                              {on && <Check />}
+                            </span>
+                            <span className="rel-swatch" style={{ "--k": kindColor(k) } as CSSProperties} aria-hidden="true" />
+                            <span className="rel-kind-name">{choiceLabel("relations", k)}</span>
+                            <span className="rel-kind-n">{inTime.filter((r) => r.kind === k).length}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="rel-kinds-foot">
+                      <button type="button" className="btn ghost small" disabled={shownKinds === kinds.length} onClick={() => setHiddenKinds(new Set())}>
+                        {t("chars.showAllKinds")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {tied.length > 0 && (
+              <Select
+                value={aim}
+                className={aim ? "rel-aimed" : undefined}
+                onChange={(e) => {
+                  setTarget(e.target.value);
+                  setSelected(null);
+                  setPicked(null);
+                }}
+                aria-label={t("chars.target")}
+              >
+                <option value="">{t("chars.everyone")}</option>
+                {(aim && !tied.some((c) => c.id === aim) ? [byId.get(aim)!, ...tied] : tied).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </div>
+          <div className="rel-actions">
+            <button type="button" className={`btn${adding ? " on" : ""}`} aria-expanded={adding} onClick={() => setAdding(!adding)}>
+              <Plus aria-hidden="true" />
+              {t("chars.newTie")}
+            </button>
+            <button type="button" className="icon-btn" onClick={toggleFull} aria-label={full ? t("chars.leaveFull") : t("chars.fullScreen")} title={full ? t("chars.leaveFull") : t("chars.fullScreen")}>
+              {full ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+            </button>
+          </div>
         </div>
         {W > 0 && H > 0 && nodes.length > 0 && (
           <svg
@@ -428,7 +478,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
               return (
                 <g
                   key={node.id}
-                  className={`rel-node${role}${selected === node.id ? " on" : ""}${dimmed && !near.has(node.id) ? " far" : ""}`}
+                  className={`rel-node${role}${selected === node.id || aim === node.id ? " on" : ""}${dimmed && !near.has(node.id) ? " far" : ""}`}
                   transform={`translate(${p.x - node.w / 2},${p.y - NODE_H / 2})`}
                   role="button"
                   tabIndex={0}
@@ -568,7 +618,9 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
           </form>
         )}
 
-        {nodes.length === 0 && <p className="rel-empty">{inTime.length ? t("chars.allKindsHidden") : t("chars.noTies")}</p>}
+        {nodes.length === 0 && (
+          <p className="rel-empty">{!inTime.length ? t("chars.noTies") : shownKinds === 0 ? t("chars.allKindsHidden") : t("chars.noTiesOf", { name: name(aim) })}</p>
+        )}
 
         {nodes.length > 0 && (
           <div className="rel-foot">
@@ -585,5 +637,14 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
         )}
       </div>
     </div>
+  );
+
+  // While the map fills the body of the page, an empty frame of its height keeps its place in the step.
+  if (!full) return stage;
+  return (
+    <>
+      <div className="rel-ghost" style={{ height: full.h }} aria-hidden="true" />
+      {createPortal(stage, full.host)}
+    </>
   );
 }

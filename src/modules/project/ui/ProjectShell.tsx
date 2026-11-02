@@ -54,7 +54,7 @@ import { useLive } from "../../../core/db/live";
 import { describeCoreError, describeError } from "../../../core/errors";
 import { markEditorStep, stepHistory } from "../../../core/history";
 import { PromptDialog, type PromptRequest } from "../../../ui-kit/PromptDialog";
-import { dateFormat, getLanguage, LANGUAGES, setLanguage, t } from "../../../core/i18n";
+import { getLanguage, LANGUAGES, setLanguage, t } from "../../../core/i18n";
 import {
   getThemePreference,
   onThemePreference,
@@ -73,7 +73,6 @@ import {
 import { BibleView } from "../../script/bible/ui/BibleView";
 import {
   ScriptSession,
-  useSessionState,
 } from "../../script/screenplay/application/scriptSession";
 import { readSetting } from "../../script/screenplay/application/settings";
 import {
@@ -85,7 +84,6 @@ import {
   blocksFromDoc,
   docFromBlocks,
 } from "../../script/screenplay/ui/editor/schema";
-import { formatMinutes } from "../../script/screenplay/domain/duration";
 import { ScreenplayWorkspace } from "../../script/screenplay/ui/ScreenplayWorkspace";
 import { VersionsView } from "../../script/screenplay/ui/VersionsView";
 import { useWritingJournal } from "../../script/stats/application/journal";
@@ -595,12 +593,8 @@ export function ProjectShell({
               dir={project.dir}
               open={menuOpen}
               onOpenChange={setMenuOpen}
+              onRename={() => void rename()}
               items={[
-                {
-                  label: t("shell.renameProject"),
-                  icon: Pencil,
-                  onClick: () => void rename(),
-                },
                 {
                   label: t("workspace.import"),
                   icon: FileInput,
@@ -613,7 +607,8 @@ export function ProjectShell({
                 },
                 {
                   label: t("shell.openFolder"),
-                  detail: project.dir,
+                  detail: shortPath(project.dir),
+                  detailTitle: project.dir,
                   icon: FolderOpen,
                   onClick: () => void commands.reveal(project.dir, true),
                 },
@@ -784,7 +779,6 @@ export function ProjectShell({
             {LATER.has(view) && <LaterView view={view} />}
           </div>
 
-          <StatusBar session={session} project={project} />
         </div>
       </div>
 
@@ -827,25 +821,37 @@ export function ProjectShell({
 
 interface MenuItem {
   label: string;
-  /** A second, muted line under the label. */
+  /** A second, muted line under the label, on one line. */
   detail?: string;
+  /** The detail in full, when the line shows it shortened. */
+  detailTitle?: string;
   icon: LucideIcon;
   onClick: () => void;
   separated?: boolean;
 }
 
-/** The project's name at the top of the side bar, opening the project actions: import, export, folder, settings. */
+/** A path short enough for one line: the drive, then the last two folders, which name the project. */
+function shortPath(dir: string): string {
+  const sep = dir.includes("\\") ? "\\" : "/";
+  const parts = dir.split(/[\\/]/);
+  return parts.length <= 4 ? dir : [parts[0], "…", ...parts.slice(-2)].join(sep);
+}
+
+/** The project's name at the top of the side bar, opening the project actions: rename beside the name, then import,
+ *  export, folder, settings. */
 function ProjectMenu({
   title,
   dir,
   open,
   onOpenChange,
+  onRename,
   items,
 }: {
   title: string;
   dir: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  onRename: () => void;
   items: MenuItem[];
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -913,6 +919,19 @@ function ProjectMenu({
         >
           <div className="project-menu-head" role="presentation">
             <span className="project-menu-title">{title}</span>
+            <button
+              type="button"
+              role="menuitem"
+              className="project-menu-rename"
+              aria-label={t("shell.renameProject")}
+              title={t("shell.renameProject")}
+              onClick={() => {
+                onOpenChange(false);
+                onRename();
+              }}
+            >
+              <Pencil aria-hidden="true" />
+            </button>
           </div>
           {items.map((item) => {
             const Icon = item.icon;
@@ -931,7 +950,7 @@ function ProjectMenu({
                 {item.detail ? (
                   <span className="project-menu-text">
                     {item.label}
-                    <span className="project-menu-dir">{item.detail}</span>
+                    <span className="project-menu-dir" title={item.detailTitle}>{item.detail}</span>
                   </span>
                 ) : (
                   item.label
@@ -1054,94 +1073,6 @@ const LATER = new Set<ViewId>([
   "scouting",
   "permits",
 ]);
-
-function StatusBar({
-  session,
-  project,
-}: {
-  session: ScriptSession;
-  project: OpenState;
-}) {
-  const { t } = useTranslation();
-  useSessionState(session);
-  const [flushedAt, setFlushedAt] = useState<Date | null>(null);
-  const [flushError, setFlushError] = useState<string | null>(null);
-  const [backupAt, setBackupAt] = useState<Date | null>(null);
-
-  useEffect(() => {
-    const flushed = events.projectFlushed.listen(() => {
-      setFlushedAt(new Date());
-      setFlushError(null);
-    });
-    const failed = events.projectFlushFailed.listen((e) =>
-      setFlushError(e.payload.message),
-    );
-    const backup = events.backupDone.listen(() => setBackupAt(new Date()));
-    return () => {
-      for (const u of [flushed, failed, backup]) void u.then((f) => f());
-    };
-  }, []);
-
-  const snap = session.snapshot;
-  const saveState = session.saveState;
-  const pages = snap?.pagination.pages ?? [];
-  const exactPages =
-    pages.length === 0
-      ? 0
-      : pages.length -
-        1 +
-        pages[pages.length - 1].usedRows / (snap?.pagination.linesPerPage ?? 1);
-  const sceneCount = snap?.headings.length ?? 0;
-
-  let status: { text: string; title: string; tone: string };
-  if (saveState === "error")
-    status = { text: t("status.error"), title: "", tone: "error" };
-  else if (flushError)
-    status = {
-      text: t("status.notInFolder"),
-      title: t("status.notInFolderTitle", { detail: flushError }),
-      tone: "warning",
-    };
-  else if (saveState !== "saved")
-    status = { text: t(`status.${saveState}`), title: "", tone: "busy" };
-  else
-    status = {
-      text: t("status.saved"),
-      title: flushedAt
-        ? t("status.savedTitle", {
-            time: dateFormat({ timeStyle: "medium" }).format(flushedAt),
-          })
-        : t("status.savedNoFlush"),
-      tone: "ok",
-    };
-
-  return (
-    <footer className="statusbar">
-      <span
-        className={`save-state ${status.tone}`}
-        title={status.title}
-        role="status"
-      >
-        {status.text}
-      </span>
-      <span>{t("status.pages", { count: pages.length })}</span>
-      <span>
-        {t("status.duration", { duration: formatMinutes(exactPages) })}
-      </span>
-      {snap && sceneCount > 0 && (
-        <span>
-          {t("status.scene", { n: snap.sceneIndex + 1, total: sceneCount })}
-        </span>
-      )}
-      {backupAt && (
-        <span>{t("status.backupAt", { time: dateFormat({ timeStyle: "short" }).format(backupAt) })}</span>
-      )}
-      <span className="statusbar-dir" title={project.dir}>
-        {project.dir}
-      </span>
-    </footer>
-  );
-}
 
 /** Says when a backup fails, and reminds when the last copy is getting old [SAV-05]. */
 function useBackupWatch(notify: Notify) {

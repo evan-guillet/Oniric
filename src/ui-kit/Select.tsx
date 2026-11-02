@@ -72,6 +72,7 @@ export function Select({
   title,
   defaultOpen,
   onClose,
+  display,
   "aria-label": ariaLabel,
 }: {
   value: string;
@@ -85,6 +86,8 @@ export function Select({
   defaultOpen?: boolean;
   /** When the list closes, chosen or not. */
   onClose?: () => void;
+  /** What the field shows of the current choice in place of its label, the list still saying it whole. */
+  display?: ReactNode;
   "aria-label"?: string;
 }) {
   const options = readOptions(children);
@@ -243,7 +246,7 @@ export function Select({
           }
         }}
       >
-        <span className="select-value">{current?.label ?? ""}</span>
+        <span className="select-value">{display || (current?.label ?? "")}</span>
         <ChevronDown className="select-caret" aria-hidden="true" />
       </button>
       {open &&

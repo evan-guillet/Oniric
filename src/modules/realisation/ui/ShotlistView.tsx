@@ -1,10 +1,7 @@
 import {
-  ChevronRight,
   Copy,
   GripVertical,
-  LayoutGrid,
   Plus,
-  Table2,
   Trash2,
   ArrowDown,
   ArrowUp,
@@ -14,7 +11,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { createPortal } from "react-dom";
 import { describeError } from "../../../core/errors";
 import { plural, t } from "../../../core/i18n";
-import { useLive } from "../../../core/db/live";
 import { CheckList } from "../../../ui-kit/CheckList";
 import { confirmRemoval } from "../../../ui-kit/Dialog";
 import { MoreMenu } from "../../../ui-kit/MoreMenu";
@@ -23,8 +19,6 @@ import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useProject } from "../../project/ui/projectContext";
 import { useScenes, type SceneInfo } from "../../script/screenplay/application/scriptSession";
 import { MediaImage } from "../../shared/media";
-import { STORY_TABLES, loadStory, storyOutline } from "../../script/views/application/story";
-import { numberedParts } from "../../script/views/domain/outline";
 import {
   addShot,
   byScene,
@@ -33,10 +27,12 @@ import {
   reorderShots,
   setShootOrder,
   updateShot,
+  useAbbreviations,
   useNumbering,
   useRatio,
   useShots,
   ratioValue,
+  type Abbreviations,
   type Shot,
   type ShotPatch,
 } from "../application/shots";
@@ -46,10 +42,12 @@ import {
   parseMinutes,
   parseSeconds,
   shotNumber,
+  MOVEMENT_FAMILIES,
   SHOT_CHOICES,
+  SHOT_MOVEMENTS,
   type ChoiceField,
 } from "../domain/shots";
-import { choiceLabel, InlineText, requestScene, shotTotals, useSceneChoice } from "./common";
+import { choiceLabel, InlineText, requestScene, SceneTree, shotTotals, useSceneChoice } from "./common";
 
 /** The fields of a shot the table can show, in its order [DEC-02, DEC-04]. */
 export const SHOT_COLUMNS = [
@@ -76,35 +74,56 @@ export const HIDDEN_KEY = "oniric.shotlist.hidden";
 export const DEFAULT_HIDDEN: ShotColumn[] = ["support", "camera", "frameRate", "sound", "lighting", "effects"];
 /** The order the shots are listed in, set in the settings with the shown fields. */
 export const ORDER_KEY = "oniric.shotlist.order";
-/** Whether opening a scene folds the rest of the breakdown, as set in the settings: it does unless told otherwise. */
-export const FOCUS_KEY = "oniric.shotlist.focus";
+/** Table or cards, as set in the settings. */
+export const SHAPE_KEY = "oniric.shotlist.shape";
 
 const CHOICE_COLUMNS = new Set<string>(Object.keys(SHOT_CHOICES));
 const isChoice = (c: ShotColumn): c is ChoiceField => CHOICE_COLUMNS.has(c);
+/** The movements listed under their family, folded, rather than on their own. */
+const FAMILY_OF = new Set<string>(Object.values(MOVEMENT_FAMILIES).flat());
 const LONG = new Set<ShotColumn>(["action", "dialogue", "notes", "lighting", "effects"]);
 
 /** The width of each column of the table, to fit the page: the long texts share what is left, no narrower than LONG_MIN. */
 const WIDTH: Partial<Record<ShotColumn, number>> = {
   size: 124,
   angle: 124,
-  movement: 136,
+  movement: 168,
   support: 116,
   sound: 104,
-  lens: 76,
+  lens: 100,
   camera: 112,
   frameRate: 76,
   duration: 80,
   setup: 104,
   characters: 140,
 };
-const LONG_MIN = 144;
+const LONG_MIN = 288;
+
+/** The focal lengths offered for the lens, those of a series of primes; any other is written in. */
+const LENSES = ["14", "16", "18", "21", "24", "25", "28", "32", "35", "40", "50", "65", "75", "85", "100", "135"].map((f) => `${f}\u00a0mm`);
+const OTHER = "\u0000other";
+/** « 50mm », « 50 MM » and « 50 mm » are the same lens. */
+const lensKey = (v: string) => v.replace(/\s+/g, "").toLowerCase();
 const GRIP = 34;
 const NUM = 52;
 const MORE = 36;
 
 export const columnLabel = (c: ShotColumn) => t(`shotlist.columns.${c}`);
 
-type Shape = "table" | "cards";
+/** A column at least as wide as its name, which is never cut nor sent to the line. */
+let measure: CanvasRenderingContext2D | null = null;
+function nameWidth(c: ShotColumn): number {
+  measure ??= document.createElement("canvas").getContext("2d");
+  if (!measure) return 0;
+  measure.font = `500 11.5px ${getComputedStyle(document.body).fontFamily}`;
+  return Math.ceil(measure.measureText(columnLabel(c)).width) + 18;
+}
+const columnWidth = (c: ShotColumn) => {
+  const w = WIDTH[c];
+  return w === undefined ? undefined : Math.max(w, nameWidth(c));
+};
+
+export type ShotShape = "table" | "cards";
 export type ShotOrder = "edit" | "shoot";
 
 /** The shots of a scene in the order of the edit, then as they will be shot: unnumbered ones last, in edit order. */
@@ -148,26 +167,21 @@ const shotText = (s: Shot) =>
     ].join("\n"),
   );
 
-/** A line of the breakdown above shots: an act, a sequence or a scene, each folding what follows it. */
-type Head =
-  | { kind: "act" | "seq"; id: string; num: string; title: string; level: number; scenes: string[] }
-  | { kind: "scene"; id: string; scene: SceneInfo; level: number };
+/** A scene of the breakdown and the line above its shots. */
+type Head = { id: string; scene: SceneInfo };
 
-/** The technical breakdown: every scene of the script down the page, under its act and sequence, with its shots in a table or in cards [DEC-01 to DEC-07]. */
+/** The technical breakdown: the shots of one scene, in a table or in cards, chosen in the tree of acts, sequences and scenes on the right; a search lists every scene it finds [DEC-01 to DEC-07]. */
 export function ShotlistView() {
   const { project, session, ask, notify, go } = useProject();
   const scenes = useScenes(session);
   const shots = useShots();
   const numbering = useNumbering();
+  const abbr = useAbbreviations();
   const ratio = useRatio();
-  const story = useLive(loadStory, [...STORY_TABLES]);
   const [current, chooseScene] = useSceneChoice(project.id, scenes);
-  const [shape, setShape] = useStoredState<Shape>("oniric.shotlist.shape", "table");
+  const [shape] = useStoredState<ShotShape>(SHAPE_KEY, "table");
   const [hidden] = useStoredState<ShotColumn[]>(HIDDEN_KEY, DEFAULT_HIDDEN);
   const [order] = useStoredState<ShotOrder>(ORDER_KEY, "edit");
-  const [focus] = useStoredState(FOCUS_KEY, true);
-  const [foldList, setFoldList] = useStoredState<string[]>(`oniric.shotlist.folds.${project.id}`, []);
-  const folded = useMemo(() => new Set(foldList), [foldList]);
   const [selected, setSelected] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [drag, setDrag] = useState<{
@@ -206,73 +220,29 @@ export function ShotlistView() {
   }, [scenes, perScene, numbering]);
   const columns = SHOT_COLUMNS.filter((c) => !hidden.includes(c));
 
-  // The acts and sequences of the story around the scenes, as the Scénario lists them; the scenes alone until it loads.
-  const groups = useMemo(
-    () => (story ? storyOutline(story, scenes.map((s) => s.id)) : [{ act: null, sequences: [{ sequence: null, scenes: scenes.map((s) => s.id) }] }]),
-    [story, scenes],
-  );
-  const heads = useMemo(() => {
-    const parts = numberedParts(groups);
-    const sceneOf = new Map(scenes.map((s) => [s.id, s]));
-    const out: Head[] = [];
-    // A search unfolds what it finds and leaves out the rest.
-    const has = (ids: string[]) => !found || ids.some((id) => found.has(id));
-    const shut = (id: string) => !found && folded.has(id);
-    for (const g of groups) {
-      const all = g.sequences.flatMap((q) => q.scenes);
-      if (!has(all)) continue;
-      if (g.act) out.push({ kind: "act", id: g.act.id, ...parts.get(g.act.id)!, level: 0, scenes: all });
-      if (g.act && shut(g.act.id)) continue;
-      for (const q of g.sequences) {
-        if (!has(q.scenes)) continue;
-        const level = g.act ? 1 : 0;
-        if (q.sequence) out.push({ kind: "seq", id: q.sequence.id, ...parts.get(q.sequence.id)!, level, scenes: q.scenes });
-        if (q.sequence && shut(q.sequence.id)) continue;
-        for (const id of q.scenes) {
-          if (!has([id])) continue;
-          const scene = sceneOf.get(id);
-          if (scene) out.push({ kind: "scene", id, scene, level: level + (q.sequence ? 1 : 0) });
-        }
-      }
-    }
-    return out;
-  }, [groups, scenes, folded, found]);
-  const isShut = (id: string) => !found && folded.has(id);
-  // Once a scene is opened among folded ones, the lines around it step back.
-  const focused = !found && heads.some((h) => h.kind === "scene" && !folded.has(h.id)) && foldList.length > 0;
-  const foldable = useMemo(
-    () => [
-      ...groups.flatMap((g) => [g.act?.id, ...g.sequences.map((q) => q.sequence?.id)].filter((x): x is string => !!x)),
-      ...scenes.map((s) => s.id),
-    ],
-    [groups, scenes],
+  // The scene chosen, or while searching every scene the search finds.
+  const heads = useMemo<Head[]>(
+    () => (found ? scenes.filter((sc) => found.has(sc.id)) : current ? [current] : []).map((scene) => ({ id: scene.id, scene })),
+    [found, scenes, current],
   );
 
-  const toggle = (id: string) => setFoldList(folded.has(id) ? foldList.filter((x) => x !== id) : [...foldList, id]);
-
-  // Opening a scene folds every other scene, sequence and act, and makes it the scene worked on; its line stays in view.
-  const [reveal, setReveal] = useState<string | null>(null);
-  const openScene = (id: string) => {
-    const g = groups.find((x) => x.sequences.some((q) => q.scenes.includes(id)));
-    const q = g?.sequences.find((x) => x.scenes.includes(id));
-    const keep = new Set([id, g?.act?.id, q?.sequence?.id]);
-    setFoldList(foldable.filter((x) => !keep.has(x)));
-    chooseScene(id);
-    setReveal(id);
-  };
+  // Another scene starts from the top of its shots.
   useLayoutEffect(() => {
-    if (!reveal) return;
-    main.current?.querySelector(`[data-scene="${reveal}"]`)?.scrollIntoView({ block: "nearest" });
-    setReveal(null);
-  }, [reveal, heads]);
+    if (main.current) main.current.scrollTop = 0;
+  }, [current?.id]);
 
-  // Ctrl+F goes to the search, unless a dialog is open.
+  // Ctrl+F shows the search, unless a dialog is open; it goes away once left empty.
   const searchField = useRef<HTMLInputElement>(null);
+  const [finding, setFinding] = useState(false);
+  useLayoutEffect(() => {
+    if (finding) searchField.current?.focus();
+  }, [finding]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "f") return;
       if (document.querySelector("dialog[open]")) return;
       e.preventDefault();
+      setFinding(true);
       searchField.current?.focus();
       searchField.current?.select();
     };
@@ -284,23 +254,31 @@ export function ShotlistView() {
     if (needle && main.current) main.current.scrollTop = 0;
   }, [needle]);
 
-  // Opened from the Storyboard or a moodboard, the page starts at the scene it was on.
-  const arrived = useRef(false);
-  useLayoutEffect(() => {
-    if (arrived.current || !story || !current) return;
-    arrived.current = true;
-    if (current.index > 0) main.current?.querySelector(`[data-scene="${current.id}"]`)?.scrollIntoView({ block: "start" });
-  }, [story, current]);
-
-  // The lines of the acts, sequences and scenes stay the width of the page while the table scrolls sideways.
+  // The line of the scene stays the width of the page while the table scrolls sideways, and so do the grip and number of each shot.
   const hasScenes = scenes.length > 0;
+  const [sideways, setSideways] = useState(false);
+  // Wider than the page, the table is dragged sideways from the empty space below it.
+  const [pans, setPans] = useState(false);
+  const pan = useRef<{ x: number; left: number } | null>(null);
+  const [panning, setPanning] = useState(false);
   useEffect(() => {
     const el = main.current;
     if (!el) return;
-    const fit = new ResizeObserver(() => el.style.setProperty("--page", `${el.clientWidth}px`));
+    const fit = new ResizeObserver(() => {
+      el.style.setProperty("--page", `${el.clientWidth}px`);
+      setPans(el.scrollWidth > el.clientWidth);
+    });
     fit.observe(el);
-    return () => fit.disconnect();
-  }, [hasScenes]);
+    const table = el.querySelector("table");
+    if (table) fit.observe(table);
+    // Once it has, the frozen columns show their edge.
+    const scrolled = () => setSideways(el.scrollLeft > 0);
+    el.addEventListener("scroll", scrolled, { passive: true });
+    return () => {
+      fit.disconnect();
+      el.removeEventListener("scroll", scrolled);
+    };
+  }, [hasScenes, shape]);
 
   // A new shot gets the focus in its first field once it is listed.
   useLayoutEffect(() => {
@@ -418,60 +396,41 @@ export function ShotlistView() {
     if (s.sceneId !== current?.id) chooseScene(s.sceneId);
   };
 
-  /** The folding line of an act, a sequence or a scene. */
+  /** The line of a scene above its shots; among the scenes a search found, it ends the search and opens that scene alone. */
   const headLine = (h: Head) => {
-    const open = !isShut(h.id);
-    const here = h.kind === "scene" ? h.id === current?.id : !!current && h.scenes.includes(current.id);
-    // Searching, a scene's line ends the search and opens that scene alone.
-    const click = () => {
-      if (found) {
-        if (h.kind !== "scene") return;
-        setQuery("");
-        openScene(h.id);
-      } else if (focus && h.kind === "scene" && !open) openScene(h.id);
-      else toggle(h.id);
-    };
+    const inner = (
+      <>
+        <span className="rz-head-num">{h.scene.index + 1}</span>
+        <span className="rz-head-title">{h.scene.heading || t("workspace.noHeading")}</span>
+      </>
+    );
     return (
-      <div
-        className={`rz-head rz-head-${h.kind}${here ? " here" : ""}${h.kind === "scene" && open ? " open" : ""}`}
-        style={{ "--level": h.level } as CSSProperties}
-      >
-        <button type="button" className="rz-fold" aria-expanded={open} onClick={click}>
-          <ChevronRight className="rz-chevron" aria-hidden="true" />
-          {h.kind === "scene" ? (
-            <>
-              <span className="rz-head-num">{h.scene.index + 1}</span>
-              <span className="rz-head-title">{h.scene.heading || t("workspace.noHeading")}</span>
-            </>
-          ) : (
-            <>
-              <span className="rz-head-num">{h.num}</span>
-              <span className="rz-head-title">{h.title}</span>
-            </>
-          )}
-        </button>
+      <div className={`rz-head rz-head-scene${h.id === current?.id ? " here" : ""}`}>
+        {found ? (
+          <button
+            type="button"
+            className="rz-fold"
+            onClick={() => {
+              setQuery("");
+              setFinding(false);
+              chooseScene(h.id);
+            }}
+          >
+            {inner}
+          </button>
+        ) : (
+          <span className="rz-fold">{inner}</span>
+        )}
         <span className="rz-head-meta">
-          {h.kind === "scene" ? <SceneMeta shots={listOf(h.id)} /> : plural("sceneList.count", h.scenes.length)}
+          <SceneMeta shots={listOf(h.id)} />
         </span>
       </div>
     );
   };
 
-  // Table or cards, in a bar at the bottom of the page as the tools of the canvases; then the search.
-  const dock = (
-    <div className="rz-dock" role="toolbar" aria-label={t("shotlist.shape")}>
-      {(
-        [
-          ["table", Table2],
-          ["cards", LayoutGrid],
-        ] as const
-      ).map(([id, Icon]) => (
-        <button key={id} type="button" className={shape === id ? "on" : undefined} aria-pressed={shape === id} onClick={() => setShape(id)}>
-          <Icon aria-hidden="true" />
-          <span>{t(`shotlist.shapes.${id}`)}</span>
-        </button>
-      ))}
-      <span className="mb-bar-sep" aria-hidden="true" />
+  // The search, over the top of the page while it is open.
+  const search = (finding || query) && (
+    <div className="rz-find" role="search">
       <input
         ref={searchField}
         type="search"
@@ -480,10 +439,16 @@ export function ShotlistView() {
         placeholder={t("shotlist.search")}
         aria-label={t("shotlist.searchLabel")}
         onChange={(e) => setQuery(e.target.value)}
+        onBlur={() => {
+          if (!query) setFinding(false);
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Escape" && query) {
-            e.preventDefault();
-            setQuery("");
+          if (e.key !== "Escape") return;
+          e.preventDefault();
+          if (query) setQuery("");
+          else {
+            setFinding(false);
+            main.current?.focus();
           }
         }}
       />
@@ -510,20 +475,19 @@ export function ShotlistView() {
   }
 
   const width = columns.length + (order === "shoot" ? 4 : 3);
-  const tableMin = columns.reduce((n, c) => n + (WIDTH[c] ?? LONG_MIN), GRIP + NUM * (order === "shoot" ? 2 : 1) + MORE);
+  const tableMin = columns.reduce((n, c) => n + (columnWidth(c) ?? Math.max(LONG_MIN, nameWidth(c))), GRIP + NUM * (order === "shoot" ? 2 : 1) + MORE);
 
   const tableRows = (h: Head) => {
     const head = (
-      <tr className={`rz-head-row rz-head-row-${h.kind}`}>
+      <tr className="rz-head-row">
         <th colSpan={width} scope="rowgroup">
           {headLine(h)}
         </th>
       </tr>
     );
-    if (h.kind !== "scene" || isShut(h.id)) return <tbody key={h.id}>{head}</tbody>;
     const shown = shownOf(h.id);
     return (
-      <tbody key={h.id} data-scene={h.id} className="rz-scene" style={{ "--level": h.level } as CSSProperties}>
+      <tbody key={h.id} data-scene={h.id} className="rz-scene">
         {head}
         {seenOf(h.id).map((s) => (
           <tr
@@ -544,7 +508,7 @@ export function ShotlistView() {
             {order === "shoot" && <td className="rz-col-num rz-shoot">{shown.indexOf(s) + 1}</td>}
             {columns.map((c, ci) => (
               <td key={c} className={`rz-col-${c}`}>
-                <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} clamp onPatch={(p) => patch(s, p)} />
+                <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} abbr={abbr} clamp onPatch={(p) => patch(s, p)} />
               </td>
             ))}
             <td className="rz-col-more">
@@ -570,12 +534,11 @@ export function ShotlistView() {
   };
 
   const cardBlock = (h: Head) => {
-    if (h.kind !== "scene" || isShut(h.id)) return <div key={h.id}>{headLine(h)}</div>;
     const shown = shownOf(h.id);
     return (
       <section key={h.id} data-scene={h.id} className="rz-scene">
         {headLine(h)}
-        <ol className="rz-cards" style={{ "--level": h.level } as CSSProperties}>
+        <ol className="rz-cards">
           {seenOf(h.id).map((s) => (
             <li
               key={s.id}
@@ -605,7 +568,7 @@ export function ShotlistView() {
                 {columns.map((c, ci) => (
                   <label key={c} className={LONG.has(c) || c === "characters" ? "rz-field wide" : "rz-field"}>
                     <span>{columnLabel(c)}</span>
-                    <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} onPatch={(p) => patch(s, p)} />
+                    <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} abbr={abbr} onPatch={(p) => patch(s, p)} />
                   </label>
                 ))}
               </div>
@@ -626,17 +589,42 @@ export function ShotlistView() {
     <div className="view rz-view">
       <main
         ref={main}
-        className={["rz-main", shape === "table" && "flush", focused && "focused"].filter(Boolean).join(" ")}
+        tabIndex={-1}
+        className={["rz-main", shape === "table" && "flush", sideways && "scrolled", shape === "table" && pans && "pans", panning && "panning"]
+          .filter(Boolean)
+          .join(" ")}
         aria-label={t("nav.views.shotlist")}
+        onPointerDown={(e) => {
+          const el = e.currentTarget;
+          if (shape !== "table" || !pans || e.button !== 0 || e.target !== el) return;
+          // The scroll bars keep their own handling.
+          const box = el.getBoundingClientRect();
+          if (e.clientX - box.left >= el.clientWidth || e.clientY - box.top >= el.clientHeight) return;
+          e.preventDefault();
+          el.setPointerCapture(e.pointerId);
+          pan.current = { x: e.clientX, left: el.scrollLeft };
+          setPanning(true);
+        }}
+        onPointerMove={(e) => {
+          if (pan.current) e.currentTarget.scrollLeft = pan.current.left - (e.clientX - pan.current.x);
+        }}
+        onPointerUp={() => {
+          pan.current = null;
+          setPanning(false);
+        }}
+        onPointerCancel={() => {
+          pan.current = null;
+          setPanning(false);
+        }}
       >
         {shape === "table" ? (
-          <table className="rz-table" style={{ minWidth: tableMin }}>
+          <table className="rz-table" style={{ minWidth: tableMin, "--grip-w": `${GRIP}px`, "--num-w": `${NUM}px` } as CSSProperties}>
             <colgroup>
               <col style={{ width: GRIP }} />
               <col style={{ width: NUM }} />
               {order === "shoot" && <col style={{ width: NUM }} />}
               {columns.map((c) => (
-                <col key={c} style={{ width: WIDTH[c] }} />
+                <col key={c} style={{ width: columnWidth(c) }} />
               ))}
               <col style={{ width: MORE }} />
             </colgroup>
@@ -660,7 +648,20 @@ export function ShotlistView() {
         )}
         {found?.size === 0 && <p className="rz-none">{t("shotlist.noMatch", { query: query.trim() })}</p>}
       </main>
-      {dock}
+      {search}
+      <aside className="view-side rz-side rz-tree" aria-label={t("shotlist.scenes")}>
+        <SceneTree
+          projectId={project.id}
+          scenes={scenes}
+          current={current?.id ?? null}
+          onSelect={(id) => {
+            setQuery("");
+            setFinding(false);
+            chooseScene(id);
+          }}
+          meta={(sc) => <SceneMeta shots={listOf(sc.id)} />}
+        />
+      </aside>
     </div>
   );
 }
@@ -675,6 +676,7 @@ function ShotField({
   column,
   scene,
   first,
+  abbr,
   clamp,
   onPatch,
 }: {
@@ -682,6 +684,7 @@ function ShotField({
   column: ShotColumn;
   scene: SceneInfo | null;
   first: boolean;
+  abbr: Abbreviations;
   /** In the table, a long text shows its first lines until it is written in. */
   clamp?: boolean;
   onPatch: (p: ShotPatch) => void;
@@ -689,19 +692,43 @@ function ShotField({
   const label = columnLabel(column);
   const cls = first ? "rz-first" : undefined;
   if (isChoice(column)) {
+    const value = shot[column] ?? "";
+    // Abbreviated, the cell keeps the whole name for the pointer.
+    const short = value ? abbr[`${column}.${value}`] : undefined;
     return (
       <Select
         className={`rz-cell-select ${cls ?? ""}`}
         aria-label={label}
-        value={shot[column] ?? ""}
+        display={short}
+        title={short ? choiceLabel(column, value) : undefined}
+        value={value}
         onChange={(e) => onPatch({ [column]: e.target.value || null })}
       >
-        <option value="">—</option>
-        {SHOT_CHOICES[column].map((id) => (
-          <option key={id} value={id}>
-            {choiceLabel(column, id)}
-          </option>
-        ))}
+        <option value=""><span className="rz-placeholder">—</span></option>
+        {column === "movement" ? (
+          <>
+            {SHOT_MOVEMENTS.filter((id) => !FAMILY_OF.has(id)).map((id) => (
+              <option key={id} value={id}>
+                {choiceLabel(column, id)}
+              </option>
+            ))}
+            {Object.entries(MOVEMENT_FAMILIES).map(([family, ids]) => (
+              <optgroup key={family} label={choiceLabel(column, family)}>
+                {ids.map((id) => (
+                  <option key={id} value={id}>
+                    {choiceLabel(column, id)}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </>
+        ) : (
+          SHOT_CHOICES[column].map((id) => (
+            <option key={id} value={id}>
+              {choiceLabel(column, id)}
+            </option>
+          ))
+        )}
       </Select>
     );
   }
@@ -719,6 +746,7 @@ function ShotField({
           const s = parseSeconds(v);
           return s === null ? null : String(s);
         }}
+        placeholder="—"
         onCommit={(v) => onPatch({ duration: v ? Number(v) : null })}
       />
     );
@@ -735,21 +763,74 @@ function ShotField({
           const m = parseMinutes(v);
           return m === null ? null : String(m);
         }}
+        placeholder="—"
         onCommit={(v) => onPatch({ setup: v ? Number(v) : null })}
       />
     );
   }
-  const key = column as "lens" | "camera" | "frameRate" | "action" | "dialogue" | "lighting" | "effects" | "notes";
+  if (column === "lens") return <LensField value={shot.lens} label={label} className={cls} onCommit={(lens) => onPatch({ lens })} />;
+  const key = column as "camera" | "frameRate" | "action" | "dialogue" | "lighting" | "effects" | "notes";
   return (
     <InlineText
       className={cls}
       label={label}
       multiline={LONG.has(column)}
       clamp={clamp}
-      placeholder={t(`shotlist.placeholders.${column}`, { defaultValue: "" }) || undefined}
+      placeholder="—"
       value={shot[key]}
       onCommit={(v) => onPatch({ [key]: v })}
     />
+  );
+}
+
+/** The lens: a focal length from the list, or one written in from its last line. */
+function LensField({ value, label, className, onCommit }: { value: string; label: string; className?: string; onCommit: (v: string) => void }) {
+  const [writing, setWriting] = useState(false);
+  const cancelled = useRef(false);
+  const listed = LENSES.find((l) => lensKey(l) === lensKey(value));
+  if (writing) {
+    return (
+      <input
+        autoFocus
+        className={`rz-inline ${className ?? ""}`}
+        aria-label={label}
+        defaultValue={listed ? "" : value}
+        placeholder={t("shotlist.lensOther")}
+        onBlur={(e) => {
+          setWriting(false);
+          const next = e.currentTarget.value.trim();
+          if (!cancelled.current && next && next !== value) onCommit(next);
+          cancelled.current = false;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            cancelled.current = true;
+            e.stopPropagation();
+            e.currentTarget.blur();
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+      />
+    );
+  }
+  return (
+    <Select
+      className={`rz-cell-select ${className ?? ""}`}
+      aria-label={label}
+      value={listed ?? value}
+      onChange={(e) => (e.target.value === OTHER ? setWriting(true) : onCommit(e.target.value))}
+    >
+      <option value=""><span className="rz-placeholder">—</span></option>
+      {LENSES.map((l) => (
+        <option key={l} value={l}>
+          {l}
+        </option>
+      ))}
+      {value && !listed && <option value={value}>{value}</option>}
+      <option value={OTHER}>{t("shotlist.lensOther")}</option>
+    </Select>
   );
 }
 

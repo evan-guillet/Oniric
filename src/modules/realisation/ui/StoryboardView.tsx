@@ -28,7 +28,7 @@ import {
   type Shot,
 } from "../application/shots";
 import { formatSeconds, shotNumber } from "../domain/shots";
-import { choiceLabel, InlineText, requestScene, SceneRail, shotTotals, useSceneChoice } from "./common";
+import { choiceLabel, InlineText, requestScene, SceneTree, shotTotals, useSceneChoice } from "./common";
 import { DrawDialog } from "./DrawDialog";
 
 type Panel = "scenes" | "display";
@@ -258,7 +258,8 @@ export function StoryboardView() {
       </main>
       <aside className="view-side rz-side" aria-label={t(`shotlist.panels.${panel}`)}>
         {panel === "scenes" ? (
-          <SceneRail
+          <SceneTree
+            projectId={project.id}
             scenes={scenes}
             current={scene?.id ?? null}
             onSelect={chooseScene}
