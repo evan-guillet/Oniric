@@ -9803,173 +9803,103 @@ button.rz-fold:hover {
   outline-offset: 2px;
 }
 
-/* A frame in large: the image on the desk at the left, what its shot says at the right; ↑ ↓ go through the shots. */
-.dialog.frame-viewer {
-  width: min(1240px, calc(100vw - 48px));
-  height: min(780px, calc(100vh - 48px));
+/* A frame in large, alone on a dark surround in both themes, as in a screening room; ↑ ↓ and the wheel go through the frames. */
+.frame-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
-  padding: 0;
-  display: none;
-  overflow: hidden;
-}
-.dialog.frame-viewer[open] {
-  display: flex;
-  flex-direction: column;
-}
-.dialog.frame-viewer:focus {
-  outline: none;
-}
-.fv-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 20px;
-  border-bottom: 1px solid var(--line);
-}
-.dialog.frame-viewer .fv-head h2 {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
   margin: 0;
-  font-size: 15px;
-}
-.fv-num {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.fv-scene {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.fv-count {
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.fv-steps {
-  display: flex;
-  gap: 2px;
-  padding-right: 8px;
-  border-right: 1px solid var(--line);
-}
-.fv-body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-}
-.fv-stage {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 28px 32px 20px;
-  background: var(--desk);
+  padding: 48px 84px;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  cursor: zoom-out;
   container-type: size;
 }
-.fv-frame {
+.frame-viewer[open] {
   display: grid;
   place-items: center;
-  /* As large as the desk allows, in the ratio of the film, the tools kept under it. */
-  width: min(100cqw, calc((100cqh - 46px) * var(--r)));
-  flex: none;
+}
+.frame-viewer:focus {
+  outline: none;
+}
+.frame-viewer::backdrop {
+  background: rgba(10, 10, 13, 0.95);
+}
+.fv-frame {
+  /* As large as the window allows, in the ratio of the film. */
+  width: min(100cqw, calc(100cqh * var(--r)));
+  aspect-ratio: var(--r);
   overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: 4px;
   background: #ffffff;
-  box-shadow: var(--sheet-shadow);
-  animation: fv-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55);
+  animation: fv-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .fv-frame img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-.fv-frame.empty {
-  border-style: dashed;
-  background: var(--sunken);
-  box-shadow: none;
-}
-.fv-frame.empty p {
-  margin: 0;
-  font-size: 13px;
+  cursor: default;
 }
 @keyframes fv-in {
   from {
-    opacity: 0.4;
+    opacity: 0.35;
+    transform: scale(0.985);
   }
 }
-.fv-tools {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
+.fv-close,
+.fv-steps button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
 }
-.fv-detail {
-  min-height: 0;
+.fv-close:hover,
+.fv-steps button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.fv-close:focus-visible,
+.fv-steps button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fv-steps button:disabled {
+  color: rgba(255, 255, 255, 0.22);
+  cursor: default;
+}
+.fv-close svg,
+.fv-steps svg {
+  width: 20px;
+  height: 20px;
+}
+.fv-close {
+  position: absolute;
+  top: 16px;
+  right: 22px;
+}
+.fv-steps {
+  position: absolute;
+  top: 50%;
+  right: 22px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 18px 14px;
-  border-left: 1px solid var(--line);
-  overflow-y: auto;
-}
-.fv-tech {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 500;
-}
-.fv-tech.muted {
-  font-weight: 400;
-}
-.fv-field {
-  display: grid;
-  gap: 2px;
-}
-.fv-label {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.fv-detail .rz-inline {
-  margin: 0 -7px;
-  width: calc(100% + 14px);
-}
-.fv-caption {
-  color: var(--ink);
-}
-.fv-dialogue {
-  color: var(--ink-2);
-  font-style: italic;
-}
-.fv-hint {
-  margin: auto 0 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-}
-@media (max-width: 1100px) {
-  .fv-body {
-    grid-template-columns: minmax(0, 1fr) 280px;
-  }
+  gap: 6px;
+  transform: translateY(-50%);
 }
 @media (prefers-reduced-motion: reduce) {
   .fv-frame {

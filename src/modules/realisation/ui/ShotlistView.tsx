@@ -5,6 +5,10 @@ import {
   Trash2,
   ArrowDown,
   ArrowUp,
+  Brush,
+  ImageOff,
+  ImagePlus,
+  Images,
   Maximize2,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
@@ -13,7 +17,7 @@ import { describeError } from "../../../core/errors";
 import { plural, t } from "../../../core/i18n";
 import { CheckList } from "../../../ui-kit/CheckList";
 import { confirmRemoval } from "../../../ui-kit/Dialog";
-import { MoreMenu } from "../../../ui-kit/MoreMenu";
+import { FloatingMenu, MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
 import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useProject } from "../../project/ui/projectContext";
@@ -198,6 +202,9 @@ export function ShotlistView() {
   const [viewing, setViewing] = useState<string | null>(null);
   const [drawing, setDrawing] = useState<Shot | null>(null);
   const [picking, setPicking] = useState<Shot | null>(null);
+  // The menu of an empty frame: draw it, import an image or take one from a moodboard.
+  const [filling, setFilling] = useState<{ shot: Shot; top: number; left: number } | null>(null);
+  const fillAnchor = useRef<HTMLElement | null>(null);
 
   const perScene = useMemo(() => byScene(shots ?? []), [shots]);
   const listOf = (sceneId: string) => perScene.get(sceneId) ?? [];
@@ -237,13 +244,9 @@ export function ShotlistView() {
     [found, scenes, current],
   );
 
-  // The shots the frame viewer goes through with ↑ and ↓: those shown, scene after scene.
-  const seen = heads.flatMap((h) => seenOf(h.id));
-  const viewIndex = viewing ? seen.findIndex((s) => s.id === viewing) : -1;
-  const headingOf = (s: Shot) => {
-    const sc = scenes.find((x) => x.id === s.sceneId);
-    return sc ? `${sc.index + 1}. ${sc.heading || t("workspace.noHeading")}` : "";
-  };
+  // The frames the viewer goes through with ↑ and ↓: those drawn among the shots shown, scene after scene.
+  const framed = heads.flatMap((h) => seenOf(h.id)).filter((s) => s.frameImage);
+  const viewIndex = viewing ? framed.findIndex((s) => s.id === viewing) : -1;
   const closeViewer = () => {
     const id = viewing;
     setViewing(null);
@@ -318,9 +321,15 @@ export function ShotlistView() {
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const patch = (s: Shot, p: ShotPatch, label?: string) => void updateShot(s.id, p, label).catch(fail);
 
-  const openFrame = (s: Shot) => {
+  const openFrame = (s: Shot, el?: HTMLElement) => {
     setSelected(s.id);
-    setViewing(s.id);
+    if (s.frameImage) {
+      setViewing(s.id);
+    } else if (el) {
+      const r = el.getBoundingClientRect();
+      fillAnchor.current = el;
+      setFilling({ shot: s, top: r.bottom + 4, left: r.left });
+    }
   };
   const importInto = async (s: Shot) => {
     try {
@@ -335,6 +344,13 @@ export function ShotlistView() {
     if (!(await confirmRemoval(ask, { title: t("storyboard.clearTitle", { n }), text: t("storyboard.clearText"), label: t("common.removeAction") }))) return;
     patch(s, { frameImage: null }, "Image retirée de la case");
   };
+
+  const frameItems = (s: Shot): MoreItem[] => [
+    { label: t(s.frameImage ? "storyboard.drawOver" : "storyboard.drawIt"), icon: Brush, onClick: () => setDrawing(s) },
+    { label: t(s.frameImage ? "storyboard.changeImage" : "storyboard.import"), icon: ImagePlus, onClick: () => void importInto(s) },
+    { label: t("storyboard.fromBoard"), icon: Images, onClick: () => setPicking(s) },
+    ...(s.frameImage ? [{ label: t("storyboard.clear"), icon: ImageOff, onClick: () => void clearImage(s) }] : []),
+  ];
 
   const add = async (sceneId: string, after: Shot | null = null) => {
     try {
@@ -400,7 +416,7 @@ export function ShotlistView() {
 
   const dropClass = (s: Shot) => (drag?.over === s.id ? (drag.after ? "drop-after" : "drop-before") : "");
 
-  const menu = (s: Shot) => [
+  const menu = (s: Shot): MoreItem[] => [
     {
       label: t("shotlist.insertAfter"),
       icon: Plus,
@@ -417,11 +433,8 @@ export function ShotlistView() {
       icon: ArrowDown,
       onClick: () => step(s, 1),
     },
-    {
-      label: t("shotlist.openFrame"),
-      icon: Maximize2,
-      onClick: () => openFrame(s),
-    },
+    ...(s.frameImage ? [{ label: t("shotlist.openFrame"), icon: Maximize2, onClick: () => openFrame(s) }] : []),
+    ...frameItems(s),
     {
       label: t("shotlist.delete"),
       icon: Trash2,
@@ -549,7 +562,7 @@ export function ShotlistView() {
             {columns.map((c) => (
               <td key={c} className={`rz-col-${c}`}>
                 {c === "frame" ? (
-                  <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} onOpen={() => openFrame(s)} />
+                  <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} onOpen={(el) => openFrame(s, el)} />
                 ) : (
                   <ShotField shot={s} column={c} scene={h.scene} first={c === firstField} abbr={abbr} clamp onPatch={(p) => patch(s, p)} />
                 )}
@@ -603,7 +616,7 @@ export function ShotlistView() {
                 )}
                 <MoreMenu label={t("shotlist.shotMenu", { n: numbers.get(s.id) })} items={menu(s)} />
               </header>
-              {columns.includes("frame") && <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} wide onOpen={() => openFrame(s)} />}
+              {columns.includes("frame") && <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} wide onOpen={(el) => openFrame(s, el)} />}
               <div className="rz-card-fields">
                 {columns
                   .filter((c) => c !== "frame")
@@ -706,21 +719,23 @@ export function ShotlistView() {
       </aside>
       {viewIndex >= 0 && (
         <FrameViewer
-          shots={seen}
+          shots={framed}
           index={viewIndex}
           numberOf={(s) => numbers.get(s.id) ?? ""}
-          headingOf={headingOf}
           ratio={frameRatio}
           onMove={(i) => {
-            setViewing(seen[i].id);
-            setSelected(seen[i].id);
+            setViewing(framed[i].id);
+            setSelected(framed[i].id);
           }}
           onClose={closeViewer}
-          onDraw={setDrawing}
-          onImport={(s) => void importInto(s)}
-          onPick={setPicking}
-          onClear={(s) => void clearImage(s)}
-          onPatch={patch}
+        />
+      )}
+      {filling && (
+        <FloatingMenu
+          items={frameItems(filling.shot)}
+          anchor={fillAnchor}
+          style={{ top: filling.top, left: filling.left }}
+          onClose={() => setFilling(null)}
         />
       )}
       {drawing && (
