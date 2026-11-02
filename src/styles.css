@@ -3752,10 +3752,25 @@ h4 {
   display: grid;
   gap: 12px;
 }
-/* Relation map: a canvas of the tied characters, the ties listed under it, a row to add one */
-.relations {
-  display: grid;
+/* Relation map: a canvas only, its kinds as filters above it; it can fill the window */
+.rel-stage {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+.rel-stage.full {
+  position: fixed;
+  inset: var(--titlebar-h) 0 0 0;
+  z-index: 40;
+  padding: 12px 16px 16px;
+  background: var(--panel);
+  animation: rel-full-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes rel-full-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
 }
 .rel-bar {
   display: flex;
@@ -3815,16 +3830,29 @@ h4 {
   font-variant-numeric: tabular-nums;
 }
 .rel-tools {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
+}
+.rel-tools .icon-btn {
+  width: var(--control-h);
+  height: var(--control-h);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--control-r);
+  background: var(--panel);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
 }
 .rel-tools .select {
-  min-width: 200px;
+  min-width: 190px;
 }
 .rel-canvas {
   position: relative;
+  height: 480px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background-color: var(--sunken);
@@ -3832,6 +3860,14 @@ h4 {
   background-size: 22px 22px;
   background-position: 11px 11px;
   overflow: hidden;
+}
+.rel-canvas.tall {
+  height: 580px;
+}
+.rel-stage.full .rel-canvas {
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 .relation-map {
   display: block;
@@ -3843,6 +3879,7 @@ h4 {
   stroke-width: 2;
   stroke-linecap: round;
   opacity: 0.7;
+  pointer-events: none;
   transition:
     opacity 140ms ease-out,
     stroke-width 140ms ease-out;
@@ -3853,6 +3890,13 @@ h4 {
 .relation-map.dim .rel-tie.lit {
   opacity: 1;
   stroke-width: 2.75;
+}
+.rel-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+  outline: none;
 }
 .rel-node {
   cursor: grab;
@@ -3920,6 +3964,77 @@ h4 {
   font-size: 11px;
   font-weight: 500;
 }
+/* The card of an opened tie, and the form of a new one, float on the canvas */
+.rel-card,
+.rel-add {
+  position: absolute;
+  z-index: 2;
+  width: 260px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  animation: rel-pop 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes rel-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.rel-card {
+  display: grid;
+  gap: 4px;
+}
+.rel-card p {
+  margin: 0;
+}
+.rel-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+.rel-who {
+  font-weight: 600;
+  color: var(--ink);
+}
+.rel-who span {
+  color: var(--hint);
+  font-weight: 400;
+}
+.rel-note {
+  color: var(--ink-2);
+}
+.rel-since {
+  color: var(--muted);
+  font-size: 12px;
+}
+.rel-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px -4px -4px;
+}
+.rel-add {
+  top: 52px;
+  right: 12px;
+  width: 300px;
+  display: grid;
+  gap: 8px;
+}
+.rel-add .select {
+  width: 100%;
+}
+.rel-add-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
 .rel-empty {
   position: absolute;
   inset: 0;
@@ -3931,122 +4046,25 @@ h4 {
   text-align: center;
 }
 .rel-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 28px;
-  margin-top: -2px;
+  min-height: 36px;
+  padding: 4px 8px 4px 14px;
+  pointer-events: none;
+}
+.rel-foot .btn {
+  pointer-events: auto;
 }
 .rel-caption {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
-}
-.rel-ties {
-  margin-top: 14px;
-}
-.rel-ties-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
-}
-.rel-ties-head h4 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-.rel-ties-head .btn {
-  margin-left: auto;
-}
-.rel-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  column-gap: 32px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.rel-list li {
-  display: grid;
-  grid-template-columns: 108px minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-}
-.rel-kind {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding-top: 1px;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 500;
-}
-.rel-body {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.rel-who {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 6px;
-}
-.rel-who button {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-weight: 500;
-  color: var(--ink);
-  cursor: pointer;
-  text-align: left;
-}
-.rel-who button:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.rel-and {
-  color: var(--hint);
-}
-.rel-note {
-  color: var(--muted);
-  font-size: 12.5px;
-}
-.rel-remove {
-  opacity: 0;
-  transition: opacity 120ms ease-out;
-}
-.rel-list li:hover .rel-remove,
-.rel-remove:focus-visible {
-  opacity: 1;
-}
-.rel-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  padding: 12px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-lg);
-}
-.rel-form .select {
-  flex: 1 1 120px;
-  width: auto;
-  min-width: 0;
-}
-.rel-form .rel-note-field {
-  flex: 2 1 160px;
-  min-width: 0;
-}
-.rel-form .btn {
-  flex: none;
 }
 
 /* Bible */

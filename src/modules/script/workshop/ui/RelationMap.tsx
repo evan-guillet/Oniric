@@ -1,5 +1,5 @@
-import { RotateCcw, X } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { Maximize2, Minimize2, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { plural, t } from "../../../../core/i18n";
@@ -38,6 +38,9 @@ interface Node {
 
 const NODE_H = 28;
 const PAD = 14;
+/** Room kept free at the top for the tools and at the bottom for the caption, both laid on the canvas. */
+const TOP = 44;
+const BOTTOM = 26;
 
 let ruler: CanvasRenderingContext2D | null = null;
 /** The width of a name on its pill, measured in the interface font. */
@@ -82,8 +85,10 @@ function layout(nodes: Node[], ties: [string, string][], placed: Placed, W: numb
   const clamp = (id: string, p: Point) => {
     const hw = width.get(id)! / 2 + PAD;
     p.x = Math.min(W - hw, Math.max(hw, p.x));
-    p.y = Math.min(H - NODE_H / 2 - PAD, Math.max(NODE_H / 2 + PAD, p.y));
+    p.y = Math.min(H - NODE_H / 2 - PAD - BOTTOM, Math.max(NODE_H / 2 + PAD + TOP, p.y));
   };
+  // A placed character stays inside the frame, whatever the size of the window.
+  for (const id of fixed) clamp(id, pos.get(id)!);
   const free = nodes.filter((node) => !fixed.has(node.id));
   if (!free.length) return pos;
 
@@ -166,7 +171,7 @@ function layout(nodes: Node[], ties: [string, string][], placed: Placed, W: numb
   return pos;
 }
 
-/** The map of ties between characters [PER-05]: a canvas of the tied characters, the list of ties, a row to add one. */
+/** The map of ties between characters [PER-05]: a canvas only, filtered by kind and by act, that can fill the window. */
 export function RelationMap({ characters, protagonistId, antagonistId }: { characters: Entry[]; protagonistId?: string; antagonistId?: string }) {
   const w = useWorkshop();
   const { notify, ask } = useProject();
@@ -178,20 +183,39 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [hoverTie, setHoverTie] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [full, setFull] = useState(false);
   const [dragAt, setDragAt] = useState<{ id: string; p: Point } | null>(null);
   const drag = useRef<{ id: string; dx: number; dy: number; x0: number; y0: number; moved: boolean } | null>(null);
   const [form, setForm] = useState({ from: "", to: "", kind: "Famille", note: "", actId: "" });
   const box = useRef<HTMLDivElement>(null);
-  const [W, setW] = useState(0);
+  const [size, setSize] = useState({ W: 0, H: 0 });
+  const { W, H } = size;
 
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setW(Math.floor(el.clientWidth)));
+    const measure = () => setSize({ W: Math.floor(el.clientWidth), H: Math.floor(el.clientHeight) });
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setW(Math.floor(el.clientWidth));
+    measure();
     return () => ro.disconnect();
   }, [characters.length >= 2]);
+
+  // Escape steps back one layer at a time: the open card, then the full window.
+  useEffect(() => {
+    if (!full && !adding && !picked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      e.preventDefault();
+      if (adding) setAdding(false);
+      else if (picked) setPicked(null);
+      else setFull(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full, adding, picked]);
 
   const byId = useMemo(() => new Map(characters.map((c) => [c.id, c])), [characters]);
   const name = (id: string) => byId.get(id)?.name ?? "?";
@@ -206,18 +230,17 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
     return characters.filter((c) => ids.has(c.id)).map((c) => ({ id: c.id, name: c.name, w: pillWidth(c.name) }));
   }, [characters, drawn.map((r) => r.id).join()]);
   const unlinked = characters.length - new Set(inTime.flatMap((r) => [r.fromId, r.toId])).size;
-  const H = nodes.length > 22 ? 560 : 460;
   const placed = w.get<Placed>("char.mapPos", {});
   const pos = useMemo(
-    () => (W ? layout(nodes, drawn.map((r) => [r.fromId, r.toId]), placed, W, H) : new Map<string, Point>()),
+    () => (W && H ? layout(nodes, drawn.map((r) => [r.fromId, r.toId]), placed, W, H) : new Map<string, Point>()),
     [nodes, W, H, JSON.stringify(placed), drawn.map((r) => `${r.fromId}${r.toId}`).join()],
   );
   const at = (id: string) => (dragAt?.id === id ? dragAt.p : pos.get(id)) ?? { x: 0, y: 0 };
   const onTop = (id: string) => (dragAt?.id === id ? 2 : selected === id ? 1 : 0);
   const nodeW = (id: string) => nodes.find((node) => node.id === id)?.w ?? 60;
 
-  // What the eye is on: a hovered tie, else a hovered or chosen character.
-  const focusTie = hoverTie ? drawn.find((r) => r.id === hoverTie) : undefined;
+  // What the eye is on: a hovered or opened tie, else a hovered or chosen character.
+  const focusTie = drawn.find((r) => r.id === (hoverTie ?? picked));
   const focusId = focusTie ? null : (hover ?? selected);
   const lit = (r: Relation) => (focusTie ? r.id === focusTie.id : focusId ? r.fromId === focusId || r.toId === focusId : false);
   const near = new Set<string>(focusTie ? [focusTie.fromId, focusTie.toId] : focusId ? [focusId, ...drawn.flatMap((r) => (r.fromId === focusId ? [r.toId] : r.toId === focusId ? [r.fromId] : []))] : []);
@@ -245,6 +268,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
 
   const choose = (id: string | null) => {
     setSelected(id);
+    setPicked(null);
     if (id) setForm((f) => ({ ...f, from: id, to: f.to === id ? "" : f.to }));
   };
 
@@ -267,7 +291,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
     if (!d.moved && Math.hypot(p.x - d.x0, p.y - d.y0) < 4) return;
     d.moved = true;
     const hw = nodeW(d.id) / 2 + PAD;
-    setDragAt({ id: d.id, p: { x: Math.min(W - hw, Math.max(hw, p.x + d.dx)), y: Math.min(H - NODE_H / 2 - PAD, Math.max(NODE_H / 2 + PAD, p.y + d.dy)) } });
+    setDragAt({ id: d.id, p: { x: Math.min(W - hw, Math.max(hw, p.x + d.dx)), y: Math.min(H - NODE_H / 2 - PAD - BOTTOM, Math.max(NODE_H / 2 + PAD + TOP, p.y + d.dy)) } });
   };
   const onUp = () => {
     const d = drag.current;
@@ -284,7 +308,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
         if (!hit) break;
         const o = pos.get(hit.id)!;
         drop.y = o.y + (drop.y <= o.y ? -1 : 1) * (NODE_H + 8);
-        drop.y = Math.min(H - NODE_H / 2 - PAD, Math.max(NODE_H / 2 + PAD, drop.y));
+        drop.y = Math.min(H - NODE_H / 2 - PAD - BOTTOM, Math.max(NODE_H / 2 + PAD + TOP, drop.y));
       }
     }
     const next: Placed = { ...placed };
@@ -298,13 +322,15 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
 
   if (characters.length < 2) return <p className="muted">{t("chars.needTwo")}</p>;
 
-  const listed = selected ? drawn.filter((r) => r.fromId === selected || r.toId === selected) : drawn;
   const pinned = Object.keys(placed).length > 0;
+  const card = picked ? drawn.find((r) => r.id === picked) : undefined;
+  const cardAt = card ? curve(card).mid : null;
+  const tieLabel = (r: Relation) => `${name(r.fromId)} — ${choiceLabel("relations", r.kind).toLowerCase()} — ${name(r.toId)}`;
 
   return (
-    <div className="relations">
-      <div className="rel-bar">
-        {kinds.length > 0 && (
+    <div className={`rel-stage${full ? " full" : ""}`} role={full ? "dialog" : undefined} aria-label={full ? t("chars.relations") : undefined}>
+      {kinds.length > 0 && (
+        <div className="rel-bar">
           <div className="rel-keys" role="group" aria-label={t("chars.kindFilter")}>
             {kinds.map((k) => {
               const off = hiddenKinds.has(k);
@@ -329,7 +355,10 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
               );
             })}
           </div>
-        )}
+        </div>
+      )}
+
+      <div className={`rel-canvas${nodes.length > 22 ? " tall" : ""}`} ref={box}>
         <div className="rel-tools">
           {acts.length > 0 && (
             <Select value={act} onChange={(e) => setAct(e.target.value)} aria-label={t("chars.showRelations")}>
@@ -341,11 +370,15 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
               ))}
             </Select>
           )}
+          <button type="button" className={`btn${adding ? " on" : ""}`} aria-expanded={adding} onClick={() => setAdding(!adding)}>
+            <Plus aria-hidden="true" />
+            {t("chars.newTie")}
+          </button>
+          <button type="button" className="icon-btn" onClick={() => setFull(!full)} aria-label={full ? t("chars.leaveFull") : t("chars.fullScreen")} title={full ? t("chars.leaveFull") : t("chars.fullScreen")}>
+            {full ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+          </button>
         </div>
-      </div>
-
-      <div className="rel-canvas" ref={box} style={{ height: H }}>
-        {W > 0 && nodes.length > 0 && (
+        {W > 0 && H > 0 && nodes.length > 0 && (
           <svg
             width={W}
             height={H}
@@ -358,12 +391,35 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
               drag.current = null;
               setDragAt(null);
             }}
-            onPointerDown={(e) => e.button === 0 && choose(null)}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              choose(null);
+              setAdding(false);
+            }}
           >
-            <g aria-hidden="true">
-              {drawn.map((r) => (
-                <path key={r.id} d={curve(r).path} className={`rel-tie${lit(r) ? " lit" : ""}`} style={{ stroke: kindColor(r.kind) }} />
-              ))}
+            <g>
+              {drawn.map((r) => {
+                const { path } = curve(r);
+                return (
+                  <g key={r.id}>
+                    <path d={path} className={`rel-tie${lit(r) ? " lit" : ""}`} style={{ stroke: kindColor(r.kind) }} aria-hidden="true" />
+                    {/* A wide, invisible twin of the tie, easier to point at than a 2px line. */}
+                    <path
+                      d={path}
+                      className="rel-hit"
+                      role="button"
+                      aria-label={tieLabel(r)}
+                      onPointerEnter={() => !drag.current && setHoverTie(r.id)}
+                      onPointerLeave={() => setHoverTie(null)}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => {
+                        setPicked(picked === r.id ? null : r.id);
+                        setAdding(false);
+                      }}
+                    />
+                  </g>
+                );
+              })}
             </g>
             {/* The character in hand, then the chosen one, are drawn last so they sit on top. */}
             {[...nodes].sort((a, b) => onTop(a.id) - onTop(b.id)).map((node) => {
@@ -387,7 +443,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       choose(selected === node.id ? null : node.id);
-                    } else if (e.key === "Escape") choose(null);
+                    }
                   }}
                 >
                   <rect width={node.w} height={NODE_H} rx={NODE_H / 2} />
@@ -398,7 +454,7 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
               );
             })}
             <g aria-hidden="true">
-              {drawn.filter(lit).map((r) => {
+              {drawn.filter((r) => lit(r) && r.id !== picked).map((r) => {
                 const { mid } = curve(r);
                 const a = at(r.fromId);
                 const b = at(r.toId);
@@ -418,125 +474,116 @@ export function RelationMap({ characters, protagonistId, antagonistId }: { chara
             </g>
           </svg>
         )}
-        {nodes.length === 0 && <p className="rel-empty">{inTime.length ? t("chars.allKindsHidden") : t("chars.noTies")}</p>}
-      </div>
-      {nodes.length > 0 && (
-        <div className="rel-foot">
-          <p className="rel-caption">
-            {t("chars.mapHint")}
-            {unlinked > 0 && <> {plural("chars.unlinked", unlinked)}</>}
-          </p>
-          {pinned && (
-            <button type="button" className="btn ghost small" onClick={() => w.set("char.mapPos", {})}>
-              <RotateCcw aria-hidden="true" />
-              {t("chars.resetLayout")}
-            </button>
-          )}
-        </div>
-      )}
 
-      {drawn.length > 0 && (
-        <div className="rel-ties">
-          <div className="rel-ties-head">
-            <h4>{selected ? t("chars.tiesOf", { name: name(selected) }) : t("chars.ties")}</h4>
-            <span className="rel-key-n">{listed.length}</span>
-            {selected && (
-              <button type="button" className="btn text small" onClick={() => choose(null)}>
-                {t("chars.allTies")}
+        {card && cardAt && (
+          <div
+            className="rel-card"
+            style={{ left: Math.min(W - 272, Math.max(12, cardAt.x - 130)), top: cardAt.y + 196 > H ? Math.max(12, cardAt.y - 182) : cardAt.y + 14 } as CSSProperties}
+          >
+            <span className="rel-kind" style={{ "--k": kindColor(card.kind) } as CSSProperties}>
+              <span className="rel-swatch" aria-hidden="true" />
+              {choiceLabel("relations", card.kind)}
+            </span>
+            <p className="rel-who">
+              {name(card.fromId)} <span aria-hidden="true">·</span> {name(card.toId)}
+            </p>
+            {card.note && <p className="rel-note">{card.note}</p>}
+            {card.actId && <p className="rel-since">{t("chars.since", { act: acts.find((a) => a.id === card.actId)?.title })}</p>}
+            <div className="rel-card-actions">
+              <button type="button" className="btn ghost small danger" onClick={async () => {
+                if (await confirmRemoval(ask, { title: t("chars.removeRelationAsk"), text: tieLabel(card), label: t("script.info.remove") })) {
+                  await deleteRelation(card.id);
+                  setPicked(null);
+                }
+              }}>
+                <Trash2 aria-hidden="true" />
+                {t("chars.removeRelation")}
+              </button>
+              <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={() => setPicked(null)}>
+                <X aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {adding && (
+          <form
+            className="rel-add"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!form.from || !form.to || form.from === form.to) return;
+              try {
+                await addRelation({ fromId: form.from, toId: form.to, kind: form.kind, note: form.note, actId: form.actId || null });
+                setForm({ ...form, to: "", note: "" });
+                setAdding(false);
+              } catch (err) {
+                notify({ text: describeError(err), tone: "error" });
+              }
+            }}
+          >
+            <Select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label={t("chars.first")}>
+              <option value="" hidden>{t("chars.characterOption")}</option>
+              {characters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+            <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label={t("chars.linkKind")}>
+              {RELATION_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {choiceLabel("relations", k)}
+                </option>
+              ))}
+            </Select>
+            <Select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label={t("chars.second")}>
+              <option value="" hidden>{t("chars.characterOption")}</option>
+              {characters
+                .filter((c) => c.id !== form.from)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </Select>
+            <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t("chars.precisionPlaceholder")} aria-label={t("chars.precision")} />
+            {acts.length > 0 && (
+              <Select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label={t("chars.fromLabel")}>
+                <option value="">{t("chars.fromStart")}</option>
+                {acts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {t("chars.from", { act: a.title })}
+                  </option>
+                ))}
+              </Select>
+            )}
+            <div className="rel-add-actions">
+              <button type="button" className="btn ghost small" onClick={() => setAdding(false)}>
+                {t("common.cancel")}
+              </button>
+              <button type="submit" className="btn small primary" disabled={!form.from || !form.to || form.from === form.to}>
+                {t("chars.addLink")}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {nodes.length === 0 && <p className="rel-empty">{inTime.length ? t("chars.allKindsHidden") : t("chars.noTies")}</p>}
+
+        {nodes.length > 0 && (
+          <div className="rel-foot">
+            <p className="rel-caption">
+              {unlinked > 0 && plural("chars.unlinked", unlinked)}
+            </p>
+            {pinned && (
+              <button type="button" className="btn ghost small" onClick={() => w.set("char.mapPos", {})}>
+                <RotateCcw aria-hidden="true" />
+                {t("chars.resetLayout")}
               </button>
             )}
           </div>
-          <ul className="rel-list">
-            {listed.map((r) => (
-              <li key={r.id} onPointerEnter={() => setHoverTie(r.id)} onPointerLeave={() => setHoverTie(null)}>
-                <span className="rel-kind" style={{ "--k": kindColor(r.kind) } as CSSProperties}>
-                  <span className="rel-swatch" aria-hidden="true" />
-                  {choiceLabel("relations", r.kind)}
-                </span>
-                <span className="rel-body">
-                  <span className="rel-who">
-                    <button type="button" onClick={() => choose(r.fromId)}>{name(r.fromId)}</button>
-                    <span className="rel-and" aria-hidden="true">·</span>
-                    <button type="button" onClick={() => choose(r.toId)}>{name(r.toId)}</button>
-                  </span>
-                  {(r.note || r.actId) && (
-                    <span className="rel-note">
-                      {r.note}
-                      {r.note && r.actId && " · "}
-                      {r.actId && t("chars.since", { act: acts.find((a) => a.id === r.actId)?.title })}
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  className="btn ghost tiny rel-remove"
-                  aria-label={t("chars.removeRelation")}
-                  onClick={async () => {
-                    if (await confirmRemoval(ask, { title: t("chars.removeRelationAsk"), text: `${name(r.fromId)} — ${choiceLabel("relations", r.kind).toLowerCase()} — ${name(r.toId)}`, label: t("script.info.remove") }))
-                      await deleteRelation(r.id);
-                  }}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <form
-        className="rel-form"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!form.from || !form.to || form.from === form.to) return;
-          try {
-            await addRelation({ fromId: form.from, toId: form.to, kind: form.kind, note: form.note, actId: form.actId || null });
-            setForm({ ...form, to: "", note: "" });
-          } catch (err) {
-            notify({ text: describeError(err), tone: "error" });
-          }
-        }}
-      >
-        <Select value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} aria-label={t("chars.first")}>
-          <option value="" hidden>{t("chars.characterOption")}</option>
-          {characters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-        <Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label={t("chars.linkKind")}>
-          {RELATION_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {choiceLabel("relations", k)}
-            </option>
-          ))}
-        </Select>
-        <Select value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })} aria-label={t("chars.second")}>
-          <option value="" hidden>{t("chars.characterOption")}</option>
-          {characters
-            .filter((c) => c.id !== form.from)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-        </Select>
-        <input className="rel-note-field" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t("chars.precisionPlaceholder")} aria-label={t("chars.precision")} />
-        {acts.length > 0 && (
-          <Select value={form.actId} onChange={(e) => setForm({ ...form, actId: e.target.value })} aria-label={t("chars.fromLabel")}>
-            <option value="">{t("chars.fromStart")}</option>
-            {acts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {t("chars.from", { act: a.title })}
-              </option>
-            ))}
-          </Select>
         )}
-        <button type="submit" className="btn small primary" disabled={!form.from || !form.to || form.from === form.to}>
-          {t("chars.addLink")}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
