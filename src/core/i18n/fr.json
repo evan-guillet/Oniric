@@ -716,8 +716,7 @@
       "createHint": "Sur le passage sélectionné, ou la ligne du curseur",
       "archived": "Archivées",
       "note": "Note",
-      "placeholder": "Votre note…",
-      "unanchored": "Sans passage"
+      "placeholder": "Votre note…"
     },
     "panels": {
       "scenes": "Scènes",

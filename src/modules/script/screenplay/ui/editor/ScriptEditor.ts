@@ -368,13 +368,6 @@ export class ScriptEditor {
     if (tr.docChanged) this.view.dispatch(tr);
   }
 
-  /** Puts the caret at `pos` without scrolling: the place is in view already. */
-  caretAt(pos: number): void {
-    if (pos > this.doc.content.size) return;
-    this.view.dispatch(this.view.state.tr.setSelection(TextSelection.create(this.doc, pos)));
-    this.view.focus();
-  }
-
   /** Selects a passage and shows it. */
   reveal(from: number, to: number): void {
     const doc = this.doc;

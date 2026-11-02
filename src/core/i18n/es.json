@@ -716,8 +716,7 @@
       "createHint": "En el fragmento seleccionado, o en la línea del cursor",
       "archived": "Archivadas",
       "note": "Nota",
-      "placeholder": "Tu nota…",
-      "unanchored": "Sin pasaje"
+      "placeholder": "Tu nota…"
     },
     "panels": {
       "scenes": "Escenas",
