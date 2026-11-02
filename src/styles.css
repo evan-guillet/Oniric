@@ -6049,7 +6049,7 @@ h4 {
   background: var(--sunken);
 }
 
-/* The panel: what its tab in the header shows, scrolling on its own. */
+/* The panel: its tabs on top, then what they show, scrolling on its own. */
 .vr-side {
   display: flex;
   flex-direction: column;

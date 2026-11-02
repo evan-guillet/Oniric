@@ -1,6 +1,5 @@
 import { ArrowDownToLine, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, History, ListTree, Lock, Pencil, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { markEditorStep, stepHistory } from "../../../../core/history";
@@ -103,7 +102,7 @@ type Pane = "scenes" | "versions" | "cuts";
  * right shows one thing at a time, as in the Scénario: the touched scenes, the versions, or the cut scenes.
  */
 export function VersionsView() {
-  const { session, project, notify, prompt, ask, headerActions } = useProject();
+  const { session, project, notify, prompt, ask } = useProject();
   const loaded = useLive(listVersions, ["script_version"]);
   const versions = loaded ?? [];
   const cuts = useLive(cutScenes, ["scene"]) ?? [];
@@ -235,6 +234,9 @@ export function VersionsView() {
   ];
   const side = (scenes: ReactNode) => (
     <aside className="vr-side" aria-label={t("versions.panel")}>
+      <div className="side-tabs">
+        <Segmented label={t("versions.panel")} options={panes} value={shownPane} onChange={setPane} />
+      </div>
       {shownPane === "scenes" ? (
         scenes
       ) : shownPane === "versions" ? (
@@ -256,15 +258,6 @@ export function VersionsView() {
 
   return (
     <div className="view versions-view">
-      {headerActions &&
-        loaded &&
-        createPortal(
-          <div className="header-tools">
-            <Segmented label={t("versions.panel")} options={panes} value={shownPane} onChange={setPane} />
-          </div>,
-          headerActions,
-        )}
-
       <main className="vr-main" aria-label={t("nav.views.versions")}>
         {/* Nothing while the versions are being read, so the first-version page does not flash before them. */}
         {!loaded ? null : versions.length === 0 ? (
@@ -484,7 +477,7 @@ function FirstVersion({ onFreeze }: { onFreeze: () => void }) {
   );
 }
 
-type Filter = "changes" | Kind | "all";
+type Filter = "changes" | Exclude<Kind, "same">;
 
 /**
  * The comparison, laid out like a code review: each touched scene's text, the identical lines folded away; its list of
@@ -565,7 +558,7 @@ function Compare({
   const count = (k: Kind) => cmp.scenes.filter((s) => s.diff.kind === k).length;
   const totals = touched.reduce((t, s) => ({ added: t.added + s.added, removed: t.removed + s.removed }), { added: 0, removed: 0 });
   const heading = (s: ComparedScene) => (s.diff.right ?? s.diff.left)?.heading || t("dash.noHeading");
-  const shown = cmp.scenes.filter((s) => (filter === "all" ? true : filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter));
+  const shown = cmp.scenes.filter((s) => (filter === "changes" ? s.diff.kind !== "same" : s.diff.kind === filter));
   const setIn = (set: Set<string>, key: string, on: boolean) => {
     const next = new Set(set);
     if (on) next.add(key);
@@ -578,9 +571,9 @@ function Compare({
     setClosed((c) => setIn(c, key, on));
   };
   const allClosed = shown.length > 0 && shown.every((s) => closed.has(s.key));
-  const filterName = (f: Filter) => (f === "changes" ? t("versions.changes") : f === "all" ? t("versions.all") : kindMany(f));
-  const filterCount = (f: Filter) => (f === "changes" ? touched.length : f === "all" ? cmp.scenes.length : count(f));
-  const filters: Filter[] = ["changes", ...KINDS.filter((k) => count(k) > 0), "all"];
+  const filterName = (f: Filter) => (f === "changes" ? t("versions.changes") : kindMany(f));
+  const filterCount = (f: Filter) => (f === "changes" ? touched.length : count(f));
+  const filters: Filter[] = ["changes", ...KINDS.filter((k) => count(k) > 0)];
 
   // The scene at the top of the text is the one lit in the list.
   const onScroll = () => {
