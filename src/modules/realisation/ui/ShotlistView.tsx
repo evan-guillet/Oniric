@@ -51,7 +51,7 @@ import {
   SHOT_MOVEMENTS,
   type ChoiceField,
 } from "../domain/shots";
-import { choiceLabel, InlineText, SceneTree, shotTotals, useSceneChoice } from "./common";
+import { choiceLabel, InlineText, ScenePicker, shotTotals, useSceneChoice } from "./common";
 import { DrawDialog } from "./DrawDialog";
 import { BoardImagePicker, FrameThumb, FrameViewer, ratioName } from "./FrameViewer";
 
@@ -449,7 +449,10 @@ export function ShotlistView() {
     if (s.sceneId !== current?.id) chooseScene(s.sceneId);
   };
 
-  /** The line of a scene above its shots; among the scenes a search found, it ends the search and opens that scene alone. */
+  /**
+   * The line of a scene above its shots: it drops the tree of the screenplay to go to another scene; among the scenes
+   * a search found, it ends the search and opens that scene alone.
+   */
   const headLine = (h: Head) => {
     const inner = (
       <>
@@ -472,7 +475,9 @@ export function ShotlistView() {
             {inner}
           </button>
         ) : (
-          <span className="rz-fold">{inner}</span>
+          <ScenePicker projectId={project.id} scenes={scenes} current={current?.id ?? null} onSelect={chooseScene} meta={(sc) => <SceneMeta shots={listOf(sc.id)} />}>
+            {inner}
+          </ScenePicker>
         )}
         <span className="rz-head-meta">
           <SceneMeta shots={listOf(h.id)} />
@@ -704,19 +709,6 @@ export function ShotlistView() {
         {found?.size === 0 && <p className="rz-none">{t("shotlist.noMatch", { query: query.trim() })}</p>}
       </main>
       {search}
-      <aside className="view-side rz-side rz-tree" aria-label={t("shotlist.scenes")}>
-        <SceneTree
-          projectId={project.id}
-          scenes={scenes}
-          current={current?.id ?? null}
-          onSelect={(id) => {
-            setQuery("");
-            setFinding(false);
-            chooseScene(id);
-          }}
-          meta={(sc) => <SceneMeta shots={listOf(sc.id)} />}
-        />
-      </aside>
       {viewIndex >= 0 && (
         <FrameViewer
           shots={framed}

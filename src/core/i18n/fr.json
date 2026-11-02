@@ -2324,6 +2324,7 @@
   },
   "shotlist": {
     "scenes": "Scènes du scénario",
+    "chooseScene": "Changer de scène",
     "panel": "Panneau",
     "panels": {
       "scenes": "Scènes",

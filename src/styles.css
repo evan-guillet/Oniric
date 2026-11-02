@@ -9082,14 +9082,11 @@ button[aria-expanded="true"] .stats-chevron {
 .view.split.rz-split {
   grid-template-columns: minmax(0, 1fr) 300px;
 }
-/* The Découpage: the shots of the chosen scene, in a table or in cards, beside the tree; the search over them while it is open. */
+/* The Découpage: the shots of the chosen scene, in a table or in cards, over the whole width; the search over them while it is open. */
 .view.rz-view {
   display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr) 340px;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   overflow: hidden;
-}
-.rz-tree {
-  grid-area: 1 / 2;
 }
 .rz-view > .rz-main,
 .rz-find {
@@ -9454,6 +9451,61 @@ button.rz-fold:hover {
   color: var(--muted);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
+}
+/* The line of the scene worked on drops the tree of the screenplay. */
+.rz-scene-pick {
+  align-items: center;
+}
+.rz-scene-pick .rz-head-num,
+.rz-scene-pick .rz-head-title {
+  align-self: baseline;
+}
+.rz-scene-chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: -2px;
+  color: var(--muted);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rz-scene-pick.on {
+  background: var(--hover);
+}
+.rz-scene-pick.on .rz-scene-chevron {
+  transform: rotate(180deg);
+}
+.rz-scene-menu {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  animation: rel-pop 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rz-scene-menu .scene-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.rz-scene-menu .scene-list > ol {
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rz-scene-menu {
+    animation: none;
+  }
+  .rz-scene-chevron {
+    transition: none;
+  }
 }
 /* The scene worked on, in ink. */
 .rz-head-scene.here .rz-head-num {

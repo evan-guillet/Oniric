@@ -1,4 +1,6 @@
+import { ChevronDown } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useLive } from "../../../core/db/live";
 import { t } from "../../../core/i18n";
 import type { SceneInfo } from "../../script/screenplay/application/scriptSession";
@@ -65,12 +67,15 @@ export function SceneTree({
   current,
   onSelect,
   meta,
+  focus,
 }: {
   projectId: string;
   scenes: SceneInfo[];
   current: string | null;
   onSelect: (id: string) => void;
   meta: (scene: SceneInfo) => ReactNode;
+  /** The scene chosen takes the focus, again once the acts and sequences have loaded around it. */
+  focus?: boolean;
 }) {
   const story = useLive(loadStory, [...STORY_TABLES]);
   const groups = useMemo<ListGroup[]>(() => {
@@ -92,8 +97,10 @@ export function SceneTree({
   const at = scenes.findIndex((s) => s.id === current);
   const box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    box.current?.querySelector(".scene-list li.on")?.scrollIntoView({ block: "nearest" });
-  }, [current, story]);
+    const on = box.current?.querySelector<HTMLElement>(".scene-list li.on");
+    on?.scrollIntoView({ block: "nearest" });
+    if (focus) (on?.querySelector("button") ?? box.current?.querySelector<HTMLElement>(".scene-list button"))?.focus({ preventScroll: true });
+  }, [current, story, focus]);
   return (
     <div ref={box} className="scene-tree">
       <SceneList
@@ -105,6 +112,111 @@ export function SceneTree({
         meta={(i) => meta(scenes[i])}
       />
     </div>
+  );
+}
+
+/**
+ * The scene line of the Découpage as a button: a click drops the tree of acts, sequences and scenes under it, the
+ * scene worked on in view and in the focus; ↑ ↓ go through the rows, Escape or a click outside closes.
+ */
+export function ScenePicker({
+  projectId,
+  scenes,
+  current,
+  onSelect,
+  meta,
+  children,
+}: {
+  projectId: string;
+  scenes: SceneInfo[];
+  current: string | null;
+  onSelect: (id: string) => void;
+  meta: (scene: SceneInfo) => ReactNode;
+  children: ReactNode;
+}) {
+  const button = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState<{ top: number; left: number; height: number } | null>(null);
+  const close = (refocus: boolean) => {
+    setAt(null);
+    if (refocus) button.current?.focus();
+  };
+  useLayoutEffect(() => {
+    if (!at) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!menu.current?.contains(target) && !button.current?.contains(target)) setAt(null);
+    };
+    const onResize = () => setAt(null);
+    // Escape wherever the focus is, even after a click on the empty part of the menu.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      setAt(null);
+      button.current?.focus();
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [at]);
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        className={`rz-fold rz-scene-pick${at ? " on" : ""}`}
+        aria-haspopup="dialog"
+        aria-expanded={!!at}
+        title={t("shotlist.chooseScene")}
+        onClick={(e) => {
+          if (at) return close(false);
+          const r = e.currentTarget.getBoundingClientRect();
+          setAt({ top: r.bottom + 4, left: r.left, height: window.innerHeight - r.bottom - 20 });
+        }}
+      >
+        {children}
+        <ChevronDown className="rz-scene-chevron" aria-hidden="true" />
+      </button>
+      {at &&
+        createPortal(
+          <div
+            ref={menu}
+            role="dialog"
+            aria-label={t("shotlist.chooseScene")}
+            className="rz-scene-menu"
+            style={{ top: at.top, left: at.left, maxHeight: Math.max(240, Math.min(at.height, 640)) }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                const all = [...(menu.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
+                const i = all.indexOf(document.activeElement as HTMLButtonElement);
+                all[Math.max(0, Math.min(all.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
+                e.preventDefault();
+              } else if (e.key === "Tab") {
+                close(false);
+              }
+            }}
+          >
+            <SceneTree
+              projectId={projectId}
+              scenes={scenes}
+              current={current}
+              meta={meta}
+              focus
+              onSelect={(id) => {
+                close(true);
+                onSelect(id);
+              }}
+            />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
