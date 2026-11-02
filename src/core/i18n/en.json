@@ -2368,6 +2368,7 @@
     "move": "Move",
     "actions": "Actions",
     "columns": {
+      "frame": "Frame",
       "number": "No.",
       "shoot": "Order",
       "scene": "Scene",
@@ -2396,7 +2397,7 @@
     "duplicate": "Duplicate",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "openFrame": "See its storyboard frame",
+    "openFrame": "View the frame in large",
     "delete": "Delete the shot…",
     "deleteTitle": "Delete shot {{n}}?",
     "deleteText": "The shot and its storyboard frame are deleted. Ctrl + Z brings them back.",
@@ -2510,7 +2511,16 @@
       "leaveText": "Discard this drawing?",
       "keepDrawing": "Keep drawing",
       "discard": "Discard"
-    }
+    },
+    "openFrame": "View the frame of shot {{n}}",
+    "addFrame": "Add an image to shot {{n}}",
+    "shotN": "Shot {{n}}",
+    "position": "{{at}} of {{count}}",
+    "previous": "Previous shot (↑)",
+    "next": "Next shot (↓)",
+    "noImage": "No image for this shot yet",
+    "noTechnique": "No size, movement or length",
+    "arrowsHint": "↑ ↓ to go from one shot to the next"
   },
   "moodboard": {
     "kinds": {

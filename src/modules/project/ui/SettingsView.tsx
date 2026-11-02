@@ -59,7 +59,8 @@ import {
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext, type SettingsPage } from "./projectContext";
-import { useAbbreviations, useNumbering, writeAbbreviation, writeNumbering } from "../../realisation/application/shots";
+import { FRAME_RATIOS, useAbbreviations, useNumbering, useRatio, writeAbbreviation, writeNumbering, writeRatio, type FrameRatio } from "../../realisation/application/shots";
+import { ratioName } from "../../realisation/ui/FrameViewer";
 import { choiceLabel } from "../../realisation/ui/common";
 import {
   columnLabel,
@@ -1319,6 +1320,7 @@ function ScriptSettings({ notify }: { notify: Notify }) {
 /** How the Découpage lists the shots: their order and numbers, kept in the project, and the fields it shows. */
 function ShotlistSettings({ notify }: { notify: Notify }) {
   const numbering = useNumbering();
+  const ratio = useRatio();
   const [order, setOrder] = useStoredState<ShotOrder>(ORDER_KEY, "edit");
   const [hidden, setHidden] = useStoredState<ShotColumn[]>(HIDDEN_KEY, DEFAULT_HIDDEN);
   const [shape, setShape] = useStoredState<ShotShape>(SHAPE_KEY, "table");
@@ -1354,6 +1356,21 @@ function ShotlistSettings({ notify }: { notify: Notify }) {
             {(["dash", "letter"] as const).map((v) => (
               <option key={v} value={v}>
                 {t(`shotlist.numberings.${v}`)}
+              </option>
+            ))}
+          </Select>
+        </Row>
+        <Row title={t("storyboard.ratio")} help={t(`storyboard.ratioHints.${ratio.replace(/[.:]/g, "_")}`)}>
+          <Select
+            aria-label={t("storyboard.ratio")}
+            value={ratio}
+            onChange={(e) =>
+              void writeRatio(e.target.value as FrameRatio).catch((x) => notify({ text: describeError(x), tone: "error" }))
+            }
+          >
+            {FRAME_RATIOS.map((r) => (
+              <option key={r} value={r}>
+                {ratioName(r)}
               </option>
             ))}
           </Select>

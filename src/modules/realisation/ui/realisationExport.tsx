@@ -10,7 +10,7 @@ import { inkOn } from "../domain/palette";
 import { formatMinutes, formatSeconds, shotNumber, toCsv } from "../domain/shots";
 import { choiceLabel, shotTotals } from "./common";
 import { columnLabel, DEFAULT_HIDDEN, HIDDEN_KEY, SHOT_COLUMNS, type ShotColumn } from "./ShotlistView";
-import { technique } from "./StoryboardView";
+import { technique } from "./FrameViewer";
 
 type Api = Pick<ProjectApi, "session" | "printPdf" | "project">;
 
@@ -67,8 +67,13 @@ async function scenesWithShots(api: Api) {
   };
 }
 
+/** The fields of a shot written out: all but its frame. */
+const TEXT_COLUMNS = SHOT_COLUMNS.filter((c) => c !== "frame");
+
 function cellText(s: Shot, c: ShotColumn): string {
   switch (c) {
+    case "frame":
+      return "";
     case "size":
     case "angle":
     case "movement":
@@ -89,14 +94,14 @@ function cellText(s: Shot, c: ShotColumn): string {
 /** Every shot of the film in a CSV file, every field, to open in a spreadsheet [DEC-08]. */
 export async function exportShotlistCsv(api: Api): Promise<string> {
   const { scenes, numbering } = await scenesWithShots(api);
-  const head = [t("shotlist.columns.scene"), t("shotlist.columns.heading"), t("shotlist.columns.number"), t("shotlist.columns.shoot"), ...SHOT_COLUMNS.map(columnLabel)];
+  const head = [t("shotlist.columns.scene"), t("shotlist.columns.heading"), t("shotlist.columns.number"), t("shotlist.columns.shoot"), ...TEXT_COLUMNS.map(columnLabel)];
   const rows = scenes.flatMap(({ scene, shots }) =>
     shots.map((s, i) => [
       String(scene.index + 1),
       scene.heading,
       shotNumber(scene.index + 1, i, numbering),
       s.shootOrder === null ? "" : String(s.shootOrder),
-      ...SHOT_COLUMNS.map((c) => cellText(s, c)),
+      ...TEXT_COLUMNS.map((c) => cellText(s, c)),
     ]),
   );
   return unwrap(await commands.exportText(`${t("nav.views.shotlist")} - ${api.project.title}.csv`, toCsv(head, rows)));
@@ -106,7 +111,7 @@ export async function exportShotlistCsv(api: Api): Promise<string> {
 export async function exportShotlistPdf(api: Api): Promise<void> {
   const { scenes, numbering } = await scenesWithShots(api);
   const hidden = readStored<ShotColumn[]>(HIDDEN_KEY, DEFAULT_HIDDEN);
-  const columns = SHOT_COLUMNS.filter((c) => !hidden.includes(c));
+  const columns = TEXT_COLUMNS.filter((c) => !hidden.includes(c));
   const all = scenes.flatMap((x) => x.shots);
   await api.printPdf(
     `${t("nav.views.shotlist")} - ${api.project.title}.pdf`,

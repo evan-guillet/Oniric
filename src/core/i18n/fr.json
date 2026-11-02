@@ -2368,6 +2368,7 @@
     "move": "Déplacer",
     "actions": "Actions",
     "columns": {
+      "frame": "Image",
       "number": "N°",
       "shoot": "Ordre",
       "scene": "Scène",
@@ -2396,7 +2397,7 @@
     "duplicate": "Dupliquer",
     "moveUp": "Monter",
     "moveDown": "Descendre",
-    "openFrame": "Voir sa case du storyboard",
+    "openFrame": "Voir la case en grand",
     "delete": "Supprimer le plan…",
     "deleteTitle": "Supprimer le plan {{n}} ?",
     "deleteText": "Le plan et sa case du storyboard sont supprimés. Ctrl + Z les fait revenir.",
@@ -2510,7 +2511,16 @@
       "leaveText": "Abandonner ce dessin ?",
       "keepDrawing": "Continuer",
       "discard": "Abandonner"
-    }
+    },
+    "openFrame": "Voir la case du plan {{n}}",
+    "addFrame": "Ajouter une image au plan {{n}}",
+    "shotN": "Plan {{n}}",
+    "position": "{{at}} sur {{count}}",
+    "previous": "Plan précédent (↑)",
+    "next": "Plan suivant (↓)",
+    "noImage": "Pas encore d'image pour ce plan",
+    "noTechnique": "Ni valeur, ni mouvement, ni durée",
+    "arrowsHint": "↑ ↓ pour passer d'un plan à l'autre"
   },
   "moodboard": {
     "kinds": {

@@ -5,7 +5,7 @@ import {
   Trash2,
   ArrowDown,
   ArrowUp,
-  LayoutPanelTop,
+  Maximize2,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { createPortal } from "react-dom";
@@ -18,7 +18,7 @@ import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useProject } from "../../project/ui/projectContext";
 import { useScenes, type SceneInfo } from "../../script/screenplay/application/scriptSession";
-import { MediaImage } from "../../shared/media";
+import { pickImage, storeImage } from "../../shared/media";
 import {
   addShot,
   byScene,
@@ -47,10 +47,13 @@ import {
   SHOT_MOVEMENTS,
   type ChoiceField,
 } from "../domain/shots";
-import { choiceLabel, InlineText, requestScene, SceneTree, shotTotals, useSceneChoice } from "./common";
+import { choiceLabel, InlineText, SceneTree, shotTotals, useSceneChoice } from "./common";
+import { DrawDialog } from "./DrawDialog";
+import { BoardImagePicker, FrameThumb, FrameViewer, ratioName } from "./FrameViewer";
 
 /** The fields of a shot the table can show, in its order [DEC-02, DEC-04]. */
 export const SHOT_COLUMNS = [
+  "frame",
   "size",
   "angle",
   "movement",
@@ -85,6 +88,7 @@ const LONG = new Set<ShotColumn>(["action", "dialogue", "notes", "lighting", "ef
 
 /** The width of each column of the table, to fit the page: the long texts share what is left, no narrower than LONG_MIN. */
 const WIDTH: Partial<Record<ShotColumn, number>> = {
+  frame: 104,
   size: 124,
   angle: 124,
   movement: 168,
@@ -190,6 +194,10 @@ export function ShotlistView() {
     after?: boolean;
   } | null>(null);
   const main = useRef<HTMLElement>(null);
+  // The frame shown in large, and the frame being drawn or taken from a moodboard.
+  const [viewing, setViewing] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState<Shot | null>(null);
+  const [picking, setPicking] = useState<Shot | null>(null);
 
   const perScene = useMemo(() => byScene(shots ?? []), [shots]);
   const listOf = (sceneId: string) => perScene.get(sceneId) ?? [];
@@ -219,12 +227,29 @@ export function ShotlistView() {
     return m;
   }, [scenes, perScene, numbering]);
   const columns = SHOT_COLUMNS.filter((c) => !hidden.includes(c));
+  // The first field written in: the frame is a button, not a field.
+  const firstField = columns.find((c) => c !== "frame");
+  const frameRatio = ratioValue(ratio);
 
   // The scene chosen, or while searching every scene the search finds.
   const heads = useMemo<Head[]>(
     () => (found ? scenes.filter((sc) => found.has(sc.id)) : current ? [current] : []).map((scene) => ({ id: scene.id, scene })),
     [found, scenes, current],
   );
+
+  // The shots the frame viewer goes through with ↑ and ↓: those shown, scene after scene.
+  const seen = heads.flatMap((h) => seenOf(h.id));
+  const viewIndex = viewing ? seen.findIndex((s) => s.id === viewing) : -1;
+  const headingOf = (s: Shot) => {
+    const sc = scenes.find((x) => x.id === s.sceneId);
+    return sc ? `${sc.index + 1}. ${sc.heading || t("workspace.noHeading")}` : "";
+  };
+  const closeViewer = () => {
+    const id = viewing;
+    setViewing(null);
+    // Back on the line of the shot last seen.
+    requestAnimationFrame(() => main.current?.querySelector<HTMLElement>(`[data-shot="${id}"] .rz-thumb`)?.focus());
+  };
 
   // Another scene starts from the top of its shots.
   useLayoutEffect(() => {
@@ -291,7 +316,25 @@ export function ShotlistView() {
   }, [focusId, shots]);
 
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
-  const patch = (s: Shot, p: ShotPatch) => void updateShot(s.id, p).catch(fail);
+  const patch = (s: Shot, p: ShotPatch, label?: string) => void updateShot(s.id, p, label).catch(fail);
+
+  const openFrame = (s: Shot) => {
+    setSelected(s.id);
+    setViewing(s.id);
+  };
+  const importInto = async (s: Shot) => {
+    try {
+      const [path] = await pickImage();
+      if (path) await updateShot(s.id, { frameImage: path }, "Image de la case");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const clearImage = async (s: Shot) => {
+    const n = numbers.get(s.id) ?? "";
+    if (!(await confirmRemoval(ask, { title: t("storyboard.clearTitle", { n }), text: t("storyboard.clearText"), label: t("common.removeAction") }))) return;
+    patch(s, { frameImage: null }, "Image retirée de la case");
+  };
 
   const add = async (sceneId: string, after: Shot | null = null) => {
     try {
@@ -376,11 +419,8 @@ export function ShotlistView() {
     },
     {
       label: t("shotlist.openFrame"),
-      icon: LayoutPanelTop,
-      onClick: () => {
-        requestScene(s.sceneId);
-        go("storyboard");
-      },
+      icon: Maximize2,
+      onClick: () => openFrame(s),
     },
     {
       label: t("shotlist.delete"),
@@ -390,7 +430,7 @@ export function ShotlistView() {
     },
   ];
 
-  // The scene of the shot worked on is the one the Storyboard opens on.
+  // The scene of the shot worked on is the one the Découpage opens on next time.
   const pick = (s: Shot) => {
     setSelected(s.id);
     if (s.sceneId !== current?.id) chooseScene(s.sceneId);
@@ -506,9 +546,13 @@ export function ShotlistView() {
               <span className="rz-num">{numbers.get(s.id)}</span>
             </td>
             {order === "shoot" && <td className="rz-col-num rz-shoot">{shown.indexOf(s) + 1}</td>}
-            {columns.map((c, ci) => (
+            {columns.map((c) => (
               <td key={c} className={`rz-col-${c}`}>
-                <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} abbr={abbr} clamp onPatch={(p) => patch(s, p)} />
+                {c === "frame" ? (
+                  <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} onOpen={() => openFrame(s)} />
+                ) : (
+                  <ShotField shot={s} column={c} scene={h.scene} first={c === firstField} abbr={abbr} clamp onPatch={(p) => patch(s, p)} />
+                )}
               </td>
             ))}
             <td className="rz-col-more">
@@ -559,18 +603,16 @@ export function ShotlistView() {
                 )}
                 <MoreMenu label={t("shotlist.shotMenu", { n: numbers.get(s.id) })} items={menu(s)} />
               </header>
-              {s.frameImage && (
-                <div className="rz-card-frame" style={{ aspectRatio: String(ratioValue(ratio)) }}>
-                  <MediaImage path={s.frameImage} alt={t("storyboard.frameOf", { n: numbers.get(s.id) })} />
-                </div>
-              )}
+              {columns.includes("frame") && <FrameThumb shot={s} n={numbers.get(s.id) ?? ""} ratio={frameRatio} wide onOpen={() => openFrame(s)} />}
               <div className="rz-card-fields">
-                {columns.map((c, ci) => (
-                  <label key={c} className={LONG.has(c) || c === "characters" ? "rz-field wide" : "rz-field"}>
-                    <span>{columnLabel(c)}</span>
-                    <ShotField shot={s} column={c} scene={h.scene} first={ci === 0} abbr={abbr} onPatch={(p) => patch(s, p)} />
-                  </label>
-                ))}
+                {columns
+                  .filter((c) => c !== "frame")
+                  .map((c) => (
+                    <label key={c} className={LONG.has(c) || c === "characters" ? "rz-field wide" : "rz-field"}>
+                      <span>{columnLabel(c)}</span>
+                      <ShotField shot={s} column={c} scene={h.scene} first={c === firstField} abbr={abbr} onPatch={(p) => patch(s, p)} />
+                    </label>
+                  ))}
               </div>
             </li>
           ))}
@@ -662,6 +704,43 @@ export function ShotlistView() {
           meta={(sc) => <SceneMeta shots={listOf(sc.id)} />}
         />
       </aside>
+      {viewIndex >= 0 && (
+        <FrameViewer
+          shots={seen}
+          index={viewIndex}
+          numberOf={(s) => numbers.get(s.id) ?? ""}
+          headingOf={headingOf}
+          ratio={frameRatio}
+          onMove={(i) => {
+            setViewing(seen[i].id);
+            setSelected(seen[i].id);
+          }}
+          onClose={closeViewer}
+          onDraw={setDrawing}
+          onImport={(s) => void importInto(s)}
+          onPick={setPicking}
+          onClear={(s) => void clearImage(s)}
+          onPatch={patch}
+        />
+      )}
+      {drawing && (
+        <DrawDialog
+          ratio={frameRatio}
+          ratioLabel={ratioName(ratio)}
+          background={drawing.frameImage}
+          title={t("storyboard.draw.title", { n: numbers.get(drawing.id) ?? "" })}
+          onClose={() => setDrawing(null)}
+          onSave={async (png) => {
+            try {
+              const path = await storeImage(png, "storyboard", `${project.title} ${numbers.get(drawing.id) ?? ""}`);
+              await updateShot(drawing.id, { frameImage: path }, "Case dessinée");
+            } catch (e) {
+              fail(e);
+            }
+          }}
+        />
+      )}
+      {picking && <BoardImagePicker onPick={(path) => patch(picking, { frameImage: path }, "Image de la case")} onClose={() => setPicking(null)} />}
     </div>
   );
 }
@@ -691,6 +770,7 @@ function ShotField({
 }) {
   const label = columnLabel(column);
   const cls = first ? "rz-first" : undefined;
+  if (column === "frame") return null;
   if (isChoice(column)) {
     const value = shot[column] ?? "";
     // Abbreviated, the cell keeps the whole name for the pointer.

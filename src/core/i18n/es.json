@@ -2368,6 +2368,7 @@
     "move": "Mover",
     "actions": "Acciones",
     "columns": {
+      "frame": "Imagen",
       "number": "N.º",
       "shoot": "Orden",
       "scene": "Escena",
@@ -2396,7 +2397,7 @@
     "duplicate": "Duplicar",
     "moveUp": "Subir",
     "moveDown": "Bajar",
-    "openFrame": "Ver su viñeta del storyboard",
+    "openFrame": "Ver la viñeta en grande",
     "delete": "Eliminar el plano…",
     "deleteTitle": "¿Eliminar el plano {{n}}?",
     "deleteText": "Se eliminan el plano y su viñeta del storyboard. Ctrl + Z los recupera.",
@@ -2510,7 +2511,16 @@
       "leaveText": "¿Abandonar este dibujo?",
       "keepDrawing": "Seguir",
       "discard": "Abandonar"
-    }
+    },
+    "openFrame": "Ver la viñeta del plano {{n}}",
+    "addFrame": "Añadir una imagen al plano {{n}}",
+    "shotN": "Plano {{n}}",
+    "position": "{{at}} de {{count}}",
+    "previous": "Plano anterior (↑)",
+    "next": "Plano siguiente (↓)",
+    "noImage": "Este plano aún no tiene imagen",
+    "noTechnique": "Sin tamaño, movimiento ni duración",
+    "arrowsHint": "↑ ↓ para pasar de un plano a otro"
   },
   "moodboard": {
     "kinds": {

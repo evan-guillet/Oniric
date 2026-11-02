@@ -9688,18 +9688,6 @@ button.rz-fold:hover {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.rz-card-frame {
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--sunken);
-}
-.rz-card-frame img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 .rz-card-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9762,136 +9750,231 @@ button.rz-fold:hover {
   font-size: 12.5px;
 }
 
-/* The Storyboard: frames in the ratio of the film, their captions written under them [STB-01 to STB-06]. */
-.sb-grid {
-  list-style: none;
-  margin: 0;
+/* The frame of a shot in its line of the Découpage: white in both themes, as on paper; empty, a dashed slot. */
+.rz-table td.rz-col-frame {
+  padding: 5px 8px;
+}
+.rz-thumb {
+  display: grid;
+  place-items: center;
+  max-width: 100%;
   padding: 0;
-  display: grid;
-  gap: 22px 18px;
-  align-items: start;
-}
-.sb-frame {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.sb-frame-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  min-width: 0;
-}
-.sb-tech {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sb-frame .more-btn {
-  opacity: 0;
-}
-.sb-frame:hover .more-btn,
-.sb-frame:focus-within .more-btn,
-.sb-frame .more-btn.on {
-  opacity: 1;
-}
-.sb-image {
-  position: relative;
   overflow: hidden;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: 4px;
   background: #ffffff;
-  box-shadow: var(--shadow-sm);
+  color: var(--hint);
+  cursor: zoom-in;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out,
+    color 120ms ease-out;
 }
-.sb-image img {
+.rz-thumb.wide {
+  width: 100%;
+  border-radius: var(--radius);
+}
+.rz-thumb img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.sb-image.empty {
+.rz-thumb.empty {
+  border-style: dashed;
+  background: var(--sunken);
+  cursor: pointer;
+}
+.rz-thumb.empty svg {
+  width: 15px;
+  height: 15px;
+}
+.rz-thumb.wide.empty {
+  aspect-ratio: auto !important;
+  height: 44px;
+}
+.rz-thumb:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--accent);
+}
+.rz-thumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A frame in large: the image on the desk at the left, what its shot says at the right; ↑ ↓ go through the shots. */
+.dialog.frame-viewer {
+  width: min(1240px, calc(100vw - 48px));
+  height: min(780px, calc(100vh - 48px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  display: none;
+  overflow: hidden;
+}
+.dialog.frame-viewer[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog.frame-viewer:focus {
+  outline: none;
+}
+.fv-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.dialog.frame-viewer .fv-head h2 {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  font-size: 15px;
+}
+.fv-num {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fv-scene {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.fv-count {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fv-steps {
+  display: flex;
+  gap: 2px;
+  padding-right: 8px;
+  border-right: 1px solid var(--line);
+}
+.fv-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.fv-stage {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px 32px 20px;
+  background: var(--desk);
+  container-type: size;
+}
+.fv-frame {
   display: grid;
   place-items: center;
+  /* As large as the desk allows, in the ratio of the film, the tools kept under it. */
+  width: min(100cqw, calc((100cqh - 46px) * var(--r)));
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: var(--sheet-shadow);
+  animation: fv-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fv-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.fv-frame.empty {
   border-style: dashed;
   background: var(--sunken);
   box-shadow: none;
 }
-.sb-empty-tools {
+.fv-frame.empty p {
+  margin: 0;
+  font-size: 13px;
+}
+@keyframes fv-in {
+  from {
+    opacity: 0.4;
+  }
+}
+.fv-tools {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  padding: 8px;
 }
-.sb-image-tools {
-  position: absolute;
-  inset: auto 0 0;
+.fv-detail {
+  min-height: 0;
   display: flex;
-  justify-content: center;
-  gap: 6px;
-  padding: 24px 8px 8px;
-  background: linear-gradient(transparent, rgba(14, 15, 22, 0.42));
-  opacity: 0;
-  transition: opacity 160ms ease-out;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 14px;
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
 }
-.sb-image:hover .sb-image-tools,
-.sb-image:focus-within .sb-image-tools {
-  opacity: 1;
+.fv-tech {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
 }
-.sb-frame .rz-inline {
+.fv-tech.muted {
+  font-weight: 400;
+}
+.fv-field {
+  display: grid;
+  gap: 2px;
+}
+.fv-label {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.fv-detail .rz-inline {
   margin: 0 -7px;
   width: calc(100% + 14px);
 }
-.sb-caption {
+.fv-caption {
   color: var(--ink);
 }
-.sb-dialogue {
+.fv-dialogue {
   color: var(--ink-2);
   font-style: italic;
 }
-.sb-notes.rz-inline {
+.fv-hint {
+  margin: auto 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
 }
-.sb-add {
-  display: grid;
-  gap: 8px;
-  padding-top: 32px;
+@media (max-width: 1100px) {
+  .fv-body {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
 }
-.sb-add button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius);
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease-out,
-    border-color 120ms ease-out,
-    color 120ms ease-out;
-}
-.sb-add button:hover {
-  border-style: solid;
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.sb-add svg {
-  width: 15px;
-  height: 15px;
-}
-.sb-add p {
-  margin: 0;
+@media (prefers-reduced-motion: reduce) {
+  .fv-frame {
+    animation: none;
+  }
 }
 .dialog.sb-picker {
   width: min(720px, calc(100vw - 48px));

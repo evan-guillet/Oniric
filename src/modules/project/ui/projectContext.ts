@@ -15,7 +15,6 @@ export type ViewId =
   | "settings"
   | "moodboard"
   | "shotlist"
-  | "storyboard"
   | "team"
   | "breakdown"
   | "schedule"

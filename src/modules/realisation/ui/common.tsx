@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLive } from "../../../core/db/live";
 import { t } from "../../../core/i18n";
 import type { SceneInfo } from "../../script/screenplay/application/scriptSession";
@@ -10,13 +10,6 @@ import type { SceneElement } from "../domain/shots";
 import type { ChoiceField } from "../domain/shots";
 import { formatMinutes, formatSeconds } from "../domain/shots";
 import type { Shot } from "../application/shots";
-
-/** The scene another view asked to open here (the Découpage from a moodboard, the Storyboard from the Découpage). */
-let requested: string | null = null;
-
-export function requestScene(id: string): void {
-  requested = id;
-}
 
 /** The moodboard another view asked to open (a scene's or an entry's board), taken once by the Moodboards. */
 let boardRequested: string | null = null;
@@ -31,19 +24,10 @@ export function takeBoardRequest(): string | null {
   return id;
 }
 
-/**
- * The scene the Découpage and the Storyboard show, the same in both and kept per project on this computer;
- * the first scene when it is gone.
- */
+/** The scene the Découpage shows, kept per project on this computer; the first scene when it is gone. */
 export function useSceneChoice(projectId: string, scenes: SceneInfo[]): [SceneInfo | null, (id: string) => void] {
   const [stored, setStored] = useStoredState<string | null>(`oniric.realisation.scene.${projectId}`, null);
-  const [id, setId] = useState<string | null>(() => requested ?? stored);
-  useEffect(() => {
-    if (requested) {
-      setStored(requested);
-      requested = null;
-    }
-  }, [setStored]);
+  const [id, setId] = useState<string | null>(stored);
   const choose = (next: string) => {
     setId(next);
     setStored(next);

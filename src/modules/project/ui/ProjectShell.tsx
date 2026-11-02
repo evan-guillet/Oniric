@@ -30,7 +30,6 @@ import {
   Keyboard,
   Layers,
   LayoutDashboard,
-  LayoutPanelTop,
   ListChecks,
   Languages,
   LogOut,
@@ -163,7 +162,6 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
   navPart("realisation", [
     navItem("moodboard", Images),
     navItem("shotlist", Clapperboard),
-    navItem("storyboard", LayoutPanelTop),
   ]),
   navPart("production", [
     navItem("team", Users, "2.0"),
@@ -181,7 +179,6 @@ const DAY_MS = 24 * 3600 * 1000;
 // The Réalisation is read when it is first opened, outside the main bundle.
 const MoodboardView = lazy(() => import("../../realisation/ui/MoodboardView").then((m) => ({ default: m.MoodboardView })));
 const ShotlistView = lazy(() => import("../../realisation/ui/ShotlistView").then((m) => ({ default: m.ShotlistView })));
-const StoryboardView = lazy(() => import("../../realisation/ui/StoryboardView").then((m) => ({ default: m.StoryboardView })));
 
 /** An open project: navigation between the views, the shared screenplay session, the status bar. */
 export function ProjectShell({
@@ -226,7 +223,7 @@ export function ProjectShell({
           section ??
           (view === "bible" || view === "workshop"
             ? view
-            : view === "moodboard" || view === "shotlist" || view === "storyboard"
+            : view === "moodboard" || view === "shotlist"
               ? "realisation"
               : "script"),
       }),
@@ -774,7 +771,6 @@ export function ProjectShell({
             <Suspense fallback={null}>
               {view === "moodboard" && <MoodboardView />}
               {view === "shotlist" && <ShotlistView />}
-              {view === "storyboard" && <StoryboardView />}
             </Suspense>
             {LATER.has(view) && <LaterView view={view} />}
           </div>
@@ -793,7 +789,7 @@ export function ProjectShell({
         <TransferDialog
           mode={transferReq.mode}
           section={transferReq.section}
-          option={view === "storyboard" ? "storyboard-pdf" : view === "moodboard" ? "moodboard-pdf" : undefined}
+          option={view === "moodboard" ? "moodboard-pdf" : undefined}
           onImport={(kind) =>
             (kind === "script" ? fileRef : bibleFileRef).current?.click()
           }
