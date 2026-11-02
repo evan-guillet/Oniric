@@ -36,7 +36,6 @@ import { describeError } from "../../../core/errors";
 import { t } from "../../../core/i18n";
 import { confirmRemoval, Dialog } from "../../../ui-kit/Dialog";
 import { ContextMenu, MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
-import { Segmented } from "../../../ui-kit/Segmented";
 import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useProject } from "../../project/ui/projectContext";
@@ -262,13 +261,14 @@ function fitView(items: Geometry[], width: number, height: number, margin = 48, 
 
 /**
  * The moodboards: free boards of images, colours, texts and notes, each tied to scenes or entries [MOO-01 to MOO-06].
- * The view opens on all the boards, as cards; one opens on its canvas, its palette and its links in the panel.
+ * The view opens on all the boards, as cards; one opens on its canvas alone, its palette and its links in a panel that
+ * the bar of tools opens.
  */
 export function MoodboardView() {
   const { ask, notify, setTrail } = useProject();
   const boards = useLive(loadBoards, [...BOARD_TABLES]);
   const [boardId, setBoardId] = useState<string | null>(() => takeBoardRequest());
-  const [panel, setPanel] = useStoredState<Panel>("oniric.moodboard.tab", "palette");
+  const [panel, setPanel] = useState<Panel | null>(null);
   const [editing, setEditing] = useState<Board | "new" | null>(null);
   const board = boards?.find((b) => b.id === boardId) ?? null;
   const items = useLive(() => (board ? loadItems(board.id) : Promise.resolve([])), ["moodboard_item"], [board?.id]);
@@ -383,35 +383,22 @@ export function MoodboardView() {
   }
 
   return (
-    <div className="view split rz-split mb-split">
+    <div className={panel ? "view split rz-split mb-split" : "view split rz-split mb-split bare"}>
       <main className="mb-main" aria-label={board.name}>
-        {items && <BoardCanvas key={board.id} board={board} items={items} onFail={fail} />}
+        {items && <BoardCanvas key={board.id} board={board} items={items} panel={panel} onPanel={setPanel} onFail={fail} />}
       </main>
-      <aside className="view-side rz-side" aria-label={t(`moodboard.panels.${panel}`)}>
-        <div className="side-tabs">
-          <Segmented
-            label={t("moodboard.panel")}
-            value={panel}
-            onChange={setPanel}
-            options={[
-              {
-                id: "palette",
-                label: t("moodboard.panels.palette"),
-                icon: Palette,
-                hint: t("moodboard.panels.paletteHint"),
-              },
-              {
-                id: "links",
-                label: t("moodboard.panels.links"),
-                icon: Link2,
-                hint: t("moodboard.panels.linksHint"),
-              },
-            ]}
-          />
-        </div>
-        {panel === "palette" && items && <PalettePanel board={board} items={items} onFail={fail} />}
-        {panel === "links" && <LinksPanel board={board} onFail={fail} />}
-      </aside>
+      {panel && (
+        <aside id="mb-panel" className="view-side rz-side" aria-label={t(`moodboard.panels.${panel}`)}>
+          <header className="mb-side-head">
+            <h2>{t(`moodboard.panels.${panel}`)}</h2>
+            <button type="button" className="icon-btn" aria-label={t("common.close")} title={t("common.close")} onClick={() => setPanel(null)}>
+              <X aria-hidden="true" />
+            </button>
+          </header>
+          {panel === "palette" && items && <PalettePanel board={board} items={items} onFail={fail} />}
+          {panel === "links" && <LinksPanel board={board} onFail={fail} />}
+        </aside>
+      )}
       {editor}
     </div>
   );
@@ -439,7 +426,20 @@ const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && a.x + a.w > b.x && a.y
  * one drags; moves and sizes snap to the grid and line up with the other items, unless Alt is held. The wheel pans,
  * Ctrl + wheel zooms, the hand (H, or Space held) drags the view.
  */
-function BoardCanvas({ board, items, onFail }: { board: Board; items: BoardItem[]; onFail: (e: unknown) => void }) {
+function BoardCanvas({
+  board,
+  items,
+  panel,
+  onPanel,
+  onFail,
+}: {
+  board: Board;
+  items: BoardItem[];
+  /** The panel open beside the canvas, which the end of the bar opens and closes. */
+  panel: Panel | null;
+  onPanel: (panel: Panel | null) => void;
+  onFail: (e: unknown) => void;
+}) {
   const { ask } = useProject();
   const box = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ x: 48, y: 48, k: 1 });
@@ -1049,6 +1049,23 @@ function BoardCanvas({ board, items, onFail }: { board: Board; items: BoardItem[
     );
   };
 
+  const panelButton = (id: Panel, Icon: typeof Type) => (
+    <button
+      type="button"
+      className={panel === id ? "mb-tool on" : "mb-tool"}
+      aria-label={t(`moodboard.panels.${id}`)}
+      aria-pressed={panel === id}
+      aria-controls={panel === id ? "mb-panel" : undefined}
+      onClick={() => onPanel(panel === id ? null : id)}
+    >
+      <Icon aria-hidden="true" />
+      <span className="mb-tip wide" aria-hidden="true">
+        {t(`moodboard.panels.${id}`)}
+        <small>{t(`moodboard.panels.${id}Hint`)}</small>
+      </span>
+    </button>
+  );
+
   const cursor = panning ? "panning" : tool === "hand" || space ? "hand" : placing ? "placing" : null;
 
   return (
@@ -1230,6 +1247,9 @@ function BoardCanvas({ board, items, onFail }: { board: Board; items: BoardItem[
               <small>{t("moodboard.snapHint")}</small>
             </span>
           </button>
+          <span className="mb-bar-sep" aria-hidden="true" />
+          {panelButton("palette", Palette)}
+          {panelButton("links", Link2)}
         </div>
       </div>
 

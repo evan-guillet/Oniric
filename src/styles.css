@@ -9076,11 +9076,29 @@ button[aria-expanded="true"] .stats-chevron {
   pointer-events: none;
 }
 
-/* Réalisation: the Découpage, the Storyboard and the Moodboards. The Storyboard and a moodboard put their work in the
-   middle and, on the right, a panel that shows one thing at a time, chosen by its tabs; the Découpage keeps on the
-   right the tree of acts, sequences and scenes, as the Scénario does. */
+/* Réalisation: the Découpage and the Moodboards. A moodboard puts its canvas in the middle and, on the right when the
+   end of its bar of tools opens it, a panel that shows one thing at a time; the Découpage has no panel. */
 .view.split.rz-split {
   grid-template-columns: minmax(0, 1fr) 300px;
+}
+.view.split.rz-split.bare {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* The head of the panel: what it shows, and its closing. */
+.mb-side-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px 0 18px;
+}
+.mb-side-head h2 {
+  flex: 1;
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
 }
 /* The Découpage: the shots of the chosen scene, in a table or in cards, over the whole width; the search over them while it is open. */
 .view.rz-view {

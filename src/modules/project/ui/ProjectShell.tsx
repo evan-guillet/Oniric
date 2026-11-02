@@ -418,7 +418,14 @@ export function ProjectShell({
   const bibleFileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   // Folded to a rail of icons, and the sections folded in it: remembered on this computer.
-  const [rail, setRail] = useStoredState("oniric.nav.rail", false);
+  const [kept, setKept] = useStoredState("oniric.nav.rail", false);
+  // The Découpage opens on the rail, to give its columns the room; unfolded there by hand, it stays so until one leaves.
+  const [shotRail, setShotRail] = useState(true);
+  useEffect(() => {
+    if (view !== "shotlist") setShotRail(true);
+  }, [view]);
+  const rail = view === "shotlist" ? shotRail : kept;
+  const setRail = view === "shotlist" ? setShotRail : setKept;
   const [foldedParts, setFoldedParts] = useStoredState<string[]>("oniric.nav.folded", []);
   // A narrow window has room for the rail only.
   const narrow = useSyncExternalStore(subscribeNarrow, () => NARROW.matches);
