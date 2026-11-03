@@ -10983,64 +10983,132 @@ td.changed input {
   }
 }
 
-/* The organisation chart: one card per department, its heads at the top. */
+/* The organisation chart: production and direction on top, each over its branch of departments, and in every
+   department its head over the team, hung from them by the rules of a tree. */
 .pr-org {
   display: grid;
+  gap: 16px;
+}
+.pr-org-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.pr-org-sum > span:not(.badge) + span:not(.badge)::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--line-strong);
+}
+.pr-org-sum .badge {
+  margin: 0 0 0 4px;
+}
+.pr-org-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.pr-org-branches.side {
+  flex-direction: row;
+  align-items: flex-start;
   gap: 14px;
 }
-.pr-org-top,
-.pr-org-rest {
+.pr-org-branch {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.pr-org-cols {
+  --drop: 18px;
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   align-items: start;
   gap: 14px;
+  width: 100%;
+  max-width: calc(var(--cols) * 340px);
 }
-.pr-org-top {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
-  justify-content: center;
+/* Down from the head of the branch, along to the middle of each column, and down into it. */
+.pr-org-cols.hung {
+  padding-top: calc(var(--drop) * 2);
 }
-/* The departments hang from the lead of the film: one rule down from it, one along them. */
-.pr-org.tiered .pr-org-rest {
-  position: relative;
-  padding-top: 22px;
-  border-top: 1.5px solid var(--line-strong);
-}
-.pr-org.tiered .pr-org-rest::before {
+.pr-org-cols.hung::before,
+.pr-org-cols.hung::after,
+.pr-org-cols.hung .pr-org-col::before {
   content: "";
   position: absolute;
-  top: -16px;
-  left: 50%;
-  height: 16px;
-  border-left: 1.5px solid var(--line-strong);
+  border: 0 solid var(--line-strong);
 }
-.pr-org.tiered .pr-org-top .pr-org-dept {
-  border-color: var(--line-strong);
+.pr-org-cols.hung::after {
+  top: 0;
+  left: 50%;
+  height: var(--drop);
+  border-left-width: 1.5px;
+}
+.pr-org-cols.hung::before {
+  top: var(--drop);
+  left: calc((100% - (var(--cols) - 1) * 14px) / var(--cols) / 2);
+  right: calc((100% - (var(--cols) - 1) * 14px) / var(--cols) / 2);
+  border-top-width: 1.5px;
+}
+.pr-org-col {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+.pr-org-cols.hung .pr-org-col::before {
+  top: calc(var(--drop) * -1);
+  left: 50%;
+  height: var(--drop);
+  border-left-width: 1.5px;
 }
 .pr-org-dept {
-  padding: 12px;
+  min-width: 0;
+  padding: 10px 10px 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
   box-shadow: var(--shadow-sm);
 }
+.pr-org-dept.lead {
+  width: min(100%, 360px);
+  padding: 12px 12px 10px;
+  border-color: var(--line-strong);
+}
 .pr-org-dept h2 {
-  margin: 0 0 10px;
-  font-size: 13px;
-}
-.pr-org-heads,
-.pr-org-team {
-  display: grid;
-  gap: 2px;
-}
-.pr-org-team.under {
-  margin: 6px 0 0 15px;
-  padding-left: 14px;
-  border-left: 1.5px solid var(--line-strong);
-}
-.pr-org-person {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-height: 20px;
+  margin: 0 0 6px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pr-org-dept h2 > span:first-child {
+  min-width: 0;
+  text-wrap: balance;
+}
+.pr-org-dept h2 .badge {
+  flex: none;
+  margin: 0;
+}
+.pr-org-person {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 10px;
+  width: 100%;
   min-width: 0;
   padding: 5px 6px;
   border: none;
@@ -11054,8 +11122,62 @@ td.changed input {
 .pr-org-person:hover {
   background: var(--hover);
 }
+.pr-org-person:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
 .pr-org-person.head .pr-row-title {
   font-weight: 600;
+}
+.pr-org-dept.lead .pr-org-person.head .pr-row-title {
+  font-size: 14px;
+}
+.pr-org-crown {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+.pr-org-team {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The team hangs from the head's portrait: a rule down, and an elbow to each of them, the last one rounded. */
+.pr-org-team.under {
+  margin: -5px 0 0 23px;
+}
+.pr-org-team.under li {
+  position: relative;
+  padding-left: 12px;
+}
+.pr-org-team.under li::before,
+.pr-org-team.under li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  border: 0 solid var(--line-strong);
+}
+.pr-org-team.under li::before {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1.5px;
+}
+.pr-org-team.under li::after {
+  top: 22px;
+  width: 10px;
+  border-top-width: 1.5px;
+}
+.pr-org-team.under li:last-child::before {
+  bottom: auto;
+  width: 10px;
+  height: 23px;
+  border-bottom-width: 1.5px;
+  border-bottom-left-radius: 8px;
+}
+.pr-org-team.under li:last-child::after {
+  display: none;
 }
 
 /* The tables of the production. */

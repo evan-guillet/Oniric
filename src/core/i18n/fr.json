@@ -2902,7 +2902,14 @@
     "roleAdded": "« {{role}} » est maintenant proposé dans {{department}}.",
     "managePosts": "Gérer les postes",
     "onFilm": "Postes sur ce film",
-    "onFilmHelp": "Aucun poste dans l'équipe technique. Ajoutez-en un ; s'il manque à la liste, choisissez « Autre poste… »."
+    "onFilmHelp": "Aucun poste dans l'équipe technique. Ajoutez-en un ; s'il manque à la liste, choisissez « Autre poste… ».",
+    "noHead": "Sans chef de poste",
+    "orgPeople_one": "{{count}} personne",
+    "orgPeople_other": "{{count}} personnes",
+    "orgDepartments_one": "{{count}} département",
+    "orgDepartments_other": "{{count}} départements",
+    "orgHeadless_one": "{{count}} département sans chef de poste",
+    "orgHeadless_other": "{{count}} départements sans chef de poste"
   },
   "breakdown": {
     "display": "Affichage du dépouillement",

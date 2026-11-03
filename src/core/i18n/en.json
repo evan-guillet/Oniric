@@ -2902,7 +2902,14 @@
     "roleAdded": "« {{role}} » is now offered in {{department}}.",
     "managePosts": "Manage posts",
     "onFilm": "Posts on this film",
-    "onFilmHelp": "No post in the crew. Add one; if it is not in the list, choose « Other post… »."
+    "onFilmHelp": "No post in the crew. Add one; if it is not in the list, choose « Other post… ».",
+    "noHead": "No head",
+    "orgPeople_one": "{{count}} person",
+    "orgPeople_other": "{{count}} people",
+    "orgDepartments_one": "{{count}} department",
+    "orgDepartments_other": "{{count}} departments",
+    "orgHeadless_one": "{{count}} department without a head",
+    "orgHeadless_other": "{{count}} departments without a head"
   },
   "breakdown": {
     "display": "Breakdown display",

@@ -2902,7 +2902,14 @@
     "roleAdded": "« {{role}} » se propone ahora en {{department}}.",
     "managePosts": "Gestionar puestos",
     "onFilm": "Puestos en esta película",
-    "onFilmHelp": "Ningún puesto en el equipo técnico. Añada uno; si no está en la lista, elija « Otro puesto… »."
+    "onFilmHelp": "Ningún puesto en el equipo técnico. Añada uno; si no está en la lista, elija « Otro puesto… ».",
+    "noHead": "Sin jefe",
+    "orgPeople_one": "{{count}} persona",
+    "orgPeople_other": "{{count}} personas",
+    "orgDepartments_one": "{{count}} departamento",
+    "orgDepartments_other": "{{count}} departamentos",
+    "orgHeadless_one": "{{count}} departamento sin jefe",
+    "orgHeadless_other": "{{count}} departamentos sin jefe"
   },
   "breakdown": {
     "display": "Vista del desglose",

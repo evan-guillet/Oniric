@@ -21,7 +21,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import type { CandidateStatus, CastKind, ContractStatus } from "../../../core/db/schema";
@@ -249,7 +249,7 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
             </section>
           ))
         ) : (
-          <OrgChart groups={groups} contact={contact} onOpen={setEditing} />
+          <OrgChart groups={groups} led={new Set(team.crew.filter((m) => m.head).map((m) => m.department))} contact={contact} onOpen={setEditing} />
         )}
       </main>
       {editing && <CrewDialog team={team} member={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
@@ -257,48 +257,137 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   );
 }
 
-const LEAD = ["production", "direction"];
+type Group = { id: string; members: CrewMember[] };
 
-/** The organisation chart, one card per department, the heads of department at its top [EQU-04]. */
+/** The departments the production runs; every other one, the artistic and technical crew, answers to the direction. */
+const PRODUCTION_SIDE = ["logistics", "finance", "release"];
+const COLUMN = 240;
+const GAP = 14;
+
+/** The width of an element, followed as it changes. */
+function useWidth(): [(el: HTMLElement | null) => void, number] {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [setEl, width];
+}
+
+/** About how tall a department card stands, in rows: its title, then its people. */
+const weight = (g: Group) => 2 + g.members.length + g.members.filter((m) => m.head).length * 0.4;
+
+/** The departments shared out over `n` columns, in their order, each to the shortest column so far. */
+function columns(groups: Group[], n: number): Group[][] {
+  const cols: Group[][] = Array.from({ length: n }, () => []);
+  const height = new Array<number>(n).fill(0);
+  for (const g of groups) {
+    const i = height.indexOf(Math.min(...height));
+    cols[i].push(g);
+    height[i] += weight(g);
+  }
+  return cols.filter((c) => c.length > 0);
+}
+
+/**
+ * The organisation chart [EQU-04]: production and direction at the head of the film, each over the departments that
+ * answer to it, and in every department its head over the people of the team.
+ */
 function OrgChart({
   groups,
+  led,
   contact,
   onOpen,
 }: {
-  groups: { id: string; members: CrewMember[] }[];
+  groups: Group[];
+  /** The departments that have a head, whether or not the search shows them. */
+  led: Set<string>;
   contact: Map<string, Contact>;
   onOpen: (m: CrewMember) => void;
 }) {
+  const [ref, width] = useWidth();
   const person = (m: CrewMember) => {
     const c = contact.get(m.contactId);
     return (
-      <button type="button" key={m.id} className={m.head ? "pr-org-person head" : "pr-org-person"} onClick={() => onOpen(m)}>
-        <Avatar name={c?.name ?? "?"} photo={c?.data.photo} size={m.head ? 32 : 24} />
+      <button type="button" className={m.head ? "pr-org-person head" : "pr-org-person"} onClick={() => onOpen(m)}>
+        <Avatar name={c?.name ?? "?"} photo={c?.data.photo} size={m.head ? 34 : 26} />
         <span className="pr-row-text">
           <span className="pr-row-title">{c?.name}</span>
           <span className="pr-row-sub">{m.role}</span>
         </span>
+        {m.head && <Crown className="pr-org-crown" aria-label={t("team.head")} />}
       </button>
     );
   };
-  const dept = (g: { id: string; members: CrewMember[] }) => {
+  const dept = (g: Group, lead = false) => {
     const heads = g.members.filter((m) => m.head);
     const rest = g.members.filter((m) => !m.head);
     return (
-      <section key={g.id} className="pr-org-dept" aria-label={departmentName(g.id)}>
-        <h2>{departmentName(g.id)}</h2>
-        {heads.length > 0 && <div className="pr-org-heads">{heads.map(person)}</div>}
-        {rest.length > 0 && <div className={heads.length ? "pr-org-team under" : "pr-org-team"}>{rest.map(person)}</div>}
+      <section key={g.id} className={lead ? "pr-org-dept lead" : "pr-org-dept"} aria-label={departmentName(g.id)}>
+        <h2>
+          <span>{departmentName(g.id)}</span>
+          {!led.has(g.id) ? <span className="badge warn">{t("team.noHead")}</span> : <span className="pr-count">{g.members.length}</span>}
+        </h2>
+        {heads.map((m) => (
+          <div key={m.id} className="pr-org-heads">
+            {person(m)}
+          </div>
+        ))}
+        {rest.length > 0 && (
+          <ul className={heads.length ? "pr-org-team under" : "pr-org-team"}>
+            {rest.map((m) => (
+              <li key={m.id}>{person(m)}</li>
+            ))}
+          </ul>
+        )}
       </section>
     );
   };
-  // Production and direction lead the film: on top, the departments hanging from them below.
-  const top = groups.filter((g) => LEAD.includes(g.id));
-  const below = groups.filter((g) => !LEAD.includes(g.id));
+
+  const find = (id: string) => groups.find((g) => g.id === id);
+  const branches = [
+    { lead: find("production"), groups: groups.filter((g) => PRODUCTION_SIDE.includes(g.id)) },
+    { lead: find("direction"), groups: groups.filter((g) => g.id !== "production" && g.id !== "direction" && !PRODUCTION_SIDE.includes(g.id)) },
+  ].filter((b) => b.lead || b.groups.length);
+  // The columns the page holds go to each branch after the height of its departments; too narrow, the branches stack.
+  const total = Math.max(1, Math.floor((width + GAP) / (COLUMN + GAP)));
+  const side = total >= 3 && branches.length === 2;
+  const load = branches.map((b) => b.groups.reduce((s, g) => s + weight(g), 0));
+  const first = side ? Math.min(total - 1, Math.max(1, Math.round((total * load[0]) / (load[0] + load[1])))) : total;
+  const people = new Set(groups.flatMap((g) => g.members.map((m) => m.contactId))).size;
+  const headless = groups.filter((g) => !led.has(g.id)).length;
+
   return (
-    <div className={top.length && below.length ? "pr-org tiered" : "pr-org"}>
-      {top.length > 0 && <div className="pr-org-top">{top.map(dept)}</div>}
-      {below.length > 0 && <div className="pr-org-rest">{below.map(dept)}</div>}
+    <div className="pr-org" ref={ref}>
+      <p className="pr-org-sum">
+        <span>{plural("team.orgPeople", people)}</span>
+        <span>{plural("team.orgDepartments", groups.length)}</span>
+        {headless > 0 && <span className="badge warn">{plural("team.orgHeadless", headless)}</span>}
+      </p>
+      {width > 0 && (
+        <div className={side ? "pr-org-branches side" : "pr-org-branches"}>
+          {branches.map((b, i) => {
+            const cols = columns(b.groups, side ? (i === 0 ? first : total - first) : total);
+            return (
+              <div key={i} className="pr-org-branch" style={{ flexGrow: side ? (i === 0 ? first : total - first) : 1 }}>
+                {b.lead && dept(b.lead, true)}
+                {cols.length > 0 && (
+                  <div className={b.lead ? "pr-org-cols hung" : "pr-org-cols"} style={{ "--cols": cols.length } as React.CSSProperties}>
+                    {cols.map((c, j) => (
+                      <div key={j} className="pr-org-col">
+                        {c.map((g) => dept(g))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
