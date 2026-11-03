@@ -46,7 +46,7 @@ export async function fieldHistory(key: string): Promise<{ id: string; value: un
   return rows.map((r) => ({ id: r.id, value: parseJson<unknown>(r.value, null), createdAt: r.created_at }));
 }
 
-export type DocumentKind = "synopsis" | "treatment" | "continuity";
+export type DocumentKind = "synopsis" | "treatment" | "continuity" | "short_synopsis" | "intention" | "bio" | "direction_note";
 
 export interface ProjectDocument {
   id: string;

@@ -3,10 +3,6 @@ import { t } from "../../../core/i18n";
 
 /** The version each view arrives in; its name and what it will hold are in the catalog. */
 const LATER: Partial<Record<ViewId, string>> = {
-  team: "3.0",
-  breakdown: "3.0",
-  schedule: "3.0",
-  callsheets: "3.0",
   budget: "4.0",
   scouting: "4.0",
   permits: "4.0",

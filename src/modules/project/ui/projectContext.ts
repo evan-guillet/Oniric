@@ -62,7 +62,7 @@ export interface Crumb {
 }
 
 export type TransferMode = "import" | "export";
-export type TransferSection = "script" | "bible" | "workshop" | "realisation";
+export type TransferSection = "script" | "bible" | "workshop" | "realisation" | "production";
 
 export const ProjectContext = createContext<ProjectApi | null>(null);
 

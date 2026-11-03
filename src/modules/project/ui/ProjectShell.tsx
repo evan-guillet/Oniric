@@ -83,6 +83,8 @@ import {
   docFromBlocks,
 } from "../../script/screenplay/ui/editor/schema";
 import { ScreenplayWorkspace } from "../../script/screenplay/ui/ScreenplayWorkspace";
+import { LockKeeper } from "../../script/screenplay/ui/LockKeeper";
+import { Reminders } from "../../script/workshop/ui/Reminders";
 import { useWritingJournal } from "../../script/stats/application/journal";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { DashboardView, lastSceneKey } from "./DashboardView";
@@ -159,10 +161,10 @@ const NAV: { part: string; label: string; items: NavItem[] }[] = [
     navItem("shotlist", Clapperboard),
   ]),
   navPart("production", [
-    navItem("team", Users, "3.0"),
-    navItem("breakdown", ListChecks, "3.0"),
-    navItem("schedule", CalendarDays, "3.0"),
-    navItem("callsheets", ClipboardList, "3.0"),
+    navItem("team", Users),
+    navItem("breakdown", ListChecks),
+    navItem("schedule", CalendarDays),
+    navItem("callsheets", ClipboardList),
     navItem("budget", Wallet, "4.0"),
     navItem("scouting", MapPin, "4.0"),
     navItem("permits", FileCheck2, "4.0"),
@@ -179,6 +181,10 @@ const VersionsView = lazy(() => import("../../script/screenplay/ui/VersionsView"
 const StatsView = lazy(() => import("../../script/stats/ui/StatsView").then((m) => ({ default: m.StatsView })));
 const MoodboardView = lazy(() => import("../../realisation/ui/MoodboardView").then((m) => ({ default: m.MoodboardView })));
 const ShotlistView = lazy(() => import("../../realisation/ui/ShotlistView").then((m) => ({ default: m.ShotlistView })));
+const TeamView = lazy(() => import("../../production/ui/TeamView").then((m) => ({ default: m.TeamView })));
+const BreakdownView = lazy(() => import("../../production/ui/BreakdownView").then((m) => ({ default: m.BreakdownView })));
+const ScheduleView = lazy(() => import("../../production/ui/ScheduleView").then((m) => ({ default: m.ScheduleView })));
+const CallSheetsView = lazy(() => import("../../production/ui/CallSheetsView").then((m) => ({ default: m.CallSheetsView })));
 const SettingsScreen = lazy(() => import("./SettingsView").then((m) => ({ default: m.SettingsScreen })));
 
 /** An open project: navigation between the views, the shared screenplay session, the status bar. */
@@ -226,7 +232,9 @@ export function ProjectShell({
             ? view
             : view === "moodboard" || view === "shotlist"
               ? "realisation"
-              : "script"),
+              : view === "team" || view === "breakdown" || view === "schedule" || view === "callsheets"
+                ? "production"
+                : "script"),
       }),
     [view],
   );
@@ -591,6 +599,8 @@ export function ProjectShell({
 
   return (
     <ProjectContext.Provider value={api}>
+      <LockKeeper session={session} />
+      <Reminders />
       {/* Hidden, not taken down: a view keeps its place and its unsaved text behind the settings. */}
       <div className="shell" hidden={settings !== null}>
         <nav
@@ -782,6 +792,10 @@ export function ProjectShell({
               {view === "stats" && <StatsView />}
               {view === "moodboard" && <MoodboardView />}
               {view === "shotlist" && <ShotlistView />}
+              {view === "team" && <TeamView />}
+              {view === "breakdown" && <BreakdownView />}
+              {view === "schedule" && <ScheduleView />}
+              {view === "callsheets" && <CallSheetsView />}
             </Suspense>
             {LATER.has(view) && <LaterView view={view} />}
           </div>
@@ -1058,10 +1072,6 @@ function ViewHeader({
 }
 
 const LATER = new Set<ViewId>([
-  "team",
-  "breakdown",
-  "schedule",
-  "callsheets",
   "budget",
   "scouting",
   "permits",

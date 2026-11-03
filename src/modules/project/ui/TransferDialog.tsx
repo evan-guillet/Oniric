@@ -1,4 +1,4 @@
-import { BookOpen, Clapperboard, FileText, NotebookPen, type LucideIcon } from "lucide-react";
+import { BookOpen, Clapperboard, FileText, NotebookPen, Users, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
@@ -19,6 +19,8 @@ import type { StoryboardLayout } from "../../realisation/ui/realisationExport";
 
 /** The exports of the Réalisation, read when one is asked for. */
 const realisation = () => import("../../realisation/ui/realisationExport");
+/** The exports of the Production, read when one is asked for. */
+const production = () => import("../../production/ui/productionExport");
 import { Segmented } from "../../../ui-kit/Segmented";
 import { readStored } from "../../../ui-kit/useStoredState";
 
@@ -72,6 +74,21 @@ const exportSections = (): Section[] => [
       { id: "shotlist-csv", label: t("transfer.shotlistCsv"), help: t("transfer.shotlistCsvHelp") },
       { id: "storyboard-pdf", label: t("transfer.storyboardPdf"), help: t("transfer.storyboardPdfHelp") },
       { id: "moodboard-pdf", label: t("transfer.moodboardPdf"), help: t("transfer.moodboardPdfHelp") },
+    ],
+  },
+  {
+    id: "production",
+    label: t("nav.parts.production"),
+    icon: Users,
+    options: [
+      { id: "team-pdf", label: t("transfer.teamPdf"), help: t("transfer.teamPdfHelp") },
+      { id: "contacts-csv", label: t("transfer.contactsCsv"), help: t("transfer.contactsCsvHelp") },
+      { id: "contacts-vcf", label: t("transfer.contactsVcf"), help: t("transfer.contactsVcfHelp") },
+      { id: "breakdown-pdf", label: t("transfer.breakdownPdf"), help: t("transfer.breakdownPdfHelp") },
+      { id: "breakdown-csv", label: t("transfer.breakdownCsv"), help: t("transfer.breakdownCsvHelp") },
+      { id: "schedule-pdf", label: t("transfer.schedulePdf"), help: t("transfer.schedulePdfHelp") },
+      { id: "schedule-xlsx", label: t("transfer.scheduleXlsx"), help: t("transfer.scheduleXlsxHelp") },
+      { id: "calendar-ics", label: t("transfer.calendarIcs"), help: t("transfer.calendarIcsHelp") },
     ],
   },
 ];
@@ -186,6 +203,22 @@ export function TransferDialog({
       await (await realisation()).exportStoryboardPdf(quiet, layout);
     } else if (id === "moodboard-pdf") {
       for (const b of pickedBoards) await (await realisation()).exportMoodboardPdf(quiet, b.id);
+    } else if (id === "team-pdf") {
+      await (await production()).exportTeamPdf(quiet);
+    } else if (id === "contacts-csv") {
+      kept(await (await production()).exportContactsCsv(api));
+    } else if (id === "contacts-vcf") {
+      kept(await (await production()).exportContactsVcf(api));
+    } else if (id === "breakdown-pdf") {
+      await (await production()).exportBreakdownPdf(quiet, "category");
+    } else if (id === "breakdown-csv") {
+      kept(await (await production()).exportBreakdownCsv(api, "category"));
+    } else if (id === "schedule-pdf") {
+      await (await production()).exportSchedulePdf(quiet);
+    } else if (id === "schedule-xlsx") {
+      kept(await (await production()).exportScheduleXlsx(api));
+    } else if (id === "calendar-ics") {
+      kept(await (await production()).exportCalendar(api));
     }
   };
 

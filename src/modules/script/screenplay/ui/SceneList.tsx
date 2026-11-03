@@ -9,6 +9,8 @@ export interface SceneRow {
   heading: string;
   page: number;
   eighths: number;
+  /** Its number once the script is locked (« 12A »); else its place. */
+  number?: string;
 }
 
 /** An act or a sequence of the outline: its automatic number (« Act. I », « Séq. A ») and its title. */
@@ -101,7 +103,7 @@ export const SceneList = memo(function SceneList({
           onContextMenu={(e) => openMenu(e, { kind: "scene", index: i }, `s${i}`)}
           aria-current={i === current ? "location" : undefined}
         >
-          <span className="scene-num">{i + 1}</span>
+          <span className="scene-num">{s.number ?? i + 1}</span>
           <span className="scene-heading">{s.heading || t("workspace.noHeading")}</span>
           <span className="scene-meta">
             {meta ? meta(i) : `${t("workspace.scenePage", { page: s.page })} · ${formatEighths(s.eighths)}`}

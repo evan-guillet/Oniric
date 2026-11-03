@@ -133,7 +133,7 @@ const SEQ_NUMBER = /^\s*(?:(?:[Ss][ée]quence|[Ss]ecuencia|[Ss][ée]q\.|[Ss]ec\.
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The label of scene `n` (counted from 1): « Scè. 12 ». */
-export const sceneLabel = (n: number) => t("versions.sceneShort", { n });
+export const sceneLabel = (n: number | string) => t("versions.sceneShort", { n });
 
 /** An act or sequence's automatic number (« Act. I », « Séq. A ») and its title without any number typed by hand. */
 export type Numbered = { num: string; title: string };

@@ -300,7 +300,7 @@ export function TimelineView() {
                   className={`tl-scene ${status ? `st-${status}` : ""} ${hover?.id === l.scene.id ? "on" : ""} ${faded(l.scene.id, l.scene.characters) ? "off" : ""}`}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${t("palette.scene", { n: l.scene.index + 1 })} ${l.scene.heading}`}
+                  aria-label={`${t("palette.scene", { n: l.scene.number })} ${l.scene.heading}`}
                   onMouseEnter={point(l.scene.id)}
                   onMouseLeave={() => setHover(null)}
                   onFocus={point(l.scene.id)}
@@ -401,7 +401,7 @@ export function TimelineView() {
         {shown && hover && (
           <div className="timeline-info" style={{ left: hover.left, top: hover.top }}>
             <strong>
-              <span className="auto-num">{sceneLabel(shown.index + 1)}</span> {shown.heading || t("dash.noHeading")}
+              <span className="auto-num">{sceneLabel(shown.number)}</span> {shown.heading || t("dash.noHeading")}
             </strong>{" "}
             <span className="muted">
               {t("workspace.scenePage", { page: shown.page })} · {formatEighths(shown.eighths)} ·{" "}

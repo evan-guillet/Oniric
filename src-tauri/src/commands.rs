@@ -618,6 +618,19 @@ pub fn export_text(core: State<'_, Core>, file_name: String, contents: String) -
     Ok(path.display().to_string())
 }
 
+/// Writes a binary file given as base64 to `exports/<file_name>` (a spreadsheet) and returns the full path.
+#[tauri::command]
+#[specta::specta]
+pub fn export_bytes(core: State<'_, Core>, file_name: String, data: String) -> Result<String> {
+    use base64::Engine;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data.as_bytes())
+        .map_err(|_| CoreError::Refused("fichier illisible".into()))?;
+    let path = export_path(&core, &file_name)?;
+    project::fsx::write_atomically(&path, &bytes)?;
+    Ok(path.display().to_string())
+}
+
 /// Opens a file of the project with its default application, or shows it in the Explorer.
 #[tauri::command]
 #[specta::specta]

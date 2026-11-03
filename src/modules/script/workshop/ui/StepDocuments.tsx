@@ -60,7 +60,7 @@ export function StepDocuments() {
   );
 }
 
-function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; title: string; goal: [number, number]; help: string; skeleton?: boolean }) {
+export function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; title: string; goal: [number, number]; help: string; skeleton?: boolean }) {
   const { notify, ask, prompt, printPdf, project } = useProject();
   const [doc, setDoc] = useState<{ content: string; key: number } | null>(null);
   const [versions, setVersions] = useState(false);

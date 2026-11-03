@@ -57,6 +57,7 @@ import { SceneList, type ListGroup, type ListTarget, type SceneRow } from "./Sce
 import { STORY_TABLES, deleteAct, deleteSequence, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
+import { useLock } from "../application/lock";
 import { exportScreenplayPdf } from "./screenplayExport";
 
 import { Select } from "../../../../ui-kit/Select";
@@ -104,7 +105,8 @@ function sameRows(a: SceneRow[], b: SceneRow[]) {
       (r, i) =>
         r.heading === b[i].heading &&
         r.page === b[i].page &&
-        r.eighths === b[i].eighths,
+        r.eighths === b[i].eighths &&
+        r.number === b[i].number,
     )
   );
 }
@@ -330,8 +332,11 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [active, saveNow, exportPdf]);
 
+  // Once the script is locked, the scenes keep their numbers [REE-07].
+  const locked = !!useLock();
   const rows = useMemo(() => {
     if (!snap) return rowsRef.current;
+    const labels = locked ? session.scenes().map((s) => s.number) : null;
     const firstPage: number[] = [];
     for (const page of snap.pagination.pages) {
       for (const line of page.lines) {
@@ -344,10 +349,11 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       heading,
       page: firstPage[i] ?? 1,
       eighths: snap.pagination.sceneEighths[i] ?? 0,
+      number: labels?.[i],
     }));
     if (!sameRows(next, rowsRef.current)) rowsRef.current = next;
     return rowsRef.current;
-  }, [snap]);
+  }, [snap, locked, session]);
 
   // Acts and sequences around the scenes, as the board arranges them.
   const story = useLive(loadStory, [...STORY_TABLES]);

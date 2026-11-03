@@ -617,6 +617,38 @@ mod tests {
     }
 
     #[test]
+    fn the_production_goes_with_its_scenes_days_and_people() {
+        let root = temp("produire");
+        let opts = OpenOptions { work_root: root.join("travail"), on_crash: CrashChoice::Restore, force_lock: false };
+        let p = Project::create(&root.join("Essai"), "Essai", &opts).unwrap();
+        let c = p.conn();
+        c.execute_batch(
+            "INSERT INTO scene (id, rank, content, created_at, updated_at) VALUES ('s1', 'a', '[]', 'd', 'd');
+             INSERT INTO contact (id, name, created_at, updated_at) VALUES ('c1', 'Camille', 'd', 'd');
+             INSERT INTO crew_member (id, contact_id, department, role, rank, created_at, updated_at) VALUES ('m1', 'c1', 'image', 'Cadreur', 'a', 'd', 'd');
+             INSERT INTO cast_role (id, character, contact_id, created_at, updated_at) VALUES ('r1', 'MARIE', 'c1', 'd', 'd');
+             INSERT INTO breakdown_element (id, category, name, created_at, updated_at) VALUES ('e1', 'props', 'Lampe', 'd', 'd');
+             INSERT INTO breakdown_item (scene_id, element_id) VALUES ('s1', 'e1');
+             INSERT INTO schedule (id, name, rank, created_at, updated_at) VALUES ('p1', 'Plan', 'a', 'd', 'd');
+             INSERT INTO shoot_day (id, schedule_id, rank, created_at, updated_at) VALUES ('d1', 'p1', 'a', 'd', 'd');
+             INSERT INTO strip (id, day_id, rank, scene_id, created_at, updated_at) VALUES ('b1', 'd1', 'a', 's1', 'd', 'd');
+             INSERT INTO call_sheet (id, day_id, created_at, updated_at) VALUES ('f1', 'd1', 'd', 'd');
+             INSERT INTO call_recipient (sheet_id, contact_id) VALUES ('f1', 'c1');",
+        )
+        .unwrap();
+        // A strip is a scene or a banner, never both nor neither.
+        assert!(c.execute("INSERT INTO strip (id, day_id, rank, created_at, updated_at) VALUES ('b2', 'd1', 'b', 'd', 'd')", []).is_err());
+        c.execute_batch("DELETE FROM scene WHERE id = 's1'; DELETE FROM contact WHERE id = 'c1';").unwrap();
+        let count = |table: &str| c.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get::<_, i64>(0)).unwrap();
+        assert_eq!((count("breakdown_item"), count("strip"), count("crew_member"), count("call_recipient")), (0, 0, 0, 0));
+        let actor: Option<String> = c.query_row("SELECT contact_id FROM cast_role", [], |r| r.get(0)).unwrap();
+        assert_eq!(actor, None);
+        c.execute_batch("DELETE FROM schedule WHERE id = 'p1';").unwrap();
+        assert_eq!((count("shoot_day"), count("call_sheet")), (0, 0));
+        p.close().unwrap();
+    }
+
+    #[test]
     fn copies_set_aside_do_not_pile_up() {
         let aside = temp("aside");
         for t in [9, 10, 11, 12, 13, 14, 100] {

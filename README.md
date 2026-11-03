@@ -2,24 +2,26 @@
 
 Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. Oniric ne se connecte à Internet que pour la carte des repérages, et seulement si on l'active.
 
-**Version 2.0** : écrire et mettre en scène. En plus du socle de la 0.1 (projet, éditeur aux formats français et américain, PDF, enregistrement automatique, survie aux plantages) :
+**Version 3.0** : écrire, mettre en scène et préparer le tournage. En plus du socle de la 0.1 (projet, éditeur aux formats français et américain, PDF, enregistrement automatique, survie aux plantages) :
 
-- l'**Atelier d'écriture**, étapes 1 à 5 : préparation, personnages, structure, documents préparatoires (synopsis, séquencier, traitement, continuité dialoguée), écriture ;
+- l'**Atelier d'écriture** et ses neuf étapes : préparation, personnages, structure, documents préparatoires (synopsis, séquencier, traitement, continuité dialoguée), écriture, puis réécriture par passes avec temps de repos et aides à la relecture, retours des lecteurs (exemplaires PDF numérotés, fiches de lecture, remarques triées, vérifications de forme), protection et diffusion (dépôts, logline, note d'intention, dossier de présentation en PDF, suivi des soumissions) et développement (demandes de réécriture) ;
+- le **verrouillage du scénario** : numéros de scène figés (12A, 12B…) et révisions de couleur, les lignes changées marquées d'un astérisque dans la marge du PDF ;
 - la **Bible** : personnages, lieux, objets… et liens `/`, `@` ou `[[` depuis le scénario et les documents, qui créent la fiche d'un nom inconnu ;
 - la **Structure**, vue en **Tableau** (actes, séquences, cartes de scène, lignes d'intrigue) ou en **Chronologie** ;
 - les **Versions** figées, leur comparaison, et les **notes** en marge du scénario ;
 - la **page de titre** et les **formats personnalisés** ;
 - l'export **FDX** (Final Draft), l'import FDX et Fountain ;
 - les **sauvegardes** automatiques dans un dossier à part, et leur restauration ;
-- la **Réalisation** : des **moodboards** libres (images glissées ou collées, couleurs, textes, notes, palette tirée des images), le **découpage technique** de chaque scène en plans (tableau ou cartes, ordre de tournage, couverture du texte) et le **storyboard**, une case par plan, dessinée dans Oniric ou importée, avec leurs exports PDF et CSV.
+- la **Réalisation** : des **moodboards** libres (images glissées ou collées, couleurs, textes, notes, palette tirée des images), le **découpage technique** de chaque scène en plans (tableau ou cartes, ordre de tournage, couverture du texte) et le **storyboard**, une case par plan, dessinée dans Oniric ou importée, avec leurs exports PDF et CSV ;
+- la **Production** : l'**Équipe** (contacts avec import et export CSV et vCard, carnet d'adresses commun aux projets de l'ordinateur, équipe technique par département et organigramme, distribution, casting), le **Dépouillement** (fiche par scène, texte surligné aux couleurs des catégories, suggestions, rapports PDF et CSV), le **Plan de travail** (bandes à glisser entre les journées, répartition automatique, conflits, plusieurs plans, présence des comédiens, calendrier ; exports PDF, XLSX et iCal) et les **Feuilles de service** (préremplies depuis le plan, lever et coucher du soleil, destinataires, versions diffusées, une feuille par personne, rapport de fin de journée).
 
-La partie Production est visible dans la navigation ; elle arrive dans les versions 3.0 et 4.0.
+Le budget, les repérages et les autorisations arrivent dans la version 4.0.
 
 Les choix techniques sont décrits dans le [document d'architecture](docs/Architecture_Oniric.md) ; le besoin, dans le [PRD](docs/PRD_Oniric.md) et le [cahier des charges](docs/Cahier_des_charges_Oniric.md).
 
 ## Utiliser Oniric
 
-1. Lancer `Oniric_2.0.0_x64-setup.exe`. L'installation se fait pour l'utilisateur, sans droits d'administrateur. L'installateur n'est pas encore signé : Windows SmartScreen demande une confirmation (« Informations complémentaires › Exécuter quand même »).
+1. Lancer `Oniric_3.0.0_x64-setup.exe`. L'installation se fait pour l'utilisateur, sans droits d'administrateur. L'installateur n'est pas encore signé : Windows SmartScreen demande une confirmation (« Informations complémentaires › Exécuter quand même »).
 2. **Nouveau projet** : un titre, un format, un emplacement. Le projet est un dossier ordinaire. **Importer un scénario…** crée un projet à partir d'un fichier Final Draft (`.fdx`) ou Fountain.
 3. Écrire. `Entrée` et `Tab` passent d'un élément à l'autre comme dans les logiciels professionnels ; `Ctrl+1` à `Ctrl+8` choisissent l'élément ; taper `INT.` en début d'action crée un en-tête de scène.
 4. **Exporter en PDF** (`Ctrl+P`) : le fichier arrive dans le dossier `exports` du projet. **Options d'export…** imprime dans un autre format ; **Page de titre…** la remplit.

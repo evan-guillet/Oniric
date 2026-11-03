@@ -239,6 +239,173 @@ export interface ShotTable {
   updated_at: string;
 }
 
+export interface ContactTable {
+  id: string;
+  name: string;
+  /** JSON object: the card's other fields. */
+  data: Generated<string>;
+  book_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ContractStatus = "none" | "sent" | "signed";
+
+export interface CrewMemberTable {
+  id: string;
+  contact_id: string;
+  department: string;
+  role: string;
+  head: Generated<number>;
+  rank: string;
+  start_date: string | null;
+  end_date: string | null;
+  rate: Generated<string>;
+  contract: Generated<ContractStatus>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CastKind = "lead" | "supporting" | "bit" | "extra" | "double" | "stunt";
+
+export interface CastRoleTable {
+  id: string;
+  character: string;
+  kind: Generated<CastKind>;
+  number: number | null;
+  contact_id: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CandidateStatus = "candidate" | "audition" | "shortlist" | "chosen" | "declined";
+
+export interface CastingCandidateTable {
+  id: string;
+  role_id: string;
+  contact_id: string;
+  status: Generated<CandidateStatus>;
+  audition_at: string | null;
+  video: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UnavailabilityTable {
+  id: string;
+  contact_id: string;
+  start_date: string;
+  end_date: string;
+  note: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BreakdownElementTable {
+  id: string;
+  category: string;
+  name: string;
+  entry_id: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BreakdownItemTable {
+  scene_id: string;
+  element_id: string;
+  quantity: number | null;
+}
+
+export interface BreakdownSceneTable {
+  scene_id: string;
+  checked_text: string | null;
+  /** JSON array of the suggestion keys turned down. */
+  rejected: Generated<string>;
+  updated_at: string;
+}
+
+export interface ScheduleTable {
+  id: string;
+  name: string;
+  rank: string;
+  start_date: string | null;
+  /** JSON array of the week days worked, 1 for Monday. */
+  week: Generated<string>;
+  day_minutes: Generated<number>;
+  page_minutes: Generated<number>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DayKind = "shoot" | "off" | "travel";
+
+export interface ShootDayTable {
+  id: string;
+  schedule_id: string;
+  rank: string;
+  kind: Generated<DayKind>;
+  date: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StripTable {
+  id: string;
+  day_id: string;
+  rank: string;
+  scene_id: string | null;
+  banner: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EventPhase = "prep" | "tests" | "shoot" | "edit" | "delivery" | "other";
+
+export interface ProductionEventTable {
+  id: string;
+  phase: EventPhase;
+  title: string;
+  start_date: string;
+  end_date: string;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CallSheetTable {
+  id: string;
+  day_id: string;
+  data: Generated<string>;
+  versions: Generated<string>;
+  report: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CallRecipientTable {
+  sheet_id: string;
+  contact_id: string;
+  call_time: Generated<string>;
+  sent: Generated<number>;
+  confirmed: Generated<number>;
+}
+
+export type WorkshopItemKind = "pass" | "reader" | "remark" | "deposit" | "submission" | "request";
+
+export interface WorkshopItemTable {
+  id: string;
+  kind: WorkshopItemKind;
+  parent_id: string | null;
+  rank: string;
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   project_setting: ProjectSettingTable;
   scene: SceneTable;
@@ -260,6 +427,21 @@ export interface Database {
   moodboard_item: MoodboardItemTable;
   moodboard_link: MoodboardLinkTable;
   shot: ShotTable;
+  contact: ContactTable;
+  crew_member: CrewMemberTable;
+  cast_role: CastRoleTable;
+  casting_candidate: CastingCandidateTable;
+  unavailability: UnavailabilityTable;
+  breakdown_element: BreakdownElementTable;
+  breakdown_item: BreakdownItemTable;
+  breakdown_scene: BreakdownSceneTable;
+  schedule: ScheduleTable;
+  shoot_day: ShootDayTable;
+  strip: StripTable;
+  production_event: ProductionEventTable;
+  call_sheet: CallSheetTable;
+  call_recipient: CallRecipientTable;
+  workshop_item: WorkshopItemTable;
 }
 
 export type TableName = keyof Database;

@@ -313,9 +313,9 @@ export function BoardView() {
       >
         {before}
         <Grip label={t("board.dragScene")} onDragStart={startDrag({ kind: "scene", id }, ".card")} />
-        <button type="button" className="card-body" onClick={() => setSelected(id)} onDoubleClick={() => openScene(id)} aria-label={`${t("palette.scene", { n: s.index + 1 })} ${s.heading}`}>
+        <button type="button" className="card-body" onClick={() => setSelected(id)} onDoubleClick={() => openScene(id)} aria-label={`${t("palette.scene", { n: s.number })} ${s.heading}`}>
           <span className="card-top">
-            <span className="card-num">{sceneLabel(s.index + 1)}</span>
+            <span className="card-num">{sceneLabel(s.number)}</span>
             <span className="card-heading">{s.heading || t("dash.noHeading")}</span>
           </span>
           {m.summary && <span className="card-summary">{m.summary}</span>}
@@ -435,11 +435,11 @@ export function BoardView() {
       const seqs = new Map(groups.flatMap((g) => g.sequences).flatMap((q) => (q.sequence ? [[q.sequence.id, q] as const] : [])));
       const sceneName = (id: string) => {
         const x = byId.get(id);
-        return x ? `${sceneLabel(x.index + 1)} · ${x.heading || t("dash.noHeading")}` : "";
+        return x ? `${sceneLabel(x.number)} · ${x.heading || t("dash.noHeading")}` : "";
       };
       return (
         <MoveDialog
-          title={t("board.moveScene", { n: s.index + 1 })}
+          title={t("board.moveScene", { n: s.number })}
           subject={s.heading || t("dash.noHeading")}
           groups={groups
             .filter((g) => g.sequences.some((q) => q.sequence))
@@ -778,7 +778,7 @@ function CardPanel({ scene, meta, story, onClose, onRemove }: { scene: SceneInfo
   return (
     <aside className="card-panel" aria-label={t("board.card")}>
       <header>
-        <h2 className="auto-num">{sceneLabel(scene.index + 1)}</h2>
+        <h2 className="auto-num">{sceneLabel(scene.number)}</h2>
         <button type="button" className="btn ghost small" onClick={onClose} aria-label={t("board.closeCard")}>
           <X aria-hidden="true" />
         </button>

@@ -11,6 +11,10 @@ export const PrintPages = memo(function PrintPages({
   titlePage,
   blocks,
   sceneNumbers = "none",
+  labels,
+  revised,
+  revision,
+  watermark,
 }: {
   pagination: Pagination;
   format: ScreenplayFormat;
@@ -18,16 +22,25 @@ export const PrintPages = memo(function PrintPages({
   /** The laid elements, to number each scene as the scene list does. */
   blocks?: LaidBlock[];
   sceneNumbers?: SceneNumbers;
+  /** The number of each scene, by its place, once the script is locked (« 12A »); else its place. */
+  labels?: string[];
+  /** The elements changed in the current revision, by their index in `blocks`: an asterisk in the right margin [REE-07]. */
+  revised?: Set<number>;
+  /** The revision at the top of every page: its colour and date. */
+  revision?: string;
+  /** A reader's copy: their name across every page [RET-01]. */
+  watermark?: string;
 }) {
   const lh = lineHeightIn(format);
   // A heading split over two pages is numbered once, on its first line.
   const numbered = new Set<number>();
-  const sceneNumber = (line: PageLine): number | null => {
+  const sceneNumber = (line: PageLine): string | null => {
     if (sceneNumbers === "none" || !blocks || line.type !== "scene_heading" || line.kind !== "text" || numbered.has(line.blockIndex)) return null;
     numbered.add(line.blockIndex);
-    return blocks[line.blockIndex].sceneIndex + 1;
+    const i = blocks[line.blockIndex].sceneIndex;
+    return labels?.[i] ?? String(i + 1);
   };
-  const numberAt = (top: string, n: number) => (
+  const numberAt = (top: string, n: string) => (
     <>
       {sceneNumbers !== "right" && (
         <div className="pl scene-no" style={{ top, right: `${format.page.width - format.margins.left + 0.3}in` }}>
@@ -51,6 +64,21 @@ export const PrintPages = memo(function PrintPages({
               {page.number}.
             </div>
           )}
+          {revision && (
+            <div className="pg-revision" style={{ top: `${format.pageNumberTop}in`, left: `${format.margins.left}in` }}>
+              {revision}
+            </div>
+          )}
+          {watermark && (
+            <>
+              <div className="pg-watermark" aria-hidden="true">
+                {watermark}
+              </div>
+              <div className="pg-copy" style={{ bottom: `${format.margins.bottom / 2}in`, left: `${format.margins.left}in` }}>
+                {watermark}
+              </div>
+            </>
+          )}
           {page.lines.map((line, i) => {
             const top = `${format.margins.top + line.row * lh}in`;
             const n = sceneNumber(line);
@@ -60,6 +88,11 @@ export const PrintPages = memo(function PrintPages({
                   {line.text}
                 </div>
                 {n !== null && numberAt(top, n)}
+                {revised?.has(line.blockIndex) && line.kind === "text" && (
+                  <div className="pl pg-mark" style={{ top, left: `${format.page.width - format.margins.right + (sceneNumbers === "left" || sceneNumbers === "none" ? 0.3 : 0.75)}in` }}>
+                    *
+                  </div>
+                )}
               </Fragment>
             );
           })}

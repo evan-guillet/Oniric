@@ -162,7 +162,7 @@ function CharacterTable({ characters, totalDialogue }: { characters: ReturnType<
                   return s ? (
                     <li key={id}>
                       <button type="button" onClick={() => openScene(id)}>
-                        <span className="auto-num">{sceneLabel(s.index + 1)}</span>
+                        <span className="auto-num">{sceneLabel(s.number)}</span>
                         <span className="stats-slug">{s.heading || t("dash.noHeading")}</span>
                         <span className="muted">{t("stats.pagesShort", { n: formatEighths(s.eighths) })}</span>
                       </button>
@@ -218,7 +218,7 @@ function PlaceTable({ places }: { places: ReturnType<typeof placeStats> }) {
                   return s ? (
                     <li key={id}>
                       <button type="button" onClick={() => openScene(id)}>
-                        <span className="auto-num">{sceneLabel(s.index + 1)}</span>
+                        <span className="auto-num">{sceneLabel(s.number)}</span>
                         <span className="stats-slug">{s.heading}</span>
                         <span className="muted">{t("stats.pagesShort", { n: formatEighths(s.eighths) })}</span>
                       </button>

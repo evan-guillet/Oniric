@@ -195,7 +195,7 @@ export function ShotlistView() {
     const m = new Map<string, Set<string>>();
     for (const sc of scenes) {
       const all = perScene.get(sc.id) ?? [];
-      const hits = String(sc.index + 1) === needle || plain(sc.heading).includes(needle) ? all : all.filter((s) => shotText(s).includes(needle));
+      const hits = sc.number === needle || plain(sc.heading).includes(needle) ? all : all.filter((s) => shotText(s).includes(needle));
       if (hits.length || plain(sc.heading).includes(needle)) m.set(sc.id, new Set(hits.map((s) => s.id)));
     }
     return m;
@@ -207,7 +207,7 @@ export function ShotlistView() {
   };
   const numbers = useMemo(() => {
     const m = new Map<string, string>();
-    for (const sc of scenes) (perScene.get(sc.id) ?? []).forEach((s, i) => m.set(s.id, shotNumber(sc.index + 1, i, numbering)));
+    for (const sc of scenes) (perScene.get(sc.id) ?? []).forEach((s, i) => m.set(s.id, shotNumber(sc.number, i, numbering)));
     return m;
   }, [scenes, perScene, numbering]);
   const columns = SHOT_COLUMNS.filter((c) => !hidden.includes(c));
@@ -433,7 +433,7 @@ export function ShotlistView() {
   const headLine = (h: Head) => {
     const inner = (
       <>
-        <span className="rz-head-num">{h.scene.index + 1}</span>
+        <span className="rz-head-num">{h.scene.number}</span>
         <span className="rz-head-title">{h.scene.heading || t("workspace.noHeading")}</span>
       </>
     );

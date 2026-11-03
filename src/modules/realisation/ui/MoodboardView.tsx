@@ -1402,7 +1402,7 @@ function LinksPanel({ board, onFail }: { board: Board; onFail: (e: unknown) => v
     if (s)
       return {
         kind: "scene" as const,
-        text: `${t("shotlist.sceneNum", { n: s.index + 1 })} · ${s.heading || t("workspace.noHeading")}`,
+        text: `${t("shotlist.sceneNum", { n: s.number })} · ${s.heading || t("workspace.noHeading")}`,
       };
     const e = entries?.all.find((x) => x.id === id);
     if (e)
@@ -1453,7 +1453,7 @@ function LinksPanel({ board, onFail }: { board: Board; onFail: (e: unknown) => v
             .filter((s) => !board.links.includes(s.id))
             .map((s) => (
               <option key={s.id} value={s.id}>
-                {`${s.index + 1}. ${s.heading || t("workspace.noHeading")}`}
+                {`${s.number}. ${s.heading || t("workspace.noHeading")}`}
               </option>
             ))}
         </optgroup>

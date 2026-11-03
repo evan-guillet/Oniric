@@ -94,7 +94,7 @@ export function EntryEditor({ entry, entries, types }: { entry: Entry; entries: 
   };
   const sceneLabel = (id: string) => {
     const s = scenes.find((x) => x.id === id);
-    return s ? `${s.index + 1}. ${s.heading || t("dash.noHeading")}` : null;
+    return s ? `${s.number}. ${s.heading || t("dash.noHeading")}` : null;
   };
 
   // The copy was silent: the notice says it exists and opens it.

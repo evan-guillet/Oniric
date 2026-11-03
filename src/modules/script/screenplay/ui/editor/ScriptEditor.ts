@@ -12,6 +12,22 @@ import { newScene, schema, sceneFromStored } from "./schema";
 import { frenchTypography, getWritingPrefs } from "../../../../../core/writingPrefs";
 import { t } from "../../../../../core/i18n";
 
+/** The pages of stored scenes (a frozen version) in a format, without an editor: a reader's copy of an older version [RET-01]. */
+export function paginateStored(scenes: { id: string; content: string }[], format: ScreenplayFormat): { pagination: Pagination; blocks: LaidBlock[] } {
+  const measurer = new Measurer(format);
+  try {
+    const laid: LaidBlock[] = [];
+    scenes.forEach((s, sceneIndex) =>
+      sceneFromStored(s.id, s.content).forEach((b) =>
+        laid.push({ type: b.type.name as ElementType, text: b.textContent, lineStarts: measurer.lineStarts(b.type.name as ElementType, b.textContent), sceneIndex }),
+      ),
+    );
+    return { pagination: paginate(laid, format), blocks: laid };
+  } finally {
+    measurer.dispose();
+  }
+}
+
 const pagesKey = new PluginKey<DecorationSet>("pages");
 
 const pagesPlugin = new Plugin<DecorationSet>({

@@ -234,7 +234,7 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
         {linked.map((s) => (
           <span key={s.id} className="tag">
             <button type="button" className="link" onClick={() => openScene(s.id)}>
-              {s.index + 1}. {s.heading || t("dash.noHeading")}
+              {s.number}. {s.heading || t("dash.noHeading")}
             </button>
             <button
               type="button"
@@ -271,7 +271,7 @@ function BeatRow({ model, def, stored, story, scenes, pages }: { model: string; 
               .filter((s) => !stored?.scenes.includes(s.id))
               .map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.index + 1}. {s.heading || t("dash.noHeading")}
+                  {s.number}. {s.heading || t("dash.noHeading")}
                 </option>
               ))}
           </Select>

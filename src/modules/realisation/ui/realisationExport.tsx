@@ -97,9 +97,9 @@ export async function exportShotlistCsv(api: Api): Promise<string> {
   const head = [t("shotlist.columns.scene"), t("shotlist.columns.heading"), t("shotlist.columns.number"), t("shotlist.columns.shoot"), ...TEXT_COLUMNS.map(columnLabel)];
   const rows = scenes.flatMap(({ scene, shots }) =>
     shots.map((s, i) => [
-      String(scene.index + 1),
+      scene.number,
       scene.heading,
-      shotNumber(scene.index + 1, i, numbering),
+      shotNumber(scene.number, i, numbering),
       s.shootOrder === null ? "" : String(s.shootOrder),
       ...TEXT_COLUMNS.map((c) => cellText(s, c)),
     ]),
@@ -124,7 +124,7 @@ export async function exportShotlistPdf(api: Api): Promise<void> {
         {scenes.map(({ scene, shots }) => (
           <section key={scene.id}>
             <h2>
-              {scene.index + 1}. {scene.heading || t("workspace.noHeading")}
+              {scene.number}. {scene.heading || t("workspace.noHeading")}
             </h2>
             <p className="totals">{shotTotals(shots)}</p>
             <table>
@@ -139,7 +139,7 @@ export async function exportShotlistPdf(api: Api): Promise<void> {
               <tbody>
                 {shots.map((s, i) => (
                   <tr key={s.id}>
-                    <td className="num">{shotNumber(scene.index + 1, i, numbering)}</td>
+                    <td className="num">{shotNumber(scene.number, i, numbering)}</td>
                     {columns.map((c) => (
                       <td key={c}>{cellText(s, c)}</td>
                     ))}
@@ -188,7 +188,7 @@ export async function exportStoryboardPdf(api: Api, layout: StoryboardLayout): P
   const [w, h] = layout.orientation === "landscape" ? [A4.long, A4.short] : [A4.short, A4.long];
   const pages: { scene: (typeof scenes)[number]["scene"]; frames: { shot: Shot; n: string }[]; part: number; parts: number }[] = [];
   for (const { scene, shots } of scenes) {
-    const frames = shots.map((shot, i) => ({ shot, n: shotNumber(scene.index + 1, i, numbering) }));
+    const frames = shots.map((shot, i) => ({ shot, n: shotNumber(scene.number, i, numbering) }));
     const parts = Math.ceil(frames.length / per);
     for (let p = 0; p < parts; p++) pages.push({ scene, frames: frames.slice(p * per, (p + 1) * per), part: p + 1, parts });
   }
@@ -198,7 +198,7 @@ export async function exportStoryboardPdf(api: Api, layout: StoryboardLayout): P
       {pages.map((p, pi) => (
         <section key={pi} className="page">
           <p className="slug">
-            {p.scene.index + 1}. {p.scene.heading || t("workspace.noHeading")}
+            {p.scene.number}. {p.scene.heading || t("workspace.noHeading")}
             {p.parts > 1 && ` (${p.part}/${p.parts})`}
           </p>
           <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>

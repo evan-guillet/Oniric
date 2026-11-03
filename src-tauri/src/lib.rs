@@ -60,6 +60,7 @@ mod app {
                 commands::project_rename,
                 commands::export_pdf,
                 commands::export_text,
+                commands::export_bytes,
                 commands::reveal,
                 commands::app_setting_get,
                 commands::app_setting_set,

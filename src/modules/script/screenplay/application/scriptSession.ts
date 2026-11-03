@@ -3,10 +3,13 @@ import type { Node as PMNode } from "prosemirror-model";
 import type { SaveScheduler, SaveState } from "./saveScheduler";
 import type { EditorSnapshot, ScriptEditor } from "../ui/editor/ScriptEditor";
 import { sceneCharacters } from "../ui/editor/schema";
+import { sceneLabels } from "../domain/lock";
 
 export interface SceneInfo {
   id: string;
   index: number;
+  /** « 12 », or once the script is locked « 12A » [REE-07]. */
+  number: string;
   heading: string;
   characters: string[];
   eighths: number;
@@ -31,6 +34,8 @@ export class ScriptSession {
   private docListeners = new Set<() => void>();
   private stateListeners = new Set<() => void>();
   private cache: { version: number; scenes: SceneInfo[] } | null = null;
+  /** The numbers of the locked script, by scene id; null while it is not locked. */
+  private locked: Record<string, string> | null = null;
 
   attach(editor: ScriptEditor, scheduler: SaveScheduler): void {
     this.editor = editor;
@@ -77,6 +82,13 @@ export class ScriptSession {
     return () => this.stateListeners.delete(l);
   };
 
+  /** The script was locked, unlocked, or numbered a new scene: every view numbers the scenes again. */
+  setLocked(numbers: Record<string, string> | null): void {
+    if (JSON.stringify(numbers) === JSON.stringify(this.locked)) return;
+    this.locked = numbers;
+    this.docChanged();
+  }
+
   getDocVersion = () => this.docVersion;
   getStateVersion = () => this.stateVersion;
 
@@ -95,12 +107,16 @@ export class ScriptSession {
       }
       // A scene the edit left alone is the same object as before, so typing reads only the scene it changes.
       const before = new Map(this.cache?.scenes.map((s) => [s.id, s]));
+      const ids: string[] = [];
+      editor.doc.forEach((node) => ids.push(node.attrs.id as string));
+      const labels = sceneLabels(ids, this.locked);
       editor.doc.forEach((node, _o, index) => {
         const id = node.attrs.id as string;
         const eighths = snap.pagination.sceneEighths[index] ?? 0;
         const page = firstPage[index] ?? 1;
+        const number = labels[index];
         const old = before.get(id);
-        if (old && old.node === node && old.index === index && old.eighths === eighths && old.page === page) {
+        if (old && old.node === node && old.index === index && old.number === number && old.eighths === eighths && old.page === page) {
           scenes.push(old);
           return;
         }
@@ -109,6 +125,7 @@ export class ScriptSession {
         scenes.push({
           id,
           index,
+          number,
           heading: node.firstChild?.type.name === "scene_heading" ? node.firstChild.textContent : "",
           characters: sceneCharacters(node),
           eighths,

@@ -112,7 +112,7 @@ function Resume({ scene, story, scenes, pageCount }: { scene: SceneInfo; story: 
           ) : (
             <>
               <p className="dash-resume-where">
-                <span className="auto-num">{sceneLabel(scene.index + 1)}</span>
+                <span className="auto-num">{sceneLabel(scene.number)}</span>
                 {parts.map((p) => (
                   <span key={p}>{p}</span>
                 ))}
@@ -189,7 +189,7 @@ function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefi
                   <button type="button" className="dash-row" onClick={() => (s ? openScene(s.id) : go("script"))}>
                     <span className="stats-dot stats-p-draft" aria-hidden="true" />
                     <span className="dash-row-text">{n.quote ? t("dash.quote", { quote: n.quote }) : n.body || t("dash.emptyNote")}</span>
-                    {s && <span className="dash-row-meta">{sceneLabel(s.index + 1)}</span>}
+                    {s && <span className="dash-row-meta">{sceneLabel(s.number)}</span>}
                   </button>
                 </li>
               );
@@ -204,7 +204,7 @@ function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefi
                 <button type="button" className="dash-row" onClick={() => openScene(s.id)}>
                   <span className="stats-dot stats-p-rewrite" aria-hidden="true" />
                   <span className="dash-row-text stats-slug">{s.heading || t("dash.noHeading")}</span>
-                  <span className="dash-row-meta">{sceneLabel(s.index + 1)}</span>
+                  <span className="dash-row-meta">{sceneLabel(s.number)}</span>
                 </button>
               </li>
             ))}
@@ -388,15 +388,14 @@ function Shortcuts({ statScenes, story }: { statScenes: StatScene[]; story: Stor
   const characters = useMemo(() => characterStats(statScenes, characterName).length, [statScenes]);
   const places = useMemo(() => placeStats(statScenes).length, [statScenes]);
 
-  const ready = STEPS.filter((s) => s.ready);
-  const steps = ready.map((s) => (fields?.get(`step.${s.n}.status`) as StepStatus | undefined) ?? "empty");
+  const steps = STEPS.map((s) => (fields?.get(`step.${s.n}.status`) as StepStatus | undefined) ?? "empty");
   const done = steps.filter((s) => s === "done").length;
   const acts = story?.acts.length ?? 0;
   const sequences = story?.sequences.length ?? 0;
   const lastVersion = versions?.[0];
 
   const rows: Shortcut[] = [
-    { view: "workshop", label: t("nav.views.workshop"), icon: NotebookPen, detail: t("dash.stepsDone", { done, total: ready.length }), steps },
+    { view: "workshop", label: t("nav.views.workshop"), icon: NotebookPen, detail: t("dash.stepsDone", { done, total: STEPS.length }), steps },
     { view: "bible", label: t("nav.views.bible"), icon: BookOpen, detail: entries === undefined ? "…" : entries === 0 ? t("dash.noEntry") : plural("dash.entries", entries) },
     {
       view: "structure",

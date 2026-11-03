@@ -39,6 +39,8 @@ export const commands = {
 	/**  Prints the main window to `exports/<file_name>` and returns the full path. */
 	exportPdf: (fileName: string, widthIn: number | null, heightIn: number | null) => typedError<string, CoreError>(__TAURI_INVOKE("export_pdf", { fileName, widthIn, heightIn })),
 	exportText: (fileName: string, contents: string) => typedError<string, CoreError>(__TAURI_INVOKE("export_text", { fileName, contents })),
+	/**  Writes a binary file given as base64 to `exports/<file_name>` (a spreadsheet) and returns the full path. */
+	exportBytes: (fileName: string, data: string) => typedError<string, CoreError>(__TAURI_INVOKE("export_bytes", { fileName, data })),
 	/**  Opens a file of the project with its default application, or shows it in the Explorer. */
 	reveal: (path: string, open: boolean) => typedError<null, CoreError>(__TAURI_INVOKE("reveal", { path, open })),
 	appSettingGet: (key: string) => typedError<string | null, CoreError>(__TAURI_INVOKE("app_setting_get", { key })),

@@ -84,7 +84,7 @@ function SceneTree({
       })),
     }));
   }, [story, scenes]);
-  const rows = useMemo(() => scenes.map((s) => ({ heading: s.heading, page: s.page, eighths: s.eighths })), [scenes]);
+  const rows = useMemo(() => scenes.map((s) => ({ heading: s.heading, page: s.page, eighths: s.eighths, number: s.number })), [scenes]);
   const at = scenes.findIndex((s) => s.id === current);
   const box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
