@@ -471,6 +471,11 @@
         "label": "About",
         "lead": "Oniric, free software for making films.",
         "keywords": "version license gpl source code"
+      },
+      "posts": {
+        "label": "Crew posts",
+        "lead": "The posts offered for each department when you build the crew.",
+        "keywords": "catalog posts jobs departments crew production add remove"
       }
     },
     "groups": {
@@ -2753,8 +2758,7 @@
     "shape": "Crew display",
     "list": "List",
     "chart": "Organisation chart",
-    "catalog": "Posts catalog",
-    "catalogHelp": "The posts offered in each department. Oniric's own can be removed and yours added; someone already assigned keeps their post.",
+    "catalogHelp": "Oniric offers the usual posts of each department. Add your film's own, here or with « Other post… » when adding someone to the crew, and remove those you do not use: a person already assigned keeps theirs.",
     "addToCrew": "Add to crew",
     "crewEmptyTitle": "Put the crew together",
     "crewEmptyText": "Add each person to their post, in their department: the organisation chart, the crew list and the call sheet times follow.",
@@ -2890,7 +2894,15 @@
     "forgetText": "Projects that copied this card keep it.",
     "listFile": "Crew list",
     "listTitle": "Crew list · {{title}}",
-    "bibleName": "In the Bible: {{name}}"
+    "bibleName": "In the Bible: {{name}}",
+    "postsOf": "Posts of the {{department}} department",
+    "ownRole": "added",
+    "removedRoles": "Removed:",
+    "restoreRole": "Bring back « {{role}} »",
+    "roleAdded": "« {{role}} » is now offered in {{department}}.",
+    "managePosts": "Manage posts",
+    "onFilm": "Posts on this film",
+    "onFilmHelp": "No post in the crew. Add one; if it is not in the list, choose « Other post… »."
   },
   "breakdown": {
     "display": "Breakdown display",

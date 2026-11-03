@@ -11,6 +11,7 @@ import {
   PenLine,
   Ruler,
   Search,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -76,6 +77,7 @@ import { useStoredState } from "../../../ui-kit/useStoredState";
 
 import { Select } from "../../../ui-kit/Select";
 import { PARTS_HIDDEN_SETTING } from "./projectContext";
+import { CatalogEditor } from "../../production/ui/CatalogEditor";
 
 type Notify = (m: Omit<ToastMessage, "id">) => void;
 
@@ -113,6 +115,7 @@ const PAGE_ICONS: Record<PageId, LucideIcon> = {
   script: FileText,
   shotlist: Clapperboard,
   parts: LayoutGrid,
+  posts: Users,
   about: Info,
 };
 
@@ -129,7 +132,7 @@ function pageOf(id: PageId): Page {
 
 const GROUPS: { id: string; pages: PageId[]; projectOnly?: boolean }[] = [
   { id: "application", pages: ["appearance", "writing", "formats", "backups", "shortcuts"] },
-  { id: "project", projectOnly: true, pages: ["script", "shotlist", "parts"] },
+  { id: "project", projectOnly: true, pages: ["script", "shotlist", "posts", "parts"] },
 ];
 
 const fold = (x: string) =>
@@ -285,6 +288,7 @@ export function SettingsScreen({
           {page === "script" && ctx && <ScriptSettings notify={notify} />}
           {page === "shotlist" && ctx && <ShotlistSettings notify={notify} />}
           {page === "parts" && ctx && <PartsSettings />}
+          {page === "posts" && ctx && <PostsSettings />}
           {page === "about" && <AboutSettings notify={notify} />}
         </div>
       </div>
@@ -1395,6 +1399,15 @@ function PartsSettings() {
         ))}
       </Group>
       <p className="set-note">{t("settings.partsNote")}</p>
+    </>
+  );
+}
+
+function PostsSettings() {
+  return (
+    <>
+      <p className="set-note">{t("team.catalogHelp")}</p>
+      <CatalogEditor />
     </>
   );
 }

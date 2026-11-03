@@ -11410,6 +11410,26 @@ td.changed input {
   padding: 0 4px 0 8px;
   border-bottom: 1px solid var(--line);
 }
+.badge.pr-own {
+  height: 18px;
+  margin-left: 8px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+.pr-catalog-removed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.pr-catalog-removed .btn svg {
+  width: 12px;
+  height: 12px;
+}
+/* In the settings, the page gives it the room a window did not. */
+.settings-pane-body .pr-catalog {
+  height: min(520px, calc(100vh - 260px));
+}
 .pr-book-list {
   max-height: 360px;
   margin: 12px 0 0;

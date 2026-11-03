@@ -82,4 +82,5 @@ export type SettingsPage =
   | "script"
   | "shotlist"
   | "parts"
+  | "posts"
   | "about";

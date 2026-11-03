@@ -465,6 +465,11 @@
         "label": "À propos",
         "lead": "Oniric, logiciel libre de création de films.",
         "keywords": "version licence gpl code source"
+      },
+      "posts": {
+        "label": "Postes de l'équipe",
+        "lead": "Les postes proposés pour chaque département quand vous composez l'équipe.",
+        "keywords": "catalogue postes métiers départements équipe technique production ajouter retirer"
       }
     },
     "groups": {
@@ -2753,8 +2758,7 @@
     "shape": "Affichage de l'équipe",
     "list": "Liste",
     "chart": "Organigramme",
-    "catalog": "Catalogue des postes",
-    "catalogHelp": "Les postes proposés pour chaque département. Ceux du catalogue d'Oniric se retirent, et vos propres postes s'ajoutent ; une personne déjà affectée garde le sien.",
+    "catalogHelp": "Oniric propose les postes habituels de chaque département. Ajoutez ceux de votre film, ici ou avec « Autre poste… » en ajoutant quelqu'un à l'équipe, et retirez ceux qui ne vous servent pas : une personne déjà affectée garde le sien.",
     "addToCrew": "Ajouter à l'équipe",
     "crewEmptyTitle": "Composez l'équipe du film",
     "crewEmptyText": "Ajoutez chaque personne à son poste, dans son département : l'organigramme, la liste d'équipe et les horaires des feuilles de service en découlent.",
@@ -2890,7 +2894,15 @@
     "forgetText": "Les projets qui ont copié cette fiche la gardent.",
     "listFile": "Liste d'équipe",
     "listTitle": "Liste d'équipe · {{title}}",
-    "bibleName": "Dans la Bible : {{name}}"
+    "bibleName": "Dans la Bible : {{name}}",
+    "postsOf": "Postes du département {{department}}",
+    "ownRole": "ajouté",
+    "removedRoles": "Retirés :",
+    "restoreRole": "Remettre « {{role}} »",
+    "roleAdded": "« {{role}} » est maintenant proposé dans {{department}}.",
+    "managePosts": "Gérer les postes",
+    "onFilm": "Postes sur ce film",
+    "onFilmHelp": "Aucun poste dans l'équipe technique. Ajoutez-en un ; s'il manque à la liste, choisissez « Autre poste… »."
   },
   "breakdown": {
     "display": "Affichage du dépouillement",

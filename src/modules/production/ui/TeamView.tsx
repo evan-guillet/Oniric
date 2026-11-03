@@ -72,7 +72,7 @@ import {
   type CrewMember,
   type Team,
 } from "../application/team";
-import { addRole, CANDIDATE_STATUSES, CAST_KINDS, CONTRACTS, DEPARTMENTS, departmentName, REGIMES, removeRole, rolesOf } from "../domain/catalog";
+import { addRole, CANDIDATE_STATUSES, CAST_KINDS, CONTRACTS, DEPARTMENTS, departmentName, REGIMES, rolesOf } from "../domain/catalog";
 import { cardsFromCsv, cardsFromVCard, samePerson, toVCard, type Card, type ContactData } from "../domain/contacts";
 import { Avatar, dateRange, Field, HeaderTabs, Section, useFilePick } from "./parts";
 
@@ -159,7 +159,6 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   const { ask, notify } = useProject();
   const [shape, setShape] = useStoredState<"list" | "chart">("oniric.team.shape", "list");
   const [editing, setEditing] = useState<CrewMember | "new" | null>(null);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [query, setQuery] = useState("");
   const contact = useMemo(() => new Map(team.contacts.map((c) => [c.id, c])), [team.contacts]);
   const needle = fold(query.trim());
@@ -201,9 +200,6 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
               { id: "chart", label: t("team.chart"), icon: Network },
             ]}
           />
-          <button type="button" className="btn" onClick={() => setCatalogOpen(true)}>
-            {t("team.catalog")}
-          </button>
           <button type="button" className="btn primary" onClick={() => setEditing("new")}>
             <UserPlus aria-hidden="true" />
             {t("team.addToCrew")}
@@ -257,7 +253,6 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
         )}
       </main>
       {editing && <CrewDialog team={team} member={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
-      {catalogOpen && <CatalogDialog onClose={() => setCatalogOpen(false)} />}
     </div>
   );
 }
@@ -310,11 +305,12 @@ function OrgChart({
 
 const OTHER = "\u0000other";
 
-function CrewDialog({ team, member, onClose }: { team: Team; member: CrewMember | null; onClose: () => void }) {
-  const { prompt, notify } = useProject();
+/** A post of the crew, new or to change; `contactId` chooses the person of a new one. */
+function CrewDialog({ team, member, contactId, onClose }: { team: Team; member: CrewMember | null; contactId?: string; onClose: () => void }) {
+  const { prompt, notify, openSettings } = useProject();
   const catalog = useCatalog();
   const [draft, setDraft] = useState<Omit<CrewMember, "id" | "rank">>(
-    member ?? { contactId: team.contacts[0]?.id ?? "", department: "direction", role: "", head: false, startDate: null, endDate: null, rate: "", contract: "none" },
+    member ?? { contactId: contactId ?? team.contacts[0]?.id ?? "", department: "direction", role: "", head: false, startDate: null, endDate: null, rate: "", contract: "none" },
   );
   const roles = rolesOf(draft.department, catalog);
   const role = draft.role || roles[0] || "";
@@ -362,7 +358,13 @@ function CrewDialog({ team, member, onClose }: { team: Team; member: CrewMember 
                 if (e.target.value !== OTHER) return set({ role: e.target.value });
                 const name = (await prompt(t("team.otherPostTitle"), t("team.post")))?.trim();
                 if (!name) return;
-                await writeCatalog(addRole(catalog, draft.department, name));
+                if (!roles.includes(name)) {
+                  await writeCatalog(addRole(catalog, draft.department, name));
+                  notify({
+                    text: t("team.roleAdded", { role: name, department: departmentName(draft.department) }),
+                    actions: [{ label: t("team.managePosts"), onClick: () => openSettings("posts") }],
+                  });
+                }
                 set({ role: name });
               }}
             >
@@ -404,67 +406,6 @@ function CrewDialog({ team, member, onClose }: { team: Team; member: CrewMember 
               ))}
             </Select>
           </label>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-/** The posts of each department, the project's own added and those it does not use taken away [EQU-03]. */
-function CatalogDialog({ onClose }: { onClose: () => void }) {
-  const catalog = useCatalog();
-  const [dept, setDept] = useState<string>(DEPARTMENTS[0]);
-  const [name, setName] = useState("");
-  const roles = rolesOf(dept, catalog);
-  const add = () => {
-    if (!name.trim()) return;
-    void writeCatalog(addRole(catalog, dept, name));
-    setName("");
-  };
-  return (
-    <Dialog title={t("team.catalog")} onCancel={onClose} wide actions={[{ label: t("common.close"), primary: true, onClick: onClose }]}>
-      <p className="muted">{t("team.catalogHelp")}</p>
-      <div className="pr-catalog">
-        <ul className="pr-catalog-depts" role="listbox" aria-label={t("team.department")}>
-          {DEPARTMENTS.map((d) => (
-            <li key={d}>
-              <button type="button" role="option" aria-selected={d === dept} className={d === dept ? "on" : ""} onClick={() => setDept(d)}>
-                {departmentName(d)}
-                <span className="pr-count">{rolesOf(d, catalog).length}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="pr-catalog-roles">
-          <ul>
-            {roles.map((r) => (
-              <li key={r}>
-                <span>{r}</span>
-                <button type="button" className="btn tiny ghost" title={t("team.removeRole", { role: r })} aria-label={t("team.removeRole", { role: r })} onClick={() => void writeCatalog(removeRole(catalog, dept, r))}>
-                  <X aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="input-row">
-            <input
-              type="text"
-              value={name}
-              placeholder={t("team.newRole")}
-              aria-label={t("team.newRole")}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  add();
-                }
-              }}
-            />
-            <button type="button" className="btn" disabled={!name.trim()} onClick={add}>
-              <Plus aria-hidden="true" />
-              {t("common.add")}
-            </button>
-          </div>
         </div>
       </div>
     </Dialog>
@@ -865,6 +806,7 @@ function rolesLine(team: Team, c: Contact): string {
 function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; onGone: () => void }) {
   const { project, ask, notify } = useProject();
   const [secret, setSecret] = useState(false);
+  const [post, setPost] = useState<CrewMember | "new" | null>(null);
   const [away, setAway] = useState({ start: "", end: "", note: "" });
   const d = contact.data;
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
@@ -963,6 +905,32 @@ function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; 
         </div>
         <MoreMenu label={t("team.contactMenu", { name: contact.name })} items={menu} />
       </header>
+
+      <Section
+        title={t("team.onFilm")}
+        aside={
+          <button type="button" className="btn small" onClick={() => setPost("new")}>
+            <UserPlus aria-hidden="true" />
+            {t("team.addToCrew")}
+          </button>
+        }
+      >
+        {posts.length === 0 ? (
+          <p className="muted small">{t("team.onFilmHelp")}</p>
+        ) : (
+          <ul className="pr-chips-list">
+            {posts.map((m) => (
+              <li key={m.id} className="pr-chip">
+                {m.head && <Crown aria-hidden="true" />}
+                <button type="button" className="pr-link" title={t("team.editPost")} onClick={() => setPost(m)}>
+                  {m.role}
+                </button>
+                <span className="muted">{departmentName(m.department)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <Section title={t("team.reach")}>
         <div className="pr-grid">
@@ -1097,6 +1065,7 @@ function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; 
       <Section title={t("team.notes")}>
         <Field label={t("team.notes")} hideLabel multiline value={d.notes} onCommit={(v) => save({ notes: v })} />
       </Section>
+      {post && <CrewDialog team={team} member={post === "new" ? null : post} contactId={contact.id} onClose={() => setPost(null)} />}
     </div>
   );
 }

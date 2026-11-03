@@ -471,6 +471,11 @@
         "label": "Acerca de",
         "lead": "Oniric, software libre para hacer películas.",
         "keywords": "versión licencia gpl código fuente"
+      },
+      "posts": {
+        "label": "Puestos del equipo",
+        "lead": "Los puestos propuestos para cada departamento al formar el equipo.",
+        "keywords": "catálogo puestos oficios departamentos equipo producción añadir quitar"
       }
     },
     "groups": {
@@ -2753,8 +2758,7 @@
     "shape": "Vista del equipo técnico",
     "list": "Lista",
     "chart": "Organigrama",
-    "catalog": "Catálogo de puestos",
-    "catalogHelp": "Los puestos propuestos en cada departamento. Se pueden quitar los de Oniric y añadir los tuyos; quien ya ocupa un puesto lo conserva.",
+    "catalogHelp": "Oniric propone los puestos habituales de cada departamento. Añada los de su película, aquí o con « Otro puesto… » al añadir a alguien al equipo, y quite los que no use: quien ya está asignado conserva el suyo.",
     "addToCrew": "Añadir al equipo",
     "crewEmptyTitle": "Formar el equipo",
     "crewEmptyText": "Añade a cada persona en su puesto, dentro de su departamento: el organigrama, la lista del equipo y los horarios de la orden de rodaje se derivan de ello.",
@@ -2890,7 +2894,15 @@
     "forgetText": "Los proyectos que copiaron esta ficha la conservan.",
     "listFile": "Lista del equipo",
     "listTitle": "Lista del equipo · {{title}}",
-    "bibleName": "En la Biblia: {{name}}"
+    "bibleName": "En la Biblia: {{name}}",
+    "postsOf": "Puestos del departamento {{department}}",
+    "ownRole": "añadido",
+    "removedRoles": "Quitados:",
+    "restoreRole": "Restablecer « {{role}} »",
+    "roleAdded": "« {{role}} » se propone ahora en {{department}}.",
+    "managePosts": "Gestionar puestos",
+    "onFilm": "Puestos en esta película",
+    "onFilmHelp": "Ningún puesto en el equipo técnico. Añada uno; si no está en la lista, elija « Otro puesto… »."
   },
   "breakdown": {
     "display": "Vista del desglose",
