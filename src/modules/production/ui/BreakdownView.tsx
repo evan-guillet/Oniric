@@ -165,7 +165,7 @@ function Sheets({ scenes, breakdown, cats }: { scenes: SceneInfo[]; breakdown: B
             <section className="pr-suggest" aria-label={t("breakdown.suggestions")}>
               <header>
                 <Sparkles aria-hidden="true" />
-                <h3>{t("breakdown.suggestions")}</h3>
+                <h2>{t("breakdown.suggestions")}</h2>
                 <span className="spacer" />
                 <button type="button" className="btn tiny" onClick={() => void accept(suggestions)}>
                   {t("breakdown.acceptAll")}
@@ -199,10 +199,10 @@ function Sheets({ scenes, breakdown, cats }: { scenes: SceneInfo[]; breakdown: B
               .filter((c) => have.some((e) => e.category === c.id))
               .map((c) => (
                 <section key={c.id} className="pr-bd-cat" style={{ "--cat": c.color } as React.CSSProperties}>
-                  <h3>
+                  <h2>
                     <span className="pr-cat-dot" aria-hidden="true" />
                     {categoryName(c)}
-                  </h3>
+                  </h2>
                   <ul className="pr-bd-items">
                     {have
                       .filter((e) => e.category === c.id)
@@ -605,14 +605,18 @@ function Reports({ scenes, breakdown, cats }: { scenes: SceneInfo[]; breakdown: 
             ]}
           />
           <span className="spacer" />
-          <button type="button" className="btn" onClick={() => void exportBreakdownCsv(api, by).then((p) => notifyExported(api, p)).catch(fail)}>
-            <FileSpreadsheet aria-hidden="true" />
-            CSV
-          </button>
-          <button type="button" className="btn primary" onClick={() => void exportBreakdownPdf(api, by).catch(fail)}>
-            <Download aria-hidden="true" />
-            {t("breakdown.exportPdf")}
-          </button>
+          {groups.length > 0 && (
+            <>
+              <button type="button" className="btn" title={t("transfer.breakdownCsvHelp")} onClick={() => void exportBreakdownCsv(api, by).then((p) => notifyExported(api, p)).catch(fail)}>
+                <FileSpreadsheet aria-hidden="true" />
+                {t("breakdown.exportCsv")}
+              </button>
+              <button type="button" className="btn primary" onClick={() => void exportBreakdownPdf(api, by).catch(fail)}>
+                <Download aria-hidden="true" />
+                {t("breakdown.exportPdf")}
+              </button>
+            </>
+          )}
         </div>
         {groups.length === 0 ? (
           <EmptyState title={t("breakdown.reportEmptyTitle")}>

@@ -106,7 +106,7 @@ export function CallSheetsView() {
             })}
           </ul>
         </nav>
-        <main className="view-main pr-sheet-main">
+        <main className={sheet && tab === "sheet" ? "view-main pr-sheet-main on-paper" : "view-main pr-sheet-main"}>
           {sheet ? (
             <SheetPage key={sheet.id} board={b} team={team} day={day} sheet={sheet} recipients={sheets.recipients.filter((r) => r.sheetId === sheet.id)} tab={tab} />
           ) : (
@@ -245,16 +245,19 @@ function SheetPage({ board: b, team, day, sheet, recipients, tab }: { board: Boa
     if (!breakdown || !cats || !entries) return;
     void saveSheet(sheet.id, prefill(data, b, team, day, breakdown, cats, entries)).catch(fail);
   };
-  const exports: MoreItem[] = [
-    { label: t("callsheet.exportGeneral"), icon: Download, onClick: () => void exportCallSheets(api, { board: b, team, day, sheet, template: template!, people, individual: false }).catch(fail) },
+  const exportGeneral = () => void exportCallSheets(api, { board: b, team, day, sheet, template: template!, people, individual: false }).catch(fail);
+  const exportReport = () => void exportDayReport(api, { day, sheet, total: b.shootDays }).catch(fail);
+  const more: MoreItem[] = [
     {
       label: t("callsheet.exportEach"),
       icon: Users,
       hint: plural("callsheet.exportEachHint", people.length),
       onClick: () => void exportCallSheets(api, { board: b, team, day, sheet, template: template!, people, individual: true }).catch(fail),
     },
-    { label: t("callsheet.exportReport"), icon: ClipboardCheck, onClick: () => void exportDayReport(api, { day, sheet, total: b.shootDays }).catch(fail) },
+    { label: t("callsheet.exportReport"), icon: ClipboardCheck, onClick: exportReport },
+    { label: t("callsheet.template"), icon: LayoutTemplate, onClick: () => setTemplateOpen(true) },
   ];
+  const longDate = day.date ? dateFormat({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(parseDay(day.date)) : t("schedule.noDate");
 
   return (
     <div className="pr-sheet">
@@ -262,30 +265,42 @@ function SheetPage({ board: b, team, day, sheet, recipients, tab }: { board: Boa
         <div>
           <h2>{t("schedule.dayN", { n: day.number, total: b.shootDays })}</h2>
           <p className="muted">
-            {day.date ? dateFormat({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(parseDay(day.date)) : t("schedule.noDate")}
+            {longDate}
             {" · "}
             {last ? (changed.size ? t("callsheet.changedSince", { n: last.n }) : t("callsheet.sentOn", { n: last.n, date: shortDate(last.at.slice(0, 10)) })) : t("callsheet.draft")}
           </p>
         </div>
         <span className="spacer" />
-        <button type="button" className="btn" onClick={() => setTemplateOpen(true)}>
-          <LayoutTemplate aria-hidden="true" />
-          {t("callsheet.template")}
-        </button>
-        <MoreMenu label={t("callsheet.exportMenu")} items={exports} />
-        <button type="button" className="btn primary" disabled={!!last && changed.size === 0} onClick={() => void send()}>
-          <Send aria-hidden="true" />
-          {t("callsheet.sendN", { n: (last?.n ?? 0) + 1 })}
-        </button>
+        {tab === "report" ? (
+          <button type="button" className="btn" onClick={exportReport}>
+            <Download aria-hidden="true" />
+            {t("callsheet.exportReportShort")}
+          </button>
+        ) : (
+          <>
+            <MoreMenu label={t("callsheet.moreMenu")} items={more} />
+            <button type="button" className="btn" disabled={!template} onClick={exportGeneral}>
+              <Download aria-hidden="true" />
+              {t("callsheet.exportPdf")}
+            </button>
+            <button type="button" className="btn primary" disabled={!!last && changed.size === 0} onClick={() => void send()}>
+              <Send aria-hidden="true" />
+              {t("callsheet.sendN", { n: (last?.n ?? 0) + 1 })}
+            </button>
+          </>
+        )}
       </header>
       {tab === "sheet" && template && (
         <>
           {last && changed.size > 0 && <p className="pr-changed-note">{t("callsheet.changedNote", { n: last.n })}</p>}
-          {template.sections
-            .filter((s) => s.shown)
-            .map((s) => (
-              <SheetSection key={s.id} id={s.id} data={data} day={day} team={team} changed={changed} save={save} onRefill={refill} />
-            ))}
+          <article className="pr-callsheet" aria-label={t("callsheet.paperTitle")}>
+            <Masthead title={api.project.title} logo={template.logo} day={day} total={b.shootDays} date={longDate} data={data} changed={changed} save={save} />
+            {template.sections
+              .filter((s) => s.shown && s.id !== "times")
+              .map((s) => (
+                <SheetSection key={s.id} id={s.id} data={data} day={day} team={team} changed={changed} save={save} onRefill={refill} />
+              ))}
+          </article>
         </>
       )}
       {tab === "recipients" && <Recipients sheet={sheet} people={people} />}
@@ -340,6 +355,64 @@ function useRecipients(team: Team, day: DayInfo, data: CallSheetData, recipients
   }, [team, day, data, recipients]);
 }
 
+/** The top of the sheet as it is printed: the film and the day, the general call in large, the times and the weather of the day. */
+function Masthead({
+  title,
+  logo,
+  day,
+  total,
+  date,
+  data,
+  changed,
+  save,
+}: {
+  title: string;
+  logo: string | null;
+  day: DayInfo;
+  total: number;
+  date: string;
+  data: CallSheetData;
+  changed: Set<string>;
+  save: (p: Partial<CallSheetData>) => void;
+}) {
+  const c = (path: string) => (changed.has(path) ? "changed" : "");
+  const sun = day.date && data.locations[0]?.coordinates ? sunTimes(day.date, data.locations[0].coordinates) : null;
+  const time = (key: "readyToShoot" | "lunch" | "wrap" | "sunrise" | "sunset", label: string, placeholder = t("callsheet.timePlaceholder")) => (
+    <Field key={key} label={label} className={c(key)} value={data[key]} placeholder={placeholder} normalize={normalizeTime} onCommit={(v) => save({ [key]: v })} />
+  );
+  return (
+    <header className="pr-cs-mast">
+      <div className="pr-cs-id">
+        {logo && <MediaImage path={logo} alt="" className="pr-cs-logo" />}
+        <div>
+          <h3>{title}</h3>
+          <p>
+            {t("callsheet.paperTitle")} · {t("schedule.dayN", { n: day.number, total })}
+          </p>
+          <p className="pr-cs-date">{date}</p>
+        </div>
+      </div>
+      <Field
+        label={t("callsheet.generalCall")}
+        className={`pr-cs-call ${c("generalCall")}`}
+        value={data.generalCall}
+        placeholder={t("callsheet.timePlaceholder")}
+        normalize={normalizeTime}
+        onCommit={(v) => save({ generalCall: v })}
+      />
+      <div className="pr-cs-times">
+        {time("readyToShoot", t("callsheet.readyToShoot"))}
+        {time("lunch", t("callsheet.lunch"))}
+        {time("wrap", t("callsheet.wrap"))}
+        {time("sunrise", t("callsheet.sunrise"), sun?.rise ?? "–")}
+        {time("sunset", t("callsheet.sunset"), sun?.set ?? "–")}
+        <Field label={t("callsheet.weather")} className={`wide ${c("weather")}`} value={data.weather} placeholder={t("callsheet.weatherPlaceholder")} onCommit={(v) => save({ weather: v })} />
+      </div>
+      <p className="pr-cs-sun">{sun ? t("callsheet.sunComputed") : t("callsheet.sunHelp")}</p>
+    </header>
+  );
+}
+
 function SheetSection({
   id,
   data,
@@ -360,26 +433,9 @@ function SheetSection({
   const c = (path: string) => (changed.has(path) ? "changed" : "");
   const title = t(`callsheet.sections.${id}`);
   switch (id) {
-    case "times": {
-      const sun = day.date && data.locations[0]?.coordinates ? sunTimes(day.date, data.locations[0].coordinates) : null;
-      const time = (key: "generalCall" | "readyToShoot" | "lunch" | "wrap", label: string) => (
-        <Field key={key} label={label} className={c(key)} value={data[key]} placeholder={t("callsheet.timePlaceholder")} normalize={normalizeTime} onCommit={(v) => save({ [key]: v })} />
-      );
-      return (
-        <Section title={title} className={c("generalCall") || c("readyToShoot") || c("lunch") || c("wrap") || c("weather")}>
-          <div className="pr-grid four">
-            {time("generalCall", t("callsheet.generalCall"))}
-            {time("readyToShoot", t("callsheet.readyToShoot"))}
-            {time("lunch", t("callsheet.lunch"))}
-            {time("wrap", t("callsheet.wrap"))}
-            <Field label={t("callsheet.weather")} className={`wide ${c("weather")}`} value={data.weather} placeholder={t("callsheet.weatherPlaceholder")} onCommit={(v) => save({ weather: v })} />
-            <Field label={t("callsheet.sunrise")} className={c("sunrise")} value={data.sunrise} placeholder={sun?.rise ?? "–"} normalize={normalizeTime} onCommit={(v) => save({ sunrise: v })} />
-            <Field label={t("callsheet.sunset")} className={c("sunset")} value={data.sunset} placeholder={sun?.set ?? "–"} normalize={normalizeTime} onCommit={(v) => save({ sunset: v })} />
-          </div>
-          <p className="muted small">{sun ? t("callsheet.sunComputed") : t("callsheet.sunHelp")}</p>
-        </Section>
-      );
-    }
+    case "times":
+      // Always at the top of the page, in the masthead.
+      return null;
     case "locations":
       return (
         <Section
@@ -654,7 +710,20 @@ function Report({ sheet, day }: { sheet: Sheet; day: DayInfo }) {
   };
   return (
     <>
-      <Section title={t("callsheet.scenesShot")}>
+      <Section
+        title={t("callsheet.scenesShot")}
+        aside={
+          <button
+            type="button"
+            className="btn small"
+            title={t("callsheet.allShotHint")}
+            disabled={day.scenes.every((s) => r.scenes[s.scene.id] === "done")}
+            onClick={() => save({ scenes: { ...r.scenes, ...Object.fromEntries(day.scenes.map((s) => [s.scene.id, "done" as const])) } })}
+          >
+            {t("callsheet.allShot")}
+          </button>
+        }
+      >
         <ul className="pr-shot-scenes">
           {day.scenes.map((s) => (
             <li key={s.scene.id}>

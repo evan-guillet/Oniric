@@ -10,6 +10,8 @@ export interface SceneFacts {
   moment: Moment | null;
   /** The set, as the heading writes it: « CUISINE DE MARIE ». */
   place: string;
+  /** What the heading says after the set when it is not a moment: « TRANCHÉE DE L'ÉTOILE DE LA MORT ». */
+  detail?: string;
 }
 
 const MOMENTS: [RegExp, Moment][] = [
@@ -42,7 +44,7 @@ export function sceneFacts(headings: string[]): SceneFacts[] {
     const m = momentOf(p.time);
     const moment = m === "same" ? last : m;
     if (moment) last = moment;
-    return { side: sideOf(p.intExt), moment, place: p.location ?? "" };
+    return { side: sideOf(p.intExt), moment, place: p.location ?? "", detail: m ? undefined : (p.time ?? undefined) };
   });
 }
 

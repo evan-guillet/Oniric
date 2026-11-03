@@ -2907,12 +2907,12 @@ h4 {
   margin: 0;
   padding-left: 18px;
 }
-.num {
+label.num {
   display: grid;
   gap: 4px;
   font-size: 12px;
 }
-.num input {
+label.num input {
   width: 90px;
 }
 
@@ -10837,6 +10837,7 @@ textarea.mb-edit:focus {
 .pr-section-head h3 {
   flex: 1;
   margin: 0;
+  font-size: 15px;
 }
 .pr-section > p:last-child {
   margin-bottom: 0;
@@ -10985,9 +10986,35 @@ td.changed input {
 /* The organisation chart: one card per department, its heads at the top. */
 .pr-org {
   display: grid;
+  gap: 14px;
+}
+.pr-org-top,
+.pr-org-rest {
+  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   align-items: start;
   gap: 14px;
+}
+.pr-org-top {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  justify-content: center;
+}
+/* The departments hang from the lead of the film: one rule down from it, one along them. */
+.pr-org.tiered .pr-org-rest {
+  position: relative;
+  padding-top: 22px;
+  border-top: 1.5px solid var(--line-strong);
+}
+.pr-org.tiered .pr-org-rest::before {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  height: 16px;
+  border-left: 1.5px solid var(--line-strong);
+}
+.pr-org.tiered .pr-org-top .pr-org-dept {
+  border-color: var(--line-strong);
 }
 .pr-org-dept {
   padding: 12px;
@@ -10996,7 +11023,7 @@ td.changed input {
   background: var(--panel);
   box-shadow: var(--shadow-sm);
 }
-.pr-org-dept h3 {
+.pr-org-dept h2 {
   margin: 0 0 10px;
   font-size: 13px;
 }
@@ -11060,6 +11087,33 @@ td.changed input {
 }
 .pr-table tbody th {
   font-weight: 500;
+}
+/* A table of settings read more than changed: its controls show as plain values until the row is pointed at or one is focused. */
+.pr-quiet tbody .select,
+.pr-quiet tbody input {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+.pr-quiet tbody .select-caret {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.pr-quiet tbody tr:hover .select,
+.pr-quiet tbody tr:hover input {
+  border-color: var(--line-strong);
+}
+.pr-quiet tbody tr:hover .select-caret,
+.pr-quiet tbody tr:focus-within .select-caret {
+  opacity: 1;
+}
+.pr-quiet tbody input:focus {
+  border-color: var(--accent);
+}
+.pr-cast-full {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.5px;
 }
 .pr-table .num {
   width: 1%;
@@ -11166,13 +11220,13 @@ td.changed input {
 .pr-side-list button:hover {
   background: var(--hover);
 }
+/* Selected like the rows of the other side lists (the steps, the bible): a quiet fill, light enough for the grey and amber under the title; blue kept for actions. */
 .pr-side-list button.on {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--ink) 6%, var(--panel));
 }
 .pr-side-list button.on .pr-row-title,
 .pr-side-list button.on .pr-slug {
-  color: var(--accent);
+  font-weight: 600;
 }
 .pr-side-sub {
   display: flex;
@@ -11189,7 +11243,7 @@ td.changed input {
   height: 13px;
 }
 .pr-side-state {
-  color: var(--hint);
+  color: var(--muted);
   font-size: 11.5px;
 }
 .pr-side-state.ok {
@@ -11571,7 +11625,7 @@ td.changed input {
   height: 15px;
   color: var(--accent);
 }
-.pr-suggest h3 {
+.pr-suggest h2 {
   margin: 0;
   color: var(--accent);
   font-size: 13px;
@@ -11618,12 +11672,12 @@ td.changed input {
   display: grid;
   gap: 14px;
 }
-.pr-bd-cat h3 {
+.pr-bd-cat h2 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 6px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .pr-bd-items {
   display: flex;
@@ -11759,7 +11813,7 @@ input.pr-qty {
   gap: 8px;
 }
 .pr-cat-edit li.off input[type="text"] {
-  color: var(--hint);
+  color: var(--muted);
 }
 .pr-cat-edit input[type="color"] {
   width: 30px;
@@ -11799,10 +11853,56 @@ input.pr-qty {
   font-variant-numeric: tabular-nums;
 }
 .pr-board-wrap {
+  position: relative;
   flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   min-height: 0;
+}
+/* The strips picked together, and what can be done to all of them at once. */
+.pr-strip-li.picked {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.pr-strip-li.picked .pr-strip {
+  background: color-mix(in oklab, var(--accent-soft) 55%, var(--tone));
+}
+.pr-pickbar {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  translate: -50% 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  animation: pr-pickbar-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pr-pickbar strong {
+  margin-right: 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes pr-pickbar-in {
+  from {
+    opacity: 0;
+    translate: -50% 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-pickbar {
+    animation: none;
+  }
+}
+/* Nothing left to place: the tray keeps its drop zone but gives the board its width. */
+.pr-board-wrap.tray-empty {
+  grid-template-columns: minmax(0, 1fr) 240px;
 }
 .pr-board {
   overflow: auto;
@@ -11954,6 +12054,22 @@ input.pr-qty {
 .pr-strip-li:hover .grip {
   color: var(--muted);
 }
+.pr-strip-li:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* The names of the columns, above the strips of a day. */
+.pr-strip.pr-strip-cols {
+  min-height: 24px;
+  border-top: 1px solid var(--line);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.pr-strip-cols + .pr-strips {
+  border-top: none;
+}
 .pr-strip-num {
   font-weight: 600;
 }
@@ -12068,6 +12184,9 @@ input.pr-qty {
   .pr-board-wrap {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
+  .pr-board-wrap.tray-empty {
+    grid-template-columns: minmax(0, 1fr) 200px;
+  }
   .pr-strip {
     grid-template-columns: 22px 40px 32px 40px minmax(0, 1fr) 48px 30px;
   }
@@ -12118,8 +12237,8 @@ input.pr-qty {
 }
 .pr-dood-day span {
   display: block;
-  color: var(--hint);
-  font-size: 10.5px;
+  color: var(--muted);
+  font-size: 11px;
 }
 .pr-dood-actor {
   display: block;
@@ -12131,23 +12250,60 @@ input.pr-qty {
   font-size: 11.5px;
   font-weight: 600;
 }
-.pr-dood td.m-SW,
-.pr-dood td.m-W,
-.pr-dood td.m-WF,
-.pr-dood td.m-SWF {
-  background: var(--accent-soft);
-  color: var(--accent);
+.pr-dood abbr {
+  text-decoration: none;
+  cursor: default;
 }
-.pr-dood td.m-H {
+/* Work is a neutral tint, not the accent (blue stays for action): the first and last days weigh more, holds are paid waits. */
+.pr-dood .m-W,
+.pr-dood-legend .m-W {
+  background: color-mix(in srgb, var(--ink) 6%, var(--panel));
+  color: var(--ink);
+}
+.pr-dood .m-SW,
+.pr-dood .m-WF,
+.pr-dood .m-SWF,
+.pr-dood-legend .m-SW,
+.pr-dood-legend .m-WF,
+.pr-dood-legend .m-SWF {
+  background: color-mix(in srgb, var(--ink) 13%, var(--panel));
+  color: var(--ink);
+  font-weight: 700;
+}
+.pr-dood .m-H,
+.pr-dood-legend .m-H {
   background: var(--warning-soft);
   color: var(--warning);
 }
-.pr-dood td.m-T {
+.pr-dood .m-T,
+.pr-dood-legend .m-T {
   background: var(--panel-2);
   color: var(--muted);
 }
 .pr-dood-legend {
-  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 14px;
+}
+.pr-dood-legend > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.pr-dood-legend dt {
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pr-dood-legend dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* The calendar of the production. */
@@ -12194,6 +12350,25 @@ input.pr-qty {
 }
 .pr-stage-auto {
   text-align: right;
+}
+/* The dates along the top of the calendar. */
+.pr-stage.pr-axis {
+  min-height: 30px;
+  background: var(--sunken);
+}
+.pr-axis-track {
+  position: relative;
+  height: 16px;
+}
+.pr-axis-track span {
+  position: absolute;
+  top: 0;
+  padding-left: 4px;
+  border-left: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .pr-stage > .more-btn {
   justify-self: end;
@@ -12243,6 +12418,172 @@ input.pr-qty {
   border-radius: var(--radius-lg);
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+/* The sheet as it goes out: a page on the desk, ruled like the printed one, its fields written straight on it. */
+.pr-sheet-main.on-paper {
+  background: var(--sunken);
+}
+.pr-callsheet {
+  --cs-rule: color-mix(in srgb, var(--paper-ink) 14%, transparent);
+  margin: 18px auto 0;
+  max-width: 880px;
+  padding: 36px 44px 28px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow: var(--shadow-md);
+}
+.pr-cs-mast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 28px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--paper-ink);
+}
+.pr-cs-id {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+.pr-cs-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.pr-cs-id h3 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.pr-cs-id p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pr-cs-id p.pr-cs-date {
+  margin-top: 2px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.pr-cs-id p.pr-cs-date::first-letter {
+  text-transform: uppercase;
+}
+/* The general call: what everyone reads first. */
+.pr-cs-call {
+  justify-items: end;
+  align-self: start;
+}
+.pr-cs-call > span {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.pr-callsheet .pr-cs-call input {
+  width: 150px;
+  height: 56px;
+  border: 2px solid var(--paper-ink);
+  border-radius: 6px;
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pr-cs-times {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.pr-cs-times .pr-field input {
+  font-variant-numeric: tabular-nums;
+}
+.pr-cs-sun {
+  grid-column: 1 / -1;
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+/* On the page, a field is a ruled box that only lights up when it is being written in. */
+.pr-callsheet .pr-field input,
+.pr-callsheet .pr-field textarea {
+  border-color: var(--cs-rule);
+  background: transparent;
+  color: var(--paper-ink);
+}
+.pr-callsheet .pr-field input:hover,
+.pr-callsheet .pr-field textarea:hover {
+  border-color: var(--muted);
+}
+.pr-callsheet .pr-field input:focus,
+.pr-callsheet .pr-field textarea:focus {
+  border-color: var(--accent);
+}
+.pr-callsheet .pr-field > span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.pr-callsheet .pr-section {
+  padding: 20px 0 4px;
+  border-top: none;
+}
+.pr-callsheet .pr-section-head {
+  margin-bottom: 12px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--paper-ink);
+}
+.pr-callsheet .pr-section-head h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+/* On the page, tables and sets are ruled, not boxed: the page is the only card. */
+.pr-callsheet .pr-table {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.pr-callsheet .pr-table th,
+.pr-callsheet .pr-table td {
+  border-bottom-color: var(--cs-rule);
+}
+.pr-callsheet .pr-table th:first-child,
+.pr-callsheet .pr-table td:first-child {
+  padding-left: 0;
+}
+.pr-callsheet .pr-table thead th {
+  background: transparent;
+  color: var(--muted);
+}
+.pr-callsheet .pr-loc {
+  margin: 0;
+  padding: 12px 40px 14px 0;
+  border: none;
+  border-bottom: 1px solid var(--cs-rule);
+  border-radius: 0;
+  background: transparent;
+}
+.pr-callsheet .pr-loc.changed {
+  border-bottom-color: var(--warning-line);
+}
+.pr-callsheet .pr-loc-x {
+  top: 10px;
+  right: 0;
+}
+.pr-callsheet .pr-loc + .pr-field {
+  margin-top: 14px;
+}
+@media (max-width: 1100px) {
+  .pr-callsheet {
+    padding: 26px 24px 20px;
+  }
+  .pr-cs-times {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .pr-loc {
   position: relative;

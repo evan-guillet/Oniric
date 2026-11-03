@@ -2889,7 +2889,8 @@
     "forgetTitle": "Remove {{name}} from this computer's address book?",
     "forgetText": "Projects that copied this card keep it.",
     "listFile": "Crew list",
-    "listTitle": "Crew list · {{title}}"
+    "listTitle": "Crew list · {{title}}",
+    "bibleName": "In the Bible: {{name}}"
   },
   "breakdown": {
     "display": "Breakdown display",
@@ -2980,7 +2981,8 @@
     "reportEmptyTitle": "Nothing to report yet",
     "reportEmptyText": "The reports list the elements broken down, with the scenes that need them.",
     "sceneCount": "Number of scenes",
-    "sceneList": "Scenes"
+    "sceneList": "Scenes",
+    "exportCsv": "Spreadsheet (CSV)"
   },
   "schedule": {
     "display": "Schedule display",
@@ -3101,7 +3103,6 @@
     "doodEmptyText": "Place scenes in days: the table shows each actor's working days.",
     "work": "Work",
     "hold": "Hold",
-    "doodLegend": "SW: start work · W: work · WF: work finish · SWF: start-work-finish · H: hold, paid without shooting · T: travel.",
     "calendarHelp": "The main stages of the production around the shoot, which comes from the schedule.",
     "addStage": "Add a stage",
     "editStage": "Edit the stage",
@@ -3119,7 +3120,6 @@
       "delivery": "Delivery",
       "other": "Other"
     },
-    "shooting": "Shoot · {{name}}",
     "fromStrips": "From the schedule",
     "calendarEmptyTitle": "The production calendar",
     "calendarEmptyText": "Add the preparation, tests, editing and delivery; the shoot takes its place as soon as the days have dates.",
@@ -3129,13 +3129,39 @@
     "minutes": "Minutes",
     "date": "Date",
     "endOfDay": "End of {{day}}",
-    "castList": "Cast"
+    "castList": "Cast",
+    "doodMarks": {
+      "SW": "Start work",
+      "W": "Work",
+      "WF": "Work finish",
+      "SWF": "Start, work and finish",
+      "H": "Hold, paid without shooting",
+      "T": "Travel"
+    },
+    "doodLegendTitle": "Presence codes",
+    "cols": {
+      "side": "I/E",
+      "moment": "D/N",
+      "set": "Set",
+      "cast": "Cast",
+      "pages": "Pages",
+      "time": "Time"
+    },
+    "stripScene": "Scene {{n}}",
+    "stripCast": "with {{list}}",
+    "select": "Select",
+    "selectHint": "Or Ctrl + click the strip",
+    "unselect": "Deselect",
+    "picked_one": "{{n}} scene selected",
+    "picked_other": "{{n}} scenes selected",
+    "pickBar": "Selected strips",
+    "clearPick": "Clear the selection"
   },
   "callsheet": {
     "display": "Sheet display",
     "sheet": "Sheet",
     "recipients": "Recipients",
-    "report": "Report",
+    "report": "Day report",
     "days": "Shooting days",
     "emptyTitle": "Call sheets come from the schedule",
     "emptyText": "Place scenes in shooting days: each day gets its call sheet here, prefilled.",
@@ -3261,7 +3287,13 @@
     "fileName": "Call sheet {{day}}",
     "reportFile": "Report {{day}}",
     "timePlaceholder": "hh:mm",
-    "coordinatesPlaceholder": "Latitude, longitude"
+    "coordinatesPlaceholder": "Latitude, longitude",
+    "exportPdf": "Export PDF",
+    "exportReportShort": "Export the report",
+    "moreMenu": "More sheet actions",
+    "paperTitle": "Call sheet",
+    "allShot": "All shot",
+    "allShotHint": "Marks every scene of the day as shot"
   },
   "rewrite": {
     "versions": "Frozen versions",

@@ -34,6 +34,8 @@ import { SearchBox } from "../../../ui-kit/SearchBox";
 import { Segmented } from "../../../ui-kit/Segmented";
 import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
+import { useLive } from "../../../core/db/live";
+import { loadEntries } from "../../script/bible/application/bible";
 import { useProject } from "../../project/ui/projectContext";
 import { fold } from "../../script/bible/domain/types";
 import { useScenes } from "../../script/screenplay/application/scriptSession";
@@ -260,6 +262,8 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   );
 }
 
+const LEAD = ["production", "direction"];
+
 /** The organisation chart, one card per department, the heads of department at its top [EQU-04]. */
 function OrgChart({
   groups,
@@ -282,19 +286,24 @@ function OrgChart({
       </button>
     );
   };
+  const dept = (g: { id: string; members: CrewMember[] }) => {
+    const heads = g.members.filter((m) => m.head);
+    const rest = g.members.filter((m) => !m.head);
+    return (
+      <section key={g.id} className="pr-org-dept" aria-label={departmentName(g.id)}>
+        <h2>{departmentName(g.id)}</h2>
+        {heads.length > 0 && <div className="pr-org-heads">{heads.map(person)}</div>}
+        {rest.length > 0 && <div className={heads.length ? "pr-org-team under" : "pr-org-team"}>{rest.map(person)}</div>}
+      </section>
+    );
+  };
+  // Production and direction lead the film: on top, the departments hanging from them below.
+  const top = groups.filter((g) => LEAD.includes(g.id));
+  const below = groups.filter((g) => !LEAD.includes(g.id));
   return (
-    <div className="pr-org">
-      {groups.map((g) => {
-        const heads = g.members.filter((m) => m.head);
-        const rest = g.members.filter((m) => !m.head);
-        return (
-          <section key={g.id} className="pr-org-dept" aria-label={departmentName(g.id)}>
-            <h3>{departmentName(g.id)}</h3>
-            {heads.length > 0 && <div className="pr-org-heads">{heads.map(person)}</div>}
-            {rest.length > 0 && <div className={heads.length ? "pr-org-team under" : "pr-org-team"}>{rest.map(person)}</div>}
-          </section>
-        );
-      })}
+    <div className={top.length && below.length ? "pr-org tiered" : "pr-org"}>
+      {top.length > 0 && <div className="pr-org-top">{top.map(dept)}</div>}
+      {below.length > 0 && <div className="pr-org-rest">{below.map(dept)}</div>}
     </div>
   );
 }
@@ -481,6 +490,12 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   const { prompt, ask, notify } = useProject();
   const characters = useCharacters(team);
   const roleOf = new Map(team.cast.map((r) => [r.character, r]));
+  const entries = useLive(loadEntries, ["bible_entry"]);
+  // The name the Bible gives a character when its cue is shorter: « LEIA » is « Princesse Leia Organa » there.
+  const bibleName = (cue: string) => {
+    const e = entries?.find((x) => x.type === "character" && [x.name, ...x.aliases].some((n) => fold(n) === fold(cue)));
+    return e && fold(e.name) !== fold(cue) ? e.name : null;
+  };
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const addPart = async () => {
     const name = (await prompt(t("team.addPart"), t("team.character")))?.trim().toLocaleUpperCase("fr");
@@ -510,7 +525,7 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
             {t("team.addPart")}
           </button>
         </div>
-        <table className="pr-table">
+        <table className="pr-table pr-quiet">
           <thead>
             <tr>
               <th className="num">{t("team.number")}</th>
@@ -538,7 +553,10 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
                       onCommit={(v) => void setCast(c.name, { number: v ? Math.max(1, Math.round(Number(v))) : null }, "Numéro du rôle").catch(fail)}
                     />
                   </td>
-                  <td className="pr-slug">{c.name}</td>
+                  <td>
+                    <span className="pr-slug">{c.name}</span>
+                    {bibleName(c.name) && <span className="pr-cast-full muted">{t("team.bibleName", { name: bibleName(c.name) })}</span>}
+                  </td>
                   <td>
                     <Select value={role?.kind ?? "supporting"} aria-label={t("team.kindOf", { name: c.name })} onChange={(e) => void setCast(c.name, { kind: e.target.value as CastKind }).catch(fail)}>
                       {CAST_KINDS.map((k) => (
@@ -931,6 +949,7 @@ function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; 
           {d.photo ? <Avatar name={contact.name} photo={d.photo} size={72} /> : <ImagePlus aria-hidden="true" />}
         </button>
         <div className="pr-contact-name">
+          <h2 className="visually-hidden">{contact.name}</h2>
           <Field label={t("team.name")} hideLabel className="pr-name-field" value={contact.name} onCommit={(v) => v.trim() && void updateContact(contact.id, { name: v.trim() }).catch(fail)} />
           <p className="muted">
             {rolesLine(team, contact) || t("team.notInCrew")}

@@ -2889,7 +2889,8 @@
     "forgetTitle": "Retirer {{name}} du carnet de l'ordinateur ?",
     "forgetText": "Les projets qui ont copié cette fiche la gardent.",
     "listFile": "Liste d'équipe",
-    "listTitle": "Liste d'équipe · {{title}}"
+    "listTitle": "Liste d'équipe · {{title}}",
+    "bibleName": "Dans la Bible : {{name}}"
   },
   "breakdown": {
     "display": "Affichage du dépouillement",
@@ -2980,7 +2981,8 @@
     "reportEmptyTitle": "Rien à rapporter encore",
     "reportEmptyText": "Les rapports listent les éléments dépouillés, avec les scènes qui en ont besoin.",
     "sceneCount": "Nombre de scènes",
-    "sceneList": "Scènes"
+    "sceneList": "Scènes",
+    "exportCsv": "Tableur (CSV)"
   },
   "schedule": {
     "display": "Affichage du plan de travail",
@@ -3037,7 +3039,7 @@
       "day": "J",
       "night": "N",
       "dawn": "Aube",
-      "dusk": "Créps."
+      "dusk": "Soir"
     },
     "noDate": "Sans date",
     "dateOf": "Date de la journée",
@@ -3101,7 +3103,6 @@
     "doodEmptyText": "Placez des scènes dans des journées : le tableau montre les jours de travail de chaque comédien.",
     "work": "Travail",
     "hold": "Attente",
-    "doodLegend": "SW : premier jour · W : travail · WF : dernier jour · SWF : un seul jour · H : en attente, payé sans tourner · T : déplacement.",
     "calendarHelp": "Les grandes étapes de la production autour du tournage, qui vient du plan de travail.",
     "addStage": "Ajouter une étape",
     "editStage": "Modifier l'étape",
@@ -3119,7 +3120,6 @@
       "delivery": "Livraison",
       "other": "Autre"
     },
-    "shooting": "Tournage · {{name}}",
     "fromStrips": "Du plan de travail",
     "calendarEmptyTitle": "Le calendrier de la production",
     "calendarEmptyText": "Ajoutez la préparation, les essais, le montage et la livraison ; le tournage s'y place dès que les journées ont des dates.",
@@ -3129,13 +3129,39 @@
     "minutes": "Minutes",
     "date": "Date",
     "endOfDay": "Fin de {{day}}",
-    "castList": "Distribution"
+    "castList": "Distribution",
+    "doodMarks": {
+      "SW": "Premier jour",
+      "W": "Travail",
+      "WF": "Dernier jour",
+      "SWF": "Un seul jour",
+      "H": "En attente, payé sans tourner",
+      "T": "Déplacement"
+    },
+    "doodLegendTitle": "Codes de présence",
+    "cols": {
+      "side": "I/E",
+      "moment": "J/N",
+      "set": "Décor",
+      "cast": "Rôles",
+      "pages": "Pages",
+      "time": "Durée"
+    },
+    "stripScene": "Scène {{n}}",
+    "stripCast": "avec {{list}}",
+    "select": "Sélectionner",
+    "selectHint": "Ou Ctrl + clic sur la bande",
+    "unselect": "Retirer de la sélection",
+    "picked_one": "{{n}} scène sélectionnée",
+    "picked_other": "{{n}} scènes sélectionnées",
+    "pickBar": "Bandes sélectionnées",
+    "clearPick": "Annuler la sélection"
   },
   "callsheet": {
     "display": "Affichage de la feuille",
     "sheet": "Feuille",
     "recipients": "Destinataires",
-    "report": "Rapport",
+    "report": "Rapport du jour",
     "days": "Journées de tournage",
     "emptyTitle": "Les feuilles de service partent du plan de travail",
     "emptyText": "Placez des scènes dans des journées de tournage : chaque journée reçoit ici sa feuille, préremplie.",
@@ -3261,7 +3287,13 @@
     "fileName": "Feuille de service {{day}}",
     "reportFile": "Rapport {{day}}",
     "timePlaceholder": "hh:mm",
-    "coordinatesPlaceholder": "Latitude, longitude"
+    "coordinatesPlaceholder": "Latitude, longitude",
+    "exportPdf": "Exporter en PDF",
+    "exportReportShort": "Exporter le rapport",
+    "moreMenu": "Autres actions de la feuille",
+    "paperTitle": "Feuille de service",
+    "allShot": "Tout tourné",
+    "allShotHint": "Marque toutes les scènes de la journée comme tournées"
   },
   "rewrite": {
     "versions": "Versions figées",

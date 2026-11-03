@@ -2889,7 +2889,8 @@
     "forgetTitle": "¿Quitar a {{name}} de la agenda de este ordenador?",
     "forgetText": "Los proyectos que copiaron esta ficha la conservan.",
     "listFile": "Lista del equipo",
-    "listTitle": "Lista del equipo · {{title}}"
+    "listTitle": "Lista del equipo · {{title}}",
+    "bibleName": "En la Biblia: {{name}}"
   },
   "breakdown": {
     "display": "Vista del desglose",
@@ -2980,7 +2981,8 @@
     "reportEmptyTitle": "Todavía nada que informar",
     "reportEmptyText": "Los informes enumeran los elementos desglosados, con las escenas que los necesitan.",
     "sceneCount": "Número de escenas",
-    "sceneList": "Escenas"
+    "sceneList": "Escenas",
+    "exportCsv": "Hoja de cálculo (CSV)"
   },
   "schedule": {
     "display": "Vista del plan de rodaje",
@@ -3037,7 +3039,7 @@
       "day": "D",
       "night": "N",
       "dawn": "Amanecer",
-      "dusk": "Atardecer"
+      "dusk": "Tarde"
     },
     "noDate": "Sin fecha",
     "dateOf": "Fecha de la jornada",
@@ -3101,7 +3103,6 @@
     "doodEmptyText": "Coloca escenas en jornadas: la tabla muestra los días de trabajo de cada actor.",
     "work": "Trabajo",
     "hold": "Espera",
-    "doodLegend": "SW: empieza · W: trabaja · WF: termina · SWF: empieza y termina · H: espera, pagada sin rodar · T: viaje.",
     "calendarHelp": "Las grandes etapas de la producción alrededor del rodaje, que sale del plan de rodaje.",
     "addStage": "Añadir una etapa",
     "editStage": "Editar la etapa",
@@ -3119,7 +3120,6 @@
       "delivery": "Entrega",
       "other": "Otra"
     },
-    "shooting": "Rodaje · {{name}}",
     "fromStrips": "Desde el plan de rodaje",
     "calendarEmptyTitle": "El calendario de producción",
     "calendarEmptyText": "Añade la preparación, las pruebas, el montaje y la entrega; el rodaje ocupa su lugar en cuanto las jornadas tienen fecha.",
@@ -3129,13 +3129,39 @@
     "minutes": "Minutos",
     "date": "Fecha",
     "endOfDay": "Fin de {{day}}",
-    "castList": "Reparto"
+    "castList": "Reparto",
+    "doodMarks": {
+      "SW": "Primer día",
+      "W": "Trabajo",
+      "WF": "Último día",
+      "SWF": "Un solo día",
+      "H": "En espera, pagado sin rodar",
+      "T": "Viaje"
+    },
+    "doodLegendTitle": "Códigos de presencia",
+    "cols": {
+      "side": "I/E",
+      "moment": "D/N",
+      "set": "Decorado",
+      "cast": "Reparto",
+      "pages": "Páginas",
+      "time": "Duración"
+    },
+    "stripScene": "Escena {{n}}",
+    "stripCast": "con {{list}}",
+    "select": "Seleccionar",
+    "selectHint": "O Ctrl + clic en la tira",
+    "unselect": "Quitar de la selección",
+    "picked_one": "{{n}} escena seleccionada",
+    "picked_other": "{{n}} escenas seleccionadas",
+    "pickBar": "Tiras seleccionadas",
+    "clearPick": "Anular la selección"
   },
   "callsheet": {
     "display": "Vista de la orden",
     "sheet": "Orden",
     "recipients": "Destinatarios",
-    "report": "Parte",
+    "report": "Parte del día",
     "days": "Jornadas de rodaje",
     "emptyTitle": "Las órdenes de rodaje salen del plan de rodaje",
     "emptyText": "Coloca escenas en jornadas de rodaje: cada jornada tiene aquí su orden, prerrellenada.",
@@ -3261,7 +3287,13 @@
     "fileName": "Orden de rodaje {{day}}",
     "reportFile": "Parte {{day}}",
     "timePlaceholder": "hh:mm",
-    "coordinatesPlaceholder": "Latitud, longitud"
+    "coordinatesPlaceholder": "Latitud, longitud",
+    "exportPdf": "Exportar en PDF",
+    "exportReportShort": "Exportar el informe",
+    "moreMenu": "Más acciones de la hoja",
+    "paperTitle": "Orden de rodaje",
+    "allShot": "Todo rodado",
+    "allShotHint": "Marca todas las escenas del día como rodadas"
   },
   "rewrite": {
     "versions": "Versiones congeladas",

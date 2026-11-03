@@ -17,6 +17,8 @@ import {
   Rows3,
   Settings2,
   Shuffle,
+  Square,
+  SquareCheck,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -344,13 +346,26 @@ function SettingsDialog({ schedule, onClose }: { schedule: Schedule; onClose: ()
   );
 }
 
-type Drag = { moving: Moving; over?: { dayId: string; stripId: string | null; after: boolean } | "tray" };
+type Drag = { moving: Moving[]; over?: { dayId: string; stripId: string | null; after: boolean } | "tray" };
 
 function Strips({ board: b }: { board: Board }) {
   const { session, notify, ask, prompt } = useProject();
   const [drag, setDrag] = useState<Drag | null>(null);
   const [arranging, setArranging] = useState(false);
-  const [moving, setMoving] = useState<Moving | null>(null);
+  const [moving, setMoving] = useState<Moving[] | null>(null);
+  // Strips picked with Ctrl + click (or from their menu), moved or taken off together.
+  const [picked, setPicked] = useState<Moving[]>([]);
+  const keyOf = (m: Moving) => ("stripId" in m ? m.stripId : `scene:${m.sceneId}`);
+  const isPicked = (m: Moving) => picked.some((p) => keyOf(p) === keyOf(m));
+  const toggle = (m: Moving) => setPicked((list) => (list.some((p) => keyOf(p) === keyOf(m)) ? list.filter((p) => keyOf(p) !== keyOf(m)) : [...list, m]));
+  const pickClick = (e: React.MouseEvent, m: Moving) => {
+    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    toggle(m);
+  };
+  const pickItem = (m: Moving): MoreItem =>
+    isPicked(m) ? { label: t("schedule.unselect"), icon: SquareCheck, onClick: () => toggle(m) } : { label: t("schedule.select"), icon: Square, hint: t("schedule.selectHint"), onClick: () => toggle(m) };
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const schedule = b.schedule!;
   const days = b.days.map((d) => d.day);
@@ -359,22 +374,28 @@ function Strips({ board: b }: { board: Board }) {
     try {
       await session.flush();
       await placeStrips(m, dayId, before, after);
+      setPicked([]);
     } catch (e) {
       fail(e);
     }
   };
   /** Drops in a day, before or after a strip of it, or at its end. */
-  const dropIn = (dayId: string, stripId: string | null, after: boolean, m: Moving) => {
-    const list = (b.days.find((d) => d.day.id === dayId)?.strips ?? []).filter((s) => !("stripId" in m) || s.id !== m.stripId);
+  const dropIn = (dayId: string, stripId: string | null, after: boolean, m: Moving[]) => {
+    const moved = new Set(m.flatMap((x) => ("stripId" in x ? [x.stripId] : [])));
+    if (stripId && moved.has(stripId)) return;
+    const list = (b.days.find((d) => d.day.id === dayId)?.strips ?? []).filter((s) => !moved.has(s.id));
     const at = stripId ? list.findIndex((s) => s.id === stripId) : list.length;
     const i = stripId && after ? at + 1 : at;
-    void place([m], dayId, list[i - 1] ?? null, list[i] ?? null);
+    void place(m, dayId, list[i - 1] ?? null, list[i] ?? null);
   };
+  /** Dragging a picked strip takes the whole selection along, in board order. */
   const dragData = (e: DragEvent, m: Moving) => {
+    const all = isPicked(m) ? picked : [m];
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", JSON.stringify(m));
-    setDrag({ moving: m });
+    e.dataTransfer.setData("text/plain", JSON.stringify(all));
+    setDrag({ moving: all });
   };
+  const stripsOf = (m: Moving[]) => m.flatMap((x) => ("stripId" in x ? [x.stripId] : []));
   const overStrip = (e: DragEvent<HTMLElement>, dayId: string, stripId: string | null) => {
     if (!drag) return;
     e.preventDefault();
@@ -391,7 +412,8 @@ function Strips({ board: b }: { board: Board }) {
     setDrag(null);
     if (!d?.over) return;
     if (d.over === "tray") {
-      if ("stripId" in d.moving) void unschedule([d.moving.stripId]).catch(fail);
+      const ids = stripsOf(d.moving);
+      if (ids.length) void unschedule(ids).then(() => setPicked([])).catch(fail);
       return;
     }
     dropIn(d.over.dayId, d.over.stripId, d.over.after, d.moving);
@@ -403,9 +425,10 @@ function Strips({ board: b }: { board: Board }) {
   };
 
   const stripMenu = (d: Board["days"][number], s: Strip, i: number): MoreItem[] => [
+    ...(s.banner === null ? [pickItem({ stripId: s.id })] : []),
     ...(i > 0 ? [{ label: t("schedule.moveUp"), icon: ArrowUp, onClick: () => void place([{ stripId: s.id }], d.day.id, d.strips[i - 2] ?? null, d.strips[i - 1]) }] : []),
     ...(i < d.strips.length - 1 ? [{ label: t("schedule.moveDown"), icon: ArrowDown, onClick: () => void place([{ stripId: s.id }], d.day.id, d.strips[i + 1], d.strips[i + 2] ?? null) }] : []),
-    { label: t("schedule.moveTo"), icon: CalendarDays, onClick: () => setMoving({ stripId: s.id }) },
+    { label: t("schedule.moveTo"), icon: CalendarDays, onClick: () => setMoving(isPicked({ stripId: s.id }) ? picked : [{ stripId: s.id }]) },
     ...(s.banner !== null
       ? [
           {
@@ -453,7 +476,7 @@ function Strips({ board: b }: { board: Board }) {
   ];
 
   return (
-    <div className="pr-board-wrap">
+    <div className={b.unplaced.length ? "pr-board-wrap" : "pr-board-wrap tray-empty"}>
       <main className="pr-board" aria-label={t("schedule.strips")} onDragEnd={() => setDrag(null)}>
         {b.days.length === 0 && (
           <div className="pr-empty-box">
@@ -488,6 +511,7 @@ function Strips({ board: b }: { board: Board }) {
                 <span className="spacer" />
                 <MoreMenu label={t("schedule.dayMenu", { day: dayTitle(d) })} items={dayMenu(d)} />
               </header>
+              {d.strips.length > 0 && <StripColumns />}
               {d.strips.length === 0 ? (
                 <p className="pr-day-empty muted">{t("schedule.dropHere")}</p>
               ) : (
@@ -497,8 +521,9 @@ function Strips({ board: b }: { board: Board }) {
                     return (
                       <li
                         key={s.id}
-                        className={`pr-strip-li${dropClass(d.day.id, s.id)}`}
+                        className={`pr-strip-li${dropClass(d.day.id, s.id)}${isPicked({ stripId: s.id }) ? " picked" : ""}`}
                         draggable
+                        onClick={(e) => s.banner === null && pickClick(e, { stripId: s.id })}
                         onDragStart={(e) => dragData(e, { stripId: s.id })}
                         onDragOver={(e) => overStrip(e, d.day.id, s.id)}
                         onDrop={drop}
@@ -531,7 +556,7 @@ function Strips({ board: b }: { board: Board }) {
         className={drag?.over === "tray" ? "pr-tray over" : "pr-tray"}
         aria-label={t("schedule.toPlace")}
         onDragOver={(e) => {
-          if (!drag || !("stripId" in drag.moving)) return;
+          if (!drag || !stripsOf(drag.moving).length) return;
           e.preventDefault();
           if (drag.over !== "tray") setDrag({ ...drag, over: "tray" });
         }}
@@ -542,7 +567,7 @@ function Strips({ board: b }: { board: Board }) {
             {t("schedule.toPlace")}
             <span className="pr-count">{b.unplaced.length}</span>
           </h2>
-          <button type="button" className="btn small primary" onClick={() => setArranging(true)}>
+          <button type="button" className={b.unplaced.length ? "btn small primary" : "btn small"} onClick={() => setArranging(true)}>
             <Shuffle aria-hidden="true" />
             {t("schedule.arrange")}
           </button>
@@ -552,11 +577,18 @@ function Strips({ board: b }: { board: Board }) {
         ) : (
           <ol className="pr-strips">
             {b.unplaced.map((info) => (
-              <li key={info.scene.id} className="pr-strip-li" draggable onDragStart={(e) => dragData(e, { sceneId: info.scene.id })}>
+              <li
+                key={info.scene.id}
+                className={isPicked({ sceneId: info.scene.id }) ? "pr-strip-li picked" : "pr-strip-li"}
+                draggable
+                onClick={(e) => pickClick(e, { sceneId: info.scene.id })}
+                onDragStart={(e) => dragData(e, { sceneId: info.scene.id })}
+              >
                 <StripRow
                   info={info}
                   menu={[
-                    { label: t("schedule.moveTo"), icon: CalendarDays, onClick: () => setMoving({ sceneId: info.scene.id }) },
+                    pickItem({ sceneId: info.scene.id }),
+                    { label: t("schedule.moveTo"), icon: CalendarDays, onClick: () => setMoving(isPicked({ sceneId: info.scene.id }) ? picked : [{ sceneId: info.scene.id }]) },
                   ]}
                 />
               </li>
@@ -570,11 +602,30 @@ function Strips({ board: b }: { board: Board }) {
           board={b}
           onPick={(dayId) => {
             const d = b.days.find((x) => x.day.id === dayId);
-            if (d) void place([moving], dayId, d.strips.filter((s) => !("stripId" in moving) || s.id !== moving.stripId).at(-1) ?? null, null);
+            const moved = new Set(stripsOf(moving));
+            if (d) void place(moving, dayId, d.strips.filter((s) => !moved.has(s.id)).at(-1) ?? null, null);
             setMoving(null);
           }}
           onClose={() => setMoving(null)}
         />
+      )}
+      {picked.length > 0 && (
+        <div className="pr-pickbar" role="toolbar" aria-label={t("schedule.pickBar")} onKeyDown={(e) => e.key === "Escape" && setPicked([])}>
+          <strong aria-live="polite">{plural("schedule.picked", picked.length)}</strong>
+          <button type="button" className="btn small" onClick={() => setMoving(picked)}>
+            <CalendarDays aria-hidden="true" />
+            {t("schedule.moveTo")}
+          </button>
+          {stripsOf(picked).length > 0 && (
+            <button type="button" className="btn small" onClick={() => void unschedule(stripsOf(picked)).then(() => setPicked([])).catch(fail)}>
+              <Undo2 aria-hidden="true" />
+              {t("schedule.unschedule")}
+            </button>
+          )}
+          <button type="button" className="btn small ghost" onClick={() => setPicked([])}>
+            {t("schedule.clearPick")}
+          </button>
+        </div>
       )}
       {drag && <span className="visually-hidden" aria-live="polite">{t("schedule.dragging")}</span>}
     </div>
@@ -640,25 +691,65 @@ function Conflicts({ list }: { list: Conflict[] }) {
   );
 }
 
+/** The names of the strip columns, above the strips of a day; the strips say them to a screen reader themselves. */
+function StripColumns() {
+  return (
+    <div className="pr-strip pr-strip-cols" aria-hidden="true">
+      <span />
+      <span>{t("team.number")}</span>
+      <span>{t("schedule.cols.side")}</span>
+      <span>{t("schedule.cols.moment")}</span>
+      <span>{t("schedule.cols.set")}</span>
+      <span className="pr-strip-cast">{t("schedule.cols.cast")}</span>
+      <span className="pr-strip-len">{t("schedule.cols.pages")}</span>
+      <span className="pr-strip-time">{t("schedule.cols.time")}</span>
+      <span />
+    </div>
+  );
+}
+
 /** A strip in the colour of its moment and side: number, I/E, D/N, set, cast numbers, length and time [PDT-01]. */
 function StripRow({ info, menu }: { info: StripScene; menu: MoreItem[] }) {
   const f = info.facts;
+  const place = f.place ? (f.detail ? `${f.place} – ${f.detail}` : f.place) : info.scene.heading || t("workspace.noHeading");
+  // What a screen reader says of the strip, its colour included: the cells alone are loose numbers.
+  const spoken = [
+    t("schedule.stripScene", { n: info.scene.number }),
+    f.side && t(`breakdown.side.${f.side}`),
+    f.moment && t(`breakdown.moment.${f.moment}`),
+    place,
+    t("breakdown.pages", { pages: formatEighths(info.scene.eighths) }),
+    info.scene.characters.length > 0 && t("schedule.stripCast", { list: info.scene.characters.join(", ") }),
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <div className={`pr-strip tone-${stripTone(f)}`}>
+      <span className="visually-hidden">{spoken}</span>
       <span className="grip" aria-hidden="true">
         <GripVertical />
       </span>
-      <span className="pr-strip-num">{info.scene.number}</span>
-      <span className="pr-strip-ie">{f.side ? t(`schedule.sideShort.${f.side}`) : ""}</span>
-      <span className="pr-strip-dn">{f.moment ? t(`schedule.momentShort.${f.moment}`) : ""}</span>
-      <span className="pr-strip-place" title={info.scene.heading}>
-        {f.place || info.scene.heading || t("workspace.noHeading")}
+      <span className="pr-strip-num" aria-hidden="true">
+        {info.scene.number}
       </span>
-      <span className="pr-strip-cast" title={info.scene.characters.join(", ")}>
+      <span className="pr-strip-ie" aria-hidden="true">
+        {f.side ? t(`schedule.sideShort.${f.side}`) : ""}
+      </span>
+      <span className="pr-strip-dn" aria-hidden="true">
+        {f.moment ? t(`schedule.momentShort.${f.moment}`) : ""}
+      </span>
+      <span className="pr-strip-place" title={info.scene.heading} aria-hidden="true">
+        {place}
+      </span>
+      <span className="pr-strip-cast" title={info.scene.characters.join(", ")} aria-hidden="true">
         {info.cast.join(", ")}
       </span>
-      <span className="pr-strip-len">{formatEighths(info.scene.eighths)}</span>
-      <span className="pr-strip-time">{formatMinutes(info.minutes)}</span>
+      <span className="pr-strip-len" aria-hidden="true">
+        {formatEighths(info.scene.eighths)}
+      </span>
+      <span className="pr-strip-time" aria-hidden="true">
+        {formatMinutes(info.minutes)}
+      </span>
       <MoreMenu label={t("schedule.stripMenu", { n: info.scene.number })} items={menu} />
     </div>
   );
@@ -778,6 +869,14 @@ function Dood({ board: b, team }: { board: Board; team: Team }) {
   }
   return (
     <div className="pr-dood-wrap">
+      <dl className="pr-dood-legend" aria-label={t("schedule.doodLegendTitle")}>
+        {(["SW", "W", "WF", "SWF", "H", "T"] as const).map((m) => (
+          <div key={m}>
+            <dt className={`m-${m}`}>{m}</dt>
+            <dd>{t(`schedule.doodMarks.${m}`)}</dd>
+          </div>
+        ))}
+      </dl>
       <table className="pr-dood">
         <thead>
           <tr>
@@ -809,7 +908,7 @@ function Dood({ board: b, team }: { board: Board; team: Team }) {
                 </th>
                 {marks.map((m, i) => (
                   <td key={days[i].day.id} className={`pr-dood-cell${m ? ` m-${m}` : ""}`}>
-                    {m}
+                    {m && <abbr title={t(`schedule.doodMarks.${m}`)}>{m}</abbr>}
                   </td>
                 ))}
                 <td className="num">{marks.filter((m) => m && m !== "H" && m !== "T").length}</td>
@@ -819,7 +918,6 @@ function Dood({ board: b, team }: { board: Board; team: Team }) {
           })}
         </tbody>
       </table>
-      <p className="muted small pr-dood-legend">{t("schedule.doodLegend")}</p>
     </div>
   );
 }
@@ -834,18 +932,30 @@ function Calendar({ plans, board: b }: { plans: Plans; board: Board }) {
   const shooting = b.days.filter((d) => d.day.kind === "shoot" && d.date).map((d) => d.date!);
   const rows: (ProductionEvent & { auto?: boolean })[] = [
     ...plans.events,
-    ...(shooting.length ? [{ id: "shoot", phase: "shoot" as const, title: t("schedule.shooting", { name: b.schedule!.name }), start: shooting[0], end: shooting[shooting.length - 1], notes: "", auto: true }] : []),
+    ...(shooting.length ? [{ id: "shoot", phase: "shoot" as const, title: t("schedule.phases.shoot"), start: shooting[0], end: shooting[shooting.length - 1], notes: "", auto: true }] : []),
   ].sort((x, y) => (x.start < y.start ? -1 : x.start > y.start ? 1 : 0));
   const from = rows.reduce((m, r) => (r.start < m ? r.start : m), rows[0]?.start ?? "");
   const to = rows.reduce((m, r) => (r.end > m ? r.end : m), rows[0]?.end ?? "");
   const span = from && to ? Math.max(1, (parseDay(to).getTime() - parseDay(from).getTime()) / 86400000 + 1) : 1;
   const pos = (iso: string) => ((parseDay(iso).getTime() - parseDay(from).getTime()) / 86400000 / span) * 100;
+  // The dates along the top: each Monday over two months or less, each first of the month beyond.
+  const ticks: string[] = [];
+  if (from && to) {
+    const weekly = span <= 62;
+    const d = parseDay(from);
+    if (weekly) d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
+    else d.setMonth(d.getMonth() + (d.getDate() === 1 ? 0 : 1), 1);
+    for (; d <= parseDay(to); weekly ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + 1)) {
+      ticks.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+  }
+  const tickFormat = dateFormat(span <= 62 ? { day: "numeric", month: "short" } : { month: "short", year: "2-digit" });
   return (
     <div className="pr-pad">
       <div className="pr-toolbar">
         <p className="muted">{t("schedule.calendarHelp")}</p>
         <span className="spacer" />
-        <button type="button" className="btn primary" onClick={() => setAdding("new")}>
+        <button type="button" className="btn" onClick={() => setAdding("new")}>
           <Plus aria-hidden="true" />
           {t("schedule.addStage")}
         </button>
@@ -856,12 +966,24 @@ function Calendar({ plans, board: b }: { plans: Plans; board: Board }) {
         </EmptyState>
       ) : (
         <ul className="pr-timeline">
+          <li className="pr-stage pr-axis" aria-hidden="true">
+            <span />
+            <div className="pr-axis-track">
+              {ticks.map((d) => (
+                <span key={d} style={{ left: `${pos(d)}%` }}>
+                  {tickFormat.format(parseDay(d))}
+                </span>
+              ))}
+            </div>
+            <span />
+          </li>
           {rows.map((r) => (
             <li key={r.id} className={`pr-stage ph-${r.phase}`}>
               <div className="pr-stage-text">
                 <strong>{r.title}</strong>
                 <span className="muted">
-                  {t(`schedule.phases.${r.phase}`)} · {r.start === r.end ? shortDate(r.start) : `${shortDate(r.start)} – ${shortDate(r.end)}`}
+                  {!r.auto && `${t(`schedule.phases.${r.phase}`)} · `}
+                  {r.start === r.end ? shortDate(r.start) : `${shortDate(r.start)} – ${shortDate(r.end)}`}
                 </span>
               </div>
               <div className="pr-stage-track" aria-hidden="true">
