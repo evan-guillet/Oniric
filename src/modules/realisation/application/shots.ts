@@ -5,7 +5,7 @@ import { rankBetween } from "../../../core/ordering";
 import { readSetting, writeSetting } from "../../script/screenplay/application/settings";
 import type { ShotNumbering } from "../domain/shots";
 
-export const SHOT_TABLES = ["shot"] as const;
+const SHOT_TABLES = ["shot"] as const;
 
 export interface Shot {
   id: string;
@@ -192,7 +192,7 @@ export type Abbreviations = Readonly<Record<string, string>>;
 const ABBREVIATIONS = "shot_abbreviations";
 const NO_ABBREVIATION: Abbreviations = {};
 
-export async function readAbbreviations(): Promise<Abbreviations> {
+async function readAbbreviations(): Promise<Abbreviations> {
   const v = parseJson<unknown>(await readSetting(ABBREVIATIONS), null);
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Abbreviations) : NO_ABBREVIATION;
 }

@@ -37,7 +37,7 @@ export const richSchema = new Schema({
 
 export const EMPTY_RICH = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
 
-export function richDoc(json: string | null | undefined): PMNode {
+function richDoc(json: string | null | undefined): PMNode {
   try {
     const node = richSchema.nodeFromJSON(JSON.parse(json || EMPTY_RICH));
     node.check();

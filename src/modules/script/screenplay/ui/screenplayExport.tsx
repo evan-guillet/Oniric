@@ -7,8 +7,7 @@ import { readSceneNumbers } from "../application/sceneNumbers";
 import { readTitlePage } from "../application/titlePageSettings";
 import { formatCss, type ScreenplayFormat } from "../domain/formats";
 import { hasContent } from "../domain/titlePage";
-import type { Pagination } from "../domain/types";
-import type { LaidBlock } from "../domain/types";
+import type { LaidBlock, Pagination } from "../domain/types";
 import { blocksFromDoc } from "./editor/schema";
 import { PrintPages } from "./PrintPages";
 

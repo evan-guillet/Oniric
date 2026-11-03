@@ -94,7 +94,7 @@ export function getLanguage(): Language {
 }
 
 /** The locale for dates and numbers in the interface. */
-export function getLocale(): string {
+function getLocale(): string {
   return LANGUAGES.find((l) => l.id === getLanguage())!.locale;
 }
 
@@ -108,8 +108,6 @@ function cachedFormat<F>(kind: string, options: object, make: (locale: string) =
 /** Dates in the interface's language; each format is made once per language. */
 export const dateFormat = (o: Intl.DateTimeFormatOptions) => cachedFormat("date", o, (l) => new Intl.DateTimeFormat(l, o));
 export const numberFormat = (o: Intl.NumberFormatOptions = {}) => cachedFormat("number", o, (l) => new Intl.NumberFormat(l, o));
-export const relativeFormat = (o: Intl.RelativeTimeFormatOptions = {}) =>
-  cachedFormat("relative", o, (l) => new Intl.RelativeTimeFormat(l, o));
 
 /** A counted text: the key's plural forms (key_one, key_other), the number written with the language's separators as {{n}}. */
 export const plural = (key: string, n: number, values: Record<string, unknown> = {}) =>

@@ -93,16 +93,26 @@ export class ScriptSession {
           if (s !== undefined && firstPage[s] === undefined) firstPage[s] = page.number;
         }
       }
+      // A scene the edit left alone is the same object as before, so typing reads only the scene it changes.
+      const before = new Map(this.cache?.scenes.map((s) => [s.id, s]));
       editor.doc.forEach((node, _o, index) => {
+        const id = node.attrs.id as string;
+        const eighths = snap.pagination.sceneEighths[index] ?? 0;
+        const page = firstPage[index] ?? 1;
+        const old = before.get(id);
+        if (old && old.node === node && old.index === index && old.eighths === eighths && old.page === page) {
+          scenes.push(old);
+          return;
+        }
         const lines: string[] = [];
         node.forEach((b) => lines.push(b.textContent));
         scenes.push({
-          id: node.attrs.id as string,
+          id,
           index,
           heading: node.firstChild?.type.name === "scene_heading" ? node.firstChild.textContent : "",
           characters: sceneCharacters(node),
-          eighths: snap.pagination.sceneEighths[index] ?? 0,
-          page: firstPage[index] ?? 1,
+          eighths,
+          page,
           text: lines.join("\n"),
           node,
         });

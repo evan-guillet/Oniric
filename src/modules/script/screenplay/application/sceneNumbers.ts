@@ -4,7 +4,7 @@ import { readSetting, writeSetting } from "./settings";
 /** Where the scene numbers print, beside each scene heading, as in a shooting script. */
 export type SceneNumbers = "none" | "left" | "right" | "both";
 
-export const SCENE_NUMBERS_SETTING = "scene_numbers";
+const SCENE_NUMBERS_SETTING = "scene_numbers";
 
 const isSceneNumbers = (v: unknown): v is SceneNumbers => v === "none" || v === "left" || v === "right" || v === "both";
 

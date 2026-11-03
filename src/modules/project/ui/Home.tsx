@@ -1,5 +1,5 @@
 import { Clapperboard, FolderOpen, Pencil, Plus, Settings, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { commands, type RecentProject, type StartupReport } from "../../../bindings";
@@ -8,10 +8,11 @@ import type { ToastMessage } from "../../../ui-kit/Toast";
 import { projectDirOf } from "../application/projects";
 import { confirmRemoval, useChoice } from "../../../ui-kit/Dialog";
 import { NewProjectDialog } from "./NewProjectDialog";
-import { SettingsScreen } from "./SettingsView";
 import { dateFormat } from "../../../core/i18n";
 import { describeError } from "../../../core/errors";
 import { usePrompt } from "../../../ui-kit/PromptDialog";
+
+const SettingsScreen = lazy(() => import("./SettingsView").then((m) => ({ default: m.SettingsScreen })));
 
 
 /** The start screen: create or open a project, then the recent ones. Restoring a backup lives in Settings, importing inside a project. */
@@ -61,7 +62,12 @@ export function Home({
     await refresh();
   };
 
-  if (settings) return <SettingsScreen notify={notify} onOpenProject={onOpen} onClose={() => setSettings(false)} />;
+  if (settings)
+    return (
+      <Suspense fallback={null}>
+        <SettingsScreen notify={notify} onOpenProject={onOpen} onClose={() => setSettings(false)} />
+      </Suspense>
+    );
 
   return (
     <main className="home">

@@ -3,7 +3,7 @@ import type { LaidBlock, Page, PageStart, Pagination } from "./types";
 
 const SENTENCE_END = /[.!?…:;]["»”)]?$/;
 
-export function lineText(b: LaidBlock, k: number): string {
+function lineText(b: LaidBlock, k: number): string {
   const end = k + 1 < b.lineStarts.length ? b.lineStarts[k + 1] : b.text.length;
   return b.text.slice(b.lineStarts[k], end).replace(/\s+$/, "");
 }

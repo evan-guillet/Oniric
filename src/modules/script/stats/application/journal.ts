@@ -5,7 +5,7 @@ import { readSetting, writeSetting } from "../../screenplay/application/settings
 import { blocksFromDoc } from "../../screenplay/ui/editor/schema";
 import { dayKey, noWords, WORD_GROUPS, wordCounts, type Journal, type WordCounts } from "../domain/stats";
 
-export const JOURNAL_SETTING = "stats.journal";
+const JOURNAL_SETTING = "stats.journal";
 
 /** Changes of the text are added up after this pause in the typing. */
 const SAMPLE_MS = 8000;

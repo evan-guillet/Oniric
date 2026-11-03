@@ -49,7 +49,7 @@ export const schema = new Schema({
 
 export const newSceneId = () => uuidv7();
 
-export function emptyDoc(): PMNode {
+function emptyDoc(): PMNode {
   return schema.nodes.doc.create(null, schema.nodes.scene.create({ id: newSceneId() }, schema.nodes.scene_heading.create()));
 }
 

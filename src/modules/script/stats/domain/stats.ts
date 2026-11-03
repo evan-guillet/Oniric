@@ -16,7 +16,7 @@ export type WordCounts = Record<WordGroup, number>;
 
 export const noWords = (): WordCounts => ({ action: 0, dialogue: 0, other: 0 });
 
-export function groupOf(type: ElementType): WordGroup {
+function groupOf(type: ElementType): WordGroup {
   if (type === "action") return "action";
   if (type === "dialogue" || type === "parenthetical") return "dialogue";
   return "other";

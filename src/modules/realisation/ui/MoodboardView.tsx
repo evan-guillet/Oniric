@@ -85,7 +85,7 @@ const PLACED = {
 } as const;
 
 /** The colours of the notes; the first, the yellow of the theme, has no code of its own. */
-export const NOTE_COLORS = [
+const NOTE_COLORS = [
   { id: "yellow", hex: null },
   { id: "orange", hex: "#ffd3b0" },
   { id: "red", hex: "#ffc6c0" },
@@ -115,7 +115,7 @@ type Guide = { axis: "x" | "y"; at: number; from: number; to: number };
 type Rect = { x: number; y: number; w: number; h: number };
 
 /** The style of an item of a board, its own colour included; the canvas and the PDF share it. */
-export function itemStyle(i: BoardItem, low: number): CSSProperties {
+function itemStyle(i: BoardItem, low: number): CSSProperties {
   return {
     left: i.x,
     top: i.y,
@@ -198,7 +198,7 @@ function snapRect(
   return { dx: shifts.x, dy: shifts.y, guides };
 }
 
-export const kindName = (k: BoardKind) => t(`moodboard.kinds.${k}`);
+const kindName = (k: BoardKind) => t(`moodboard.kinds.${k}`);
 
 /** The size an image of the project takes when it lands on a board: its own ratio, at most IMAGE_SIDE. */
 async function imageSize(path: string): Promise<{ w: number; h: number }> {

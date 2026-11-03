@@ -19,7 +19,7 @@ export interface WritingPrefs {
   pin: boolean;
 }
 
-export const DEFAULT_WRITING: WritingPrefs = {
+const DEFAULT_WRITING: WritingPrefs = {
   typewriter: false,
   spellcheck: false,
   typography: "auto",

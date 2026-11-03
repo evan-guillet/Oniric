@@ -15,7 +15,7 @@ pub use app::{export_types, run};
 
 #[cfg(feature = "app")]
 mod app {
-    use crate::commands::{self, BackupDone, BackupFailed, Core, DbChanged, ProjectFlushFailed, ProjectFlushed};
+    use crate::commands::{self, BackupFailed, Core, DbChanged, ProjectFlushFailed, ProjectFlushed};
     use crate::system::{log, Paths};
     use specta_typescript::Typescript;
     use std::time::{Duration, Instant};
@@ -74,7 +74,7 @@ mod app {
                 commands::version_save,
                 commands::version_read,
             ])
-            .events(collect_events![DbChanged, ProjectFlushed, ProjectFlushFailed, BackupDone, BackupFailed])
+            .events(collect_events![DbChanged, ProjectFlushed, ProjectFlushFailed, BackupFailed])
     }
 
     /// `oniric --exporter-types chemin\bindings.ts` writes the TypeScript bindings and exits.

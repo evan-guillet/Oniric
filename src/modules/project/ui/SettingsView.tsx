@@ -11,7 +11,6 @@ import {
   PenLine,
   Ruler,
   Search,
-  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import { Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -35,7 +34,6 @@ import { confirmRemoval, Dialog, useChoice } from "../../../ui-kit/Dialog";
 import { dragWindow, WindowControls } from "../../../ui-kit/TitleBar";
 import { Labeled } from "../../../ui-kit/Form";
 import type { ToastMessage } from "../../../ui-kit/Toast";
-import { readProfile, writeProfile, EMPTY_PROFILE, type Profile } from "../application/profile";
 import {
   availableFormats,
   loadFormatLibrary,
@@ -72,12 +70,12 @@ import {
   type ShotColumn,
   type ShotOrder,
   type ShotShape,
-} from "../../realisation/ui/ShotlistView";
+} from "../../realisation/ui/shotColumns";
 import { SHOT_CHOICES, type ChoiceField, type ShotNumbering } from "../../realisation/domain/shots";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 
 import { Select } from "../../../ui-kit/Select";
-export const PARTS_HIDDEN_SETTING = "parts_hidden";
+import { PARTS_HIDDEN_SETTING } from "./projectContext";
 
 type Notify = (m: Omit<ToastMessage, "id">) => void;
 
@@ -107,7 +105,6 @@ interface Page {
 
 
 const PAGE_ICONS: Record<PageId, LucideIcon> = {
-  profile: UserRound,
   appearance: Palette,
   writing: PenLine,
   formats: Ruler,
@@ -131,7 +128,7 @@ function pageOf(id: PageId): Page {
 }
 
 const GROUPS: { id: string; pages: PageId[]; projectOnly?: boolean }[] = [
-  { id: "application", pages: ["profile", "appearance", "writing", "formats", "backups", "shortcuts"] },
+  { id: "application", pages: ["appearance", "writing", "formats", "backups", "shortcuts"] },
   { id: "project", projectOnly: true, pages: ["script", "shotlist", "parts"] },
 ];
 
@@ -151,7 +148,7 @@ const fold = (x: string) =>
  * right. Retour or Échap gives the window back to what it showed.
  */
 export function SettingsScreen({
-  page: initialPage = "profile",
+  page: initialPage = "appearance",
   onClose,
   notify: notifyProp,
   onOpenProject,
@@ -274,7 +271,6 @@ export function SettingsScreen({
           {ctx && <WindowControls />}
         </header>
         <div className="settings-pane-body" key={page}>
-          {page === "profile" && <ProfileSettings notify={notify} />}
           {page === "appearance" && <AppearanceSettings notify={notify} />}
           {page === "writing" && <WritingSettings notify={notify} />}
           {page === "formats" && <FormatSettings notify={notify} inProject={!!ctx} />}
@@ -395,91 +391,6 @@ function NumberField({
       />
       <span aria-hidden="true">{unit}</span>
     </span>
-  );
-}
-
-const profileFields = (): { key: keyof Profile; label: string; help?: string; multiline?: boolean; type?: string }[] => [
-  { key: "name", label: t("settings.profile.name"), help: t("settings.profile.nameHelp") },
-  { key: "email", label: t("settings.profile.email"), type: "email" },
-  { key: "phone", label: t("settings.profile.phone"), type: "tel" },
-  { key: "address", label: t("settings.profile.address"), multiline: true },
-  { key: "agent", label: t("settings.profile.agent"), help: t("settings.profile.agentHelp"), multiline: true },
-];
-
-function ProfileSettings({ notify }: { notify: Notify }) {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const pending = useRef<Profile | null>(null);
-  useEffect(() => {
-    void readProfile()
-      .then(setProfile)
-      .catch(() => setProfile(EMPTY_PROFILE));
-  }, []);
-  const flush = () => {
-    window.clearTimeout(timer.current);
-    const p = pending.current;
-    pending.current = null;
-    if (p) writeProfile(p).catch((e) => notify({ text: describeError(e), tone: "error" }));
-  };
-  // Saved as it is typed, and at the latest when the page closes.
-  useEffect(() => () => flush(), []);
-  if (!profile) return null;
-  const set = (key: keyof Profile, value: string) => {
-    const next = { ...profile, [key]: value };
-    setProfile(next);
-    pending.current = next;
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flush, 400);
-  };
-  const contact = [profile.name, profile.address, profile.phone, profile.email, profile.agent].filter((x) => x.trim());
-
-  return (
-    <>
-      <Group title={t("settings.contactDetails")}>
-        {profileFields().map((f) => (
-          <Row key={f.key} id={`profile-${f.key}`} title={f.label} help={f.help}>
-            {f.multiline ? (
-              <textarea
-                id={`profile-${f.key}`}
-                rows={2}
-                value={profile[f.key]}
-                onChange={(e) => set(f.key, e.target.value)}
-                onBlur={flush}
-              />
-            ) : (
-              <input
-                id={`profile-${f.key}`}
-                type={f.type ?? "text"}
-                value={profile[f.key]}
-                onChange={(e) => set(f.key, e.target.value)}
-                onBlur={flush}
-                spellCheck={false}
-              />
-            )}
-          </Row>
-        ))}
-      </Group>
-      <Group title={t("settings.onTitlePage")}>
-        <div className="profile-sheet" aria-label={t("settings.printedContact")}>
-          <div className="profile-sheet-by">
-            {profile.name.trim() ? (
-              <>
-                {t("settings.writtenBy")}
-                <br />
-                <br />
-                {profile.name}
-              </>
-            ) : (
-              <span className="muted">{t("settings.nameHere")}</span>
-            )}
-          </div>
-          <div className="profile-sheet-contact">
-            {contact.length > 0 ? contact.join("\n") : <span className="muted">{t("settings.contactHere")}</span>}
-          </div>
-        </div>
-        <p className="set-note">{t("settings.profileNote")}</p>
-      </Group>
-    </>
   );
 }
 
@@ -1186,7 +1097,6 @@ function ShortcutSettings() {
         ["Ctrl+P", t("settings.sc.pdf")],
         ["Ctrl+Z", t("settings.sc.undo")],
         ["Ctrl+Y Ctrl+Maj+Z", t("settings.sc.redo")],
-        ["Échap", t("settings.sc.preview")],
         ["/ @ [[", t("settings.sc.link")],
         ["Ctrl+Clic", t("settings.sc.openLink")],
       ],

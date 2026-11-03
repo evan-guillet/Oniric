@@ -107,15 +107,6 @@ export async function createEntry(type: string, name: string, extra: Partial<Ent
   return id;
 }
 
-export async function createEntries(items: { type: string; name: string }[]): Promise<void> {
-  const now = nowIso();
-  await write(
-    "Fiches détectées dans le scénario",
-    [...TABLES],
-    items.map((it) => db.insertInto("bible_entry").values({ id: uuidv7(), type: it.type, name: it.name, created_at: now, updated_at: now })),
-  );
-}
-
 const SNAPSHOT_EVERY_MS = 10 * 60 * 1000;
 
 /** Saves an entry; a copy of the previous state is kept in its history every ten minutes at most [5.2]. */
@@ -193,12 +184,6 @@ export async function deleteEntry(id: string): Promise<void> {
 /** Brings back an entry deleted a moment ago (the « Annuler » of the deletion notice). */
 export async function restoreEntry(id: string): Promise<void> {
   await write("Fiche restaurée", [...TABLES], [db.updateTable("bible_entry").set({ deleted_at: null, updated_at: nowIso() }).where("id", "=", id)]);
-}
-
-/** A name found in the screenplay becomes another name of an existing entry. */
-export async function addAlias(entry: Entry, alias: string): Promise<void> {
-  if (entry.aliases.some((a) => fold(a) === fold(alias))) return;
-  await saveEntry({ ...entry, aliases: [...entry.aliases, alias] }, entry);
 }
 
 export async function saveType(t: { id?: string; name: string; icon: string; fields: FieldDef[] }): Promise<string> {

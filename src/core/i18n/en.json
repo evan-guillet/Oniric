@@ -27,7 +27,6 @@
     "name": "Film title",
     "namePlaceholder": "The Blue Hours",
     "format": "Screenplay format",
-    "formatHelp": "You can change it at any time: the text stays the same, only the pages are recalculated.",
     "location": "Location",
     "browse": "Browse…",
     "browseTitle": "Where should the project go?",
@@ -48,8 +47,7 @@
     "restored": "Work restored after an unexpected shutdown.",
     "repaired": "The project file was damaged: it was repaired from the work kept on this PC.",
     "keptAside": "A copy of your previous work was set aside: {{path}}",
-    "cancel": "Cancel",
-    "ok": "Got it"
+    "cancel": "Cancel"
   },
   "close": {
     "notSavedTitle": "The project folder can’t be reached",
@@ -62,11 +60,9 @@
   "workspace": {
     "closeProject": "Close project",
     "element": "Element",
-    "format": "Format",
     "import": "Import…",
     "export": "Export…",
     "exportPdf": "Export as PDF",
-    "exportFountain": "Export as Fountain",
     "scenes": "Scenes",
     "noHeading": "(no heading)",
     "scenePage": "p. {{page}}",
@@ -75,9 +71,10 @@
     "importReplace": "Replace",
     "imported": "“{{file}}” imported: {{count}} elements.",
     "exported": "File saved in the project folder: {{file}}",
+    "exportedMany_one": "{{count}} file saved in the project's “exports” folder",
+    "exportedMany_other": "{{count}} files saved in the project's “exports” folder",
     "openFile": "Open",
     "showInFolder": "Show in folder",
-    "exporting": "Creating the PDF…",
     "dismiss": "Dismiss message"
   },
   "status": {
@@ -122,10 +119,8 @@
     "confirm": "OK",
     "close": "Close",
     "delete": "Delete",
-    "rename": "Rename",
     "save": "Save",
     "add": "Add",
-    "more": "More actions",
     "addEllipsis": "Add…",
     "removeAction": "Remove"
   },
@@ -296,8 +291,13 @@
     "orientation": "Orientation",
     "landscape": "Landscape",
     "portrait": "Portrait",
-    "board": "Moodboard",
-    "noBoard": "No moodboard in the project."
+    "noBoard": "No moodboard in the project.",
+    "exportFiles_one": "Export {{count}} file",
+    "exportFiles_other": "Export {{count}} files",
+    "picked_one": "{{count}} checked",
+    "picked_other": "{{count}} checked",
+    "boards": "Moodboards",
+    "allBoards": "All"
   },
   "languages": {
     "fr": "French",
@@ -313,19 +313,8 @@
     "closeSettings": "Leave settings",
     "closeTitle": "Back (Esc)",
     "profile": {
-      "name": "Name",
-      "nameHelp": "Printed under “Written by” and at the top of the contact.",
-      "email": "Email",
-      "phone": "Phone",
-      "address": "Address",
-      "agent": "Agent or representative",
-      "agentHelp": "Added at the end of the contact."
+      "name": "Name"
     },
-    "contactDetails": "Contact details",
-    "onTitlePage": "On the title page",
-    "printedContact": "The contact as it prints",
-    "nameHere": "Your name will print here.",
-    "contactHere": "The contact prints at the bottom left.",
     "themes": {
       "system": "System",
       "systemHelp": "Follows the Windows setting",
@@ -396,7 +385,6 @@
       "pdf": "Export as PDF",
       "undo": "Undo",
       "redo": "Redo",
-      "preview": "Leave the preview",
       "link": "Link a name to its Bible entry; Enter creates the entry of an unknown name",
       "openLink": "Open the entry of a linked name",
       "elements": "Screenplay elements",
@@ -430,11 +418,6 @@
     "source": "Source code",
     "copyLink": "Copy the link",
     "pages": {
-      "profile": {
-        "label": "Profile",
-        "lead": "Your name and contact details, printed on the title page of every script.",
-        "keywords": "name author email phone address agent contact title page"
-      },
       "appearance": {
         "label": "Appearance",
         "lead": "The theme and language of the whole application, screenplay pages included.",
@@ -494,7 +477,6 @@
     "mb": "{{n}} MB",
     "kb": "{{n}} KB",
     "writtenBy": "Written by",
-    "profileNote": "Every script follows this profile, except for the fields changed in Screenplay, “Information” tab, which apply to that script only. The profile stays on this PC.",
     "theme": "Theme",
     "themeNote": "Exported PDFs always stay black on white.",
     "language": "Language",
@@ -673,11 +655,8 @@
     "linksHint": "Bible items in color, their entry on hover",
     "pin": "Act and sequence",
     "pinHint": "The marker left of the text, which follows the scene at the top of the desk",
-    "previewTitle": "The whole script as it prints (Esc to go back)",
-    "preview": "Preview",
     "panel": "Panel",
     "info": {
-      "takeBackButton": "Use the profile",
       "otherLines": "Other lines",
       "otherLinesPlaceholder": "Production, website, registration…",
       "yourMention": "Your mention",
@@ -695,8 +674,6 @@
       "basedOn": "Based on",
       "basedOnPlaceholder": "Based on the novel by…",
       "contact": "Contact",
-      "takeBack": "Use “{{value}}”",
-      "takeBackEmpty": "Use the profile, empty for this field",
       "mentions": "Mentions"
     },
     "notes": {
@@ -714,7 +691,6 @@
       "empty": "Empty note",
       "create": "Create a note",
       "createHint": "On the selected passage, or the cursor’s line",
-      "archived": "Archived",
       "note": "Note",
       "placeholder": "Your note…"
     },
@@ -762,7 +738,6 @@
   },
   "sceneList": {
     "unfold": "Expand all",
-    "fold": "Collapse all",
     "remove": {
       "act": "Delete the act…",
       "seq": "Delete the sequence…",
@@ -778,13 +753,11 @@
     "renameVersion": "Rename the version",
     "copyHash": "Copy the fingerprint",
     "removeFromList": "Remove from the list",
-    "cuts": "Cut scenes",
     "reinstate": "Put back",
     "firstTitle": "Keep track of every stage of the screenplay",
     "firstWhen": "Good moments: before a big rewrite, before sending the screenplay to someone, at the end of a draft.",
     "sampleLabel": "Comparison example",
     "sampleCaption": "The removed line in red, the new one in green, the changed words highlighted.",
-    "swap": "Swap the two versions",
     "historyHint": "The frozen versions, and the current one",
     "panel": "Panel",
     "paneScenes": "Scenes",
@@ -850,8 +823,6 @@
     "linesAdded_other": "{{n}} lines added",
     "linesRemoved_one": "{{n}} line removed",
     "linesRemoved_other": "{{n}} lines removed",
-    "changedCount_one": "{{n}} scene changed",
-    "changedCount_other": "{{n}} scenes changed",
     "sameLines_one": "{{n}} unchanged line",
     "sameLines_other": "{{n}} unchanged lines",
     "reviewed": "Reviewed",
@@ -860,12 +831,7 @@
     "sceneActions": "Actions for {{heading}}",
     "tree": "Scene list",
     "removedLine": "Removed line",
-    "compare": "Compare",
-    "noneYet": "No frozen version yet",
-    "noneYetText": "Freeze the current version before a big rewrite or before sending it out: you’ll then see what changed since.",
     "cutsEmpty": "No cut scenes",
-    "moreLines_one": "{{n}} more line",
-    "moreLines_other": "{{n}} more lines",
     "cutsHint": "The scenes deleted from the screenplay, to put back"
   },
   "bible": {
@@ -1409,8 +1375,6 @@
     "filterKinds": {
       "character": "Character",
       "location": "Place",
-      "plotline": "Plotline",
-      "tag": "Tag",
       "status": "Status"
     },
     "alone": "Alone in this place",
@@ -2236,7 +2200,7 @@
     "tip3": "Enter a scene as late as possible and leave it as early as possible.",
     "tip4": "Type @ or [[ to link a character, place or object from the Bible.",
     "openScript": "Open the script",
-    "later": "This guided step arrives in version 2.0.",
+    "later": "This guided step arrives in version 3.0.",
     "openVersions": "Open versions",
     "status": {
       "empty": "To do",
@@ -2322,22 +2286,13 @@
     }
   },
   "shotlist": {
-    "scenes": "Scenes of the screenplay",
     "chooseScene": "Change the scene",
-    "panel": "Panel",
-    "panels": {
-      "scenes": "Scenes",
-      "text": "Text",
-      "textHint": "The scene's text and the shots that cover it",
-      "display": "Display"
-    },
     "shape": "Shot list display",
     "shapes": {
       "table": "Table",
       "cards": "Cards"
     },
     "add": "New shot",
-    "addFirst": "Add the first shot",
     "emptyTitle": "The shot list starts from the screenplay",
     "emptyText": "Write at least one scene: each scene gets its shots here, and each shot its storyboard frame.",
     "toScript": "Go to the Screenplay",
@@ -2347,10 +2302,6 @@
     "shots_other": "{{count}} shots",
     "onScreen": "{{time}} on screen",
     "toShoot": "{{time}} to shoot",
-    "uncovered_one": "{{count}} passage not covered",
-    "uncovered_other": "{{count}} passages not covered",
-    "allCovered": "All the text is covered",
-    "openBoard": "Open the moodboard",
     "order": "Order of the shots",
     "orders": {
       "edit": "Edit",
@@ -2358,8 +2309,6 @@
       "shoot": "Shooting",
       "shootHint": "In the order they will be shot; drag them to change it"
     },
-    "noShot": "No shot for this scene.",
-    "noShotHint": "Break it down into shots: size, movement, lens, length. Each shot also gets its frame in the Storyboard.",
     "noShotShort": "No shot",
     "search": "Search a shot, a scene…",
     "searchLabel": "Search the breakdown",
@@ -2404,10 +2353,6 @@
     "shotMenu": "Actions for shot {{n}}",
     "shootN": "Order {{n}}",
     "noCharacter": "No character in this scene.",
-    "coverFor": "Passages covered by shot",
-    "coverHint": "Choose a shot in the list, then click the passages it covers.",
-    "noText": "This scene has no text yet.",
-    "notCovered": "Not covered",
     "numbering": "Numbering",
     "numberings": {
       "dash": "12-1, 12-2…",
@@ -2419,9 +2364,6 @@
     "exportEmpty": "No shot in the shot list."
   },
   "storyboard": {
-    "panel": "Panel",
-    "emptyTitle": "The storyboard starts from the screenplay",
-    "toShotlist": "Open the shot list",
     "frameOf": "Frame of shot {{n}}",
     "import": "Import an image",
     "fromBoard": "Take an image from a moodboard",
@@ -2431,14 +2373,6 @@
     "drawOver": "Draw over it",
     "changeImage": "Change the image",
     "drawIt": "Draw",
-    "captionPlaceholder": "What the frame shows",
-    "dialoguePlaceholder": "Dialogue",
-    "notesPlaceholder": "Notes",
-    "addFirst": "First frame",
-    "addHint": "Each frame is a shot of the shot list: adding it here adds it there too.",
-    "noFrame": "No frame",
-    "framesDone_one": "{{count}} frame, {{done}} illustrated",
-    "framesDone_other": "{{count}} frames, {{done}} illustrated",
     "ratio": "Frame format",
     "ratios": {
       "1_85": "1.85:1",
@@ -2453,20 +2387,6 @@
       "16_9": "Television and streaming",
       "4_3": "The former television format",
       "9_16": "Vertical, for phones"
-    },
-    "perRow": "Frames per row",
-    "perRowN_one": "{{count}} frame",
-    "perRowN_other": "{{count}} frames",
-    "underFrame": "Under each frame",
-    "shown": {
-      "technique": "Size, angle and movement",
-      "techniqueHint": "Taken from the shot list",
-      "action": "Description",
-      "actionHint": "What the shot shows",
-      "dialogue": "Dialogue",
-      "dialogueHint": "The lines the shot covers",
-      "notes": "Notes",
-      "notesHint": "The frame's own notes"
     },
     "noBoardImage": "No image in the project's moodboards.",
     "frameRatio": "Frame {{ratio}}",
@@ -2524,7 +2444,6 @@
       "color": "Colours",
       "other": "Other"
     },
-    "panel": "Panel",
     "panels": {
       "boards": "Moodboards",
       "palette": "Palette",

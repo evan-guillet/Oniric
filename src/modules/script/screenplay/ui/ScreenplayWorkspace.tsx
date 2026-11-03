@@ -1,13 +1,8 @@
 import {
-  Archive,
-  ArchiveRestore,
-  ChevronRight,
-  BookOpen,
   FileText,
   ListTree,
   Pencil,
   Plus,
-  RotateCcw,
   StickyNote,
   type LucideIcon,
   Trash2,
@@ -25,7 +20,6 @@ import { useWritingPrefs } from "../../../../core/writingPrefs";
 import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
-import { readProfile, useProfile, type Profile } from "../../../project/application/profile";
 import { useProject } from "../../../project/ui/projectContext";
 import { bibleIndex } from "../../bible/application/bible";
 import { wikiPlugin } from "../../bible/ui/wikiPlugin";
@@ -34,7 +28,6 @@ import {
   readProjectFormat,
 } from "../application/formatSettings";
 import { SaveScheduler } from "../application/saveScheduler";
-import { useSceneNumbers } from "../application/sceneNumbers";
 import { SceneStore } from "../application/sceneStore";
 import {
   readTitlePage,
@@ -49,7 +42,6 @@ import {
   hasContent,
   type ContactKey,
   MENTIONS,
-  resolveTitlePage,
   type MentionId,
   type TitleAuto,
   type TitlePage,
@@ -60,7 +52,6 @@ import { sceneGapsPlugin } from "./editor/sceneGaps";
 import { notePlugin, refreshNotes, type NoteHost } from "./editor/notePlugin";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
-import { PrintPages } from "./PrintPages";
 import { ScriptLedger } from "./ScriptLedger";
 import { SceneList, type ListGroup, type ListTarget, type SceneRow } from "./SceneList";
 import { STORY_TABLES, deleteAct, deleteSequence, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
@@ -94,10 +85,7 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
   return rules.join("\n");
 }
 
-/**
- * What the side panel shows while writing: the scenes, the notes or the script's information. « Aperçu », at the
- * head of the same tabs, shows the whole script as it prints across the desk, with no panel beside it.
- */
+/** What the side panel shows: the scenes, the notes or the script's information, chosen by the tabs at its head. */
 type Panel = "scenes" | "notes" | "info";
 /** The panel's tabs: one is always chosen, and pressing it again keeps it. */
 const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText };
@@ -124,7 +112,7 @@ function sameRows(a: SceneRow[], b: SceneRow[]) {
 /** The screenplay view: the editor, its scene list and its notes. It stays mounted while other views are shown. */
 export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const { t } = useTranslation();
-  const { project, session, notify, printPdf, headerActions } = useProject();
+  const { project, session, notify, printPdf } = useProject();
   const mountRef = useRef<HTMLDivElement>(null);
   const deskRef = useRef<HTMLElement>(null);
   const editorRef = useRef<ScriptEditor | null>(null);
@@ -132,32 +120,18 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [snap, setSnap] = useState<EditorSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<Panel>("scenes");
-  const [preview, setPreview] = useState(false);
-  const body: "editor" | "preview" = preview ? "preview" : "editor";
   // How the writing shows on the desk, chosen in the settings: the pagination, exports and printing stay the same.
   const display = useWritingPrefs();
   const linksRef = useRef(display.links);
   linksRef.current = display.links;
-  /** A panel's tab shows it in place of the others; pressed again, it stays. From the preview, it goes back to writing. */
+  /** A panel's tab shows it in place of the others; pressed again, it stays. */
   const showPanel = (next: Panel) => {
-    if (next === panel && !preview) return;
-    setPreview(false);
-    if (next !== panel) {
-      setPanel(next);
-      setShownNote(null);
-    }
+    if (next === panel) return;
+    setPanel(next);
+    setShownNote(null);
     if (next !== "info") requestAnimationFrame(() => editorRef.current?.focus());
   };
-  /** « Aperçu » shows the whole script as it prints, without the panel; pressed again, or Échap, it goes back to writing. */
-  const togglePreview = () => {
-    const next = !preview;
-    setPreview(next);
-    if (next) requestAnimationFrame(() => deskRef.current?.scrollTo({ top: 0 }));
-    else requestAnimationFrame(() => editorRef.current?.focus());
-  };
-  const togglePreviewRef = useRef(togglePreview);
-  togglePreviewRef.current = togglePreview;
-  // The notes, for the card a passage opens in the text; an archived one leaves the text.
+  // The notes, for the card a passage opens in the text.
   const notes = useLive(loadNotes, ["note"]);
   const [popped, setPopped] = useState<{ id: string; card: HTMLElement } | null>(null);
   const [popEditing, setPopEditing] = useState(false);
@@ -165,8 +139,8 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [shownNote, setShownNote] = useState<{ id: string; at: number } | null>(null);
   const noteHost = useRef<NoteHost | null>(null);
   noteHost.current = {
-    open: (id) => !!notes?.some((n) => n.id === id && !n.resolved),
-    archived: () => new Set(notes?.filter((n) => n.resolved).map((n) => n.id)),
+    open: (id) => !!notes?.some((n) => n.id === id),
+    archived: () => new Set(),
     render: (id, card) => {
       setPopEditing(false);
       setPopped(id ? { id, card } : null);
@@ -260,14 +234,13 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
   // The writing preferences, changed in the settings, apply at once.
   const prefs = useWritingPrefs();
-  const typewriter = prefs.typewriter && body === "editor";
+  const typewriter = prefs.typewriter;
   useEffect(() => {
     editorRef.current?.refreshPrefs();
   }, [prefs, format]);
   useEffect(() => {
     editorRef.current?.setTypewriter(typewriter ? deskRef.current : null);
   }, [typewriter, format]);
-  const sceneNumbers = useSceneNumbers();
   // The format chosen in the settings for this project lays the pages out anew.
   const savedFormat = useLive(readProjectFormat, ["project_setting"]);
   useEffect(() => {
@@ -279,16 +252,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 
   // The title page, edited in the side panel and saved as it is typed.
   const [titlePage, setTitlePage] = useState<TitleDraft | null>(null);
-  // The contact follows the profile as it is changed in the settings, field by field, unless the script sets its own.
-  const profile = useProfile();
   const titleTimer = useRef<number | undefined>(undefined);
   const titlePending = useRef<TitlePage | null>(null);
   useEffect(() => {
-    void Promise.all([readTitlePageRaw(), readProfile(), titleAuto()])
-      .then(([p, profile, auto]) =>
+    void Promise.all([readTitlePageRaw(), titleAuto()])
+      .then(([p, auto]) =>
         setTitlePage({
           stored: p,
-          draft: p ?? { ...emptyTitlePage(project.title, profile), include: true },
+          draft: p ?? { ...emptyTitlePage(project.title), include: true },
           auto,
         }),
       )
@@ -317,9 +288,9 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   }, [panel, flushTitle]);
   // The version in progress moves when a version is frozen, the date at midnight: both are read again on showing the page.
   useEffect(() => {
-    if (panel !== "info" && !preview) return;
+    if (panel !== "info") return;
     void titleAuto().then((auto) => setTitlePage((t) => t && { ...t, auto }));
-  }, [panel, preview]);
+  }, [panel]);
 
   const saveNow = useCallback(async () => {
     try {
@@ -345,10 +316,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && preview && !e.defaultPrevented) {
-        togglePreviewRef.current();
-        return;
-      }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === "s") {
@@ -361,7 +328,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [active, saveNow, exportPdf, preview]);
+  }, [active, saveNow, exportPdf]);
 
   const rows = useMemo(() => {
     if (!snap) return rowsRef.current;
@@ -460,7 +427,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const sceneCount = snap?.headings.length ?? 0;
   useEffect(() => {
     const desk = deskRef.current;
-    if (!desk || body !== "editor") return;
+    if (!desk) return;
     let frame = 0;
     const measure = () => {
       frame = 0;
@@ -495,7 +462,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
       resized.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [body, display.cards, sceneCount]);
+  }, [display.cards, sceneCount]);
   const pin = useMemo(() => {
     for (const g of groups)
       for (const q of g.sequences)
@@ -520,19 +487,17 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     [story, sceneInfos, currentId],
   );
 
-  const shownTitle = titlePage && resolveTitlePage(titlePage.draft, titlePage.auto, profile);
-  // The preview prints the information as it is being typed, saved or not.
-  const printedTitle = hasContent(shownTitle) ? shownTitle : null;
-
   return (
     <>
       {format && <style>{formatCss(format, false)}</style>}
       {display.cards && story && <style>{cardCss}</style>}
       {choice}
-      <div className={preview ? "workspace previewing" : "workspace"}>
-        {/* The preview takes the whole desk: no panel beside it. */}
-        {!preview && (
-          <aside className="sidebar" aria-label={t(`script.panels.${panel}`)}>
+      <div className="workspace">
+        <aside className="sidebar" aria-label={t("script.panel")}>
+          <div className="side-tabs">
+            <Segmented label={t("script.panel")} options={panelTabs()} value={panel} onChange={showPanel} />
+          </div>
+          <div className="sidebar-body">
             {panel === "scenes" && (
               <SceneList
                 scenes={rows}
@@ -545,46 +510,37 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
             )}
             {panel === "notes" && <NotesPanel editor={editorRef.current} shown={shownNote} />}
             {panel === "info" && titlePage && (
-              <TitlePagePanel page={titlePage.draft} profile={profile} onChange={editTitle} />
+              <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
             )}
-          </aside>
-        )}
+          </div>
+        </aside>
 
         <main
           ref={deskRef}
-          className={
-            body === "editor"
-              ? `desk sheetless ${display.cards ? "display-cards" : "display-bare"}${display.links ? "" : " links-off"}`
-              : "desk desk-print"
-          }
+          className={`desk sheetless ${display.cards ? "display-cards" : "display-bare"}${display.links ? "" : " links-off"}`}
         >
-          {/* Beside the text while writing, beside the printed sheet in the preview. */}
+          {/* Beside the text, in the margin left of it. */}
           {format && (
             <div
               className="story-pin-rail"
               style={{
                 width: `${format.page.width}in`,
-                translate: body === "editor" ? `${(format.margins.right - format.margins.left) / 2}in` : undefined,
+                translate: `${(format.margins.right - format.margins.left) / 2}in`,
               }}
             >
               <div
                 className="story-pin"
                 style={
-                  body === "editor"
-                    ? ({
-                        top: pinTop,
-                        right: `calc(100% - ${format.margins.left - 0.6}in + 22px)`,
-                        // As wide as the room left of the cards, up to 180px.
-                        maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px))`,
-                        "--act": pin?.color ?? undefined,
-                      } as CSSProperties)
-                    : {
-                        right: "calc(100% + 22px)",
-                        maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 - 38px))`,
-                      }
+                  {
+                    top: pinTop,
+                    right: `calc(100% - ${format.margins.left - 0.6}in + 22px)`,
+                    // As wide as the room left of the cards, up to 180px.
+                    maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px))`,
+                    "--act": pin?.color ?? undefined,
+                  } as CSSProperties
                 }
               >
-                {body === "editor" && display.pin && pin && (
+                {display.pin && pin && (
                   <span key={`${pin.act?.id}:${pin.sequence?.id}`} className="story-pin-thread" aria-hidden="true">
                     {pin.act && (
                       <span className="story-pin-part story-pin-act">
@@ -619,7 +575,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           {format && (
             <div
               className="fmt page-column"
-              hidden={body !== "editor"}
               style={{
                 width: `${format.page.width}in`,
                 // Without a sheet, the text block itself is centred rather than the page.
@@ -637,20 +592,9 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               />
             </div>
           )}
-          {format && body === "preview" && snap && (
-            <div className="fmt">
-              <PrintPages
-                pagination={snap.pagination}
-                format={format}
-                titlePage={printedTitle}
-                blocks={snap.blocks}
-                sceneNumbers={sceneNumbers}
-              />
-            </div>
-          )}
         </main>
         {/* The kinds of element, fixed at the bottom of the desk while writing. */}
-        {format && body === "editor" && <ElementBar editor={editorRef.current} snap={snap} />}
+        {format && <ElementBar editor={editorRef.current} snap={snap} />}
       </div>
 
       {/* The card of the note under the caret or the pointer, drawn where the editor placed it. */}
@@ -680,32 +624,6 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
           );
         })()}
 
-      {active &&
-        headerActions &&
-        createPortal(
-          <div className="header-tools">
-            <Segmented
-              label={t("script.panel")}
-              options={panelTabs()}
-              value={preview ? null : panel}
-              onChange={showPanel}
-              compact
-              lead={
-                <button
-                  type="button"
-                  className={preview ? "seg on" : "seg"}
-                  aria-pressed={preview}
-                  title={t("script.previewTitle")}
-                  onClick={togglePreview}
-                >
-                  <BookOpen aria-hidden="true" />
-                  <span>{t("script.preview")}</span>
-                </button>
-              }
-            />
-          </div>,
-          headerActions,
-        )}
     </>
   );
 }
@@ -713,14 +631,13 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
 interface TitleDraft {
   /** What is saved, hence printed; null until the title page is first edited. */
   stored: TitlePage | null;
-  /** What the panel shows: the saved page, or one prefilled from the project and the profile. */
+  /** What the panel shows: the saved page, or one prefilled from the project. */
   draft: TitlePage;
   /** The version in progress and today's date, for the automatic fields. */
   auto: TitleAuto;
 }
 
-/** The script's information, in the side panel: what the title page prints, seen with « Aperçu ». */
-/** The contact fields of the panel, in the order they print, with what they hold when the profile leaves them empty. */
+/** The contact fields of the panel, in the order they print. */
 const CONTACT_FIELDS: { key: ContactKey; type?: string; rows?: number }[] = [
   { key: "name" },
   { key: "address", rows: 2 },
@@ -729,24 +646,9 @@ const CONTACT_FIELDS: { key: ContactKey; type?: string; rows?: number }[] = [
   { key: "agent", rows: 2 },
 ];
 
-function TitlePagePanel({
-  page,
-  profile,
-  onChange,
-}: {
-  page: TitlePage;
-  profile: Profile | null;
-  onChange: (p: TitlePage) => void;
-}) {
+function TitlePagePanel({ page, onChange }: { page: TitlePage; onChange: (p: TitlePage) => void }) {
   const { ask } = useProject();
-  // A field typed back to the profile's value follows the profile again.
-  const setContact = (k: ContactKey, value: string) => {
-    const fields = { ...page.contactFields };
-    if (value === (profile?.[k] ?? "")) delete fields[k];
-    else fields[k] = value;
-    set({ contactFields: fields });
-  };
-  const own = (k: ContactKey) => k in page.contactFields && page.contactFields[k] !== (profile?.[k] ?? "");
+  const setContact = (k: ContactKey, value: string) => set({ contactFields: { ...page.contactFields, [k]: value } });
   const set = (patch: Partial<TitlePage>) => onChange({ ...page, ...patch });
   const [added, setAdded] = useState(-1);
   const names = page.authors.split("\n");
@@ -764,10 +666,11 @@ function TitlePagePanel({
           rows={rows}
           value={page[k]}
           placeholder={placeholder}
+          autoComplete="off"
           onChange={(e) => set({ [k]: e.target.value })}
         />
       ) : (
-        <input value={page[k]} placeholder={placeholder} onChange={(e) => set({ [k]: e.target.value })} />
+        <input value={page[k]} placeholder={placeholder} autoComplete="off" onChange={(e) => set({ [k]: e.target.value })} />
       )}
     </label>
   );
@@ -785,6 +688,7 @@ function TitlePagePanel({
                 value={n}
                 aria-label={t("script.info.author", { n: i + 1 })}
                 placeholder={t("script.contact.namePlaceholder")}
+                autoComplete="off"
                 autoFocus={i === added}
                 onChange={(e) => setNames(names.map((m, j) => (j === i ? e.target.value : m)))}
               />
@@ -822,27 +726,16 @@ function TitlePagePanel({
         <legend>{t("script.info.contact")}</legend>
         {CONTACT_FIELDS.map((f) => {
           const id = `title-contact-${f.key}`;
-          const value = contactValue(page, profile, f.key);
+          const value = contactValue(page, null, f.key);
           return (
             <div key={f.key} className="contact-field">
               <div className="contact-field-head">
                 <label htmlFor={id}>{t(`script.contact.${f.key}`)}</label>
-                {own(f.key) && (
-                  <button
-                    type="button"
-                    className="btn small text contact-reset"
-                    title={profile?.[f.key].trim() ? t("script.info.takeBack", { value: profile[f.key].trim().split("\n")[0] }) : t("script.info.takeBackEmpty")}
-                    onClick={() => setContact(f.key, profile?.[f.key] ?? "")}
-                  >
-                    <RotateCcw aria-hidden="true" />
-                    {t("script.info.takeBackButton")}
-                  </button>
-                )}
               </div>
               {f.rows ? (
-                <textarea id={id} rows={f.rows} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} onChange={(e) => setContact(f.key, e.target.value)} />
+                <textarea id={id} rows={f.rows} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} autoComplete="off" onChange={(e) => setContact(f.key, e.target.value)} />
               ) : (
-                <input id={id} type={f.type ?? "text"} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} spellCheck={false} onChange={(e) => setContact(f.key, e.target.value)} />
+                <input id={id} type={f.type ?? "text"} value={value} placeholder={t(`script.contact.${f.key}Placeholder`)} spellCheck={false} autoComplete="off" onChange={(e) => setContact(f.key, e.target.value)} />
               )}
             </div>
           );
@@ -853,6 +746,7 @@ function TitlePagePanel({
             id="title-contact-more"
             rows={2}
             value={page.contact}
+            autoComplete="off"
             placeholder={t("script.info.otherLinesPlaceholder")}
             onChange={(e) => set({ contact: e.target.value })}
           />
@@ -915,7 +809,6 @@ async function loadNotes(): Promise<NoteRow[]> {
 function NotesPanel({ editor, shown }: { editor: ScriptEditor | null; shown: { id: string; at: number } | null }) {
   const { session, notify } = useProject();
   const notes = useLive(loadNotes, ["note"]);
-  const [archives, setArchives] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -941,10 +834,7 @@ function NotesPanel({ editor, shown }: { editor: ScriptEditor | null; shown: { i
   const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
   const order = (n: NoteRow) =>
     spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
-  // `resolved` holds « archivée »: the note leaves the list and the text; its passage keeps the mark, unhighlighted.
   const sorted = [...notes].sort((a, b) => order(a) - order(b));
-  const open = sorted.filter((n) => !n.resolved);
-  const archived = sorted.filter((n) => n.resolved);
 
   const add = async () => {
     const range = editor?.selectionRange();
@@ -1007,19 +897,8 @@ function NotesPanel({ editor, shown }: { editor: ScriptEditor | null; shown: { i
             <span className="note-new-hint">{t("script.notes.createHint")}</span>
           </button>
         </li>
-        {open.map(card)}
+        {sorted.map(card)}
       </ul>
-      {/* The archived notes, folded under the others. */}
-      {archived.length > 0 && (
-        <section className="notes-archived">
-          <button type="button" className="notes-archived-toggle" aria-expanded={archives} onClick={() => setArchives(!archives)}>
-            <ChevronRight className="notes-archived-chevron" aria-hidden="true" />
-            {t("script.notes.archived")}
-            <span className="notes-archived-count">{archived.length}</span>
-          </button>
-          {archives && <ul className="notes">{archived.map(card)}</ul>}
-        </section>
-      )}
     </div>
   );
 }
@@ -1047,13 +926,13 @@ function NoteCard({
 }) {
   const { notify, ask } = useProject();
   const Tag = inText ? "div" : "li";
-  const update = (patch: { body?: string; resolved?: number; deleted_at?: string }) =>
+  const update = (patch: { body?: string; deleted_at?: string }) =>
     write("Note", ["note"], [db.updateTable("note").set({ ...patch, updated_at: nowIso() }).where("id", "=", n.id)]).catch((e) =>
       notify({ text: describeError(e), tone: "error" }),
     );
   const quote = t("dash.quote", { quote: span?.text ?? n.quote });
   return (
-    <Tag className={["note", n.resolved && "resolved", flash && "flash"].filter(Boolean).join(" ")} data-note={inText ? undefined : n.id}>
+    <Tag className={["note", flash && "flash"].filter(Boolean).join(" ")} data-note={inText ? undefined : n.id}>
       <div className="note-top">
         {inText ? (
           <p className="note-quote">{quote}</p>
@@ -1073,9 +952,6 @@ function NoteCard({
           label={t("script.notes.actions")}
           items={[
             { label: t("script.notes.edit"), icon: Pencil, onClick: () => onEditing(true) },
-            n.resolved
-              ? { label: t("script.notes.unarchive"), icon: ArchiveRestore, onClick: () => void update({ resolved: 0 }) }
-              : { label: t("script.notes.archive"), icon: Archive, onClick: () => void update({ resolved: 1 }) },
             {
               label: t("script.notes.delete"),
               icon: Trash2,

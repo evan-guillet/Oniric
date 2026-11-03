@@ -1,6 +1,6 @@
 /** The vocabularies of a shot [DEC-02], kept by id in the project; their names are in the catalog (shot.<field>.<id>). */
-export const SHOT_SIZES = ["xcu", "cu", "mcu", "waist", "cowboy", "medium", "wide", "extreme", "insert"] as const;
-export const SHOT_ANGLES = ["eye", "high", "low", "dutch"] as const;
+const SHOT_SIZES = ["xcu", "cu", "mcu", "waist", "cowboy", "medium", "wide", "extreme", "insert"] as const;
+const SHOT_ANGLES = ["eye", "high", "low", "dutch"] as const;
 /** The movements that go one way or another, each with its directions; the family's own id says no direction. */
 export const MOVEMENT_FAMILIES = {
   pan: ["pan", "pan-left", "pan-right", "tilt-up", "tilt-down"],
@@ -27,8 +27,8 @@ export const SHOT_MOVEMENTS = [
   ...MOVEMENT_FAMILIES.crane,
   ...MOVEMENT_FAMILIES.zoom,
 ] as const;
-export const SHOT_SUPPORTS = ["tripod", "dolly", "slider", "gimbal", "shoulder", "crane", "vehicle"] as const;
-export const SHOT_SOUNDS = ["sync", "mos", "playback"] as const;
+const SHOT_SUPPORTS = ["tripod", "dolly", "slider", "gimbal", "shoulder", "crane", "vehicle"] as const;
+const SHOT_SOUNDS = ["sync", "mos", "playback"] as const;
 
 export const SHOT_CHOICES = {
   size: SHOT_SIZES,
@@ -67,7 +67,7 @@ export interface SceneElement {
 }
 
 /** What a shot covers can be set on these elements: everything but the scene heading. */
-export function coverable(elements: SceneElement[]): SceneElement[] {
+function coverable(elements: SceneElement[]): SceneElement[] {
   return elements.filter((e) => e.type !== "scene_heading" && e.text.trim() !== "");
 }
 

@@ -54,35 +54,17 @@ import {
 import { choiceLabel, InlineText, ScenePicker, shotTotals, useSceneChoice } from "./common";
 import { DrawDialog } from "./DrawDialog";
 import { BoardImagePicker, FrameThumb, FrameViewer, ratioName } from "./FrameViewer";
-
-/** The fields of a shot the table can show, in its order [DEC-02, DEC-04]. */
-export const SHOT_COLUMNS = [
-  "frame",
-  "size",
-  "angle",
-  "movement",
-  "support",
-  "lens",
-  "camera",
-  "frameRate",
-  "sound",
-  "characters",
-  "action",
-  "dialogue",
-  "duration",
-  "setup",
-  "lighting",
-  "effects",
-  "notes",
-] as const;
-export type ShotColumn = (typeof SHOT_COLUMNS)[number];
-
-export const HIDDEN_KEY = "oniric.shotlist.hidden";
-export const DEFAULT_HIDDEN: ShotColumn[] = ["support", "camera", "frameRate", "sound", "lighting", "effects"];
-/** The order the shots are listed in, set in the settings with the shown fields. */
-export const ORDER_KEY = "oniric.shotlist.order";
-/** Table or cards, as set in the settings. */
-export const SHAPE_KEY = "oniric.shotlist.shape";
+import {
+  columnLabel,
+  DEFAULT_HIDDEN,
+  HIDDEN_KEY,
+  ORDER_KEY,
+  SHAPE_KEY,
+  SHOT_COLUMNS,
+  type ShotColumn,
+  type ShotOrder,
+  type ShotShape,
+} from "./shotColumns";
 
 const CHOICE_COLUMNS = new Set<string>(Object.keys(SHOT_CHOICES));
 const isChoice = (c: ShotColumn): c is ChoiceField => CHOICE_COLUMNS.has(c);
@@ -116,8 +98,6 @@ const GRIP = 34;
 const NUM = 52;
 const MORE = 36;
 
-export const columnLabel = (c: ShotColumn) => t(`shotlist.columns.${c}`);
-
 /** A column at least as wide as its name, which is never cut nor sent to the line. */
 let measure: CanvasRenderingContext2D | null = null;
 function nameWidth(c: ShotColumn): number {
@@ -131,11 +111,8 @@ const columnWidth = (c: ShotColumn) => {
   return w === undefined ? undefined : Math.max(w, nameWidth(c));
 };
 
-export type ShotShape = "table" | "cards";
-export type ShotOrder = "edit" | "shoot";
-
 /** The shots of a scene in the order of the edit, then as they will be shot: unnumbered ones last, in edit order. */
-export function inShootOrder(shots: Shot[]): Shot[] {
+function inShootOrder(shots: Shot[]): Shot[] {
   return [...shots].sort((a, b) => {
     if (a.shootOrder !== null && b.shootOrder !== null) return a.shootOrder - b.shootOrder;
     if (a.shootOrder !== null) return -1;

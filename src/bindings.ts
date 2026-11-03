@@ -66,7 +66,6 @@ export const commands = {
 
 /** Events */
 export const events = {
-	backupDone: makeEvent<BackupDone>("backup:done"),
 	backupFailed: makeEvent<BackupFailed>("backup:failed"),
 	dbChanged: makeEvent<DbChanged>("db:changed"),
 	projectFlushFailed: makeEvent<ProjectFlushFailed>("project:flush-failed"),
@@ -74,10 +73,6 @@ export const events = {
 };
 
 /* Types */
-export type BackupDone = {
-	entry: Entry,
-};
-
 export type BackupFailed = {
 	message: string,
 };

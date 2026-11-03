@@ -39,7 +39,7 @@ function endWidget(f: ScreenplayFormat, usedRows: number, L: number): HTMLElemen
 }
 
 /** Positions (before the node) of every screenplay element, in document order. */
-export function blockPositions(doc: PMNode): number[] {
+function blockPositions(doc: PMNode): number[] {
   const out: number[] = [];
   doc.forEach((scene, sceneOffset) => scene.forEach((_b, offset) => out.push(sceneOffset + 1 + offset)));
   return out;

@@ -78,7 +78,3 @@ export function MediaImage({ path, alt, className }: { path: string; alt: string
   if (src === "") return <span className={`media-missing ${className ?? ""}`}>{t("media.missing")}</span>;
   return src ? <img src={src} alt={alt} className={className} /> : <span className={`media-loading ${className ?? ""}`} />;
 }
-
-export function clearMediaCache(): void {
-  cache.clear();
-}

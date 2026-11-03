@@ -9,7 +9,7 @@ import { byScene, loadShots, ratioValue, readNumbering, readRatio, type Shot } f
 import { inkOn } from "../domain/palette";
 import { formatMinutes, formatSeconds, shotNumber, toCsv } from "../domain/shots";
 import { choiceLabel, shotTotals } from "./common";
-import { columnLabel, DEFAULT_HIDDEN, HIDDEN_KEY, SHOT_COLUMNS, type ShotColumn } from "./ShotlistView";
+import { columnLabel, DEFAULT_HIDDEN, HIDDEN_KEY, SHOT_COLUMNS, type ShotColumn } from "./shotColumns";
 import { technique } from "./FrameViewer";
 
 type Api = Pick<ProjectApi, "session" | "printPdf" | "project">;

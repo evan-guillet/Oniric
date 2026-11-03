@@ -27,7 +27,6 @@
     "name": "Título de la película",
     "namePlaceholder": "Las horas azules",
     "format": "Formato del guion",
-    "formatHelp": "Se puede cambiar en cualquier momento: el texto no cambia, solo se recalculan las páginas.",
     "location": "Ubicación",
     "browse": "Examinar…",
     "browseTitle": "¿Dónde crear el proyecto?",
@@ -48,8 +47,7 @@
     "restored": "Trabajo restaurado tras un cierre inesperado.",
     "repaired": "El archivo del proyecto estaba dañado: se ha reparado a partir del trabajo conservado en este PC.",
     "keptAside": "Se ha guardado aparte una copia de tu trabajo anterior: {{path}}",
-    "cancel": "Cancelar",
-    "ok": "Entendido"
+    "cancel": "Cancelar"
   },
   "close": {
     "notSavedTitle": "No se puede acceder a la carpeta del proyecto",
@@ -62,11 +60,9 @@
   "workspace": {
     "closeProject": "Cerrar el proyecto",
     "element": "Elemento",
-    "format": "Formato",
     "import": "Importar…",
     "export": "Exportar…",
     "exportPdf": "Exportar en PDF",
-    "exportFountain": "Exportar en Fountain",
     "scenes": "Escenas",
     "noHeading": "(sin encabezado)",
     "scenePage": "p. {{page}}",
@@ -75,9 +71,10 @@
     "importReplace": "Reemplazar",
     "imported": "«{{file}}» importado: {{count}} elementos.",
     "exported": "Archivo guardado en la carpeta del proyecto: {{file}}",
+    "exportedMany_one": "{{count}} archivo guardado en la carpeta «exports» del proyecto",
+    "exportedMany_other": "{{count}} archivos guardados en la carpeta «exports» del proyecto",
     "openFile": "Abrir",
     "showInFolder": "Mostrar en la carpeta",
-    "exporting": "Creando el PDF…",
     "dismiss": "Cerrar el mensaje"
   },
   "status": {
@@ -122,10 +119,8 @@
     "confirm": "Aceptar",
     "close": "Cerrar",
     "delete": "Eliminar",
-    "rename": "Cambiar el nombre",
     "save": "Guardar",
     "add": "Añadir",
-    "more": "Más acciones",
     "addEllipsis": "Añadir…",
     "removeAction": "Quitar"
   },
@@ -296,8 +291,13 @@
     "orientation": "Orientación",
     "landscape": "Horizontal",
     "portrait": "Vertical",
-    "board": "Moodboard",
-    "noBoard": "Ningún moodboard en el proyecto."
+    "noBoard": "Ningún moodboard en el proyecto.",
+    "exportFiles_one": "Exportar {{count}} archivo",
+    "exportFiles_other": "Exportar {{count}} archivos",
+    "picked_one": "{{count}} marcado",
+    "picked_other": "{{count}} marcados",
+    "boards": "Moodboards",
+    "allBoards": "Todos"
   },
   "languages": {
     "fr": "Francés",
@@ -313,19 +313,8 @@
     "closeSettings": "Salir de los ajustes",
     "closeTitle": "Volver (Esc)",
     "profile": {
-      "name": "Nombre",
-      "nameHelp": "Se imprime bajo «Escrito por» y al principio del contacto.",
-      "email": "Correo electrónico",
-      "phone": "Teléfono",
-      "address": "Dirección",
-      "agent": "Agente o representante",
-      "agentHelp": "Se añade al final del contacto."
+      "name": "Nombre"
     },
-    "contactDetails": "Datos de contacto",
-    "onTitlePage": "En la portada",
-    "printedContact": "El contacto tal como se imprime",
-    "nameHere": "Tu nombre se imprimirá aquí.",
-    "contactHere": "El contacto se imprime abajo a la izquierda.",
     "themes": {
       "system": "Sistema",
       "systemHelp": "Sigue el ajuste de Windows",
@@ -396,7 +385,6 @@
       "pdf": "Exportar en PDF",
       "undo": "Deshacer",
       "redo": "Rehacer",
-      "preview": "Salir de la vista previa",
       "link": "Vincular un nombre a su ficha de la Biblia; Intro crea la ficha de un nombre desconocido",
       "openLink": "Abrir la ficha de un nombre vinculado",
       "elements": "Elementos del guion",
@@ -430,11 +418,6 @@
     "source": "Código fuente",
     "copyLink": "Copiar el enlace",
     "pages": {
-      "profile": {
-        "label": "Perfil",
-        "lead": "Tu nombre y tus datos de contacto, que aparecen en la portada de cada guion.",
-        "keywords": "nombre autor correo teléfono dirección agente contacto portada"
-      },
       "appearance": {
         "label": "Apariencia",
         "lead": "El tema y el idioma de toda la aplicación, páginas del guion incluidas.",
@@ -494,7 +477,6 @@
     "mb": "{{n}} MB",
     "kb": "{{n}} KB",
     "writtenBy": "Escrito por",
-    "profileNote": "Cada guion sigue este perfil, salvo los campos cambiados en Guion, pestaña «Información», que solo valen para él. El perfil se queda en este PC.",
     "theme": "Tema",
     "themeNote": "Los PDF exportados siempre quedan en negro sobre blanco.",
     "language": "Idioma",
@@ -673,11 +655,8 @@
     "linksHint": "Los elementos de la Biblia en color, su ficha al pasar el ratón",
     "pin": "Acto y secuencia",
     "pinHint": "La marca a la izquierda del texto, que sigue la escena de arriba del escritorio",
-    "previewTitle": "El guion entero tal como se imprime (Esc para volver)",
-    "preview": "Vista previa",
     "panel": "Panel",
     "info": {
-      "takeBackButton": "Volver al perfil",
       "otherLines": "Otras líneas",
       "otherLinesPlaceholder": "Producción, web, registro…",
       "yourMention": "Tu mención",
@@ -695,8 +674,6 @@
       "basedOn": "Basado en",
       "basedOnPlaceholder": "Basado en la novela de…",
       "contact": "Contacto",
-      "takeBack": "Volver a «{{value}}»",
-      "takeBackEmpty": "Volver al perfil, vacío para este campo",
       "mentions": "Menciones"
     },
     "notes": {
@@ -714,7 +691,6 @@
       "empty": "Nota vacía",
       "create": "Crear una nota",
       "createHint": "En el fragmento seleccionado, o en la línea del cursor",
-      "archived": "Archivadas",
       "note": "Nota",
       "placeholder": "Tu nota…"
     },
@@ -762,7 +738,6 @@
   },
   "sceneList": {
     "unfold": "Desplegar todo",
-    "fold": "Contraer todo",
     "remove": {
       "act": "Eliminar el acto…",
       "seq": "Eliminar la secuencia…",
@@ -778,13 +753,11 @@
     "renameVersion": "Cambiar el nombre de la versión",
     "copyHash": "Copiar la huella",
     "removeFromList": "Quitar de la lista",
-    "cuts": "Escenas cortadas",
     "reinstate": "Recuperar",
     "firstTitle": "Guarda la huella de cada etapa del guion",
     "firstWhen": "Buenos momentos: antes de una gran reescritura, antes de enviar el guion a alguien, al terminar un borrador.",
     "sampleLabel": "Ejemplo de comparación",
     "sampleCaption": "La línea eliminada en rojo, la nueva en verde, las palabras cambiadas resaltadas.",
-    "swap": "Intercambiar las dos versiones",
     "historyHint": "Las versiones congeladas y la actual",
     "panel": "Panel",
     "paneScenes": "Escenas",
@@ -850,8 +823,6 @@
     "linesAdded_other": "{{n}} líneas añadidas",
     "linesRemoved_one": "{{n}} línea quitada",
     "linesRemoved_other": "{{n}} líneas quitadas",
-    "changedCount_one": "{{n}} escena modificada",
-    "changedCount_other": "{{n}} escenas modificadas",
     "sameLines_one": "{{n}} línea idéntica",
     "sameLines_other": "{{n}} líneas idénticas",
     "reviewed": "Revisada",
@@ -860,12 +831,7 @@
     "sceneActions": "Acciones para {{heading}}",
     "tree": "Lista de escenas",
     "removedLine": "Línea eliminada",
-    "compare": "Comparar",
-    "noneYet": "Todavía no hay ninguna versión fijada",
-    "noneYetText": "Fija la versión actual antes de una gran reescritura o de un envío: después verás qué ha cambiado.",
     "cutsEmpty": "No hay escenas cortadas",
-    "moreLines_one": "{{n}} línea más",
-    "moreLines_other": "{{n}} líneas más",
     "cutsHint": "Las escenas eliminadas del guion, para reintegrar"
   },
   "bible": {
@@ -1409,8 +1375,6 @@
     "filterKinds": {
       "character": "Personaje",
       "location": "Lugar",
-      "plotline": "Trama",
-      "tag": "Etiqueta",
       "status": "Estado"
     },
     "alone": "Sola en este lugar",
@@ -2236,7 +2200,7 @@
     "tip3": "Una escena entra lo más tarde posible y sale lo antes posible.",
     "tip4": "Escribe @ o [[ para vincular un personaje, un lugar o un objeto de la Biblia.",
     "openScript": "Abrir el guion",
-    "later": "Esta etapa guiada llega en la versión 2.0.",
+    "later": "Esta etapa guiada llega en la versión 3.0.",
     "openVersions": "Abrir las versiones",
     "status": {
       "empty": "Por hacer",
@@ -2322,22 +2286,13 @@
     }
   },
   "shotlist": {
-    "scenes": "Escenas del guion",
     "chooseScene": "Cambiar de escena",
-    "panel": "Panel",
-    "panels": {
-      "scenes": "Escenas",
-      "text": "Texto",
-      "textHint": "El texto de la escena y los planos que lo cubren",
-      "display": "Visualización"
-    },
     "shape": "Visualización de la planificación",
     "shapes": {
       "table": "Tabla",
       "cards": "Tarjetas"
     },
     "add": "Nuevo plano",
-    "addFirst": "Añadir el primer plano",
     "emptyTitle": "La planificación parte del guion",
     "emptyText": "Escriba al menos una escena: cada escena recibe aquí sus planos, y cada plano su viñeta del storyboard.",
     "toScript": "Ir al Guion",
@@ -2347,10 +2302,6 @@
     "shots_other": "{{count}} planos",
     "onScreen": "{{time}} en pantalla",
     "toShoot": "{{time}} de rodaje",
-    "uncovered_one": "{{count}} pasaje sin cubrir",
-    "uncovered_other": "{{count}} pasajes sin cubrir",
-    "allCovered": "Todo el texto está cubierto",
-    "openBoard": "Abrir el moodboard",
     "order": "Orden de los planos",
     "orders": {
       "edit": "Montaje",
@@ -2358,8 +2309,6 @@
       "shoot": "Rodaje",
       "shootHint": "En el orden en que se rodarán; arrástrelos para cambiarlo"
     },
-    "noShot": "Ningún plano para esta escena.",
-    "noShotHint": "Divídala en planos: tamaño, movimiento, óptica, duración. Cada plano tiene también su viñeta en el Storyboard.",
     "noShotShort": "Ningún plano",
     "search": "Buscar un plano, una escena…",
     "searchLabel": "Buscar en el desglose",
@@ -2404,10 +2353,6 @@
     "shotMenu": "Acciones del plano {{n}}",
     "shootN": "Orden {{n}}",
     "noCharacter": "Ningún personaje en esta escena.",
-    "coverFor": "Pasajes cubiertos por el plano",
-    "coverHint": "Elija un plano en la lista y luego haga clic en los pasajes que cubre.",
-    "noText": "Esta escena aún no tiene texto.",
-    "notCovered": "Sin cubrir",
     "numbering": "Numeración",
     "numberings": {
       "dash": "12-1, 12-2…",
@@ -2419,9 +2364,6 @@
     "exportEmpty": "Ningún plano en la planificación."
   },
   "storyboard": {
-    "panel": "Panel",
-    "emptyTitle": "El storyboard parte del guion",
-    "toShotlist": "Abrir la planificación",
     "frameOf": "Viñeta del plano {{n}}",
     "import": "Importar una imagen",
     "fromBoard": "Tomar una imagen de un moodboard",
@@ -2431,14 +2373,6 @@
     "drawOver": "Dibujar encima",
     "changeImage": "Cambiar la imagen",
     "drawIt": "Dibujar",
-    "captionPlaceholder": "Lo que muestra la viñeta",
-    "dialoguePlaceholder": "Diálogo",
-    "notesPlaceholder": "Notas",
-    "addFirst": "Primera viñeta",
-    "addHint": "Cada viñeta es un plano de la planificación: añadirla aquí la añade también allí.",
-    "noFrame": "Ninguna viñeta",
-    "framesDone_one": "{{count}} viñeta, {{done}} ilustrada",
-    "framesDone_other": "{{count}} viñetas, {{done}} ilustradas",
     "ratio": "Formato del encuadre",
     "ratios": {
       "1_85": "1,85:1",
@@ -2453,20 +2387,6 @@
       "16_9": "Televisión y plataformas",
       "4_3": "El antiguo formato de la televisión",
       "9_16": "Vertical, para los teléfonos"
-    },
-    "perRow": "Viñetas por fila",
-    "perRowN_one": "{{count}} viñeta",
-    "perRowN_other": "{{count}} viñetas",
-    "underFrame": "Bajo cada viñeta",
-    "shown": {
-      "technique": "Tamaño, ángulo y movimiento",
-      "techniqueHint": "Tomados de la planificación",
-      "action": "Descripción",
-      "actionHint": "Lo que muestra el plano",
-      "dialogue": "Diálogo",
-      "dialogueHint": "Las réplicas que cubre el plano",
-      "notes": "Notas",
-      "notesHint": "Las notas propias de la viñeta"
     },
     "noBoardImage": "Ninguna imagen en los moodboards del proyecto.",
     "frameRatio": "Encuadre {{ratio}}",
@@ -2524,7 +2444,6 @@
       "color": "Colores",
       "other": "Otro"
     },
-    "panel": "Panel",
     "panels": {
       "boards": "Moodboards",
       "palette": "Paleta",

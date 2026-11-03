@@ -1,4 +1,4 @@
-import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Trash2 } from "lucide-react";
+import { ChevronRight, Trash2 } from "lucide-react";
 import { memo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ContextMenu } from "../../../../ui-kit/MoreMenu";
@@ -39,7 +39,8 @@ function savedFolds(key: string): Set<string> {
 
 /**
  * The scenes of the screenplay, under their acts and sequences when the story has some.
- * Acts and sequences fold, one by one or all at once; the folds are remembered per project on this computer.
+ * Acts and sequences fold like an accordion: opening one folds all the others but its act, so an act opens with its
+ * sequences folded. The folds are remembered per project on this computer.
  * A right click on an act, a sequence or a scene offers to delete it; `onRemove` asks before doing so. Without it,
  * there is no menu. `meta` replaces the page and length under each heading.
  */
@@ -81,14 +82,13 @@ export const SceneList = memo(function SceneList({
       // Not remembered: the fold still applies until the project is closed.
     }
   };
-  const toggle = (id: string) => {
-    const next = new Set(folded);
-    if (!next.delete(id)) next.add(id);
-    setFolded(next);
+  const parts = groups.flatMap((g) => [...(g.act ? [g.act.id] : []), ...g.sequences.flatMap((q) => (q.sequence ? [q.sequence.id] : []))]);
+  /** Folds an open part; opens a folded one with `path`, its act and itself, and folds all the rest. */
+  const toggle = (id: string, path: string[]) => {
+    if (folded.has(id)) setFolded(new Set(parts.filter((p) => !path.includes(p))));
+    else setFolded(new Set(folded).add(id));
   };
-  const partIds = groups.flatMap((g) => [g.act?.id, ...g.sequences.map((q) => q.sequence?.id)].filter((id): id is string => !!id));
-  const allFolded = partIds.every((id) => folded.has(id));
-  const noneFolded = partIds.every((id) => !folded.has(id));
+  const flat = groups.every((g) => !g.act && g.sequences.every((q) => !q.sequence));
 
   const scene = (i: number) => {
     const s = scenes[i];
@@ -111,7 +111,7 @@ export const SceneList = memo(function SceneList({
     );
   };
 
-  const part = (kind: "act" | "seq", p: PartLabel, indexes: number[], children: ReactNode) => {
+  const part = (kind: "act" | "seq", p: PartLabel, indexes: number[], children: ReactNode, path: string[]) => {
     const open = !folded.has(p.id);
     const here = indexes.includes(current);
     const first = indexes.length ? indexes[0] + 1 : null;
@@ -121,7 +121,7 @@ export const SceneList = memo(function SceneList({
           type="button"
           className="outline-head"
           aria-expanded={open}
-          onClick={() => toggle(p.id)}
+          onClick={() => toggle(p.id, path)}
           onContextMenu={(e) => openMenu(e, { kind, part: p }, p.id)}
           title={first ? plural("sceneList.partTitle", indexes.length, { first }) : t("sceneList.none")}
         >
@@ -135,41 +135,29 @@ export const SceneList = memo(function SceneList({
     );
   };
 
-  const flat = partIds.length === 0;
   const sequences = (g: ListGroup) =>
-    g.sequences.flatMap((s) => (s.sequence ? [part("seq", s.sequence, s.scenes, s.scenes.map(scene))] : s.scenes.map(scene)));
+    g.sequences.flatMap((s) =>
+      s.sequence ? [part("seq", s.sequence, s.scenes, s.scenes.map(scene), [...(g.act ? [g.act.id] : []), s.sequence.id])] : s.scenes.map(scene),
+    );
 
   return (
     <nav className="scene-list" aria-label={t("workspace.scenes")}>
-      {!flat && (
-        <div className="scene-list-tools">
-          <span className="scene-list-count">
-            {plural("sceneList.count", scenes.length)}
-          </span>
-          <button
-            type="button"
-            title={t("sceneList.unfold")}
-            aria-label={t("sceneList.unfold")}
-            disabled={noneFolded}
-            onClick={() => setFolded(new Set())}
-          >
-            <ChevronsUpDown aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title={t("sceneList.fold")}
-            aria-label={t("sceneList.fold")}
-            disabled={allFolded}
-            onClick={() => setFolded(new Set(partIds))}
-          >
-            <ChevronsDownUp aria-hidden="true" />
-          </button>
-        </div>
-      )}
       <ol className={flat ? undefined : "outlined"}>
         {flat
           ? scenes.map((_s, i) => scene(i))
-          : groups.flatMap((g) => (g.act ? [part("act", g.act, g.sequences.flatMap((s) => s.scenes), sequences(g))] : sequences(g)))}
+          : groups.flatMap((g) =>
+              g.act
+                ? [
+                    part(
+                      "act",
+                      g.act,
+                      g.sequences.flatMap((s) => s.scenes),
+                      sequences(g),
+                      [g.act.id],
+                    ),
+                  ]
+                : sequences(g),
+            )}
       </ol>
       {menu && onRemove && (
         <ContextMenu

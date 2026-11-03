@@ -39,57 +39,6 @@ export function Labeled({ label, help, children, wide }: { label: string; help?:
   );
 }
 
-export function TextInput({
-  value,
-  onSave,
-  label,
-  help,
-  placeholder,
-  wide,
-}: {
-  value: string;
-  onSave: (v: string) => void;
-  label: string;
-  help?: string;
-  placeholder?: string;
-  wide?: boolean;
-}) {
-  const [v, set, flush] = useDebounced(value, onSave);
-  return (
-    <Labeled label={label} help={help} wide={wide}>
-      <input value={v} placeholder={placeholder} onChange={(e) => set(e.target.value)} onBlur={flush} />
-    </Labeled>
-  );
-}
-
-export function TextArea({
-  value,
-  onSave,
-  label,
-  help,
-  placeholder,
-  rows = 3,
-  wide = true,
-  extra,
-}: {
-  value: string;
-  onSave: (v: string) => void;
-  label: string;
-  help?: string;
-  placeholder?: string;
-  rows?: number;
-  wide?: boolean;
-  extra?: ReactNode;
-}) {
-  const [v, set, flush] = useDebounced(value, onSave);
-  return (
-    <Labeled label={label} help={help} wide={wide}>
-      <textarea value={v} placeholder={placeholder} rows={rows} onChange={(e) => set(e.target.value)} onBlur={flush} />
-      {extra}
-    </Labeled>
-  );
-}
-
 export function TagInput({
   value,
   onChange,

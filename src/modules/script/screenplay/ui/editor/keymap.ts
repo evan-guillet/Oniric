@@ -142,7 +142,7 @@ export const sceneNormalizer = new Plugin({
   },
 });
 
-export function normalizeScenes(state: EditorState): Transaction | null {
+function normalizeScenes(state: EditorState): Transaction | null {
   const tr = state.tr;
   const splits: number[] = [];
   state.doc.forEach((scene, sceneOffset) => {

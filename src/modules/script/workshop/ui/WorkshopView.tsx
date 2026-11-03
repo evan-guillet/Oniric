@@ -96,7 +96,7 @@ export function WorkshopView() {
           <StepList steps={ready} step={step} status={status} onPick={setStep} />
           {later.length > 0 && (
             <>
-              <p className="steps-group">{t("app.version", { version: "2.0" })}</p>
+              <p className="steps-group">{t("app.version", { version: "3.0" })}</p>
               <StepList steps={later} step={step} status={status} onPick={setStep} />
             </>
           )}

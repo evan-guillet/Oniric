@@ -1293,30 +1293,6 @@ input.switch:disabled {
   font-size: 12.5px;
 }
 
-/* The profile as the title page prints it: the author in the middle, the contact at the bottom left */
-.profile-sheet {
-  display: grid;
-  gap: 28px;
-  margin: 16px auto 12px;
-  width: min(100% - 32px, 420px);
-  padding: 28px 32px 24px;
-  border-radius: 3px;
-  background: var(--paper);
-  color: var(--paper-ink);
-  box-shadow: var(--sheet-shadow);
-  font-family: "Courier Prime", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.35;
-}
-.profile-sheet-by {
-  text-align: center;
-}
-.profile-sheet-contact {
-  white-space: pre-line;
-}
-.profile-sheet .muted {
-  font-family: var(--ui-font);
-}
 .set-card > .set-note {
   padding: 0 16px 14px;
   text-align: center;
@@ -1735,25 +1711,6 @@ input.switch:disabled {
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.project-menu-text {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-.project-menu button.detailed {
-  height: auto;
-  min-height: 30px;
-  padding-block: 6px;
-}
-.project-menu-dir {
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  user-select: text;
-}
 .project-menu button {
   display: flex;
   align-items: center;
@@ -1888,8 +1845,7 @@ input.switch:disabled {
 .nav-link.later {
   color: var(--muted);
 }
-.nav-later,
-.nav-value {
+.nav-later {
   flex: none;
   font-size: 11px;
   color: var(--muted);
@@ -2032,7 +1988,6 @@ input.switch:disabled {
 .shell-nav.rail .shell-brand-title,
 .shell-nav.rail .shell-brand-chevron,
 .shell-nav.rail .nav-later,
-.shell-nav.rail .nav-value,
 .shell-nav.rail .nav-keys {
   display: none;
 }
@@ -2284,18 +2239,6 @@ input.switch:disabled {
   background: var(--danger-dot);
   box-shadow: 0 0 0 3px var(--danger-soft);
 }
-/* Toolbars */
-.view-toolbar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 46px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-}
 /* View controls carried in the page header. */
 .header-tools {
   display: flex;
@@ -2329,24 +2272,14 @@ input.switch:disabled {
   border-radius: 11px;
   font-size: 13px;
 }
-.view-toolbar,
-.tools label,
-.view-toolbar label {
+.tools label {
   color: var(--muted);
   font-size: 12px;
 }
-.view-toolbar label,
 .tools label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-.view-toolbar .select {
-  height: 30px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  color: var(--ink);
-  font-weight: 500;
 }
 .tools {
   display: flex;
@@ -2366,37 +2299,6 @@ input.switch:disabled {
   overflow: hidden;
   clip-path: inset(50%);
 }
-.btn-group {
-  display: inline-flex;
-  align-items: center;
-}
-.btn-group-label {
-  margin-right: 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.btn-group .btn {
-  border-radius: 0;
-  margin-left: -1px;
-}
-.btn-group .btn:nth-child(2) {
-  margin-left: 0;
-  border-radius: var(--radius) 0 0 var(--radius);
-}
-.btn-group .btn:last-child {
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-.btn-group .btn:hover:not(:disabled),
-.btn-group .btn:focus-visible {
-  position: relative;
-  z-index: 1;
-}
-.bar-sep {
-  width: 1px;
-  height: 18px;
-  margin: 0 4px;
-  background: var(--line);
-}
 
 /* Screenplay */
 .workspace {
@@ -2407,19 +2309,23 @@ input.switch:disabled {
   grid-template-areas: "desk side";
   min-height: 0;
 }
-/* The preview takes the whole width: no panel beside the printed pages */
-.workspace.previewing {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "desk";
-}
 .desk {
   grid-area: desk;
 }
+/* The tabs at the head of the panel stay; what they show scrolls under them. */
 .sidebar {
   grid-area: side;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border-left: 1px solid var(--line);
   background: var(--panel);
+}
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .scene-list ol {
   list-style: none;
@@ -2481,62 +2387,23 @@ input.switch:disabled {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-/* Above an outlined list: the scene count, unfold all, fold all. The list scrolls under it on its own, so the
-   scrollbar starts below the band; the act heads stick to the top of the list. */
-.sidebar:has(> .scene-list .scene-list-tools) {
+/* In the panel, the list scrolls on its own, so that the act heads stick to its top. */
+.sidebar-body:has(> .scene-list) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.scene-list:has(.scene-list-tools) {
+.sidebar-body > .scene-list {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
 }
-.scene-list:has(.scene-list-tools) > ol {
+.sidebar-body > .scene-list > ol {
   flex: 1;
   min-height: 0;
   align-content: start;
   overflow-y: auto;
-}
-.scene-list-tools {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 36px;
-  padding: 0 8px 0 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-}
-.scene-list-count {
-  margin-right: auto;
-  color: var(--muted);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-.scene-list .scene-list-tools button {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  color: var(--muted);
-}
-.scene-list .scene-list-tools button:hover:not(:disabled) {
-  background: var(--control-hover);
-  color: var(--ink);
-}
-.scene-list .scene-list-tools button:disabled {
-  color: var(--hint);
-  opacity: 0.55;
-  cursor: default;
-  background: none;
-}
-.scene-list-tools svg {
-  width: 15px;
-  height: 15px;
 }
 /* Acts and sequences around the scenes: folding heads, each open part set in under its head */
 .scene-list .outlined,
@@ -2783,8 +2650,7 @@ h4 {
   padding: 18px 20px;
   margin-bottom: 16px;
 }
-.panel > h2,
-.panel-head h2 {
+.panel > h2 {
   font-size: 14px;
 }
 .panel > h2 {
@@ -2793,15 +2659,7 @@ h4 {
 .panel > p {
   margin: 4px 0 12px;
 }
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-.panel-actions,
-.form-actions {
+.panel-actions {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -2867,7 +2725,6 @@ h4 {
 
 /* Lists */
 .version-list,
-.cut-list,
 .ref-list,
 .check-list,
 .elsewhere,
@@ -2877,7 +2734,6 @@ h4 {
   padding: 0;
 }
 .version-list li,
-.cut-list li,
 .elsewhere li,
 .idea-list li {
   display: flex;
@@ -2888,13 +2744,11 @@ h4 {
   border-bottom: 1px solid var(--line);
 }
 .version-list li:last-child,
-.cut-list li:last-child,
 .elsewhere li:last-child,
 .idea-list li:last-child {
   border-bottom: none;
 }
 .version-list li > span:first-child,
-.cut-list li > span:first-child,
 .elsewhere li > span:first-child {
   flex: 1;
   min-width: 0;
@@ -4094,16 +3948,6 @@ h4 {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
-}
-
-/* Bible */
-.side-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.side-head .btn {
-  flex: 1;
 }
 /* A search field with its magnifier inside, at the head of the list it filters */
 .search-box {
@@ -6264,7 +6108,6 @@ button.vr-stop-body:focus-visible {
   text-transform: uppercase;
 }
 
-
 .vr-linestat {
   display: inline-flex;
   align-items: center;
@@ -6848,61 +6691,6 @@ button.vr-stop-body:focus-visible {
   flex-direction: column;
   gap: 10px;
 }
-/* The archived notes, folded under the open ones behind a quiet row */
-.notes-archived {
-  display: grid;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.notes-archived-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: left;
-  cursor: pointer;
-}
-.notes-archived-toggle:hover {
-  background: var(--control-hover);
-  color: var(--ink);
-}
-.notes-archived-toggle:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.notes-archived-chevron {
-  width: 14px;
-  height: 14px;
-  transition: transform 140ms ease-out;
-}
-.notes-archived-toggle[aria-expanded="true"] .notes-archived-chevron {
-  transform: rotate(90deg);
-}
-.notes-archived-count {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--sunken);
-  font-size: 11.5px;
-  color: var(--ink-2);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-@media (prefers-reduced-motion: reduce) {
-  .notes-archived-chevron {
-    transition: none;
-  }
-}
 /* « Créer une note »: a card of the list's shape, its outline dashed until it is written */
 .note-new {
   display: grid;
@@ -6964,10 +6752,6 @@ button.vr-stop-body:focus-visible {
   border: 1px solid var(--warning-line);
   background: var(--warning-soft);
 }
-.note.resolved {
-  border-color: var(--ok-line);
-  background: var(--ok-soft);
-}
 /* The note a Ctrl+click on its passage asked for: a ring that fades */
 .note.flash {
   animation: note-flash 1400ms ease-out;
@@ -7017,9 +6801,6 @@ button.vr-stop-body:focus-visible {
   font-size: 12px;
   color: var(--warning);
   cursor: pointer;
-}
-.note.resolved .note-quote {
-  color: var(--ok);
 }
 .note-quote:hover:not(:disabled) {
   color: var(--ink);
@@ -7217,14 +6998,6 @@ button.vr-stop-body:focus-visible {
 }
 .check-list .more-item {
   max-width: none;
-}
-.check-list-title {
-  margin: 8px 18px 0;
-  color: var(--hint);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .check-menu {
   min-width: 260px;
@@ -7525,8 +7298,7 @@ button.vr-stop-body:focus-visible {
 }
 /* The act and sequence of the scene at the top, pinned to the left of the text, and under them the length of the
    whole screenplay */
-.desk.sheetless,
-.desk.desk-print {
+.desk.sheetless {
   container: desk / inline-size;
 }
 .story-pin-rail {
@@ -7828,6 +7600,11 @@ button.vr-stop-body:focus-visible {
 .export-kind-label {
   font-weight: 600;
 }
+/* A checked kind with settings: they hang under its card, as part of it. */
+.export-kind-block {
+  display: grid;
+  gap: 6px;
+}
 
 /* Import / export of the whole project: the parts on the left, their file kinds on the right. */
 .dialog.transfer-dialog {
@@ -7893,6 +7670,11 @@ button.vr-stop-body:focus-visible {
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
+.transfer-count.picked {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
 .transfer-main {
   display: grid;
   align-content: start;
@@ -7906,6 +7688,43 @@ button.vr-stop-body:focus-visible {
 }
 .transfer-where {
   margin: 0;
+}
+.transfer-boards {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.transfer-boards-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.transfer-boards-head .choice {
+  font-weight: 400;
+}
+/* The boards, two columns while the names fit; a long list scrolls in its box. */
+.transfer-board-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 16px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.transfer-board-list .choice span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pg-break,
@@ -7963,36 +7782,6 @@ button.vr-stop-body:focus-visible {
   position: absolute;
   white-space: pre;
 }
-/* The pages as they print, on the desk: white paper and black ink in both themes, slightly rounded, with air
-   between them. They rise into place when the preview opens. */
-.desk-print {
-  padding-top: 40px;
-}
-.desk-print .print-pages {
-  animation: pages-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes pages-in {
-  from {
-    transform: translateY(10px);
-    opacity: 0;
-  }
-}
-.desk-print .print-page {
-  margin: 0 auto 36px;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #111111;
-  box-shadow: var(--print-shadow);
-}
-.desk-print .print-page ::selection {
-  background: #d8e0fd;
-}
-.print-caption {
-  margin: -12px auto 14px;
-  text-align: center;
-  color: var(--muted);
-  font: 400 12px/1.4 var(--ui-font);
-}
 .side-form {
   padding: 14px 16px 24px;
   gap: 12px;
@@ -8047,17 +7836,6 @@ button.vr-stop-body:focus-visible {
   font-size: 12px;
   font-weight: 500;
   color: var(--muted);
-}
-.btn.small.text.contact-reset {
-  height: 20px;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.btn.small.text.contact-reset svg {
-  width: 13px;
-  height: 13px;
-  color: inherit;
 }
 
 @media (max-width: 1180px) {
@@ -8689,8 +8467,7 @@ button[aria-expanded="true"] .stats-chevron {
 .head-add:active,
 .head-fold:active,
 .more-btn:active,
-.canvas-tools button:active:not(:disabled),
-.scene-list .scene-list-tools button:active:not(:disabled) {
+.canvas-tools button:active:not(:disabled) {
   background: var(--control-press);
 }
 
@@ -9175,10 +8952,16 @@ button[aria-expanded="true"] .stats-chevron {
   display: flex;
   width: 100%;
 }
+/* Each tab as wide as its label, the room left shared out, so that a long label (« Informations ») is never cut. */
 .side-tabs .seg {
-  flex: 1;
+  flex: 1 1 auto;
   justify-content: center;
   min-width: 0;
+  padding: 0 8px;
+}
+.side-tabs .seg span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rz-main {
   overflow: auto;
@@ -9223,24 +9006,6 @@ button[aria-expanded="true"] .stats-chevron {
   border-color: var(--accent);
   background: radial-gradient(circle, var(--accent-ink) 0 3px, var(--accent) 3.5px);
 }
-
-/* The scene a view works on, above its shots or frames. */
-.rz-scene-head {
-  display: grid;
-  gap: 6px;
-}
-.rz-scene-title {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-.rz-scene-num {
-  flex: none;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
 .rz-slug {
   margin: 0;
   font-size: 13px;
@@ -9250,18 +9015,6 @@ button[aria-expanded="true"] .stats-chevron {
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.rz-scene-facts {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 32px;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-.rz-scene-facts .badge {
-  margin: 0;
-}
 button.badge {
   font: inherit;
   font-size: 11.5px;
@@ -9270,16 +9023,6 @@ button.badge {
 }
 button.badge.warn:hover {
   border-color: var(--warning-dot);
-}
-.chip.rz-board-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.chip.rz-board-chip svg {
-  width: 13px;
-  height: 13px;
-  color: var(--muted);
 }
 /* The tree of acts, sequences and scenes of the Découpage and the Storyboard: its tools stay on top, the list scrolls. */
 .scene-tree {

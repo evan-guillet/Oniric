@@ -14,7 +14,7 @@ import type { ElementType } from "../../script/screenplay/domain/formats";
 import { characterName } from "../../script/screenplay/ui/editor/schema";
 import { readJournal } from "../../script/stats/application/journal";
 import { characterStats, dayKey, periodDays, placeStats, totalWords, wordCounts, type Journal, type StatScene } from "../../script/stats/domain/stats";
-import { Progress, Tile } from "../../script/stats/ui/StatsView";
+import { Progress, Tile } from "../../script/stats/ui/StatsParts";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline, type Story } from "../../script/views/application/story";
 import { numberedTitles, sceneLabel } from "../../script/views/domain/outline";
 import { useFields } from "../../script/workshop/application/workshop";

@@ -1,6 +1,5 @@
 import { Minus, Plus } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { useLive } from "../../../../core/db/live";
 import { useProject } from "../../../project/ui/projectContext";
 import { prettyName } from "../../bible/domain/appearances";

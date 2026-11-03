@@ -27,7 +27,6 @@
     "name": "Titre du film",
     "namePlaceholder": "Les Heures Bleues",
     "format": "Format du scénario",
-    "formatHelp": "Modifiable à tout moment : le texte ne change pas, seules les pages sont recalculées.",
     "location": "Emplacement",
     "browse": "Parcourir…",
     "browseTitle": "Où créer le projet ?",
@@ -48,8 +47,7 @@
     "restored": "Travail restauré après une fermeture inattendue.",
     "repaired": "Le fichier du projet était endommagé : il a été réparé à partir du travail conservé sur ce PC.",
     "keptAside": "Une copie de votre travail précédent a été mise de côté : {{path}}",
-    "cancel": "Annuler",
-    "ok": "Compris"
+    "cancel": "Annuler"
   },
   "close": {
     "notSavedTitle": "Le dossier du projet est inaccessible",
@@ -62,11 +60,9 @@
   "workspace": {
     "closeProject": "Fermer le projet",
     "element": "Élément",
-    "format": "Format",
     "import": "Importer…",
     "export": "Exporter…",
     "exportPdf": "Exporter en PDF",
-    "exportFountain": "Exporter en Fountain",
     "scenes": "Scènes",
     "noHeading": "(sans en-tête)",
     "scenePage": "p. {{page}}",
@@ -75,9 +71,10 @@
     "importReplace": "Remplacer",
     "imported": "« {{file}} » importé : {{count}} éléments.",
     "exported": "Fichier enregistré dans le dossier du projet : {{file}}",
+    "exportedMany_one": "{{count}} fichier enregistré dans le dossier « exports » du projet",
+    "exportedMany_other": "{{count}} fichiers enregistrés dans le dossier « exports » du projet",
     "openFile": "Ouvrir",
     "showInFolder": "Afficher dans le dossier",
-    "exporting": "Création du PDF…",
     "dismiss": "Fermer le message"
   },
   "status": {
@@ -122,10 +119,8 @@
     "confirm": "Valider",
     "close": "Fermer",
     "delete": "Supprimer",
-    "rename": "Renommer",
     "save": "Enregistrer",
     "add": "Ajouter",
-    "more": "Plus d'actions",
     "addEllipsis": "Ajouter…",
     "removeAction": "Retirer"
   },
@@ -296,8 +291,13 @@
     "orientation": "Orientation",
     "landscape": "Paysage",
     "portrait": "Portrait",
-    "board": "Moodboard",
-    "noBoard": "Aucun moodboard dans le projet."
+    "noBoard": "Aucun moodboard dans le projet.",
+    "exportFiles_one": "Exporter {{count}} fichier",
+    "exportFiles_other": "Exporter {{count}} fichiers",
+    "picked_one": "{{count}} coché",
+    "picked_other": "{{count}} cochés",
+    "boards": "Moodboards",
+    "allBoards": "Tous"
   },
   "settings": {
     "pagesNav": "Pages des réglages",
@@ -307,19 +307,8 @@
     "closeSettings": "Quitter les réglages",
     "closeTitle": "Retour (Échap)",
     "profile": {
-      "name": "Nom",
-      "nameHelp": "Imprimé sous « Écrit par » et en tête du contact.",
-      "email": "E-mail",
-      "phone": "Téléphone",
-      "address": "Adresse",
-      "agent": "Agent ou représentant",
-      "agentHelp": "Ajouté à la fin du contact."
+      "name": "Nom"
     },
-    "contactDetails": "Coordonnées",
-    "onTitlePage": "Sur la page de titre",
-    "printedContact": "Le contact tel qu'il s'imprime",
-    "nameHere": "Votre nom s'imprimera ici.",
-    "contactHere": "Le contact s'imprime en bas à gauche.",
     "themes": {
       "system": "Système",
       "systemHelp": "Suit le réglage de Windows",
@@ -390,7 +379,6 @@
       "pdf": "Exporter en PDF",
       "undo": "Annuler",
       "redo": "Rétablir",
-      "preview": "Quitter l'aperçu",
       "link": "Lier un nom à sa fiche de la Bible ; Entrée crée la fiche d'un nom inconnu",
       "openLink": "Ouvrir la fiche d'un nom lié",
       "elements": "Éléments du scénario",
@@ -424,11 +412,6 @@
     "source": "Code source",
     "copyLink": "Copier le lien",
     "pages": {
-      "profile": {
-        "label": "Profil",
-        "lead": "Votre nom et vos coordonnées, repris sur la page de titre de chaque script.",
-        "keywords": "nom auteur e-mail téléphone adresse agent contact page de titre"
-      },
       "appearance": {
         "label": "Apparence",
         "lead": "Le thème et la langue de toute l'application, pages du scénario comprises.",
@@ -488,7 +471,6 @@
     "mb": "{{n}} Mo",
     "kb": "{{n}} Ko",
     "writtenBy": "Écrit par",
-    "profileNote": "Chaque script suit ce profil, sauf les champs changés dans Scénario, onglet « Informations », qui ne valent que pour lui. Le profil reste sur ce PC.",
     "theme": "Thème",
     "themeNote": "Les PDF exportés restent toujours en noir sur blanc.",
     "language": "Langue",
@@ -673,11 +655,8 @@
     "linksHint": "Les éléments de la Bible en couleur, leur fiche au survol",
     "pin": "Acte et séquence",
     "pinHint": "Le repère à gauche du texte, qui suit la scène en haut du bureau",
-    "previewTitle": "Le script entier tel qu'il s'imprime (Échap pour revenir)",
-    "preview": "Aperçu",
     "panel": "Panneau",
     "info": {
-      "takeBackButton": "Reprendre le profil",
       "otherLines": "Autres lignes",
       "otherLinesPlaceholder": "Production, site, dépôt…",
       "yourMention": "Votre mention",
@@ -695,8 +674,6 @@
       "basedOn": "D'après",
       "basedOnPlaceholder": "D'après le roman de…",
       "contact": "Contact",
-      "takeBack": "Reprendre « {{value}} »",
-      "takeBackEmpty": "Reprendre le profil, vide pour ce champ",
       "mentions": "Mentions"
     },
     "notes": {
@@ -714,7 +691,6 @@
       "empty": "Note vide",
       "create": "Créer une note",
       "createHint": "Sur le passage sélectionné, ou la ligne du curseur",
-      "archived": "Archivées",
       "note": "Note",
       "placeholder": "Votre note…"
     },
@@ -762,7 +738,6 @@
   },
   "sceneList": {
     "unfold": "Tout déplier",
-    "fold": "Tout plier",
     "remove": {
       "act": "Supprimer l'acte…",
       "seq": "Supprimer la séquence…",
@@ -778,13 +753,11 @@
     "renameVersion": "Renommer la version",
     "copyHash": "Copier l'empreinte",
     "removeFromList": "Retirer de la liste",
-    "cuts": "Scènes coupées",
     "reinstate": "Réintégrer",
     "firstTitle": "Gardez une trace de chaque étape du scénario",
     "firstWhen": "Les bons moments : avant une grande réécriture, avant d'envoyer le scénario à quelqu'un, à la fin d'un jet.",
     "sampleLabel": "Exemple de comparaison",
     "sampleCaption": "La ligne retirée en rouge, la nouvelle en vert, les mots changés surlignés.",
-    "swap": "Inverser les deux versions",
     "historyHint": "Les versions figées, et la version actuelle",
     "panel": "Panneau",
     "paneScenes": "Scènes",
@@ -850,8 +823,6 @@
     "linesAdded_other": "{{n}} lignes ajoutées",
     "linesRemoved_one": "{{n}} ligne retirée",
     "linesRemoved_other": "{{n}} lignes retirées",
-    "changedCount_one": "{{n}} scène modifiée",
-    "changedCount_other": "{{n}} scènes modifiées",
     "sameLines_one": "{{n}} ligne identique",
     "sameLines_other": "{{n}} lignes identiques",
     "reviewed": "Relue",
@@ -860,12 +831,7 @@
     "sceneActions": "Actions pour {{heading}}",
     "tree": "Liste des scènes",
     "removedLine": "Ligne retirée",
-    "compare": "Comparer",
-    "noneYet": "Aucune version figée pour l'instant",
-    "noneYetText": "Figez la version actuelle avant une grande réécriture ou un envoi : vous verrez ensuite ce qui a changé depuis.",
     "cutsEmpty": "Aucune scène coupée",
-    "moreLines_one": "{{n}} ligne de plus",
-    "moreLines_other": "{{n}} lignes de plus",
     "cutsHint": "Les scènes supprimées du scénario, à réintégrer"
   },
   "bible": {
@@ -1409,8 +1375,6 @@
     "filterKinds": {
       "character": "Personnage",
       "location": "Lieu",
-      "plotline": "Intrigue",
-      "tag": "Étiquette",
       "status": "Statut"
     },
     "alone": "Seule à cet endroit",
@@ -2236,7 +2200,7 @@
     "tip3": "Une scène entre le plus tard possible et sort le plus tôt possible.",
     "tip4": "Tapez @ ou [[ pour relier un personnage, un lieu ou un objet de la Bible.",
     "openScript": "Ouvrir le scénario",
-    "later": "Cette étape guidée arrive dans la version 2.0.",
+    "later": "Cette étape guidée arrive dans la version 3.0.",
     "openVersions": "Ouvrir les versions",
     "status": {
       "empty": "À faire",
@@ -2322,22 +2286,13 @@
     }
   },
   "shotlist": {
-    "scenes": "Scènes du scénario",
     "chooseScene": "Changer de scène",
-    "panel": "Panneau",
-    "panels": {
-      "scenes": "Scènes",
-      "text": "Texte",
-      "textHint": "Le texte de la scène et les plans qui le couvrent",
-      "display": "Affichage"
-    },
     "shape": "Affichage du découpage",
     "shapes": {
       "table": "Tableau",
       "cards": "Cartes"
     },
     "add": "Nouveau plan",
-    "addFirst": "Ajouter le premier plan",
     "emptyTitle": "Le découpage part du scénario",
     "emptyText": "Écrivez au moins une scène : chaque scène reçoit ici ses plans, et chaque plan sa case du storyboard.",
     "toScript": "Aller au Scénario",
@@ -2347,10 +2302,6 @@
     "shots_other": "{{count}} plans",
     "onScreen": "{{time}} à l'écran",
     "toShoot": "{{time}} de tournage",
-    "uncovered_one": "{{count}} passage non couvert",
-    "uncovered_other": "{{count}} passages non couverts",
-    "allCovered": "Tout le texte est couvert",
-    "openBoard": "Ouvrir le moodboard",
     "order": "Ordre des plans",
     "orders": {
       "edit": "Montage",
@@ -2358,8 +2309,6 @@
       "shoot": "Tournage",
       "shootHint": "Dans l'ordre où ils seront tournés ; glissez-les pour le changer"
     },
-    "noShot": "Aucun plan pour cette scène.",
-    "noShotHint": "Découpez-la en plans : valeur, mouvement, optique, durée. Chaque plan a aussi sa case dans le Storyboard.",
     "noShotShort": "Aucun plan",
     "search": "Rechercher un plan, une scène…",
     "searchLabel": "Rechercher dans le découpage",
@@ -2404,10 +2353,6 @@
     "shotMenu": "Actions du plan {{n}}",
     "shootN": "Ordre {{n}}",
     "noCharacter": "Aucun personnage dans cette scène.",
-    "coverFor": "Passages couverts par le plan",
-    "coverHint": "Choisissez un plan dans la liste, puis cliquez les passages qu'il couvre.",
-    "noText": "Cette scène n'a pas encore de texte.",
-    "notCovered": "Non couvert",
     "numbering": "Numérotation",
     "numberings": {
       "dash": "12-1, 12-2…",
@@ -2419,9 +2364,6 @@
     "exportEmpty": "Aucun plan dans le découpage."
   },
   "storyboard": {
-    "panel": "Panneau",
-    "emptyTitle": "Le storyboard part du scénario",
-    "toShotlist": "Ouvrir le découpage",
     "frameOf": "Case du plan {{n}}",
     "import": "Importer une image",
     "fromBoard": "Prendre une image d'un moodboard",
@@ -2431,14 +2373,6 @@
     "drawOver": "Dessiner dessus",
     "changeImage": "Changer l'image",
     "drawIt": "Dessiner",
-    "captionPlaceholder": "Ce que montre la case",
-    "dialoguePlaceholder": "Dialogue",
-    "notesPlaceholder": "Notes",
-    "addFirst": "Première case",
-    "addHint": "Chaque case est un plan du découpage : l'ajouter ici l'ajoute aussi là-bas.",
-    "noFrame": "Aucune case",
-    "framesDone_one": "{{count}} case, {{done}} illustrée",
-    "framesDone_other": "{{count}} cases, {{done}} illustrées",
     "ratio": "Format du cadre",
     "ratios": {
       "1_85": "1,85:1",
@@ -2453,20 +2387,6 @@
       "16_9": "Télévision et plateformes",
       "4_3": "L'ancien format de la télévision",
       "9_16": "Vertical, pour les téléphones"
-    },
-    "perRow": "Cases par ligne",
-    "perRowN_one": "{{count}} case",
-    "perRowN_other": "{{count}} cases",
-    "underFrame": "Sous chaque case",
-    "shown": {
-      "technique": "Valeur, angle et mouvement",
-      "techniqueHint": "Repris du découpage",
-      "action": "Description",
-      "actionHint": "Ce que montre le plan",
-      "dialogue": "Dialogue",
-      "dialogueHint": "Les répliques que couvre le plan",
-      "notes": "Notes",
-      "notesHint": "Les notes propres à la case"
     },
     "noBoardImage": "Aucune image dans les moodboards du projet.",
     "frameRatio": "Cadre {{ratio}}",
@@ -2524,7 +2444,6 @@
       "color": "Couleurs",
       "other": "Autre"
     },
-    "panel": "Panneau",
     "panels": {
       "boards": "Moodboards",
       "palette": "Palette",

@@ -3,13 +3,13 @@ import { t } from "../../../core/i18n";
 
 /** The version each view arrives in; its name and what it will hold are in the catalog. */
 const LATER: Partial<Record<ViewId, string>> = {
-  team: "2.0",
-  breakdown: "2.0",
-  schedule: "2.0",
-  callsheets: "2.0",
-  budget: "3.0",
-  scouting: "3.0",
-  permits: "3.0",
+  team: "3.0",
+  breakdown: "3.0",
+  schedule: "3.0",
+  callsheets: "3.0",
+  budget: "4.0",
+  scouting: "4.0",
+  permits: "4.0",
 };
 
 /** The views of the next versions, shown so that the whole film is visible from the start [PRJ-02]. */

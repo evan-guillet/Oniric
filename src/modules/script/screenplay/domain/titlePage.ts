@@ -27,7 +27,7 @@ export interface TitlePage {
 export const TITLE_PAGE_SETTING = "title_page";
 
 /** The contact at the bottom left of the page, field by field, in the order it prints. */
-export const CONTACT_KEYS = ["name", "address", "phone", "email", "agent"] as const;
+const CONTACT_KEYS = ["name", "address", "phone", "email", "agent"] as const;
 export type ContactKey = (typeof CONTACT_KEYS)[number];
 export type Contact = Record<ContactKey, string>;
 

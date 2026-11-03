@@ -103,7 +103,7 @@ export const US_FORMAT: ScreenplayFormat = {
   pageNumberTop: 0.5,
 };
 
-export const FR_FORMAT: ScreenplayFormat = {
+const FR_FORMAT: ScreenplayFormat = {
   id: "fr",
   name: "Français (A4)",
   kind: "film",
@@ -143,7 +143,7 @@ const translated = (language: "fr" | "de" | "es", id: string, name: string, help
   variant(US_FORMAT, { id, name, help, language, labels: LABELS[language] });
 
 /** The older layout of Hillis Cole and Judith Haag's guide: every column a little to the right. */
-export const COLE_HAAG_FORMAT = variant(US_FORMAT, {
+const COLE_HAAG_FORMAT = variant(US_FORMAT, {
   id: "cole-haag",
   name: "Cole et Haag (Letter)",
   help: "L'ancienne mise en page du guide de Cole et Haag, colonnes décalées vers la droite",
@@ -161,7 +161,7 @@ export const COLE_HAAG_FORMAT = variant(US_FORMAT, {
 });
 
 /** The studio layout: narrower dialogue set further in, which holds more on a page. */
-export const WARNER_FORMAT = variant(US_FORMAT, {
+const WARNER_FORMAT = variant(US_FORMAT, {
   id: "warner",
   name: "Warner Bros. (Letter)",
   help: "La mise en page de studio : dialogue plus étroit et plus en retrait",
@@ -179,7 +179,7 @@ export const WARNER_FORMAT = variant(US_FORMAT, {
 });
 
 /** BBC Writersroom's film and single-camera drama: the American columns on A4. */
-export const BBC_FORMAT = variant(US_FORMAT, {
+const BBC_FORMAT = variant(US_FORMAT, {
   id: "bbc",
   name: "BBC (A4)",
   help: "Le format de la BBC pour le cinéma et la fiction télé à une caméra",
@@ -216,7 +216,7 @@ export const MULTICAM_FORMAT = variant(US_FORMAT, {
 });
 
 /** The BBC studio sitcom: name on the left, speech and capitalised directions in one column, double-spaced. */
-export const BBC_SITCOM_FORMAT = variant(BBC_FORMAT, {
+const BBC_SITCOM_FORMAT = variant(BBC_FORMAT, {
   id: "bbc-sitcom",
   name: "Sitcom BBC en studio (A4)",
   kind: "tv",
@@ -234,7 +234,7 @@ export const BBC_SITCOM_FORMAT = variant(BBC_FORMAT, {
 });
 
 /** The Dramatists Guild's traditional play: centred names, speech across the page, directions set in, in italics. */
-export const STAGE_FORMAT = variant(US_FORMAT, {
+const STAGE_FORMAT = variant(US_FORMAT, {
   id: "stage",
   name: "Théâtre traditionnel (Letter)",
   kind: "stage",
@@ -252,7 +252,7 @@ export const STAGE_FORMAT = variant(US_FORMAT, {
 });
 
 /** The Dramatists Guild's modern play: the name on its own line at the margin, directions set in. */
-export const STAGE_MODERN_FORMAT = variant(STAGE_FORMAT, {
+const STAGE_MODERN_FORMAT = variant(STAGE_FORMAT, {
   id: "stage-modern",
   name: "Théâtre moderne (Letter)",
   help: "Le format moderne du Dramatists Guild : noms à la marge, didascalies en retrait",
@@ -269,7 +269,7 @@ export const STAGE_MODERN_FORMAT = variant(STAGE_FORMAT, {
 });
 
 /** A French play on A4: names centred, didascalies in italics. */
-export const STAGE_FR_FORMAT = variant(FR_FORMAT, {
+const STAGE_FR_FORMAT = variant(FR_FORMAT, {
   id: "stage-fr",
   name: "Théâtre français (A4)",
   kind: "stage",
@@ -287,7 +287,7 @@ export const STAGE_FR_FORMAT = variant(FR_FORMAT, {
 });
 
 /** Audio drama and podcast: the name at the margin, the speech set in under it, cues in capitals. */
-export const PODCAST_FORMAT = variant(US_FORMAT, {
+const PODCAST_FORMAT = variant(US_FORMAT, {
   id: "podcast",
   name: "Podcast et fiction audio (Letter)",
   kind: "audio",

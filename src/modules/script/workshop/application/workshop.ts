@@ -7,7 +7,7 @@ import { EMPTY_RICH } from "../../../../ui-kit/RichText";
 /** A new version of a field is kept when the last one is older than this [ATL-02]. */
 const VERSION_EVERY_MS = 10 * 60 * 1000;
 
-export async function loadFields(): Promise<Map<string, unknown>> {
+async function loadFields(): Promise<Map<string, unknown>> {
   const rows = await query(db.selectFrom("workshop_field").selectAll());
   return new Map(rows.map((r) => [r.key, parseJson<unknown>(r.value, null)]));
 }

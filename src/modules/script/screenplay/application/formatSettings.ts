@@ -5,9 +5,9 @@ import { readSetting, writeSetting } from "./settings";
 
 export const FORMAT_SETTING = "screenplay_format";
 /** The full format of the project when it is a custom one, so that the project opens the same on any PC. */
-export const FORMAT_DATA_SETTING = "screenplay_format_data";
+const FORMAT_DATA_SETTING = "screenplay_format_data";
 /** Custom formats saved as models, shared by all projects [EDT-02, ACC-04]. */
-export const FORMAT_LIBRARY = "formats";
+const FORMAT_LIBRARY = "formats";
 
 export function loadFormatLibrary(): Promise<ScreenplayFormat[]> {
   return readAppSetting<ScreenplayFormat[]>(FORMAT_LIBRARY, []);

@@ -69,7 +69,6 @@ import {
   importBible,
   loadEntries,
 } from "../../script/bible/application/bible";
-import { BibleView } from "../../script/bible/ui/BibleView";
 import {
   ScriptSession,
 } from "../../script/screenplay/application/scriptSession";
@@ -84,15 +83,12 @@ import {
   docFromBlocks,
 } from "../../script/screenplay/ui/editor/schema";
 import { ScreenplayWorkspace } from "../../script/screenplay/ui/ScreenplayWorkspace";
-import { VersionsView } from "../../script/screenplay/ui/VersionsView";
 import { useWritingJournal } from "../../script/stats/application/journal";
-import { StatsView } from "../../script/stats/ui/StatsView";
-import { StructureView } from "../../script/views/ui/StructureView";
-import { WorkshopView } from "../../script/workshop/ui/WorkshopView";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { DashboardView, lastSceneKey } from "./DashboardView";
 import { LaterView } from "./LaterView";
 import {
+  PARTS_HIDDEN_SETTING,
   ProjectContext,
   type Crumb,
   type ProjectApi,
@@ -101,7 +97,6 @@ import {
   type SettingsPage,
   type ViewId,
 } from "./projectContext";
-import { PARTS_HIDDEN_SETTING, SettingsScreen } from "./SettingsView";
 import { TransferDialog } from "./TransferDialog";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { dragWindow, WindowControls } from "../../../ui-kit/TitleBar";
@@ -150,7 +145,7 @@ function navPart(part: string, items: NavItem[]) {
   };
 }
 
-export const NAV: { part: string; label: string; items: NavItem[] }[] = [
+const NAV: { part: string; label: string; items: NavItem[] }[] = [
   navPart("script", [
     navItem("workshop", NotebookPen),
     navItem("bible", BookOpen),
@@ -164,21 +159,27 @@ export const NAV: { part: string; label: string; items: NavItem[] }[] = [
     navItem("shotlist", Clapperboard),
   ]),
   navPart("production", [
-    navItem("team", Users, "2.0"),
-    navItem("breakdown", ListChecks, "2.0"),
-    navItem("schedule", CalendarDays, "2.0"),
-    navItem("callsheets", ClipboardList, "2.0"),
-    navItem("budget", Wallet, "3.0"),
-    navItem("scouting", MapPin, "3.0"),
-    navItem("permits", FileCheck2, "3.0"),
+    navItem("team", Users, "3.0"),
+    navItem("breakdown", ListChecks, "3.0"),
+    navItem("schedule", CalendarDays, "3.0"),
+    navItem("callsheets", ClipboardList, "3.0"),
+    navItem("budget", Wallet, "4.0"),
+    navItem("scouting", MapPin, "4.0"),
+    navItem("permits", FileCheck2, "4.0"),
   ]),
 ];
 
 const DAY_MS = 24 * 3600 * 1000;
 
-// The Réalisation is read when it is first opened, outside the main bundle.
+// The views other than the screenplay and the dashboard are read when first opened, outside the main bundle.
+const WorkshopView = lazy(() => import("../../script/workshop/ui/WorkshopView").then((m) => ({ default: m.WorkshopView })));
+const BibleView = lazy(() => import("../../script/bible/ui/BibleView").then((m) => ({ default: m.BibleView })));
+const StructureView = lazy(() => import("../../script/views/ui/StructureView").then((m) => ({ default: m.StructureView })));
+const VersionsView = lazy(() => import("../../script/screenplay/ui/VersionsView").then((m) => ({ default: m.VersionsView })));
+const StatsView = lazy(() => import("../../script/stats/ui/StatsView").then((m) => ({ default: m.StatsView })));
 const MoodboardView = lazy(() => import("../../realisation/ui/MoodboardView").then((m) => ({ default: m.MoodboardView })));
 const ShotlistView = lazy(() => import("../../realisation/ui/ShotlistView").then((m) => ({ default: m.ShotlistView })));
+const SettingsScreen = lazy(() => import("./SettingsView").then((m) => ({ default: m.SettingsScreen })));
 
 /** An open project: navigation between the views, the shared screenplay session, the status bar. */
 export function ProjectShell({
@@ -320,7 +321,8 @@ export function ProjectShell({
       fileName: string,
       content: ReactNode,
       page: { width: number; height: number; css?: string },
-    ) => {
+      quiet?: boolean,
+    ): Promise<string | null> => {
       try {
         await session.flush();
         flushSync(() =>
@@ -335,6 +337,7 @@ export function ProjectShell({
         const path = unwrap(
           await commands.exportPdf(fileName, page.width, page.height),
         );
+        if (quiet) return path;
         notify({
           text: t("workspace.exported", { file: path.split(/[\\/]/).slice(-2).join("\\") }),
           actions: [
@@ -348,8 +351,11 @@ export function ProjectShell({
             },
           ],
         });
+        return path;
       } catch (e) {
+        if (quiet) throw e;
         notify({ text: describeError(e), tone: "error" });
+        return null;
       } finally {
         setPrint(null);
       }
@@ -371,7 +377,7 @@ export function ProjectShell({
       headerActions,
       transfer,
       setTrail,
-      openSettings: (page: SettingsPage = "profile") => setSettings(page),
+      openSettings: (page: SettingsPage = "appearance") => setSettings(page),
     }),
     [
       project,
@@ -501,7 +507,7 @@ export function ProjectShell({
       action("import", t("workspace.import"), FileInput, () => transfer("import"), t("palette.kw.import")),
       action("export", t("workspace.export"), FileOutput, () => transfer("export"), t("palette.kw.export")),
       { ...action("folder", t("shell.openFolder"), FolderOpen, () => void commands.reveal(project.dir, true), t("palette.kw.folder")), detail: project.dir },
-      action("settings", t("shell.settings"), Settings, () => setSettings("profile"), t("palette.kw.settings")),
+      action("settings", t("shell.settings"), Settings, () => setSettings("appearance"), t("palette.kw.settings")),
       action("shortcuts", t("shell.shortcuts"), Keyboard, () => setSettings("shortcuts"), t("palette.kw.shortcuts")),
       action("light", t("palette.themeLight"), Sun, () => void setThemePreference("light"), t("palette.kw.light")),
       action("dark", t("palette.themeDark"), Moon, () => void setThemePreference("dark"), t("palette.kw.dark")),
@@ -611,15 +617,13 @@ export function ProjectShell({
                 },
                 {
                   label: t("shell.openFolder"),
-                  detail: shortPath(project.dir),
-                  detailTitle: project.dir,
                   icon: FolderOpen,
                   onClick: () => void commands.reveal(project.dir, true),
                 },
                 {
                   label: t("shell.settings"),
                   icon: Settings,
-                  onClick: () => setSettings("profile"),
+                  onClick: () => setSettings("appearance"),
                   separated: true,
                 },
               ]}
@@ -768,14 +772,14 @@ export function ProjectShell({
               <ScreenplayWorkspace active={view === "script"} />
             </div>
             {view === "dashboard" && <DashboardView />}
-            {view === "workshop" && <WorkshopView />}
-            {view === "bible" && (
-              <BibleView selected={entry} onSelected={setEntry} home={bibleHome} />
-            )}
-            {view === "structure" && <StructureView />}
-            {view === "versions" && <VersionsView />}
-            {view === "stats" && <StatsView />}
             <Suspense fallback={null}>
+              {view === "workshop" && <WorkshopView />}
+              {view === "bible" && (
+                <BibleView selected={entry} onSelected={setEntry} home={bibleHome} />
+              )}
+              {view === "structure" && <StructureView />}
+              {view === "versions" && <VersionsView />}
+              {view === "stats" && <StatsView />}
               {view === "moodboard" && <MoodboardView />}
               {view === "shotlist" && <ShotlistView />}
             </Suspense>
@@ -791,7 +795,11 @@ export function ProjectShell({
           {print.content}
         </div>
       )}
-      {settings && <SettingsScreen page={settings} onClose={closeSettings} />}
+      {settings && (
+        <Suspense fallback={null}>
+          <SettingsScreen page={settings} onClose={closeSettings} />
+        </Suspense>
+      )}
       {transferReq && (
         <TransferDialog
           mode={transferReq.mode}
@@ -824,20 +832,9 @@ export function ProjectShell({
 
 interface MenuItem {
   label: string;
-  /** A second, muted line under the label, on one line. */
-  detail?: string;
-  /** The detail in full, when the line shows it shortened. */
-  detailTitle?: string;
   icon: LucideIcon;
   onClick: () => void;
   separated?: boolean;
-}
-
-/** A path short enough for one line: the drive, then the last two folders, which name the project. */
-function shortPath(dir: string): string {
-  const sep = dir.includes("\\") ? "\\" : "/";
-  const parts = dir.split(/[\\/]/);
-  return parts.length <= 4 ? dir : [parts[0], "…", ...parts.slice(-2)].join(sep);
 }
 
 /** The project's name at the top of the side bar, opening the project actions: rename beside the name, then import,
@@ -943,21 +940,14 @@ function ProjectMenu({
                 key={item.label}
                 type="button"
                 role="menuitem"
-                className={[item.separated && "separated", item.detail && "detailed"].filter(Boolean).join(" ") || undefined}
+                className={item.separated ? "separated" : undefined}
                 onClick={() => {
                   onOpenChange(false);
                   item.onClick();
                 }}
               >
                 <Icon aria-hidden="true" />
-                {item.detail ? (
-                  <span className="project-menu-text">
-                    {item.label}
-                    <span className="project-menu-dir" title={item.detailTitle}>{item.detail}</span>
-                  </span>
-                ) : (
-                  item.label
-                )}
+                {item.label}
               </button>
             );
           })}

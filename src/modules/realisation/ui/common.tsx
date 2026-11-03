@@ -8,9 +8,7 @@ import { SceneList, type ListGroup } from "../../script/screenplay/ui/SceneList"
 import { STORY_TABLES, loadStory, storyOutline } from "../../script/views/application/story";
 import { numberedParts } from "../../script/views/domain/outline";
 import { useStoredState } from "../../../ui-kit/useStoredState";
-import type { SceneElement } from "../domain/shots";
-import type { ChoiceField } from "../domain/shots";
-import { formatMinutes, formatSeconds } from "../domain/shots";
+import { formatMinutes, formatSeconds, type ChoiceField } from "../domain/shots";
 import type { Shot } from "../application/shots";
 
 /** The moodboard another view asked to open (a scene's or an entry's board), taken once by the Moodboards. */
@@ -37,13 +35,6 @@ export function useSceneChoice(projectId: string, scenes: SceneInfo[]): [SceneIn
   return [scenes.find((s) => s.id === id) ?? scenes[0] ?? null, choose];
 }
 
-/** The elements of a scene, heading included, as the coverage reads them. */
-export function sceneElements(scene: SceneInfo): SceneElement[] {
-  const out: SceneElement[] = [];
-  scene.node.forEach((b) => out.push({ type: b.type.name, text: b.textContent }));
-  return out;
-}
-
 export const choiceLabel = (field: ChoiceField, id: string) => t(`shot.${field}.${id}`);
 
 /** « 5 plans · 2 min 30 à l'écran · 3 h de tournage » */
@@ -61,7 +52,7 @@ export function shotTotals(shots: Shot[]): string {
 
 /** The scenes of the screenplay under their acts and sequences, as the Scénario lists them, the chosen one marked and
  *  kept in view; `meta` is the line under each heading. The folds are the same in every view of the Réalisation. */
-export function SceneTree({
+function SceneTree({
   projectId,
   scenes,
   current,

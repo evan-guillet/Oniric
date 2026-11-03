@@ -23,6 +23,9 @@ export type ViewId =
   | "scouting"
   | "permits";
 
+/** The parts of the project hidden from the side bar, as set in the settings. */
+export const PARTS_HIDDEN_SETTING = "parts_hidden";
+
 export interface ProjectApi {
   project: OpenState;
   session: ScriptSession;
@@ -33,8 +36,14 @@ export interface ProjectApi {
   go: (view: ViewId) => void;
   openScene: (id: string) => void;
   openEntry: (id: string) => void;
-  /** Prints `content` to a PDF in `exports/` and tells the user. */
-  printPdf: (fileName: string, content: ReactNode, page: { width: number; height: number; css?: string }) => Promise<void>;
+  /** Prints `content` to a PDF in `exports/` and tells the user; a quiet print tells nothing, throws its error and
+   *  hands the file's path back, for an export of several files that tells once. */
+  printPdf: (
+    fileName: string,
+    content: ReactNode,
+    page: { width: number; height: number; css?: string },
+    quiet?: boolean,
+  ) => Promise<string | null>;
   /** The right end of the view header, where the current view puts its own buttons (through a portal). */
   headerActions: HTMLElement | null;
   /** Opens the settings, on `page` when given. */
@@ -65,7 +74,6 @@ export function useProject(): ProjectApi {
 
 /** The pages of the settings window. */
 export type SettingsPage =
-  | "profile"
   | "appearance"
   | "writing"
   | "formats"

@@ -202,13 +202,6 @@ pub struct ProjectFlushFailed {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "backup:done")]
-pub struct BackupDone {
-    pub entry: backup::Entry,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
-#[serde(rename_all = "camelCase")]
 #[tauri_specta(event_name = "backup:failed")]
 pub struct BackupFailed {
     pub message: String,
@@ -303,14 +296,8 @@ pub fn backup_tick(app: &AppHandle) {
         }
         *last = Instant::now();
     }
-    match backup_current(&core, "auto", false) {
-        Ok(Some(entry)) => {
-            let _ = BackupDone { entry }.emit(app);
-        }
-        Ok(None) => {}
-        Err(e) => {
-            let _ = BackupFailed { message: format!("{e:?}") }.emit(app);
-        }
+    if let Err(e) = backup_current(&core, "auto", false) {
+        let _ = BackupFailed { message: format!("{e:?}") }.emit(app);
     }
 }
 
@@ -689,10 +676,8 @@ pub fn backup_settings_set(core: State<'_, Core>, settings: backup::Settings) ->
 
 #[tauri::command]
 #[specta::specta]
-pub fn backup_now(app: AppHandle, core: State<'_, Core>) -> Result<backup::Entry> {
-    let entry = backup_current(&core, "manuelle", true)?.ok_or(CoreError::NoProject)?;
-    let _ = BackupDone { entry: entry.clone() }.emit(&app);
-    Ok(entry)
+pub fn backup_now(core: State<'_, Core>) -> Result<backup::Entry> {
+    backup_current(&core, "manuelle", true)?.ok_or(CoreError::NoProject)
 }
 
 /// Rebuilds a project folder from the copy `file`, inside `dest_parent`, and returns the new folder.
