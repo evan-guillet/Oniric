@@ -104,7 +104,7 @@ export function FloatingMenu({
 }
 
 /** The « ⋯ » button and its menu (rename, delete…). */
-export function MoreMenu({ label, items, className = "" }: { label: string; items: MoreItem[]; className?: string }) {
+export function MoreMenu({ label, items, className = "", disabled }: { label: string; items: MoreItem[]; className?: string; disabled?: boolean }) {
   const button = useRef<HTMLButtonElement>(null);
   const [at, setAt] = useState<{ top: number; right: number } | null>(null);
   return (
@@ -117,6 +117,7 @@ export function MoreMenu({ label, items, className = "" }: { label: string; item
         title={label}
         aria-haspopup="menu"
         aria-expanded={!!at}
+        disabled={disabled}
         onClick={(e) => {
           e.stopPropagation();
           const r = e.currentTarget.getBoundingClientRect();

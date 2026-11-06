@@ -1,4 +1,4 @@
-import { Download, Lock, LockOpen, Palette, Plus, Trash2, X } from "lucide-react";
+import { Lock, LockOpen, Palette, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { describeError } from "../../../../core/errors";
 import { dateFormat, plural, t } from "../../../../core/i18n";
@@ -13,7 +13,6 @@ import { readTitlePage } from "../../screenplay/application/titlePageSettings";
 import { currentVersion, freezeVersion } from "../../screenplay/application/versions";
 import { formatById } from "../../screenplay/domain/formats";
 import { REVISION_COLORS, REVISION_TINTS, revisedElements } from "../../screenplay/domain/lock";
-import { exportScreenplayPdf } from "../../screenplay/ui/screenplayExport";
 import { addItems, deleteItem, itemsOf, updateItem, useItems, type Item } from "../application/items";
 import { Help } from "./fields";
 
@@ -124,8 +123,7 @@ function Requests({ list }: { list: Item<Request>[] }) {
 
 /** Locking the script for preproduction, and the coloured revisions that follow [DEV-02, REE-07]. */
 function Locking() {
-  const api = useProject();
-  const { session, ask, notify, project } = api;
+  const { session, ask, notify, project } = useProject();
   const lock = useLock();
   const scenes = useScenes(session);
   const format = useScriptFormat();
@@ -215,10 +213,6 @@ function Locking() {
         >
           <Palette aria-hidden="true" />
           {t("lock.newRevision", { color: t(`lock.colors.${next}`) })}
-        </button>
-        <button type="button" className="btn" onClick={() => void exportScreenplayPdf(api).catch(fail)}>
-          <Download aria-hidden="true" />
-          {t("lock.exportPdf")}
         </button>
         <span className="spacer" />
         <button

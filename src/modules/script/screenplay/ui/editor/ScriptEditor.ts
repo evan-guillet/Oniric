@@ -236,6 +236,12 @@ export class ScriptEditor {
     if (i >= 0) this.goToScene(i);
   }
 
+  /** The caret at a place, without moving the desk or taking the focus. */
+  caretAt(pos: number): void {
+    const state = this.view.state;
+    this.view.dispatch(state.tr.setSelection(TextSelection.near(state.doc.resolve(pos))));
+  }
+
   private replaceScenes(nodes: PMNode[]): void {
     const state = this.view.state;
     this.apart(state.tr.replaceWith(0, state.doc.content.size, Fragment.from(nodes)));

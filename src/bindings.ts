@@ -64,12 +64,29 @@ export const commands = {
 	/**  Writes a frozen version of the screenplay in `versions/`, with its SHA-256 fingerprint [REE-01]. */
 	versionSave: (name: string, contents: string) => typedError<SavedFile, CoreError>(__TAURI_INVOKE("version_save", { name, contents })),
 	versionRead: (path: string) => typedError<string, CoreError>(__TAURI_INVOKE("version_read", { path })),
+	mapSettingsGet: () => __TAURI_INVOKE<MapSettings>("map_settings_get"),
+	mapSettingsSet: (settings: MapSettings) => typedError<null, CoreError>(__TAURI_INVOKE("map_settings_set", { settings })),
+	/**  A search asked for by the user, one per second at most, its answer kept [REP-04b]. */
+	mapGeocode: (query: string) => typedError<GeoResult[], CoreError>(__TAURI_INVOKE("map_geocode", { query })),
+	/**  A route between two points: openrouteservice with the user's key, otherwise the free servers [REP-04b]. */
+	mapRoute: (from: [number | null, number | null], to: [number | null, number | null], mode: string) => typedError<RouteResult, CoreError>(__TAURI_INVOKE("map_route", { from, to, mode })),
+	/**
+	 *  Keeps the tiles of an area for use without a connection, in the background; its size is limited, so as not to
+	 *  overload the free services [REP-04c].
+	 */
+	mapZoneSave: (name: string, west: number | null, south: number | null, east: number | null, north: number | null) => typedError<string, CoreError>(__TAURI_INVOKE("map_zone_save", { name, west, south, east, north })),
+	mapZoneDelete: (id: string) => typedError<null, CoreError>(__TAURI_INVOKE("map_zone_delete", { id })),
+	mapCacheState: () => typedError<MapCacheState, CoreError>(__TAURI_INVOKE("map_cache_state")),
+	/**  Empties the tiles kept, but those of the saved zones. */
+	mapCacheClear: () => typedError<null, CoreError>(__TAURI_INVOKE("map_cache_clear")),
 };
 
 /** Events */
 export const events = {
 	backupFailed: makeEvent<BackupFailed>("backup:failed"),
 	dbChanged: makeEvent<DbChanged>("db:changed"),
+	mapActivity: makeEvent<MapActivity>("map-activity"),
+	mapZoneProgress: makeEvent<MapZoneProgress>("map-zone-progress"),
 	projectFlushFailed: makeEvent<ProjectFlushFailed>("project:flush-failed"),
 	projectFlushed: makeEvent<ProjectFlushed>("project:flushed"),
 };
@@ -106,6 +123,12 @@ export type Entry = {
 	sha256: string,
 };
 
+export type GeoResult = {
+	name: string,
+	lat: number | null,
+	lon: number | null,
+};
+
 export type HistoryState = {
 	undo: HistoryStep | null,
 	redo: HistoryStep | null,
@@ -119,6 +142,49 @@ export type HistoryStep = {
 };
 
 export type LockStatus = "free" | "openHere" | "openElsewhere";
+
+/**  Says the map is talking to the network, and whether the last attempt got through [REP-04e]. */
+export type MapActivity = {
+	active: number,
+	offline: boolean,
+	enabled: boolean,
+};
+
+export type MapCacheState = {
+	bytes: number | null,
+	tiles: number,
+	zones: MapZone[],
+};
+
+export type MapSettings = {
+	enabled?: boolean,
+	tilesUrl?: string,
+	fontsUrl?: string,
+	geocodeUrl?: string,
+	carUrl?: string,
+	footUrl?: string,
+	routeKeyUrl?: string,
+	routeKey?: string,
+};
+
+export type MapZone = {
+	id: string,
+	name: string,
+	west: number | null,
+	south: number | null,
+	east: number | null,
+	north: number | null,
+	tiles: number,
+	saved: number,
+	createdAt: string,
+};
+
+export type MapZoneProgress = {
+	id: string,
+	done: number,
+	total: number,
+	finished: boolean,
+};
 
 export type OpenState = {
 	dir: string,
@@ -156,6 +222,13 @@ export type RecentProject = {
 	openedAt: string,
 	/**  False when the folder is gone or unplugged (USB key). */
 	available: boolean,
+};
+
+export type RouteResult = {
+	distanceM: number | null,
+	durationS: number | null,
+	/**  Longitude and latitude of each point. */
+	geometry: ([number | null, number | null])[],
 };
 
 export type Rows = {

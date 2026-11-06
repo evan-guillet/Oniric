@@ -5,6 +5,7 @@ import {
   Clapperboard,
   MessageSquareQuote,
   Parentheses,
+  StickyNote,
   UserRound,
   Video,
   type LucideIcon,
@@ -27,9 +28,9 @@ const ICONS: Record<ElementType, LucideIcon> = {
 
 /**
  * The kinds of element, in a bar fixed at the bottom of the desk, as the tools of the moodboard.
- * Holding Ctrl writes out the shortcut of every type.
+ * Holding Ctrl writes out the shortcut of every type. At the end of the bar, a note on the passage selected.
  */
-export function ElementBar({ editor, snap }: { editor: ScriptEditor | null; snap: EditorSnapshot | null }) {
+export function ElementBar({ editor, snap, onNote }: { editor: ScriptEditor | null; snap: EditorSnapshot | null; onNote: () => void }) {
   const { t } = useTranslation();
   const [keys, setKeys] = useState(false);
 
@@ -81,6 +82,11 @@ export function ElementBar({ editor, snap }: { editor: ScriptEditor | null; snap
           </button>
         );
       })}
+      <span className="element-bar-sep" aria-hidden="true" />
+      <button type="button" className="element-bar-note" title={`${t("script.notes.create")} — ${t("script.notes.createHint")}`} onClick={onNote}>
+        <StickyNote aria-hidden="true" />
+        {t("script.notes.note")}
+      </button>
     </div>
   );
 }

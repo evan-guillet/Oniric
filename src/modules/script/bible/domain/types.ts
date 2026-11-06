@@ -253,6 +253,17 @@ export function pluralize(name: string, language: Language = getLanguage()): str
   return words.map((w, i) => (i >= end || !/\p{L}/u.test(w) || (language === "en" && i !== last) ? w : one(w))).join("");
 }
 
+/**
+ * The built-in types under the names this project gave them, by type id. A type not renamed keeps following the
+ * interface's language; a renamed one keeps its fields and what its entries store.
+ */
+export function namedBuiltins(names: ReadonlyMap<string, string>): EntryType[] {
+  return BUILTIN_TYPES.map((type) => {
+    const name = names.get(type.id);
+    return name ? { ...type, name, plural: pluralize(name) } : type;
+  });
+}
+
 /** Lowercase, without accents, one apostrophe: « Hélène » and « helene », « d’Oren » and « d'Oren » match. */
 export function fold(s: string): string {
   return s

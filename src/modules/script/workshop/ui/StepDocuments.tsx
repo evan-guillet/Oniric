@@ -14,7 +14,6 @@ import { docFromBlocks } from "../../screenplay/ui/editor/schema";
 import { applyFrenchSpacing } from "../../screenplay/domain/typography";
 import { addSequence, deleteSequence, loadStory, STORY_TABLES, updateSequence, type Sequence } from "../../views/application/story";
 import { documentVersions, freezeDocument, loadDocument, saveDocument, type DocumentKind } from "../application/workshop";
-import { exportDocumentPdf } from "./documentExport";
 import { Help } from "./fields";
 
 import { Select } from "../../../../ui-kit/Select";
@@ -61,7 +60,7 @@ export function StepDocuments() {
 }
 
 export function DocEditor({ kind, title, goal, help, skeleton }: { kind: DocumentKind; title: string; goal: [number, number]; help: string; skeleton?: boolean }) {
-  const { notify, ask, prompt, printPdf, project } = useProject();
+  const { notify, ask, prompt } = useProject();
   const [doc, setDoc] = useState<{ content: string; key: number } | null>(null);
   const [versions, setVersions] = useState(false);
   const latest = useRef("");
@@ -160,13 +159,6 @@ export function DocEditor({ kind, title, goal, help, skeleton }: { kind: Documen
           }}
         >
           {t("docs.freeze")}
-        </button>
-        <button
-          type="button"
-          className="btn small"
-          onClick={() => void exportDocumentPdf({ printPdf, project }, title, latest.current)}
-        >
-          {t("workspace.exportPdf")}
         </button>
       </div>
       <RichText key={doc.key} value={doc.content} onChange={change} label={title} plugins={plugins} minHeight={420} className="paper-like" />

@@ -1,17 +1,15 @@
 import { useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { dateFormat, t } from "../../../core/i18n";
-import { Segmented, type SegmentedOption } from "../../../ui-kit/Segmented";
 import { useProject } from "../../project/ui/projectContext";
 import { MediaImage } from "../../shared/media";
 import { initials } from "../domain/contacts";
 import { parseDay } from "../domain/schedule";
 
-/** The displays of a view, in the header where every view keeps its own choice. */
-export function HeaderTabs<T extends string>({ label, options, value, onChange }: { label: string; options: SegmentedOption<T>[]; value: T; onChange: (v: T) => void }) {
+/** What the page shown puts in the header of the window, right of where one is. */
+export function HeaderTools({ children }: { children: ReactNode }) {
   const { headerActions } = useProject();
-  if (!headerActions) return null;
-  return createPortal(<Segmented label={label} options={options} value={value} onChange={onChange} compact />, headerActions);
+  return headerActions && createPortal(children, headerActions);
 }
 
 /** A photo, or the initials of the name on a tint of its own. */
@@ -41,6 +39,7 @@ export function Field({
   hideLabel,
   normalize,
   autoFocus,
+  title,
 }: {
   label: string;
   value: string;
@@ -52,6 +51,7 @@ export function Field({
   hideLabel?: boolean;
   normalize?: (v: string) => string;
   autoFocus?: boolean;
+  title?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
@@ -78,6 +78,7 @@ export function Field({
       if (e.key === "Escape" && draft !== null && draft !== value) {
         cancelled.current = true;
         e.currentTarget.blur();
+        e.preventDefault();
         e.stopPropagation();
       } else if (e.key === "Enter" && (!multiline || e.ctrlKey)) {
         e.preventDefault();
@@ -88,7 +89,7 @@ export function Field({
   const control = multiline ? <textarea rows={2} {...common} /> : <input type={type} {...common} />;
   if (hideLabel) return <span className={`pr-field bare ${className ?? ""}`}>{control}</span>;
   return (
-    <label className={`pr-field ${className ?? ""}`}>
+    <label className={`pr-field ${className ?? ""}`} title={title}>
       <span>{label}</span>
       {control}
     </label>
@@ -124,23 +125,3 @@ export function dateRange(start: string | null, end: string | null): string {
   if (end) return t("team.until", { date: f(end) });
   return "";
 }
-
-/** Writes a file the user picked as text, or null when they picked none. */
-export function useFilePick(accept: string, onText: (text: string, name: string) => void) {
-  const ref = useRef<HTMLInputElement>(null);
-  const input = (
-    <input
-      ref={ref}
-      type="file"
-      accept={accept}
-      hidden
-      onChange={(e) => {
-        const f = e.target.files?.[0];
-        e.target.value = "";
-        if (f) void f.text().then((text) => onText(text, f.name));
-      }}
-    />
-  );
-  return [input, () => ref.current?.click()] as const;
-}
-

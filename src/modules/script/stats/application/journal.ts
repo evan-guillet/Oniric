@@ -40,7 +40,7 @@ export function useWritingJournal(session: ScriptSession): void {
       if (!before) return;
       const added = noWords();
       let removed = 0;
-      for (const { id } of WORD_GROUPS) {
+      for (const id of WORD_GROUPS) {
         const d = now[id] - before[id];
         if (d > 0) added[id] = d;
         else removed -= d;
@@ -52,7 +52,7 @@ export function useWritingJournal(session: ScriptSession): void {
       writing = writing.then(async () => {
         const journal = await readJournal();
         const day = journal[key] ?? { added: noWords(), removed: 0, minutes: 0 };
-        for (const { id } of WORD_GROUPS) day.added[id] += added[id];
+        for (const id of WORD_GROUPS) day.added[id] += added[id];
         day.removed += removed;
         day.minutes += minutes;
         journal[key] = day;

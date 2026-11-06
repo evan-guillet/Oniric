@@ -3,26 +3,22 @@ import {
   ArrowDown,
   ArrowUp,
   BedDouble,
-  CalendarCheck,
   CalendarDays,
-  CalendarRange,
   Car,
   Copy,
-  Download,
-  FileSpreadsheet,
   Flag,
   GripVertical,
   Pencil,
   Plus,
-  Rows3,
   Settings2,
   Shuffle,
   Square,
   SquareCheck,
   Trash2,
   Undo2,
+  FileWarning,
 } from "lucide-react";
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent } from "react";
 import type { EventPhase } from "../../../core/db/schema";
 import { describeError } from "../../../core/errors";
 import { dateFormat, plural, t } from "../../../core/i18n";
@@ -32,7 +28,7 @@ import { MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
 import { Segmented } from "../../../ui-kit/Segmented";
 import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
-import { useProject } from "../../project/ui/projectContext";
+import { PAGE_KEY, useProject } from "../../project/ui/projectContext";
 import { byScene, useShots } from "../../realisation/application/shots";
 import { useScenes, type SceneInfo } from "../../script/screenplay/application/scriptSession";
 import { formatEighths } from "../../script/screenplay/domain/duration";
@@ -64,9 +60,10 @@ import {
 } from "../application/schedule";
 import { castNumbers, useTeam, type Team } from "../application/team";
 import { sceneFacts, stripTone, type SceneFacts } from "../domain/sceneFacts";
-import { arrange, dayConflicts, dayDates, parseDay, presence, sceneMinutes, shootNumbers, type ArrangeBy, type Conflict } from "../domain/schedule";
-import { exportCalendar, exportSchedulePdf, exportScheduleXlsx, notifyExported } from "./productionExport";
-import { Field, HeaderTabs, shortDate } from "./parts";
+import { arrange, dayConflicts, dayDates, parseDay, presence, sceneMinutes, shootNumbers, type ArrangeBy, type Conflict, type Presence } from "../domain/schedule";
+import type { PermitAlert } from "../domain/permits";
+import { Field, HeaderTools, shortDate } from "./parts";
+import { usePermitAlerts } from "./preparation";
 
 type Tab = "strips" | "dood" | "calendar";
 
@@ -145,7 +142,7 @@ export type Board = NonNullable<ReturnType<typeof board>>;
 
 /** The shooting schedule: the strips day by day, the presence of the cast, the calendar of the production [PDT-01 to PDT-07]. */
 export function ScheduleView() {
-  const [tab, setTab] = useStoredState<Tab>("oniric.schedule.tab", "strips");
+  const [tab, setTab] = useStoredState<Tab>(PAGE_KEY.schedule, "strips");
   const plans = usePlans();
   const team = useTeam();
   const b = useBoard(plans, team);
@@ -181,19 +178,9 @@ export function ScheduleView() {
   }
   return (
     <>
-      <HeaderTabs
-        label={t("schedule.display")}
-        value={tab}
-        onChange={setTab}
-        options={[
-          { id: "strips", label: t("schedule.strips"), icon: Rows3 },
-          { id: "dood", label: t("schedule.dood"), icon: CalendarCheck },
-          { id: "calendar", label: t("schedule.calendar"), icon: CalendarRange },
-        ]}
-      />
       <div className="view pr-view pr-schedule">
         <Versions plans={plans} board={b} onSettings={() => setSettingsOpen(true)} />
-        {tab === "strips" ? <Strips board={b} /> : tab === "dood" ? <Dood board={b} team={team} /> : <Calendar plans={plans} board={b} />}
+        {tab === "strips" ? <Strips board={b} /> : tab === "dood" ? <Dood board={b} team={team} /> : <Calendar plans={plans} board={b} onShowStrips={() => setTab("strips")} />}
       </div>
       {settingsOpen && <SettingsDialog schedule={b.schedule} onClose={() => setSettingsOpen(false)} />}
     </>
@@ -202,8 +189,7 @@ export function ScheduleView() {
 
 /** The schedule shown among those kept side by side, and what is done with it [PDT-05]. */
 function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board; onSettings: () => void }) {
-  const api = useProject();
-  const { ask, prompt, notify } = api;
+  const { ask, prompt, notify } = useProject();
   const s = b.schedule!;
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const items: MoreItem[] = [
@@ -241,11 +227,8 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
       },
     },
   ];
-  const total = b.days.reduce((n, d) => n + d.eighths, 0);
-  const first = b.days.find((d) => d.day.kind === "shoot" && d.date)?.date ?? null;
-  const last = [...b.days].reverse().find((d) => d.day.kind === "shoot" && d.date)?.date ?? null;
   return (
-    <div className="pr-toolbar pr-sched-bar">
+    <HeaderTools>
       <Select value={s.id} aria-label={t("schedule.version")} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
         {plans.schedules.map((x) => (
           <option key={x.id} value={x.id}>
@@ -254,24 +237,11 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
         ))}
       </Select>
       <MoreMenu label={t("schedule.versionMenu")} items={items} />
-      <span className="pr-sched-sum">
-        {plural("schedule.shootDays", b.shootDays)} · {t("breakdown.pages", { pages: formatEighths(total) })}
-        {first && last && ` · ${shortDate(first)} – ${shortDate(last)}`}
-      </span>
-      <span className="spacer" />
       <button type="button" className="btn" onClick={onSettings}>
         <Settings2 aria-hidden="true" />
         {t("schedule.settings")}
       </button>
-      <MoreMenu
-        label={t("schedule.exportMenu")}
-        items={[
-          { label: t("schedule.exportPdf"), icon: Download, onClick: () => void exportSchedulePdf(api, b).catch(fail) },
-          { label: t("schedule.exportXlsx"), icon: FileSpreadsheet, onClick: () => void exportScheduleXlsx(api, b).then((p) => p && notifyExported(api, p)).catch(fail) },
-          { label: t("schedule.exportIcs"), icon: CalendarDays, hint: t("schedule.exportIcsHint"), onClick: () => void exportCalendar(api, b, plans.events).then((p) => notifyExported(api, p)).catch(fail) },
-        ]}
-      />
-    </div>
+    </HeaderTools>
   );
 }
 
@@ -349,6 +319,7 @@ function SettingsDialog({ schedule, onClose }: { schedule: Schedule; onClose: ()
 type Drag = { moving: Moving[]; over?: { dayId: string; stripId: string | null; after: boolean } | "tray" };
 
 function Strips({ board: b }: { board: Board }) {
+  const alerts = usePermitAlerts();
   const { session, notify, ask, prompt } = useProject();
   const [drag, setDrag] = useState<Drag | null>(null);
   const [arranging, setArranging] = useState(false);
@@ -508,6 +479,7 @@ function Strips({ board: b }: { board: Board }) {
                   <span className="muted"> / {formatMinutes(b.settings.dayMinutes)}</span>
                 </span>
                 <Conflicts list={d.conflicts} />
+                <PermitConflict dayId={d.day.id} alerts={alerts} />
                 <span className="spacer" />
                 <MoreMenu label={t("schedule.dayMenu", { day: dayTitle(d) })} items={dayMenu(d)} />
               </header>
@@ -670,6 +642,21 @@ function DateField({ day, date }: { day: Day; date: string | null }) {
   return (
     <button type="button" className={day.date ? "pr-date fixed" : "pr-date"} title={day.date ? t("schedule.dateFixed") : t("schedule.dateAuto")} onClick={() => setEditing(true)}>
       {date ? dateFormat({ weekday: "long", day: "numeric", month: "long" }).format(parseDay(date)) : t("schedule.noDate")}
+    </button>
+  );
+}
+
+/** A set of the day has no permit for that day [AUT-04]; the badge leads to the requests. */
+function PermitConflict({ dayId, alerts }: { dayId: string; alerts: PermitAlert[] | undefined }) {
+  const { go } = useProject();
+  const own = alerts?.filter((a) => a.dayId === dayId) ?? [];
+  if (!own.length) return null;
+  const text = own.map((a) => t("schedule.permitConflict", { name: a.name })).join("\n");
+  return (
+    <button type="button" className="badge warn pr-conflict pr-conflict-link" title={text} onClick={() => go("permits")}>
+      <FileWarning aria-hidden="true" />
+      {plural("schedule.permitConflicts", own.length)}
+      <span className="visually-hidden">{text}</span>
     </button>
   );
 }
@@ -853,10 +840,24 @@ function ArrangeDialog({ board: b, onClose }: { board: Board; onClose: () => voi
   );
 }
 
-/** Who works which day: start, work, finish, hold, travel, and the totals of each actor [PDT-04]. */
+/** The days in runs of one calendar week, for the band above them. */
+function weeksOf(days: Board["days"]) {
+  const weeks: { key: number; start: number; span: number; first: string | null }[] = [];
+  days.forEach((d, i) => {
+    const monday = d.date ? parseDay(d.date) : null;
+    monday?.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const key = monday ? monday.getTime() : 0;
+    const last = weeks[weeks.length - 1];
+    if (last && last.key === key) last.span++;
+    else weeks.push({ key, start: i, span: 1, first: d.date });
+  });
+  return weeks;
+}
+
+/** Who is there which day: one square per day with the usual day-out-of-days code [PDT-04]. */
 function Dood({ board: b, team }: { board: Board; team: Team }) {
+  const [hot, setHot] = useState<number | null>(null);
   const days = b.days.filter((d) => d.day.kind !== "off");
-  const cast = [...b.numbers.entries()].sort((x, y) => x[1] - y[1]);
   const contact = new Map(team.contacts.map((c) => [c.id, c.name]));
   if (!days.some((d) => d.day.kind === "shoot")) {
     return (
@@ -867,150 +868,384 @@ function Dood({ board: b, team }: { board: Board; team: Team }) {
       </div>
     );
   }
+  const rows = [...b.numbers.entries()]
+    .sort((x, y) => x[1] - y[1])
+    .map(([character, n]) => {
+      const marks = presence(
+        days.map((d) => d.day),
+        days.map((d) => d.characters.includes(character)),
+      );
+      const actorId = team.cast.find((r) => r.character === character)?.contactId;
+      return { character, n, marks, actor: actorId ? contact.get(actorId) : undefined };
+    });
+  const worked = (m: Presence) => m === "SW" || m === "W" || m === "WF" || m === "SWF";
+  const count = (marks: Presence[], test: (m: Presence) => boolean) => marks.filter(test).length;
+  const totalWork = rows.reduce((sum, r) => sum + count(r.marks, worked), 0);
+  const totalHold = rows.reduce((sum, r) => sum + count(r.marks, (m) => m === "H"), 0);
+  const dated = days.some((d) => d.date);
+  const weeks = weeksOf(days);
+  const weekStarts = new Set(weeks.slice(1).map((w) => w.start));
+  const shortDay = dateFormat({ day: "numeric", month: "short" });
+  const dayName = dateFormat({ weekday: "short", day: "numeric" });
+  const dayLabel = (d: Board["days"][number]) => (d.day.kind === "shoot" ? t("schedule.dayShort", { n: d.number }) : t("schedule.travelShort"));
+  const col = (i: number) => `${days[i].day.kind === "travel" ? " off" : ""}${weekStarts.has(i) ? " wk" : ""}${hot === i ? " hot" : ""}`;
+  const amount = (n: number) => n || "–";
+  const nameHead = (
+    <div className="pr-dood-who">
+      <span className="pr-dood-n">{t("team.number")}</span>
+      {t("team.character")}
+    </div>
+  );
   return (
     <div className="pr-dood-wrap">
-      <dl className="pr-dood-legend" aria-label={t("schedule.doodLegendTitle")}>
-        {(["SW", "W", "WF", "SWF", "H", "T"] as const).map((m) => (
-          <div key={m}>
-            <dt className={`m-${m}`}>{m}</dt>
-            <dd>{t(`schedule.doodMarks.${m}`)}</dd>
-          </div>
-        ))}
-      </dl>
-      <table className="pr-dood">
-        <thead>
-          <tr>
-            <th className="num">{t("team.number")}</th>
-            <th>{t("team.character")}</th>
+      <div className="pr-dood-scroll" tabIndex={0} role="region" aria-label={t("schedule.dood")}>
+        <table
+          className="pr-dood"
+          style={{ "--dood-days": days.length } as CSSProperties}
+          onMouseOver={(e) => {
+            const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-col]");
+            setHot(cell ? Number(cell.dataset.col) : null);
+          }}
+          onMouseLeave={() => setHot(null)}
+        >
+          <colgroup>
+            <col className="c-name" />
             {days.map((d) => (
-              <th key={d.day.id} className="pr-dood-day" title={d.date ? shortDate(d.date) : undefined}>
-                {d.day.kind === "shoot" ? t("schedule.dayShort", { n: d.number }) : t("schedule.travelShort")}
-                {d.date && <span>{dateFormat({ day: "numeric", month: "numeric" }).format(parseDay(d.date))}</span>}
-              </th>
+              <col key={d.day.id} />
             ))}
-            <th className="num">{t("schedule.work")}</th>
-            <th className="num">{t("schedule.hold")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cast.map(([character, n]) => {
-            const marks = presence(
-              days.map((d) => d.day),
-              days.map((d) => d.characters.includes(character)),
-            );
-            const actor = team.cast.find((r) => r.character === character)?.contactId;
-            return (
-              <tr key={character}>
-                <td className="num">{n}</td>
-                <th scope="row">
-                  <span className="pr-slug">{character}</span>
-                  {actor && <span className="muted pr-dood-actor">{contact.get(actor)}</span>}
+            <col className="c-total" />
+            <col className="c-total" />
+          </colgroup>
+          <thead>
+            {dated && (
+              <tr className="pr-dood-weeks">
+                <th className="pr-dood-name" rowSpan={2}>
+                  {nameHead}
                 </th>
-                {marks.map((m, i) => (
-                  <td key={days[i].day.id} className={`pr-dood-cell${m ? ` m-${m}` : ""}`}>
-                    {m && <abbr title={t(`schedule.doodMarks.${m}`)}>{m}</abbr>}
-                  </td>
+                {weeks.map((w) => (
+                  <th key={w.start} colSpan={w.span} className={w.start > 0 ? "wk" : undefined}>
+                    {w.first && <span className="pr-dood-week">{w.span >= 3 ? t("schedule.weekOf", { date: shortDay.format(new Date(w.key)) }) : shortDay.format(parseDay(w.first))}</span>}
+                  </th>
                 ))}
-                <td className="num">{marks.filter((m) => m && m !== "H" && m !== "T").length}</td>
-                <td className="num muted">{marks.filter((m) => m === "H").length}</td>
+                <th className="pr-dood-total t-work" rowSpan={2}>
+                  {t("schedule.work")}
+                </th>
+                <th className="pr-dood-total t-hold" rowSpan={2}>
+                  {t("schedule.hold")}
+                </th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            <tr>
+              {!dated && <th className="pr-dood-name">{nameHead}</th>}
+              {days.map((d, i) => (
+                <th key={d.day.id} data-col={i} className={`pr-dood-day${col(i)}`} title={d.date ? shortDate(d.date) : undefined}>
+                  {dayLabel(d)}
+                  {d.date && <span>{dayName.format(parseDay(d.date))}</span>}
+                </th>
+              ))}
+              {!dated && (
+                <>
+                  <th className="pr-dood-total t-work">{t("schedule.work")}</th>
+                  <th className="pr-dood-total t-hold">{t("schedule.hold")}</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const holds = count(r.marks, (m) => m === "H");
+              return (
+                <tr key={r.character}>
+                  <th scope="row" className="pr-dood-name" title={r.actor ? `${r.character} · ${r.actor}` : r.character}>
+                    <div className="pr-dood-who">
+                      <span className="pr-dood-n">{r.n}</span>
+                      <span className="pr-slug">{r.character}</span>
+                      {r.actor && <span className="pr-dood-actor">{r.actor}</span>}
+                    </div>
+                  </th>
+                  {r.marks.map((m, i) => {
+                    const d = days[i];
+                    const label = m ? t(`schedule.doodMarks.${m}`) : "";
+                    return (
+                      <td key={d.day.id} data-col={i} className={`pr-dood-cell${col(i)}`}>
+                        {m && (
+                          <abbr className={`pr-dood-mark m-${m}`} title={`${label} · ${r.character} · ${dayLabel(d)}${d.date ? ` · ${shortDate(d.date)}` : ""}`}>
+                            {m}
+                          </abbr>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="pr-dood-total t-work">{amount(count(r.marks, worked))}</td>
+                  <td className={`pr-dood-total t-hold${holds ? " held" : ""}`}>{amount(holds)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" className="pr-dood-name">
+                <div className="pr-dood-who">{t("schedule.doodAtWork")}</div>
+              </th>
+              {days.map((d, i) => (
+                <td key={d.day.id} data-col={i} className={`pr-dood-count${col(i)}`}>
+                  {amount(count(rows.map((r) => r.marks[i]), worked))}
+                </td>
+              ))}
+              <td className="pr-dood-total t-work">{amount(totalWork)}</td>
+              <td className={`pr-dood-total t-hold${totalHold ? " held" : ""}`}>{amount(totalHold)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }
 
 const PHASES: EventPhase[] = ["prep", "tests", "shoot", "edit", "delivery", "other"];
 
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** Whole days from one date to another: rounded, as a change of clock hour makes a day 23 or 25 hours long. */
+const dayDiff = (from: string, to: string) => Math.round((parseDay(to).getTime() - parseDay(from).getTime()) / 86400000);
+const shiftDay = (iso: string, by: number) => {
+  const d = parseDay(iso);
+  d.setDate(d.getDate() + by);
+  return isoDay(d);
+};
+/** What a stage lasts, in the unit a production speaks of: days up to two weeks, weeks beyond. */
+const stageLength = (start: string, end: string) => {
+  const days = dayDiff(start, end) + 1;
+  return days < 14 ? t("schedule.lengthDays", { n: days }) : t("schedule.lengthWeeks", { n: Math.round(days / 7) });
+};
+/** The shooting days as runs of consecutive days: the rest days show as gaps in the shoot. */
+const dayRuns = (dates: string[]) => {
+  const runs: { start: string; end: string }[] = [];
+  for (const d of dates) {
+    const last = runs[runs.length - 1];
+    if (last && dayDiff(last.end, d) <= 1) last.end = d;
+    else runs.push({ start: d, end: d });
+  }
+  return runs;
+};
+
+type StageRow = ProductionEvent & { auto?: boolean };
+type StageDates = { id: string; start: string; end: string };
+
 /** The calendar of the production, the shooting days among its stages, sent to any diary as an iCal file [PDT-06]. */
-function Calendar({ plans, board: b }: { plans: Plans; board: Board }) {
+function Calendar({ plans, board: b, onShowStrips }: { plans: Plans; board: Board; onShowStrips: () => void }) {
   const { ask, notify } = useProject();
   const [adding, setAdding] = useState<ProductionEvent | "new" | null>(null);
+  const [moved, setMoved] = useState<StageDates | null>(null);
+  const grab = useRef<{ row: StageRow; mode: string; x: number; perDay: number; dragged: boolean } | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
-  const shooting = b.days.filter((d) => d.day.kind === "shoot" && d.date).map((d) => d.date!);
-  const rows: (ProductionEvent & { auto?: boolean })[] = [
+  const shooting = b.days
+    .filter((d) => d.day.kind === "shoot" && d.date)
+    .map((d) => d.date!)
+    .sort();
+  const rows: StageRow[] = [
     ...plans.events,
     ...(shooting.length ? [{ id: "shoot", phase: "shoot" as const, title: t("schedule.phases.shoot"), start: shooting[0], end: shooting[shooting.length - 1], notes: "", auto: true }] : []),
   ].sort((x, y) => (x.start < y.start ? -1 : x.start > y.start ? 1 : 0));
-  const from = rows.reduce((m, r) => (r.start < m ? r.start : m), rows[0]?.start ?? "");
-  const to = rows.reduce((m, r) => (r.end > m ? r.end : m), rows[0]?.end ?? "");
-  const span = from && to ? Math.max(1, (parseDay(to).getTime() - parseDay(from).getTime()) / 86400000 + 1) : 1;
-  const pos = (iso: string) => ((parseDay(iso).getTime() - parseDay(from).getTime()) / 86400000 / span) * 100;
-  // The dates along the top: each Monday over two months or less, each first of the month beyond.
-  const ticks: string[] = [];
-  if (from && to) {
-    const weekly = span <= 62;
-    const d = parseDay(from);
-    if (weekly) d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
-    else d.setMonth(d.getMonth() + (d.getDate() === 1 ? 0 : 1), 1);
-    for (; d <= parseDay(to); weekly ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + 1)) {
-      ticks.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+  const first = rows.reduce((m, r) => (r.start < m ? r.start : m), rows[0]?.start ?? "");
+  const last = rows.reduce((m, r) => (r.end > m ? r.end : m), rows[0]?.end ?? "");
+  // The sheet runs over whole months, so that every column reads as a month.
+  const from = first && `${first.slice(0, 7)}-01`;
+  const to = last && isoDay(new Date(parseDay(last).getFullYear(), parseDay(last).getMonth() + 1, 0));
+  const span = from && to ? dayDiff(from, to) + 1 : 1;
+  const pos = (iso: string) => (dayDiff(from, iso) / span) * 100;
+  const today = isoDay(new Date());
+  const hasToday = !!from && today >= from && today <= to;
+
+  const months: { iso: string; days: number; yearly: boolean }[] = [];
+  if (from) {
+    for (const d = parseDay(from); isoDay(d) <= to; d.setMonth(d.getMonth() + 1)) {
+      months.push({ iso: isoDay(d), days: new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(), yearly: months.length === 0 || d.getMonth() === 0 });
     }
   }
-  const tickFormat = dateFormat(span <= 62 ? { day: "numeric", month: "short" } : { month: "short", year: "2-digit" });
+  const mondays: string[] = [];
+  if (from && span <= 100) {
+    for (let d = shiftDay(from, (8 - parseDay(from).getDay()) % 7); d <= to; d = shiftDay(d, 7)) mondays.push(d);
+  }
+  const monthName = dateFormat({ month: "short" });
+  const monthAndYear = dateFormat({ month: "short", year: "numeric" });
+  const dayAndMonth = dateFormat({ day: "numeric", month: "short" });
+
+  // A window too narrow for the whole sheet opens on the present day rather than on its first month.
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box || !hasToday || box.scrollWidth <= box.clientWidth) return;
+    const axis = box.querySelector(".pr-cal-axis");
+    if (axis) box.scrollLeft = (axis.clientWidth * pos(today)) / 100 - axis.clientWidth / 8;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startGrab = (e: PointerEvent<HTMLElement>, row: StageRow) => {
+    if (e.button !== 0) return;
+    const track = e.currentTarget.parentElement!;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    grab.current = { row, mode: (e.target as HTMLElement).dataset.edge ?? "move", x: e.clientX, perDay: track.getBoundingClientRect().width / span, dragged: false };
+  };
+  const dragGrab = (e: PointerEvent<HTMLElement>) => {
+    const g = grab.current;
+    if (!g) return;
+    if (Math.abs(e.clientX - g.x) >= 3) g.dragged = true;
+    if (!g.dragged) return;
+    const by = Math.round((e.clientX - g.x) / g.perDay);
+    const { id, start, end } = g.row;
+    if (g.mode === "start") {
+      const s = shiftDay(start, by);
+      setMoved({ id, start: s > end ? end : s, end });
+    } else if (g.mode === "end") {
+      const n = shiftDay(end, by);
+      setMoved({ id, start, end: n < start ? start : n });
+    } else {
+      setMoved({ id, start: shiftDay(start, by), end: shiftDay(end, by) });
+    }
+  };
+  const dropGrab = async () => {
+    const g = grab.current;
+    grab.current = null;
+    if (!g) return;
+    if (!g.dragged) {
+      setAdding(g.row);
+      return;
+    }
+    try {
+      if (moved && (moved.start !== g.row.start || moved.end !== g.row.end)) await updateEvent(g.row.id, { start: moved.start, end: moved.end });
+    } catch (e) {
+      fail(e);
+    }
+    setMoved(null);
+  };
+  const stageMenu = (r: StageRow) => [
+    { label: t("schedule.editStage"), icon: Pencil, onClick: () => setAdding(r) },
+    {
+      label: t("schedule.deleteStage"),
+      icon: Trash2,
+      danger: true,
+      onClick: async () => {
+        if (await confirmRemoval(ask, { title: t("schedule.deleteStageTitle", { name: r.title }), text: t("schedule.deleteStageText") })) void deleteEvent(r.id).catch(fail);
+      },
+    },
+  ];
+  const addButton = (
+    <button type="button" className="rz-add-row pr-cal-add" onClick={() => setAdding("new")}>
+      <Plus aria-hidden="true" />
+      {t("schedule.addStage")}
+    </button>
+  );
+
   return (
-    <div className="pr-pad">
-      <div className="pr-toolbar">
-        <p className="muted">{t("schedule.calendarHelp")}</p>
-        <span className="spacer" />
-        <button type="button" className="btn" onClick={() => setAdding("new")}>
-          <Plus aria-hidden="true" />
-          {t("schedule.addStage")}
-        </button>
-      </div>
+    <div className="pr-cal-wrap">
       {rows.length === 0 ? (
-        <EmptyState title={t("schedule.calendarEmptyTitle")}>
-          <p className="muted">{t("schedule.calendarEmptyText")}</p>
-        </EmptyState>
+        <div className="pr-cal-empty">
+          <EmptyState title={t("schedule.calendarEmptyTitle")}>
+            <p className="muted">{t("schedule.calendarEmptyText")}</p>
+          </EmptyState>
+        </div>
       ) : (
-        <ul className="pr-timeline">
-          <li className="pr-stage pr-axis" aria-hidden="true">
-            <span />
-            <div className="pr-axis-track">
-              {ticks.map((d) => (
-                <span key={d} style={{ left: `${pos(d)}%` }}>
-                  {tickFormat.format(parseDay(d))}
-                </span>
+        <div className="pr-cal-scroll" ref={scroller} tabIndex={0} role="region" aria-label={t("schedule.calendar")}>
+          <div className="pr-cal" style={{ "--cal-days": span } as CSSProperties}>
+            {/* The months, the shoot and the present day run the full height of the sheet, down past the last stage. */}
+            <div className="pr-cal-ground" aria-hidden="true">
+              {months.map((m, i) => (
+                <span key={m.iso} className={`pr-cal-band${i % 2 ? " odd" : ""}`} style={{ left: `${pos(m.iso)}%`, width: `${(m.days / span) * 100}%` }} />
               ))}
+              {mondays.map((d) => (
+                <span key={d} className="pr-cal-week" style={{ left: `${pos(d)}%` }} />
+              ))}
+              {shooting.length > 0 && <span className="pr-cal-shoot" style={{ left: `${pos(shooting[0])}%`, width: `${((dayDiff(shooting[0], shooting[shooting.length - 1]) + 1) / span) * 100}%` }} />}
+              {hasToday && <span className="pr-cal-now" style={{ left: `${pos(today)}%` }} />}
             </div>
-            <span />
-          </li>
-          {rows.map((r) => (
-            <li key={r.id} className={`pr-stage ph-${r.phase}`}>
-              <div className="pr-stage-text">
-                <strong>{r.title}</strong>
-                <span className="muted">
-                  {!r.auto && `${t(`schedule.phases.${r.phase}`)} · `}
-                  {r.start === r.end ? shortDate(r.start) : `${shortDate(r.start)} – ${shortDate(r.end)}`}
-                </span>
+            <div className="pr-cal-head" aria-hidden="true">
+              <div className="pr-cal-corner" />
+              <div className="pr-cal-axis">
+                {months.map((m) => (
+                  <span key={m.iso} className="pr-cal-month" style={{ left: `${pos(m.iso)}%`, width: `${(m.days / span) * 100}%` }}>
+                    {(m.yearly ? monthAndYear : monthName).format(parseDay(m.iso))}
+                  </span>
+                ))}
+                {mondays.map((d) => (
+                  <span key={d} className="pr-cal-monday" style={{ left: `${pos(d)}%` }}>
+                    {parseDay(d).getDate()}
+                  </span>
+                ))}
+                {hasToday && (
+                  <span className="pr-cal-today" style={{ left: `${pos(today)}%` }}>
+                    {t("schedule.today")}
+                  </span>
+                )}
               </div>
-              <div className="pr-stage-track" aria-hidden="true">
-                <span className="pr-stage-bar" style={{ left: `${pos(r.start)}%`, width: `${Math.max(0.8, pos(r.end) - pos(r.start) + 100 / span)}%` }} />
-              </div>
-              {r.auto ? (
-                <span className="pr-stage-auto muted small">{t("schedule.fromStrips")}</span>
-              ) : (
-                <MoreMenu
-                  label={t("schedule.stageMenu", { name: r.title })}
-                  items={[
-                    { label: t("schedule.editStage"), icon: Pencil, onClick: () => setAdding(r) },
-                    {
-                      label: t("schedule.deleteStage"),
-                      icon: Trash2,
-                      danger: true,
-                      onClick: async () => {
-                        if (await confirmRemoval(ask, { title: t("schedule.deleteStageTitle", { name: r.title }), text: t("schedule.deleteStageText") })) void deleteEvent(r.id).catch(fail);
-                      },
-                    },
-                  ]}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
+            </div>
+            {PHASES.map((phase) => {
+              const stages = rows.filter((r) => r.phase === phase);
+              if (!stages.length) return null;
+              return (
+                <section key={phase} className={`pr-cal-group ph-${phase}`} aria-label={t(`schedule.phases.${phase}`)}>
+                  <h3 className="pr-cal-phase">
+                    <span>{t(`schedule.phases.${phase}`)}</span>
+                  </h3>
+                  <ul className="pr-cal-rows">
+                    {stages.map((r) => {
+                      const now = moved?.id === r.id ? moved : r;
+                      const dates = now.start === now.end ? shortDate(now.start) : `${shortDate(now.start)} – ${shortDate(now.end)}`;
+                      const flip = pos(now.end) > 84;
+                      const tag = r.auto ? `${plural("schedule.shootDays", shooting.length)} · ${t("schedule.fromStrips")}` : now.start === now.end ? dayAndMonth.format(parseDay(now.start)) : stageLength(now.start, now.end);
+                      return (
+                        <li key={r.id} className={`pr-cal-row${moved?.id === r.id ? " moving" : ""}`}>
+                          <div className="pr-cal-name">
+                            <button type="button" className="pr-cal-title" title={`${r.title} · ${dates}`} onClick={() => (r.auto ? onShowStrips() : setAdding(r))}>
+                              <strong>{r.title}</strong>
+                              <span>{dates}</span>
+                            </button>
+                            {!r.auto && <MoreMenu label={t("schedule.stageMenu", { name: r.title })} items={stageMenu(r)} />}
+                          </div>
+                          <div className="pr-cal-track" aria-hidden="true">
+                            {r.auto ? (
+                              <button type="button" tabIndex={-1} className="pr-cal-shootbar" title={`${r.title} · ${dates}`} style={{ left: `${pos(now.start)}%`, width: `${((dayDiff(now.start, now.end) + 1) / span) * 100}%` }} onClick={onShowStrips}>
+                                {dayRuns(shooting).map((run) => (
+                                  <span key={run.start} style={{ left: `${(dayDiff(now.start, run.start) / (dayDiff(now.start, now.end) + 1)) * 100}%`, width: `${((dayDiff(run.start, run.end) + 1) / (dayDiff(now.start, now.end) + 1)) * 100}%` }} />
+                                ))}
+                              </button>
+                            ) : (
+                              <span
+                                className={`pr-cal-bar${now.start === now.end ? " one" : ""}`}
+                                title={`${r.title} · ${dates}${r.notes ? `\n${r.notes}` : ""}`}
+                                style={now.start === now.end ? { left: `${pos(now.start) + 50 / span}%` } : { left: `${pos(now.start)}%`, width: `${((dayDiff(now.start, now.end) + 1) / span) * 100}%` }}
+                                onPointerDown={(e) => startGrab(e, r)}
+                                onPointerMove={dragGrab}
+                                onPointerUp={() => void dropGrab()}
+                                onPointerCancel={() => {
+                                  grab.current = null;
+                                  setMoved(null);
+                                }}
+                              >
+                                {now.start !== now.end && (
+                                  <>
+                                    <i data-edge="start" />
+                                    <i data-edge="end" />
+                                  </>
+                                )}
+                              </span>
+                            )}
+                            {tag && (
+                              <span className="pr-cal-tag" style={flip ? { right: `calc(${100 - pos(now.start)}% + ${now.start === now.end ? 14 : 8}px)` } : { left: `calc(${pos(now.end) + 100 / span}% + 8px)` }}>
+                                {tag}
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        </div>
       )}
+      <div className="pr-cal-foot">{addButton}</div>
       {adding && <StageDialog event={adding === "new" ? null : adding} onClose={() => setAdding(null)} />}
     </div>
   );

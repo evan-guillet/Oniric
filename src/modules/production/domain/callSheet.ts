@@ -1,4 +1,4 @@
-/** The call sheet of a day [FDS-01 to FDS-08]: what it holds, its sections, what changed since it was sent. */
+/** The call sheet of a day [FDS-01 to FDS-07]: what it holds, its sections, what changed since it was sent. */
 
 export interface CallLocation {
   name: string;
@@ -84,7 +84,7 @@ export function sheetData(raw: unknown): CallSheetData {
 }
 
 /** The sections of a sheet, in the order the template sets [FDS-04]. */
-export const SECTIONS = ["times", "locations", "safety", "scenes", "cast", "extras", "departments", "needs", "notes", "nextDay", "contacts"] as const;
+export const SECTIONS = ["times", "locations", "scenes", "cast", "departments", "extras", "needs", "safety", "notes", "nextDay", "contacts"] as const;
 export type SectionId = (typeof SECTIONS)[number];
 
 export interface Template {
@@ -129,37 +129,10 @@ export function changes(before: unknown, after: unknown, path = ""): Set<string>
   return out;
 }
 
-/** The report of the day [FDS-08]. */
-export interface DayReport {
-  /** The scenes shot: all of it, part of it. */
-  scenes: Record<string, "done" | "part">;
-  shots: string;
-  /** Minutes of film shot. */
-  screenTime: string;
-  call: string;
-  firstShot: string;
-  lunch: string;
-  wrap: string;
-  incidents: string;
-  continuity: string;
-  notes: string;
-}
-
-export function dayReport(raw: unknown): DayReport {
-  const o = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Partial<DayReport>) : {};
-  return {
-    shots: "",
-    screenTime: "",
-    call: "",
-    firstShot: "",
-    lunch: "",
-    wrap: "",
-    incidents: "",
-    continuity: "",
-    notes: "",
-    ...o,
-    scenes: o.scenes && typeof o.scenes === "object" ? o.scenes : {},
-  };
+/** How many things changed: a change marks every level above it, only the deepest ones count. */
+export function changeCount(paths: Set<string>): number {
+  const all = [...paths];
+  return all.filter((p) => !all.some((q) => q.startsWith(`${p}.`))).length;
 }
 
 /** « 07:30 » for « 7h30 », « 7:30 », « 730 » or « 7 »; what it can't read stays as typed. */

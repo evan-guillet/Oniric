@@ -11,7 +11,6 @@ export type ViewId =
   | "script"
   | "structure"
   | "versions"
-  | "stats"
   | "settings"
   | "moodboard"
   | "shotlist"
@@ -22,6 +21,20 @@ export type ViewId =
   | "budget"
   | "scouting"
   | "permits";
+
+/** Where each view with several pages keeps the one shown: the side bar chooses it, the view shows it. */
+export const PAGE_KEY = {
+  script: "oniric.script.page",
+  bible: "oniric.bible.type",
+  structure: "oniric.structure.view",
+  versions: "oniric.versions.pane",
+  team: "oniric.team.tab",
+  breakdown: "oniric.breakdown.tab",
+  schedule: "oniric.schedule.tab",
+  budget: "oniric.budget.tab",
+  scouting: "oniric.scouting.tab",
+  permits: "oniric.permits.tab",
+} as const;
 
 /** The parts of the project hidden from the side bar, as set in the settings. */
 export const PARTS_HIDDEN_SETTING = "parts_hidden";
@@ -78,9 +91,11 @@ export type SettingsPage =
   | "writing"
   | "formats"
   | "backups"
+  | "map"
   | "shortcuts"
   | "script"
   | "shotlist"
+  | "breakdown"
   | "parts"
   | "posts"
   | "about";

@@ -406,7 +406,172 @@ export interface WorkshopItemTable {
   updated_at: string;
 }
 
+export type BudgetKind = "estimate" | "forecast" | "actual";
+export type BudgetLevel = "chapter" | "post" | "line";
+
+export interface BudgetTable {
+  id: string;
+  name: string;
+  kind: Generated<BudgetKind>;
+  rank: string;
+  settings: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetLineTable {
+  id: string;
+  budget_id: string;
+  parent_id: string | null;
+  level: BudgetLevel;
+  origin: string;
+  rank: string;
+  label: Generated<string>;
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetExpenseTable {
+  id: string;
+  origin: string | null;
+  spent_on: string | null;
+  supplier: Generated<string>;
+  label: Generated<string>;
+  amount: Generated<number>;
+  currency: Generated<string>;
+  receipt: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FundingStatus = "asked" | "granted" | "paid";
+
+export interface FundingSourceTable {
+  id: string;
+  name: Generated<string>;
+  kind: Generated<string>;
+  amount: Generated<number>;
+  currency: Generated<string>;
+  status: Generated<FundingStatus>;
+  notes: Generated<string>;
+  rank: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RealKind = "set" | "base" | "parking" | "catering" | "hospital" | "pharmacy";
+export type RealStatus = "lead" | "visited" | "kept" | "refused" | "booked";
+
+export interface RealLocationTable {
+  id: string;
+  kind: Generated<RealKind>;
+  status: Generated<RealStatus>;
+  name: Generated<string>;
+  address: Generated<string>;
+  lat: number | null;
+  lon: number | null;
+  rank: string;
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RealLocationEntryTable {
+  location_id: string;
+  entry_id: string;
+}
+
+export interface ScoutingVisitTable {
+  id: string;
+  location_id: string;
+  visited_on: string | null;
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RouteMode = "car" | "foot";
+
+export interface MapRouteTable {
+  from_id: string;
+  to_id: string;
+  mode: RouteMode;
+  distance_m: number;
+  duration_s: number;
+  geometry: Generated<string>;
+  computed_at: string;
+}
+
+export type PermitStatus = "todo" | "sent" | "review" | "granted" | "refused" | "expired";
+
+export interface PermitTable {
+  id: string;
+  location_id: string | null;
+  kind: Generated<string>;
+  status: Generated<PermitStatus>;
+  authority: Generated<string>;
+  start_date: string | null;
+  end_date: string | null;
+  deadline: string | null;
+  data: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ReleaseStatus = "todo" | "sent" | "signed";
+
+export interface ImageReleaseTable {
+  id: string;
+  contact_id: string | null;
+  name: Generated<string>;
+  status: Generated<ReleaseStatus>;
+  signed_on: string | null;
+  document: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuranceTable {
+  id: string;
+  location_id: string | null;
+  activity: Generated<string>;
+  insurer: Generated<string>;
+  policy: Generated<string>;
+  start_date: string | null;
+  end_date: string | null;
+  document: string | null;
+  notes: Generated<string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LegalDocumentTable {
+  id: string;
+  model: string;
+  title: Generated<string>;
+  body: Generated<string>;
+  location_id: string | null;
+  permit_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
+  budget: BudgetTable;
+  budget_line: BudgetLineTable;
+  budget_expense: BudgetExpenseTable;
+  funding_source: FundingSourceTable;
+  real_location: RealLocationTable;
+  real_location_entry: RealLocationEntryTable;
+  scouting_visit: ScoutingVisitTable;
+  map_route: MapRouteTable;
+  permit: PermitTable;
+  image_release: ImageReleaseTable;
+  insurance: InsuranceTable;
+  legal_document: LegalDocumentTable;
   project_setting: ProjectSettingTable;
   scene: SceneTable;
   act: ActTable;

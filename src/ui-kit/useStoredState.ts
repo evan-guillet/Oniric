@@ -6,6 +6,12 @@ const CHANGED = "oniric-stored";
 /** A state kept in this computer's storage; without it, it still holds for the session. */
 export function useStoredState<T>(key: string, initial: T): [T, (v: T) => void] {
   const [value, setValue] = useState<T>(() => readStored(key, initial));
+  // Another key is another state: what the last one held does not carry over.
+  const [lastKey, setLastKey] = useState(key);
+  if (key !== lastKey) {
+    setLastKey(key);
+    setValue(readStored(key, initial));
+  }
   useEffect(() => {
     const follow = (e: Event) => {
       const d = (e as CustomEvent<{ key: string; value: T }>).detail;
@@ -17,16 +23,21 @@ export function useStoredState<T>(key: string, initial: T): [T, (v: T) => void] 
   const set = useCallback(
     (v: T) => {
       setValue(v);
-      try {
-        localStorage.setItem(key, JSON.stringify(v));
-      } catch {
-        // Not remembered, still applied.
-      }
-      window.dispatchEvent(new CustomEvent(CHANGED, { detail: { key, value: v } }));
+      writeStored(key, v);
     },
     [key],
   );
   return [value, set];
+}
+
+/** Changes such a state from outside a component, or from another one (the side bar chooses the page a view shows). */
+export function writeStored<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Not remembered, still applied.
+  }
+  window.dispatchEvent(new CustomEvent(CHANGED, { detail: { key, value } }));
 }
 
 /** What a state of `useStoredState` holds, read outside a component (an export reads the shown columns). */

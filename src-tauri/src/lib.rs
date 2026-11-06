@@ -9,6 +9,8 @@ pub mod system;
 mod commands;
 #[cfg(feature = "app")]
 mod documents;
+#[cfg(feature = "app")]
+mod network;
 
 #[cfg(feature = "app")]
 pub use app::{export_types, run};
@@ -16,6 +18,7 @@ pub use app::{export_types, run};
 #[cfg(feature = "app")]
 mod app {
     use crate::commands::{self, BackupFailed, Core, DbChanged, ProjectFlushFailed, ProjectFlushed};
+    use crate::network::{self, MapActivity, MapNet, MapZoneProgress};
     use crate::system::{log, Paths};
     use specta_typescript::Typescript;
     use std::time::{Duration, Instant};
@@ -74,8 +77,16 @@ mod app {
                 commands::media_write,
                 commands::version_save,
                 commands::version_read,
+                network::map_settings_get,
+                network::map_settings_set,
+                network::map_geocode,
+                network::map_route,
+                network::map_zone_save,
+                network::map_zone_delete,
+                network::map_cache_state,
+                network::map_cache_clear,
             ])
-            .events(collect_events![DbChanged, ProjectFlushed, ProjectFlushFailed, BackupFailed])
+            .events(collect_events![DbChanged, ProjectFlushed, ProjectFlushFailed, BackupFailed, MapActivity, MapZoneProgress])
     }
 
     /// `oniric --exporter-types chemin\bindings.ts` writes the TypeScript bindings and exits.
@@ -116,6 +127,12 @@ mod app {
             .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_opener::init())
             .invoke_handler(builder.invoke_handler())
+            // The tiles of the map, from its cache or through the one module that may connect.
+            .register_asynchronous_uri_scheme_protocol("oniric-tiles", |ctx, request, responder| {
+                let app = ctx.app_handle().clone();
+                let path = request.uri().path().to_string();
+                tauri::async_runtime::spawn_blocking(move || responder.respond(network::serve(&app, &path)));
+            })
             .setup(move |app| {
                 let path = app.path();
                 let exe_dir = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.to_path_buf()));
@@ -127,6 +144,7 @@ mod app {
                 } else {
                     path.document_dir()?.join("Oniric").join("Sauvegardes")
                 };
+                app.manage(MapNet::new(&paths.local, &app.package_info().version.to_string()));
                 app.manage(Core::new(paths, started, startup_project, backups));
                 builder.mount_events(app);
                 if let Some(window) = app.get_webview_window("main") {

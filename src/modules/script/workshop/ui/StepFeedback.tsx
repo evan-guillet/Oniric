@@ -1,4 +1,4 @@
-import { ChevronRight, Download, Plus, Star, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Star, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
@@ -10,24 +10,12 @@ import { Select } from "../../../../ui-kit/Select";
 import { useProject } from "../../../project/ui/projectContext";
 import { Field } from "../../../production/ui/parts";
 import { useScenes } from "../../screenplay/application/scriptSession";
-import { listVersions, readVersion } from "../../screenplay/application/versions";
-import { exportScreenplayPdf } from "../../screenplay/ui/screenplayExport";
+import { listVersions } from "../../screenplay/application/versions";
 import { addItems, deleteItem, itemsOf, updateItem, useItems, type Item } from "../application/items";
 import { formIssues, type Issue } from "../domain/review";
 import { Help } from "./fields";
+import type { Reader } from "./readerCopy";
 import { reviewScenes } from "./StepRewrite";
-
-interface Reader {
-  name: string;
-  /** The frozen version sent, by its id; empty: the text as it was when exported. */
-  version: string;
-  copy: number;
-  sentAt: string;
-  strengths: string;
-  weaknesses: string;
-  understanding: string;
-  rating: number;
-}
 
 type RemarkStatus = "todo" | "apply" | "discuss" | "rejected" | "done";
 const STATUSES: RemarkStatus[] = ["todo", "apply", "discuss", "rejected", "done"];
@@ -88,27 +76,13 @@ function Readers({ readers, remarks }: { readers: Item<Reader>[]; remarks: Item<
 }
 
 function ReaderRow({ reader, remarks, open, onToggle }: { reader: Item<Reader>; remarks: Item<Remark>[]; open: boolean; onToggle: () => void }) {
-  const api = useProject();
-  const { ask, notify, session } = api;
+  const { ask, notify, session } = useProject();
   const versions = useLive(listVersions, ["script_version"]) ?? [];
   const scenes = useScenes(session);
   const r = reader.data;
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const set = (p: Partial<Reader>) => void updateItem(reader, p).catch(fail);
   const version = versions.find((v) => v.id === r.version);
-  const exportCopy = async () => {
-    try {
-      const frozen = version ? await readVersion(version.file) : undefined;
-      await exportScreenplayPdf(api, undefined, undefined, {
-        watermark: t("feedback.watermark", { name: r.name, n: r.copy }),
-        fileName: `${api.project.title} - ${t("feedback.copyFile", { n: r.copy })} - ${r.name}.pdf`,
-        version: frozen,
-      });
-      if (!r.sentAt) set({ sentAt: new Date().toISOString().slice(0, 10) });
-    } catch (e) {
-      fail(e);
-    }
-  };
   const [draft, setDraft] = useState<Remark>({ sceneId: "", quote: "", text: "", status: "todo" });
   const addRemark = () => {
     if (!draft.text.trim() && !draft.quote.trim()) return;
@@ -130,7 +104,6 @@ function ReaderRow({ reader, remarks, open, onToggle }: { reader: Item<Reader>; 
         <MoreMenu
           label={t("feedback.readerMenu", { name: r.name })}
           items={[
-            { label: t("feedback.exportCopy"), icon: Download, onClick: () => void exportCopy() },
             {
               label: t("feedback.deleteReader"),
               icon: Trash2,
@@ -157,10 +130,6 @@ function ReaderRow({ reader, remarks, open, onToggle }: { reader: Item<Reader>; 
               </Select>
             </label>
             <Field label={t("feedback.sentAt")} type="date" value={r.sentAt} onCommit={(v) => set({ sentAt: v })} />
-            <button type="button" className="btn" onClick={() => void exportCopy()}>
-              <Download aria-hidden="true" />
-              {t("feedback.exportCopy")}
-            </button>
           </div>
           <h4>{t("feedback.sheet")}</h4>
           <div className="pr-grid">

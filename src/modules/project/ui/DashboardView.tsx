@@ -1,4 +1,4 @@
-import { BookOpen, ChartColumn, ChevronRight, History, Layers, NotebookPen, PenLine, type LucideIcon } from "lucide-react";
+import { BookOpen, ChevronRight, FileCheck2, History, Layers, MapPin, NotebookPen, PenLine, Wallet, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { db, query } from "../../../core/db/client";
 import { useLive } from "../../../core/db/live";
@@ -11,15 +11,20 @@ import { listVersions } from "../../script/screenplay/application/versions";
 import { useScenes, useSessionState, type SceneInfo } from "../../script/screenplay/application/scriptSession";
 import { formatMinutes } from "../../script/screenplay/domain/duration";
 import type { ElementType } from "../../script/screenplay/domain/formats";
-import { characterName } from "../../script/screenplay/ui/editor/schema";
 import { readJournal } from "../../script/stats/application/journal";
-import { characterStats, dayKey, periodDays, placeStats, totalWords, wordCounts, type Journal, type StatScene } from "../../script/stats/domain/stats";
+import { dayKey, periodDays, totalWords, wordCounts, type Journal } from "../../script/stats/domain/stats";
 import { Progress, Tile } from "../../script/stats/ui/StatsParts";
 import { loadStory, SCENE_STATUSES, STORY_TABLES, storyOutline, type Story } from "../../script/views/application/story";
 import { numberedTitles, sceneLabel } from "../../script/views/domain/outline";
 import { useFields } from "../../script/workshop/application/workshop";
 import { STEPS, type StepStatus } from "../../script/workshop/domain/steps";
 import { useProject, type ViewId } from "./projectContext";
+import { loadBudgets } from "../../production/application/budget";
+import { loadPermits } from "../../production/application/permits";
+import { loadScouting } from "../../production/application/scouting";
+import { dueSoon } from "../../production/domain/permits";
+import { overruns, rollUp, spentBy, topsheet } from "../../production/domain/budget";
+import { money, usePermitAlerts } from "../../production/ui/preparation";
 
 const num = { format: (n: number) => numberFormat().format(n) };
 const longDay = { format: (d: Date) => dateFormat({ weekday: "long", day: "numeric", month: "long" }).format(d) };
@@ -35,16 +40,11 @@ export function DashboardView() {
   const scenes = useScenes(session);
   const story = useLive(loadStory, [...STORY_TABLES]);
 
-  const statScenes = useMemo(
-    (): StatScene[] =>
-      scenes.map((s) => {
-        const blocks: StatScene["blocks"] = [];
-        s.node.forEach((b) => blocks.push({ type: b.type.name as ElementType, text: b.textContent }));
-        return { id: s.id, index: s.index, heading: s.heading, eighths: s.eighths, blocks };
-      }),
-    [scenes],
-  );
-  const words = useMemo(() => totalWords(wordCounts(statScenes.flatMap((s) => s.blocks))), [statScenes]);
+  const words = useMemo(() => {
+    const blocks: { type: ElementType; text: string }[] = [];
+    for (const s of scenes) s.node.forEach((b) => blocks.push({ type: b.type.name as ElementType, text: b.textContent }));
+    return totalWords(wordCounts(blocks));
+  }, [scenes]);
 
   const snap = session.snapshot;
   const pages = snap?.pagination.pages ?? [];
@@ -80,7 +80,7 @@ export function DashboardView() {
         )}
       </section>
 
-      <Shortcuts statScenes={statScenes} story={story} />
+      <Shortcuts story={story} />
     </div>
   );
 }
@@ -152,9 +152,27 @@ async function loadOpenNotes(): Promise<OpenNote[]> {
 
 const SHOWN = 3;
 
+/** What the shoot is short of: a day in a set without a permit, a request to send soon, a line of the budget overrun [PRJ-05]. */
+function useShootWaiting(): { key: string; view: ViewId; text: string }[] {
+  const alerts = usePermitAlerts();
+  const permits = useLive(loadPermits, ["permit"]);
+  const budgets = useLive(loadBudgets, ["budget", "budget_line", "budget_expense", "project_setting"]);
+  const today = new Date().toISOString().slice(0, 10);
+  const out: { key: string; view: ViewId; text: string }[] = [];
+  for (const a of alerts ?? []) out.push({ key: `a${a.dayId}${a.locationId}`, view: "permits", text: t("dash.noPermit", { day: a.number, name: a.name }) });
+  for (const p of dueSoon(permits?.permits ?? [], today)) out.push({ key: `p${p.id}`, view: "permits", text: t("dash.permitDue", { date: p.deadline ? dateFormat({ day: "numeric", month: "long" }).format(new Date(`${p.deadline}T12:00:00`)) : "" }) });
+  const current = budgets?.budgets.find((b) => b.id === budgets.currentId);
+  if (budgets && current) {
+    const lines = budgets.lines.filter((l) => l.budgetId === current.id);
+    for (const o of overruns(lines, rollUp(lines, current.settings), spentBy(lines, budgets.expenses, current.settings))) out.push({ key: `o${o.id}`, view: "budget", text: t("dash.overrun", { name: o.label, amount: money(o.over, current.settings.currency) }) });
+  }
+  return out;
+}
+
 /** What is waiting for the author: open notes, scenes to rewrite, names of the screenplay without an entry. */
 function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefined }) {
   const { openScene, go } = useProject();
+  const prep = useShootWaiting();
   const notes = useLive(loadOpenNotes, ["note"]);
   const entries = useLive(loadEntries, ["bible_entry"]);
   const texts = useMemo(() => sceneTexts(scenes), [scenes]);
@@ -167,7 +185,7 @@ function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefi
   const rewrite = story ? scenes.filter((s) => story.meta.get(s.id)?.status === "rewrite") : [];
   const open = (notes ?? []).filter((n) => !n.sceneId || byId.has(n.sceneId));
   const loading = !notes || !story || !entries;
-  const nothing = !loading && open.length === 0 && rewrite.length === 0 && unnamed === 0;
+  const nothing = !loading && open.length === 0 && rewrite.length === 0 && unnamed === 0 && !prep.length;
 
   return (
     <section className="stats-section" aria-labelledby="dash-waiting">
@@ -179,6 +197,19 @@ function Waiting({ scenes, story }: { scenes: SceneInfo[]; story: Story | undefi
             <span className="stats-dot stats-p-done" aria-hidden="true" />
             {t("dash.clear")}
           </p>
+        )}
+        {prep.length > 0 && (
+          <Group title={t("dash.shoot")} count={prep.length}>
+            {prep.slice(0, SHOWN).map((p) => (
+              <li key={p.key}>
+                <button type="button" className="dash-row" onClick={() => go(p.view)}>
+                  <span className="stats-dot stats-p-rewrite" aria-hidden="true" />
+                  <span className="dash-row-text">{p.text}</span>
+                </button>
+              </li>
+            ))}
+            {prep.length > SHOWN && <li className="dash-more">{plural("dash.others", prep.length - SHOWN)}</li>}
+          </Group>
         )}
         {open.length > 0 && (
           <Group title={t("dash.openNotes")} count={open.length}>
@@ -380,13 +411,16 @@ interface Shortcut {
 
 
 /** The other views of the script, each with what it holds. */
-function Shortcuts({ statScenes, story }: { statScenes: StatScene[]; story: Story | undefined }) {
+function Shortcuts({ story }: { story: Story | undefined }) {
   const { go } = useProject();
   const fields = useFields();
   const entries = useLive(async () => (await loadEntries()).filter((e) => !e.archivedAt).length, ["bible_entry"]);
   const versions = useLive(listVersions, ["script_version"]);
-  const characters = useMemo(() => characterStats(statScenes, characterName).length, [statScenes]);
-  const places = useMemo(() => placeStats(statScenes).length, [statScenes]);
+  const budgets = useLive(loadBudgets, ["budget", "budget_line", "project_setting"]);
+  const currentBudget = budgets?.budgets.find((b) => b.id === budgets.currentId);
+  const scouting = useLive(loadScouting, ["real_location"]);
+  const sets = scouting?.locations.filter((l) => l.kind === "set") ?? [];
+  const permitList = useLive(loadPermits, ["permit"]);
 
   const steps = STEPS.map((s) => (fields?.get(`step.${s.n}.status`) as StepStatus | undefined) ?? "empty");
   const done = steps.filter((s) => s === "done").length;
@@ -416,7 +450,24 @@ function Shortcuts({ statScenes, story }: { statScenes: StatScene[]; story: Stor
             })
           : t("dash.noVersion"),
     },
-    { view: "stats", label: t("nav.views.stats"), icon: ChartColumn, detail: `${plural("dash.speakers", characters)} · ${plural("dash.places", places)}` },
+    {
+      view: "budget",
+      label: t("nav.views.budget"),
+      icon: Wallet,
+      detail: !budgets ? "…" : currentBudget ? t("dash.budgetTotal", { name: currentBudget.name, total: money(topsheet(budgets.lines.filter((l) => l.budgetId === currentBudget.id), currentBudget.settings).total, currentBudget.settings.currency) }) : t("dash.noBudget"),
+    },
+    {
+      view: "scouting",
+      label: t("nav.views.scouting"),
+      icon: MapPin,
+      detail: !scouting ? "…" : sets.length ? plural("dash.sets", sets.length, { kept: sets.filter((l) => l.status === "kept" || l.status === "booked").length }) : t("dash.noSet"),
+    },
+    {
+      view: "permits",
+      label: t("nav.views.permits"),
+      icon: FileCheck2,
+      detail: !permitList ? "…" : permitList.permits.length ? t("dash.permits", { granted: permitList.permits.filter((p) => p.status === "granted").length, total: permitList.permits.length }) : t("dash.noPermitYet"),
+    },
   ];
 
   return (

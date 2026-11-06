@@ -36,6 +36,17 @@ export function Reminders() {
       if (follow) lines.push(plural("reminders.submissions", follow));
       if (due) lines.push(plural("reminders.requests", due));
       if (lines.length) notify({ text: lines.join(" "), tone: "warning", actions: [{ label: t("reminders.open"), onClick: () => go("workshop") }] });
+      // The permits to send soon, and those that ran out [AUT-02].
+      const permits = await query(db.selectFrom("permit").select(["status", "deadline", "end_date"]));
+      const limit = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+      const toSend = permits.filter((p) => p.status === "todo" && p.deadline && p.deadline <= limit).length;
+      const lapsed = permits.filter((p) => p.status === "granted" && p.end_date && p.end_date < today).length;
+      if (toSend || lapsed)
+        notify({
+          text: [toSend && plural("reminders.permits", toSend), lapsed && plural("reminders.permitsLapsed", lapsed)].filter(Boolean).join(" "),
+          tone: "warning",
+          actions: [{ label: t("reminders.openPermits"), onClick: () => go("permits") }],
+        });
     })().catch(() => {});
   }, [notify, go]);
   return null;

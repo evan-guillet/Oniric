@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Download, Paperclip, Plus, Trash2, X } from "lucide-react";
+import { Paperclip, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { commands } from "../../../../bindings";
 import { unwrap } from "../../../../core/db/client";
@@ -10,12 +10,10 @@ import { confirmRemoval } from "../../../../ui-kit/Dialog";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
 import { Select } from "../../../../ui-kit/Select";
 import { useProject } from "../../../project/ui/projectContext";
-import { BOARD_TABLES, loadBoards } from "../../../realisation/application/moodboards";
 import { Field } from "../../../production/ui/parts";
 import { listVersions } from "../../screenplay/application/versions";
 import { addItems, deleteItem, itemsOf, updateItem, useItems, type Item } from "../application/items";
-import { exportDossier } from "./dossierExport";
-import { Help, useWorkshop, WText } from "./fields";
+import { Help, WText } from "./fields";
 import { DocEditor } from "./StepDocuments";
 
 const BODIES = ["sacd", "sgdl", "wga", "inpi", "soleau", "copyright", "other"] as const;
@@ -51,14 +49,13 @@ const DOCS: { id: Doc; goal: [number, number] }[] = [
   { id: "bio", goal: [0, 1] },
 ];
 
-/** Step 8: the deposits kept track of, the documents that go out, the presentation file, the submissions [DIF-01 to DIF-04]. */
+/** Step 8: the deposits kept track of, the documents that go out, the submissions [DIF-01, DIF-02, DIF-04]. */
 export function StepDiffusion() {
   const items = useItems();
   return (
     <div className="step-body">
       <Deposits list={itemsOf<Deposit>(items, "deposit")} />
       <Documents />
-      <Dossier />
       <Submissions list={itemsOf<Submission>(items, "submission")} />
     </div>
   );
@@ -178,42 +175,6 @@ function Documents() {
         ))}
       </div>
       <DocEditor key={tab} kind={tab} title={t(`diffusion.docs.${tab}`)} goal={doc.goal} help={t(`diffusion.docsHelp.${tab}`)} />
-    </section>
-  );
-}
-
-/** The presentation file in PDF, with a moodboard chosen [DIF-03]. */
-function Dossier() {
-  const api = useProject();
-  const w = useWorkshop();
-  const boards = useLive(loadBoards, [...BOARD_TABLES]) ?? [];
-  const [board, setBoard] = useState("");
-  const chosen = boards.find((b) => b.id === board) ?? null;
-  return (
-    <section className="step-section">
-      <h3>{t("diffusion.dossier")}</h3>
-      <Help>{t("diffusion.dossierHelp")}</Help>
-      <div className="ws-rest">
-        <label className="field">
-          <span>{t("diffusion.moodboard")}</span>
-          <Select value={chosen?.id ?? ""} aria-label={t("diffusion.moodboard")} onChange={(e) => setBoard(e.target.value)}>
-            <option value="">{t("diffusion.noBoard")}</option>
-            {boards.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <button
-          type="button"
-          className="btn primary"
-          onClick={() => void exportDossier(api, chosen?.id ?? null, w.get<string>("diffusion.logline", "")).catch((e) => api.notify({ text: describeError(e), tone: "error" }))}
-        >
-          <Download aria-hidden="true" />
-          {t("diffusion.makeDossier")}
-        </button>
-      </div>
     </section>
   );
 }

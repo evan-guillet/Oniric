@@ -6,11 +6,13 @@ import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
 export interface NoteHost {
   /** Whether the note shows in the text: it exists and is not archived. */
   open(id: string): boolean;
+  /** Whether a note opens in a card over its passage; else it stands beside the text. */
+  floats(): boolean;
   /** The notes put away: their passage keeps its mark, so a note brought back finds it, but loses its highlight. */
   archived(): ReadonlySet<string>;
   /** Draws the card of note `id` in `card`, or empties it with null. */
   render(id: string | null, card: HTMLElement): void;
-  /** Ctrl+click on the passage: the note, in the notes panel. */
+  /** Ctrl+click on the passage: the note beside the text, brought into view. */
   reveal(id: string): void;
 }
 
@@ -31,7 +33,8 @@ interface Span {
  * The note on a passage, in a card under the line: while the caret is in the passage, or the pointer on it.
  * The card is the one of the notes panel, with its « ⋯ » menu; it only shows the note. A link to the Bible keeps its
  * own preview. An archived note leaves the text: its passage is no longer highlighted and opens nothing.
- * Ctrl+click on the passage opens the note in the notes panel; while Ctrl is held, the passage takes the pointer of a link.
+ * With room beside the text no card opens: the note stands there, and Ctrl+click on the passage brings it into view;
+ * while Ctrl is held, the passage takes the pointer of a link.
  */
 export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost | null): Plugin {
   let view: EditorView | null = null;
@@ -56,7 +59,7 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
   };
 
   // The card holds on while it is used: its menu open, its note being written.
-  const held = () => card.contains(document.activeElement) || !!card.querySelector('[aria-expanded="true"]');
+  const held = () => card.contains(document.activeElement) || !!card.querySelector('[aria-expanded="true"], textarea');
   const hide = () => {
     window.clearTimeout(hideTimer);
     if (!shownId) return;
@@ -117,7 +120,7 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
     let found: Span | null = null;
     let run: Span | null = null;
     const close = () => {
-      if (run && !found && run.from <= at && at <= run.to && host()?.open(run.id)) found = run;
+      if (run && !found && run.from <= at && at <= run.to && host()?.floats() && host()?.open(run.id)) found = run;
       run = null;
     };
     $head.parent.forEach((child, offset) => {
@@ -165,7 +168,7 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
       return {
         update(v) {
           view = v;
-          if (shownId && !host()?.open(shownId)) hide();
+          if (shownId && !(host()?.floats() && host()?.open(shownId))) hide();
           followCaret();
         },
         destroy() {
@@ -189,12 +192,12 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
         return true;
       },
       handleDOMEvents: {
-        // Ctrl+click on an open note: the panel, and the caret stays where it was.
+        // Ctrl+click on an open note: the note beside the text, and the caret stays where it was.
         mousedown(_v, e) {
           if (!(e.ctrlKey || e.metaKey) || e.button !== 0) return false;
           const target = e.target as HTMLElement;
           const id = (target.closest?.(".note-mark") as HTMLElement | null)?.dataset.note;
-          if (!id || !host()?.open(id) || target.closest(".wikilink")) return false;
+          if (!id || host()?.floats() || !host()?.open(id) || target.closest(".wikilink")) return false;
           e.preventDefault();
           hide();
           host()?.reveal(id);
@@ -204,7 +207,7 @@ export function notePlugin(mark: MarkType, link: MarkType, host: () => NoteHost 
           const target = e.target as HTMLElement;
           const span = target.closest?.(".note-mark") as HTMLElement | null;
           const id = span?.dataset.note;
-          if (!span || !id || !host()?.open(id) || target.closest(".wikilink")) {
+          if (!span || !id || !host()?.floats() || !host()?.open(id) || target.closest(".wikilink")) {
             if (shownBy === "pointer") hideSoon();
             return false;
           }

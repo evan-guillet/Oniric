@@ -4,7 +4,7 @@ import { onTablesChanged, parseJson } from "../../../../core/db/live";
 import type { EntryStatus } from "../../../../core/db/schema";
 import { uuidv7 } from "../../../../core/ids";
 import type { WikiSource, WikiTarget } from "../ui/wikiPlugin";
-import { BUILTIN_TYPES, fold, pluralize, type EntryType, type FieldDef } from "../domain/types";
+import { BUILTIN_TYPES, fold, namedBuiltins, pluralize, type EntryType, type FieldDef } from "../domain/types";
 import { t } from "../../../../core/i18n";
 
 export interface Entry {
@@ -81,11 +81,30 @@ export async function loadEntries(): Promise<Entry[]> {
   return rows.map(toEntry).sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }
 
+/** One category of the Bible: a type, or a removed type that still has entries. */
+export interface BibleCategory {
+  id: string;
+  title: string;
+  name: string;
+  type?: EntryType;
+}
+
+/** The types in their order, then the removed types whose entries still show. */
+export function bibleCategories(types: EntryType[], entries: { type: string }[]): BibleCategory[] {
+  const known = new Set(types.map((t) => t.id));
+  return [
+    ...types.map((t) => ({ id: t.id, title: t.plural, name: t.name, type: t })),
+    ...[...new Set(entries.map((e) => e.type))].filter((id) => !known.has(id)).map((id) => ({ id, title: t("bible.removedType"), name: t("bible.removedType") })),
+  ];
+}
+
 export async function loadTypes(): Promise<EntryType[]> {
   const rows = await query(db.selectFrom("bible_type").selectAll().where("deleted_at", "is", null).orderBy("name"));
+  // The row of a built-in type holds only the name this project gave it.
+  const isBuiltin = (id: string) => BUILTIN_TYPES.some((b) => b.id === id);
   return [
-    ...BUILTIN_TYPES,
-    ...rows.map((r) => ({ id: r.id, name: r.name, plural: pluralize(r.name), icon: r.icon, builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
+    ...namedBuiltins(new Map(rows.filter((r) => isBuiltin(r.id)).map((r) => [r.id, r.name]))),
+    ...rows.filter((r) => !isBuiltin(r.id)).map((r) => ({ id: r.id, name: r.name, plural: pluralize(r.name), icon: r.icon, builtin: false, fields: parseJson<FieldDef[]>(r.fields, []) })),
   ];
 }
 
@@ -196,6 +215,10 @@ export async function saveType(t: { id?: string; name: string; icon: string; fie
       .onConflict((oc) => oc.column("id").doUpdateSet({ name: t.name.trim() || "Type", icon: t.icon, fields: JSON.stringify(t.fields), updated_at: now })),
   ]);
   return id;
+}
+
+export async function renameType(type: EntryType, name: string): Promise<void> {
+  await saveType({ id: type.id, name, icon: type.builtin ? "" : (type.icon ?? ""), fields: type.builtin ? [] : type.fields });
 }
 
 export async function deleteType(id: string): Promise<void> {

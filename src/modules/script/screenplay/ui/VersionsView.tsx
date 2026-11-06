@@ -1,11 +1,11 @@
-import { ArrowDownToLine, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, History, ListTree, Lock, Pencil, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
+import { ArrowDownToLine, ArrowUpToLine, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, GitCompareArrows, Lock, Pencil, PenLine, Scissors, Trash2, Undo2, UnfoldVertical, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLive } from "../../../../core/db/live";
 import { describeError } from "../../../../core/errors";
 import { markEditorStep, stepHistory } from "../../../../core/history";
 import { FloatingMenu, MoreMenu } from "../../../../ui-kit/MoreMenu";
-import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
-import { useProject } from "../../../project/ui/projectContext";
+import { useStoredState, writeStored } from "../../../../ui-kit/useStoredState";
+import { PAGE_KEY, useProject } from "../../../project/ui/projectContext";
 import { diffLines, diffScenes, foldLines, lineStats, type DiffLine, type LineSide, type SceneDiff } from "../domain/diff";
 import { formatById, lineHeightIn, type ElementStyle, type ScreenplayFormat } from "../domain/formats";
 import { useScriptFormat } from "../application/formatSettings";
@@ -93,13 +93,13 @@ const kindOne = (k: Kind) => t(`versions.kind.${k}`);
 const kindMany = (k: Kind) => t(`versions.kinds.${k}`);
 const KINDS: Exclude<Kind, "same">[] = ["changed", "added", "removed", "moved"];
 
-/** What the panel on the right shows: the touched scenes, the versions, or the cut scenes. */
+/** The page shown, chosen in the side bar: what changed scene by scene, the versions, or the cut scenes. */
 type Pane = "scenes" | "versions" | "cuts";
 
 /**
- * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06], on one screen. The header holds the
- * panel's tabs and the one act (freeze); the text of what changed since the reference fills the page; the panel on the
- * right shows one thing at a time, as in the Scénario: the touched scenes, the versions, or the cut scenes.
+ * Frozen versions, their comparison and the cut scenes [REE-01, REE-02, REE-06], a page each: « Scènes » shows what
+ * changed since the reference; « Figées » is their cards and nothing else; « Coupées » reads the one chosen
+ * beside its list, on the right.
  */
 export function VersionsView() {
   const { session, project, notify, prompt, ask } = useProject();
@@ -107,7 +107,7 @@ export function VersionsView() {
   const versions = loaded ?? [];
   const cuts = useLive(cutScenes, ["scene"]) ?? [];
   const format = useScriptFormat();
-  const [pane, setPane] = useState<Pane>("scenes");
+  const [pane] = useStoredState<Pane>(PAGE_KEY.versions, "scenes");
   const [base, setBase] = useState("");
   const [cmp, setCmp] = useState<Comparison | null>(null);
   const [now, setNow] = useState<VersionFile | null>(null);
@@ -115,13 +115,23 @@ export function VersionsView() {
   // The reference follows the latest frozen version, so that freezing leaves nothing to compare.
   const latest = versions[0]?.file ?? "";
   useEffect(() => setBase(latest), [latest]);
+  // Taken off the list, it can no longer be chosen again: back to the latest.
+  useEffect(() => {
+    if (loaded && base && !loaded.some((v) => v.file === base)) setBase(latest);
+  }, [loaded, base, latest]);
   // The reference is compared with the current text.
   const head = CURRENT;
 
   const load = async (file: string) =>
     file === CURRENT ? currentVersion(session, project.title, format ?? formatById(null), await readTitlePage()) : readVersion(file);
 
+  // Without a frozen version there is nothing to compare: the side bar has no « Scènes », and it falls to the versions.
+  const shownPane: Pane = versions.length === 0 && pane === "scenes" ? "versions" : pane;
+  const comparing = shownPane === "scenes";
+
+  // Read again each time the page shows or a scene comes back: the text may have changed in between.
   useEffect(() => {
+    if (!comparing) return;
     if (!base || base === head) {
       setCmp(null);
       return;
@@ -135,10 +145,7 @@ export function VersionsView() {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, format]);
-
-  // Without a frozen version there is nothing to compare: the panel opens on the versions.
-  const shownPane: Pane = versions.length === 0 && pane === "scenes" ? "versions" : pane;
+  }, [base, format, comparing, cuts.length]);
 
   // The current version's size, measured again each time the versions show.
   useEffect(() => {
@@ -227,46 +234,32 @@ export function VersionsView() {
   };
 
   const label = (file: string) => (file === CURRENT ? t("versions.current") : (versions.find((v) => v.file === file)?.name ?? file));
-  const panes: SegmentedOption<Pane>[] = [
-    ...(versions.length > 0 ? [{ id: "scenes" as const, label: t("versions.paneScenes"), icon: ListTree, hint: t("versions.paneScenesHint") }] : []),
-    { id: "versions", label: t("nav.views.versions"), icon: History, hint: t("versions.historyHint") },
-    { id: "cuts", label: t("versions.paneCuts"), icon: Scissors, hint: t("versions.cutsHint") },
-  ];
-  const side = (scenes: ReactNode) => (
-    <aside className="vr-side" aria-label={t("versions.panel")}>
-      <div className="side-tabs">
-        <Segmented label={t("versions.panel")} options={panes} value={shownPane} onChange={setPane} />
-      </div>
-      {shownPane === "scenes" ? (
-        scenes
-      ) : shownPane === "versions" ? (
-        <VersionPane
-          versions={versions}
-          now={now}
-          base={base}
-          onFreeze={() => void freeze()}
-          onCompare={setBase}
-          onRename={rename}
-          onRestore={restore}
-          onRemove={remove}
-        />
-      ) : (
-        <CutPane cuts={cuts} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
-      )}
-    </aside>
-  );
+  const compareWith = (file: string) => {
+    setBase(file);
+    writeStored(PAGE_KEY.versions, "scenes");
+  };
 
   return (
     <div className="view versions-view">
       <main className="vr-main" aria-label={t("nav.views.versions")}>
         {/* Nothing while the versions are being read, so the first-version page does not flash before them. */}
-        {!loaded ? null : versions.length === 0 ? (
-          <div className="vr-compare">
-            <div className="vr-col">
-              <FirstVersion onFreeze={() => void freeze()} />
-            </div>
-            {side(null)}
+        {!loaded ? null : shownPane === "cuts" ? (
+          <CutsPage cuts={cuts} format={format ?? formatById(null)} onReinstate={reinstateCut} onPurge={(c) => void purgeCut(c)} />
+        ) : versions.length === 0 ? (
+          <div className="vr-col">
+            <FirstVersion onFreeze={() => void freeze()} />
           </div>
+        ) : shownPane === "versions" ? (
+          <VersionsPage
+            versions={versions}
+            now={now}
+            base={base}
+            onFreeze={() => void freeze()}
+            onCompare={compareWith}
+            onRename={rename}
+            onRestore={restore}
+            onRemove={remove}
+          />
         ) : (
           <Compare
             format={format ?? formatById(null)}
@@ -274,7 +267,6 @@ export function VersionsView() {
             head={head}
             cmp={cmp}
             label={label}
-            side={side}
             cutIds={new Set(cuts.map((c) => c.id))}
             onReinstate={(id) => {
               const c = cuts.find((x) => x.id === id);
@@ -287,13 +279,41 @@ export function VersionsView() {
   );
 }
 
-const delta = (before: number, after: number) => after !== before && <span className="vr-delta">{signed(after - before)}</span>;
+const delta = (before: number, after: number) => after !== before && <span className={`vr-delta ${after > before ? "up" : "down"}`}>{signed(after - before)}</span>;
+
+/** A scene's elements, in order, those with text. */
+function sceneBlocks(content: string): { kind: string; text: string }[] {
+  try {
+    const blocks = JSON.parse(content) as { type: string; content?: { text?: string }[] }[];
+    return blocks.map((b) => ({ kind: b.type, text: (b.content ?? []).map((p) => p.text ?? "").join("") })).filter((b) => b.text.trim());
+  } catch {
+    return [];
+  }
+}
+
+/** A scene read as on the page, in the format it was written in, with nothing to act on. */
+function ScriptSheet({ content, format }: { content: string; format: ScreenplayFormat }) {
+  const lh = lineHeightIn(format);
+  return (
+    <article className="vr-sheet" style={{ ...pageWidth(format), fontFamily: `"${format.fontFamily}", monospace`, fontSize: `${format.fontSizePt}pt` }}>
+      {sceneBlocks(content).map((b, k) => {
+        const el = format.elements[b.kind as keyof ScreenplayFormat["elements"]] ?? format.elements.action;
+        return (
+          <p key={k} className="vr-el" style={{ ...elementStyle(el, lh), paddingTop: k === 0 ? undefined : `${el.spaceBefore * lh}in` }}>
+            {b.text}
+          </p>
+        );
+      })}
+    </article>
+  );
+}
 
 /**
- * The versions, the current one on top, each numbered in the order it was frozen; picking a frozen one compares the
- * current text with it. The current one is frozen from its « ⋯ ».
+ * The versions as cards in the body of the page: the current one on top, all in green, the latest frozen after it, all
+ * in blue. Each frozen one says how far it stands from the current one, which measures the others and so has no delta.
+ * Freezing is on the current one; each frozen one has its own « ⋯ ».
  */
-function VersionPane({
+function VersionsPage({
   versions,
   now,
   base,
@@ -313,65 +333,73 @@ function VersionPane({
   onRemove: (v: VersionRow) => void;
 }) {
   const { notify } = useProject();
-  const newest = versions[0];
+  const size = (pages: number, scenes: number, from?: VersionFile | null) => (
+    <>
+      <span title={from ? t("versions.nowIs", { n: from.pages }) : undefined}>
+        {plural("versions.pages", pages)}
+        {from && delta(from.pages, pages)}
+      </span>
+      <span title={from ? t("versions.nowIs", { n: from.scenes.length }) : undefined}>
+        {plural("sceneList.count", scenes)}
+        {from && delta(from.scenes.length, scenes)}
+      </span>
+    </>
+  );
+  const currentMeta = now ? size(now.pages, now.scenes.length) : <span>{t("versions.savedAsTyped")}</span>;
+
   return (
-    <div className="vr-pane">
+    <div className="vr-col">
       <ol className="vr-thread">
         <li className="vr-stop current">
-          <span className="vr-mark" aria-hidden="true">
-            <span className="vr-node">
-              <PenLine />
-            </span>
-            V{versions.length + 1}
-          </span>
           <div className="vr-stop-card">
-          <div className="vr-stop-body">
-            <span className="vr-stop-title">
-              <span className="vr-stop-name">{t("versions.current")}</span>
-            </span>
-            <span className="vr-stop-meta">
-              {now ? (
-                <>
-                  <span title={newest ? t("versions.wasIn", { n: newest.pages, name: newest.name }) : undefined}>
-                    {plural("versions.pages", now.pages)}
-                    {newest && delta(newest.pages, now.pages)}
-                  </span>
-                  <span title={newest ? t("versions.wasIn", { n: newest.scenes, name: newest.name }) : undefined}>
-                    {plural("sceneList.count", now.scenes.length)}
-                    {newest && delta(newest.scenes, now.scenes.length)}
-                  </span>
-                </>
-              ) : (
-                t("versions.savedAsTyped")
-              )}
-            </span>
-          </div>
-          <MoreMenu label={t("versions.actionsFor", { name: t("versions.current") })} items={[{ label: t("versions.freeze"), icon: Lock, onClick: onFreeze }]} />
-          </div>
-        </li>
-        {versions.map((v, i) => (
-          <li key={v.id} className={`vr-stop${v.file === base ? " base" : ""}`}>
             <span className="vr-mark" aria-hidden="true">
               <span className="vr-node">
-                <Lock />
+                <PenLine />
               </span>
-              V{versions.length - i}
+              V{versions.length + 1}
             </span>
-            <div className="vr-stop-card">
-            <button type="button" className="vr-stop-body" aria-pressed={v.file === base} title={t("versions.seeSince", { name: v.name })} onClick={() => onCompare(v.file)}>
+            <span className="vr-stop-text">
               <span className="vr-stop-title">
-                <span className="vr-stop-name">{v.name}</span>
+                <span className="vr-stop-name">{t("versions.currentName")}</span>
               </span>
-              <span className="vr-stop-meta">
-                <span title={dateFormat.format(new Date(v.createdAt))}>{shortDate(v.createdAt)}</span>
-                <span>{plural("versions.pages", v.pages)}</span>
-                <span>{plural("sceneList.count", v.scenes)}</span>
+              <span className="vr-stop-meta">{currentMeta}</span>
+            </span>
+          </div>
+          <button type="button" className="btn small vr-freeze" aria-label={t("versions.freeze")} title={t("versions.freeze")} onClick={onFreeze}>
+            <Lock aria-hidden="true" />
+            {t("versions.freezeShort")}
+          </button>
+        </li>
+        {versions.map((v, i) => (
+          <li key={v.id} className={`vr-stop${i === 0 ? " latest" : ""}`}>
+            <div className="vr-stop-card">
+              <span className="vr-mark" aria-hidden="true">
+                <span className="vr-node">
+                  <Lock />
+                </span>
+                V{versions.length - i}
               </span>
-            </button>
+              <span className="vr-stop-text">
+                <span className="vr-stop-title">
+                  <span className="vr-stop-name">{v.name}</span>
+                  {v.file === base && (
+                    <span className="vr-ref" title={t("versions.referenceHint")}>
+                      {t("versions.reference")}
+                    </span>
+                  )}
+                </span>
+                <span className="vr-stop-meta">
+                  <span title={dateFormat.format(new Date(v.createdAt))}>{shortDate(v.createdAt)}</span>
+                  {size(v.pages, v.scenes, now)}
+                </span>
+              </span>
+            </div>
             <MoreMenu
+              className="vr-row-more"
               label={t("versions.actionsFor", { name: v.name })}
               items={[
-                { label: t("versions.renameVersion"), icon: Pencil, onClick: () => onRename(v) },
+                { label: t("versions.seeChanges"), icon: GitCompareArrows, onClick: () => onCompare(v.file) },
+                { label: t("versions.renameShort"), icon: Pencil, onClick: () => onRename(v) },
                 { label: t("versions.restore"), icon: Undo2, onClick: () => onRestore(v) },
                 {
                   label: `${t("versions.copyHash")} · ${v.sha256.slice(0, 8)}`,
@@ -381,7 +409,6 @@ function VersionPane({
                 { label: t("versions.removeFromList"), icon: X, danger: true, onClick: () => onRemove(v) },
               ]}
             />
-            </div>
           </li>
         ))}
       </ol>
@@ -389,53 +416,58 @@ function VersionPane({
   );
 }
 
-/** The first lines of a cut scene's text, under its heading, so it can be recognised before it is put back. */
-function cutExcerpt(content: string): { kind: string; text: string }[] {
-  try {
-    const blocks = JSON.parse(content) as { type: string; content?: { text?: string }[] }[];
-    return blocks
-      .filter((b, i) => !(i === 0 && b.type === "scene_heading"))
-      .map((b) => ({ kind: b.type, text: (b.content ?? []).map((p) => p.text ?? "").join("") }))
-      .filter((b) => b.text.trim());
-  } catch {
-    return [];
-  }
-}
-
-/** The cut scenes, newest first: the heading, the start of the text, when it went and the way back. */
-function CutPane({ cuts, onReinstate, onPurge }: { cuts: CutScene[]; onReinstate: (c: CutScene) => void; onPurge: (c: CutScene) => void }) {
+/** The cut scenes, newest first: the one chosen is read in full and carries the way back, the others stay as they are. */
+function CutsPage({ cuts, format, onReinstate, onPurge }: { cuts: CutScene[]; format: ScreenplayFormat; onReinstate: (c: CutScene) => void; onPurge: (c: CutScene) => void }) {
+  const [picked, setPicked] = useState("");
+  if (cuts.length === 0)
+    return (
+      <div className="vr-col">
+        <div className="vr-no-cut">
+          <Scissors aria-hidden="true" />
+          <h2>{t("versions.cutsEmpty")}</h2>
+          <p>{t("versions.cutsHint")}</p>
+        </div>
+      </div>
+    );
+  const cut = cuts.find((c) => c.id === picked) ?? cuts[0];
+  const headingOf = (c: CutScene) => c.heading || t("dash.noHeading");
   return (
-    <div className="vr-pane">
-      {cuts.length === 0 ? (
-        <p className="vr-pane-empty">{t("versions.cutsEmpty")}</p>
-      ) : (
+    <div className="vr-page">
+      <section className="vr-reader" aria-label={headingOf(cut)}>
+        <div key={cut.id} className="vr-reader-body">
+          <ScriptSheet content={cut.content} format={format} />
+        </div>
+      </section>
+      <div className="vr-list">
         <ul className="vr-cut-list">
           {cuts.map((c) => {
-            const first = cutExcerpt(c.content)[0];
-            const heading = c.heading || t("dash.noHeading");
+            const first = sceneBlocks(c.content).find((b) => b.kind !== "scene_heading");
+            const on = c.id === cut.id;
             return (
-              <li key={c.id} className="vr-cut">
-                <div className="vr-cut-top">
-                  <span className="vr-slug" title={heading}>
-                    {heading}
+              <li key={c.id} className={`vr-cut-row${on ? " on" : ""}`}>
+                <button type="button" className="vr-cut" aria-current={on || undefined} onClick={() => setPicked(c.id)}>
+                  <span className="vr-slug" title={headingOf(c)}>
+                    {headingOf(c)}
                   </span>
-                  <MoreMenu label={t("versions.cutActions", { heading })} items={[{ label: t("versions.purge"), icon: Trash2, danger: true, onClick: () => onPurge(c) }]} />
-                </div>
-                {first && <p className="vr-cut-line">{first.text}</p>}
-                <div className="vr-cut-foot">
+                  {first && <span className="vr-cut-line">{first.text}</span>}
                   <span className="vr-cut-date" title={t("versions.cutOn", { date: dateFormat.format(new Date(c.deletedAt)) })}>
                     {shortDate(c.deletedAt)}
                   </span>
-                  <button type="button" className="btn small" onClick={() => onReinstate(c)}>
-                    <Undo2 aria-hidden="true" />
-                    {t("versions.reinstate")}
-                  </button>
-                </div>
+                </button>
+                {on && (
+                  <div className="vr-cut-acts">
+                    <button type="button" className="btn small primary" onClick={() => onReinstate(c)}>
+                      <Undo2 aria-hidden="true" />
+                      {t("versions.reinstate")}
+                    </button>
+                    <MoreMenu label={t("versions.cutActions", { heading: headingOf(c) })} items={[{ label: t("versions.purge"), icon: Trash2, danger: true, onClick: () => onPurge(c) }]} />
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
-      )}
+      </div>
     </div>
   );
 }
@@ -481,7 +513,7 @@ type Filter = "changes" | Exclude<Kind, "same">;
 
 /**
  * The comparison, laid out like a code review: each touched scene's text, the identical lines folded away; its list of
- * scenes goes to the panel on the right, which the page gives it through `side`.
+ * scenes goes to the panel on the right.
  */
 function Compare({
   format,
@@ -489,7 +521,6 @@ function Compare({
   head,
   cmp,
   label,
-  side,
   cutIds,
   onReinstate,
 }: {
@@ -498,8 +529,6 @@ function Compare({
   head: string;
   cmp: Comparison | null;
   label: (file: string) => string;
-  /** The panel on the right, given what its « Scènes » tab shows. */
-  side: (scenes: ReactNode) => ReactNode;
   cutIds: Set<string>;
   onReinstate: (id: string) => void;
 }) {
@@ -522,7 +551,9 @@ function Compare({
   const layout = (main: ReactNode, scenes: ReactNode) => (
     <div className="vr-compare">
       {main}
-      {side(scenes)}
+      <aside className="vr-side" aria-label={t("versions.panel")}>
+        {scenes}
+      </aside>
     </div>
   );
   const quiet = (text: string) => (

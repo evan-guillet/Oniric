@@ -15,6 +15,7 @@ export const PrintPages = memo(function PrintPages({
   revised,
   revision,
   watermark,
+  pageHeight,
 }: {
   pagination: Pagination;
   format: ScreenplayFormat;
@@ -30,6 +31,8 @@ export const PrintPages = memo(function PrintPages({
   revision?: string;
   /** A reader's copy: their name across every page [RET-01]. */
   watermark?: string;
+  /** The height of the pages when not the format's: the text in one piece on the desk. */
+  pageHeight?: number;
 }) {
   const lh = lineHeightIn(format);
   // A heading split over two pages is numbered once, on its first line.
@@ -58,7 +61,7 @@ export const PrintPages = memo(function PrintPages({
     <div className="print-pages">
       {titlePage && <PrintTitlePage page={titlePage} format={format} />}
       {pagination.pages.map((page) => (
-        <section key={page.number} className="print-page" style={{ width: `${format.page.width}in`, height: `${format.page.height}in` }}>
+        <section key={page.number} className="print-page" style={{ width: `${format.page.width}in`, height: `${pageHeight ?? format.page.height}in` }}>
           {page.number > 1 && (
             <div className="pg-number" style={{ top: `${format.pageNumberTop}in`, right: `${format.margins.right}in` }}>
               {page.number}.

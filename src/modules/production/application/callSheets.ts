@@ -3,7 +3,7 @@ import { parseJson, useLive } from "../../../core/db/live";
 import type { TableName } from "../../../core/db/schema";
 import { uuidv7 } from "../../../core/ids";
 import { readSetting, writeSetting } from "../../script/screenplay/application/settings";
-import { dayReport, sheetData, template, type CallSheetData, type DayReport, type SentVersion, type Template } from "../domain/callSheet";
+import { sheetData, template, type CallSheetData, type SentVersion, type Template } from "../domain/callSheet";
 
 export const SHEET_TABLES: TableName[] = ["call_sheet", "call_recipient"];
 
@@ -12,7 +12,6 @@ export interface Sheet {
   dayId: string;
   data: CallSheetData;
   versions: SentVersion[];
-  report: DayReport;
 }
 
 export interface Recipient {
@@ -31,7 +30,6 @@ export async function loadSheets(): Promise<{ sheets: Sheet[]; recipients: Recip
       dayId: r.day_id,
       data: sheetData(parseJson(r.data, {})),
       versions: parseJson<SentVersion[]>(r.versions, []).map((v) => ({ ...v, data: sheetData(v.data) })),
-      report: dayReport(parseJson(r.report, {})),
     })),
     recipients: recipients.map((r) => ({ sheetId: r.sheet_id, contactId: r.contact_id, callTime: r.call_time, sent: r.sent === 1, confirmed: r.confirmed === 1 })),
   };
@@ -58,19 +56,29 @@ export async function saveSheet(id: string, data: CallSheetData): Promise<void> 
   await write("Feuille de service", ["call_sheet"], [db.updateTable("call_sheet").set({ data: JSON.stringify(data), updated_at: nowIso() }).where("id", "=", id)]);
 }
 
-/** The sheet as it goes out now becomes a numbered version; the ticks of who got and confirmed it start again [FDS-07]. */
-export async function sendVersion(sheet: Sheet): Promise<number> {
+const sentTo = (sheetId: string, contactIds: string[]) =>
+  contactIds.map((id) =>
+    db
+      .insertInto("call_recipient")
+      .values({ sheet_id: sheetId, contact_id: id, sent: 1 })
+      .onConflict((oc) => oc.columns(["sheet_id", "contact_id"]).doUpdateSet({ sent: 1 })),
+  );
+
+/** The sheet as it goes out now becomes a numbered version; the ticks of who got and confirmed it start again, with those it goes to [FDS-07]. */
+export async function sendVersion(sheet: Sheet, to: string[]): Promise<number> {
   const n = (sheet.versions[sheet.versions.length - 1]?.n ?? 0) + 1;
   const versions = [...sheet.versions, { n, at: nowIso(), data: sheet.data }];
   await write(`Version ${n} de la feuille`, SHEET_TABLES, [
     db.updateTable("call_sheet").set({ versions: JSON.stringify(versions), updated_at: nowIso() }).where("id", "=", sheet.id),
     db.updateTable("call_recipient").set({ sent: 0, confirmed: 0 }).where("sheet_id", "=", sheet.id),
+    ...sentTo(sheet.id, to),
   ]);
   return n;
 }
 
-export async function saveReport(id: string, report: DayReport): Promise<void> {
-  await write("Rapport de fin de journée", ["call_sheet"], [db.updateTable("call_sheet").set({ report: JSON.stringify(report), updated_at: nowIso() }).where("id", "=", id)]);
+/** The version already out goes to more people. */
+export async function markSent(sheetId: string, to: string[]): Promise<void> {
+  await write("Destinataire", ["call_recipient"], sentTo(sheetId, to));
 }
 
 export async function setRecipient(sheetId: string, contactId: string, patch: Partial<Pick<Recipient, "callTime" | "sent" | "confirmed">>): Promise<void> {

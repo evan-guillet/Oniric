@@ -15,12 +15,10 @@ export function parseCoordinates(text: string): { lat: number; lon: number } | n
   return { lat, lon };
 }
 
-/**
- * The times of sunrise and sunset in UTC minutes after midnight of `date` (yyyy-mm-dd); null for polar day or night.
- */
-export function sunTimesUtc(date: string, lat: number, lon: number): { rise: number; set: number } | null {
+/** Where the sun stands in the year: its declination, and how far the sundial runs ahead of the clock, in minutes. */
+function solar(date: string, utcMinutes = 720): { decl: number; eqTime: number } {
   const [y, m, d] = date.split("-").map(Number);
-  const jd = Date.UTC(y, m - 1, d, 12) / 86400000 + 2440587.5;
+  const jd = (Date.UTC(y, m - 1, d) + utcMinutes * 60000) / 86400000 + 2440587.5;
   const tc = (jd - 2451545) / 36525;
   const l0 = (280.46646 + tc * (36000.76983 + tc * 0.0003032)) % 360;
   const ma = 357.52911 + tc * (35999.05029 - 0.0001537 * tc);
@@ -42,11 +40,48 @@ export function sunTimesUtc(date: string, lat: number, lon: number): { rise: num
         0.5 * yy * yy * Math.sin(4 * rad(l0)) -
         1.25 * e * e * Math.sin(2 * rad(ma)),
     );
-  const cosH = Math.cos(rad(90.833)) / (Math.cos(rad(lat)) * Math.cos(rad(decl))) - Math.tan(rad(lat)) * Math.tan(rad(decl));
+  return { decl, eqTime };
+}
+
+/** When the sun crosses a height above the horizon, in UTC minutes after midnight of `date`; null when it never does. */
+function crossing(date: string, lat: number, lon: number, height: number): { rise: number; set: number } | null {
+  const { decl, eqTime } = solar(date);
+  const cosH = Math.cos(rad(90 - height)) / (Math.cos(rad(lat)) * Math.cos(rad(decl))) - Math.tan(rad(lat)) * Math.tan(rad(decl));
   if (cosH < -1 || cosH > 1) return null;
   const ha = deg(Math.acos(cosH));
   const noon = 720 - 4 * lon - eqTime;
   return { rise: noon - ha * 4, set: noon + ha * 4 };
+}
+
+/**
+ * The times of sunrise and sunset in UTC minutes after midnight of `date` (yyyy-mm-dd); null for polar day or night.
+ */
+export function sunTimesUtc(date: string, lat: number, lon: number): { rise: number; set: number } | null {
+  return crossing(date, lat, lon, -0.833);
+}
+
+/** The golden hours: from sunrise until the sun is 6° up, and from 6° up until sunset [REP-07]. */
+export function goldenHours(date: string, lat: number, lon: number): { morningEnd: number; eveningStart: number } | null {
+  const high = crossing(date, lat, lon, 6);
+  return high ? { morningEnd: high.rise, eveningStart: high.set } : null;
+}
+
+/** Where the sun is seen from a place at a moment: its bearing from the north, clockwise, and its height, in degrees [REP-04]. */
+export function sunPosition(date: string, utcMinutes: number, lat: number, lon: number): { azimuth: number; elevation: number } {
+  const { decl, eqTime } = solar(date, utcMinutes);
+  const solarMinutes = utcMinutes + eqTime + 4 * lon;
+  const ha = rad(solarMinutes / 4 - 180);
+  const la = rad(lat);
+  const de = rad(decl);
+  const elevation = deg(Math.asin(Math.sin(la) * Math.sin(de) + Math.cos(la) * Math.cos(de) * Math.cos(ha)));
+  const azimuth = (deg(Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(de) * Math.cos(la))) + 180 + 360) % 360;
+  return { azimuth, elevation };
+}
+
+/** The UTC minutes of a local hour of that day on this computer. */
+export function utcMinutesOf(date: string, hours: number, minutes = 0): number {
+  const [y, m, d] = date.split("-").map(Number);
+  return (new Date(y, m - 1, d, hours, minutes).getTime() - Date.UTC(y, m - 1, d)) / 60000;
 }
 
 /** « 07:42 » in the time zone of this computer on that day. */

@@ -1,11 +1,9 @@
-import { ArrowDown, ArrowUp, ClipboardCheck, Download, FileText, ImagePlus, LayoutTemplate, Plus, RefreshCw, Send, Trash2, Users, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ImagePlus, LayoutTemplate, Plus, RefreshCw, Send, Trash2, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { describeError } from "../../../core/errors";
 import { dateFormat, plural, t } from "../../../core/i18n";
 import { Dialog } from "../../../ui-kit/Dialog";
 import { EmptyState } from "../../../ui-kit/Form";
-import { MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
-import { Segmented } from "../../../ui-kit/Segmented";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useProject } from "../../project/ui/projectContext";
 import { useLive } from "../../../core/db/live";
@@ -14,14 +12,17 @@ import { fold } from "../../script/bible/domain/types";
 import { formatEighths } from "../../script/screenplay/domain/duration";
 import { MediaImage, pickImage } from "../../shared/media";
 import { useBreakdown, useCategories, elementsByScene, type Breakdown } from "../application/breakdown";
-import { createSheet, saveReport, saveSheet, sendVersion, setRecipient, useSheets, useTemplate, writeTemplate, type Recipient, type Sheet } from "../application/callSheets";
+import { createSheet, markSent, saveSheet, sendVersion, setRecipient, useSheets, useTemplate, writeTemplate, type Recipient, type Sheet } from "../application/callSheets";
 import { usePlans } from "../application/schedule";
+import { useScouting, type Scouting } from "../application/scouting";
+import { decorsOfPlace } from "../domain/permits";
+import { decorRefs } from "./preparation";
 import { useTeam, type Team } from "../application/team";
 import { categoryName, type Category } from "../domain/breakdown";
 import { departmentName } from "../domain/catalog";
 import {
+  changeCount,
   changes,
-  dayReport,
   EMPTY_CALL,
   earliest,
   emptySheet,
@@ -29,22 +30,20 @@ import {
   SECTIONS,
   type CallLocation,
   type CallSheetData,
-  type DayReport,
   type SectionId,
   type Template,
 } from "../domain/callSheet";
 import { parseDay } from "../domain/schedule";
+import { stripTone } from "../domain/sceneFacts";
 import { sunTimes } from "../domain/sun";
-import { exportCallSheets, exportDayReport } from "./productionExport";
-import { Field, HeaderTabs, Section, shortDate } from "./parts";
+import { exportCallSheets } from "./productionExport";
+import { Field, Section, shortDate } from "./parts";
 import { dayTitle, useBoard, type Board } from "./ScheduleView";
 
-type Tab = "sheet" | "recipients" | "report";
 type DayInfo = Board["days"][number];
 
-/** The call sheets: one per shooting day, made from the schedule, sent as PDF, its versions and its report [FDS-01 to FDS-08]. */
+/** The call sheets: one per shooting day, made from the schedule, sent as PDF, and its versions [FDS-01 to FDS-07]. */
 export function CallSheetsView() {
-  const [tab, setTab] = useStoredState<Tab>("oniric.callsheets.tab", "sheet");
   const { project, go } = useProject();
   const plans = usePlans();
   const team = useTeam();
@@ -76,45 +75,31 @@ export function CallSheetsView() {
     return changed ? { text: t("callsheet.changedSince", { n: last.n }), tone: "warn" } : { text: t("callsheet.sent", { n: last.n }), tone: "ok" };
   };
   return (
-    <>
-      {sheet && (
-        <HeaderTabs
-          label={t("callsheet.display")}
-          value={tab}
-          onChange={setTab}
-          options={[
-            { id: "sheet", label: t("callsheet.sheet"), icon: FileText },
-            { id: "recipients", label: t("callsheet.recipients"), icon: Users },
-            { id: "report", label: t("callsheet.report"), icon: ClipboardCheck },
-          ]}
-        />
-      )}
-      <div className="view split pr-split">
-        <nav className="view-side pr-side" aria-label={t("callsheet.days")}>
-          <ul className="pr-side-list">
-            {days.map((d) => {
-              const st = status(d);
-              return (
-                <li key={d.day.id}>
-                  <button type="button" className={d.day.id === day.day.id ? "on" : ""} aria-current={d.day.id === day.day.id} onClick={() => setPicked(d.day.id)}>
-                    <span className="pr-row-title">{t("schedule.dayN", { n: d.number, total: b.shootDays })}</span>
-                    <span className="pr-side-sub">{d.date ? shortDate(d.date) : t("schedule.noDate")}</span>
-                    <span className={`pr-side-state ${st.tone}`}>{st.text}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        <main className={sheet && tab === "sheet" ? "view-main pr-sheet-main on-paper" : "view-main pr-sheet-main"}>
-          {sheet ? (
-            <SheetPage key={sheet.id} board={b} team={team} day={day} sheet={sheet} recipients={sheets.recipients.filter((r) => r.sheetId === sheet.id)} tab={tab} />
-          ) : (
-            <NewSheet board={b} team={team} day={day} />
-          )}
-        </main>
-      </div>
-    </>
+    <div className="view split pr-split">
+      <main className={sheet ? "view-main pr-sheet-main on-paper" : "view-main pr-sheet-main"}>
+        {sheet ? (
+          <SheetPage key={sheet.id} board={b} team={team} day={day} sheet={sheet} recipients={sheets.recipients.filter((r) => r.sheetId === sheet.id)} />
+        ) : (
+          <NewSheet board={b} team={team} day={day} />
+        )}
+      </main>
+      <nav className="view-side pr-side" aria-label={t("callsheet.days")}>
+        <ul className="pr-side-list pr-side-days">
+          {days.map((d) => {
+            const st = status(d);
+            return (
+              <li key={d.day.id}>
+                <button type="button" className={d.day.id === day.day.id ? "on" : ""} aria-current={d.day.id === day.day.id} onClick={() => setPicked(d.day.id)}>
+                  <span className="pr-row-title">{t("schedule.dayShort", { n: d.number })}</span>
+                  <span className="pr-side-sub">{d.date ? shortDate(d.date) : t("schedule.noDate")}</span>
+                  <span className={`pr-side-state ${st.tone}`}>{st.text}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
   );
 }
 
@@ -124,9 +109,10 @@ function NewSheet({ board: b, team, day }: { board: Board; team: Team; day: DayI
   const breakdown = useBreakdown();
   const cats = useCategories();
   const entries = useLive(loadEntries, ["bible_entry"]);
+  const scouting = useScouting();
   const make = async () => {
     try {
-      await createSheet(day.day.id, prefill(emptySheet(), b, team, day, breakdown, cats ?? [], entries ?? []));
+      await createSheet(day.day.id, prefill(emptySheet(), b, team, day, breakdown, cats ?? [], entries ?? [], scouting));
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
     }
@@ -153,6 +139,7 @@ export function prefill(
   breakdown: Breakdown | undefined,
   cats: Category[],
   entries: Entry[],
+  scouting?: Scouting,
 ): CallSheetData {
   const places = [...new Set(day.scenes.map((s) => s.facts.place).filter(Boolean))];
   const known = new Map(base.locations.map((l) => [fold(l.name), l]));
@@ -160,6 +147,11 @@ export function prefill(
     const kept = known.get(fold(p));
     if (kept) return kept;
     const entry = entries.find((e) => e.type === "location" && [e.name, ...e.aliases].some((n) => fold(n) === fold(p)));
+    // The set chosen in the scouting knows more than the bible's note: where it is and how to get there [REP-02].
+    const decor = decorsOfPlace(p, decorRefs(scouting?.locations ?? [], entries))
+      .map((d) => scouting!.locations.find((l) => l.id === d.id)!)
+      .sort((a, b) => Number(b.status === "booked" || b.status === "kept") - Number(a.status === "booked" || a.status === "kept"))[0];
+    if (decor) return { name: p, address: [decor.name, decor.address].filter(Boolean).join("\n"), coordinates: decor.lat !== null ? `${decor.lat}, ${decor.lon}` : "", parking: decor.data.parking, notes: decor.data.access };
     const real = typeof entry?.fields.real_set === "string" ? entry.fields.real_set : "";
     return { name: p, address: real, coordinates: "", parking: "", notes: "" };
   });
@@ -210,101 +202,90 @@ export function prefill(
   };
 }
 
-function SheetPage({ board: b, team, day, sheet, recipients, tab }: { board: Board; team: Team; day: DayInfo; sheet: Sheet; recipients: Recipient[]; tab: Tab }) {
+function SheetPage({ board: b, team, day, sheet, recipients }: { board: Board; team: Team; day: DayInfo; sheet: Sheet; recipients: Recipient[] }) {
   const api = useProject();
-  const { notify, ask } = api;
+  const { notify } = api;
   const template = useTemplate();
   const breakdown = useBreakdown();
   const cats = useCategories();
+  const scouting = useScouting();
   const entries = useLive(loadEntries, ["bible_entry"]);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  // PDFs being written: nothing says so otherwise for the seconds a whole list takes.
+  const [run, setRun] = useState<{ done: number; total: number } | null>(null);
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const data = sheet.data;
   const last = sheet.versions[sheet.versions.length - 1];
   const changed = useMemo(() => (last ? changes(last.data, data) : new Set<string>()), [last, data]);
   const save = (patch: Partial<CallSheetData>) => void saveSheet(sheet.id, { ...data, ...patch }).catch(fail);
   const people = useRecipients(team, day, data, recipients);
+  // Nothing to send but the version already out: the button then opens who got it.
+  const pending = !last || changed.size > 0;
+  const version = pending ? (last?.n ?? 0) + 1 : last.n;
 
-  const send = async () => {
-    const n = (last?.n ?? 0) + 1;
-    const answer = await ask({
-      title: t("callsheet.sendTitle", { n }),
-      text: <p>{last ? t("callsheet.sendAgainText", { count: changed.size }) : t("callsheet.sendText")}</p>,
-      cancel: t("common.cancel"),
-      choices: [{ label: t("callsheet.sendGo", { n }), value: "y", primary: true }],
-    });
-    if (answer !== "y") return;
+  const working = async (total: number, work: () => Promise<void>) => {
+    setRun({ done: 0, total });
     try {
-      await sendVersion(sheet);
-      notify({ text: t("callsheet.sentDone", { n }) });
+      await work();
     } catch (e) {
       fail(e);
+    } finally {
+      setRun(null);
     }
+  };
+  const onProgress = (done: number, total: number) => setRun({ done, total });
+  /** The PDFs come first: if they can't be written, nothing is marked as sent. */
+  const send = (to: Person[]) => {
+    setSendOpen(false);
+    const ids = to.map((p) => p.contactId);
+    void working(to.length, async () => {
+      if (to.length) await exportCallSheets(api, { board: b, team, day, sheet, template: template!, people: to, individual: true, onProgress, notice: plural("callsheet.sentFiles", to.length, { v: version }) });
+      await (pending ? sendVersion(sheet, ids) : markSent(sheet.id, ids));
+      if (!to.length) notify({ text: t("callsheet.sentDone", { n: version }) });
+    });
   };
   const refill = () => {
     if (!breakdown || !cats || !entries) return;
-    void saveSheet(sheet.id, prefill(data, b, team, day, breakdown, cats, entries)).catch(fail);
+    void saveSheet(sheet.id, prefill(data, b, team, day, breakdown, cats, entries, scouting)).catch(fail);
   };
-  const exportGeneral = () => void exportCallSheets(api, { board: b, team, day, sheet, template: template!, people, individual: false }).catch(fail);
-  const exportReport = () => void exportDayReport(api, { day, sheet, total: b.shootDays }).catch(fail);
-  const more: MoreItem[] = [
-    {
-      label: t("callsheet.exportEach"),
-      icon: Users,
-      hint: plural("callsheet.exportEachHint", people.length),
-      onClick: () => void exportCallSheets(api, { board: b, team, day, sheet, template: template!, people, individual: true }).catch(fail),
-    },
-    { label: t("callsheet.exportReport"), icon: ClipboardCheck, onClick: exportReport },
-    { label: t("callsheet.template"), icon: LayoutTemplate, onClick: () => setTemplateOpen(true) },
-  ];
+  const sentOn = (v: { n: number; at: string }) => t("callsheet.sentOn", { n: v.n, date: shortDate(v.at.slice(0, 10)) });
   const longDate = day.date ? dateFormat({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(parseDay(day.date)) : t("schedule.noDate");
 
   return (
     <div className="pr-sheet">
-      <header className="pr-sheet-head">
+      <header className="pr-sheet-bar">
         <div>
-          <h2>{t("schedule.dayN", { n: day.number, total: b.shootDays })}</h2>
-          <p className="muted">
-            {longDate}
-            {" · "}
-            {last ? (changed.size ? t("callsheet.changedSince", { n: last.n }) : t("callsheet.sentOn", { n: last.n, date: shortDate(last.at.slice(0, 10)) })) : t("callsheet.draft")}
-          </p>
+          <h2 className="visually-hidden">{t("schedule.dayN", { n: day.number, total: b.shootDays })}</h2>
+          {run && run.total > 1 ? (
+            <p className="pr-sheet-state" role="status">
+              {t("callsheet.writing", { done: run.done, total: run.total })}
+            </p>
+          ) : (
+            <p className={last && changed.size ? "pr-sheet-state warn" : "pr-sheet-state"}>
+              {last ? (changed.size ? t("callsheet.changedNote", { n: last.n }) : sentOn(last)) : t("callsheet.draft")}
+            </p>
+          )}
         </div>
         <span className="spacer" />
-        {tab === "report" ? (
-          <button type="button" className="btn" onClick={exportReport}>
-            <Download aria-hidden="true" />
-            {t("callsheet.exportReportShort")}
-          </button>
-        ) : (
-          <>
-            <MoreMenu label={t("callsheet.moreMenu")} items={more} />
-            <button type="button" className="btn" disabled={!template} onClick={exportGeneral}>
-              <Download aria-hidden="true" />
-              {t("callsheet.exportPdf")}
-            </button>
-            <button type="button" className="btn primary" disabled={!!last && changed.size === 0} onClick={() => void send()}>
-              <Send aria-hidden="true" />
-              {t("callsheet.sendN", { n: (last?.n ?? 0) + 1 })}
-            </button>
-          </>
-        )}
+        <button type="button" className="btn" disabled={!template || !!run} onClick={() => setTemplateOpen(true)}>
+          <LayoutTemplate aria-hidden="true" />
+          {t("callsheet.template")}
+        </button>
+        <button type="button" className={pending ? "btn primary" : "btn"} disabled={!template || !!run} onClick={() => setSendOpen(true)}>
+          <Send aria-hidden="true" />
+          {pending ? t("callsheet.sendN", { n: version }) : t("callsheet.sendFollow", { n: version })}
+        </button>
       </header>
-      {tab === "sheet" && template && (
-        <>
-          {last && changed.size > 0 && <p className="pr-changed-note">{t("callsheet.changedNote", { n: last.n })}</p>}
-          <article className="pr-callsheet" aria-label={t("callsheet.paperTitle")}>
-            <Masthead title={api.project.title} logo={template.logo} day={day} total={b.shootDays} date={longDate} data={data} changed={changed} save={save} />
-            {template.sections
-              .filter((s) => s.shown && s.id !== "times")
-              .map((s) => (
-                <SheetSection key={s.id} id={s.id} data={data} day={day} team={team} changed={changed} save={save} onRefill={refill} />
-              ))}
-          </article>
-        </>
+      {template && (
+        <article className="pr-callsheet" aria-label={t("callsheet.paperTitle")}>
+          <Masthead title={api.project.title} logo={template.logo} day={day} total={b.shootDays} date={longDate} data={data} changed={changed} save={save} />
+          {halves(template.sections.filter((s) => s.shown && s.id !== "times").map((s) => s.id)).map(({ id, half }) => (
+            <SheetSection key={id} id={id} half={half} data={data} day={day} numbers={b.numbers} team={team} changed={changed} save={save} onRefill={refill} />
+          ))}
+        </article>
       )}
-      {tab === "recipients" && <Recipients sheet={sheet} people={people} />}
-      {tab === "report" && <Report sheet={sheet} day={day} />}
+      {sendOpen && <SendDialog sheet={sheet} people={people} version={version} pending={pending} changes={changeCount(changed)} onSend={(to) => void send(to)} onClose={() => setSendOpen(false)} />}
       {templateOpen && template && <TemplateDialog template={template} onClose={() => setTemplateOpen(false)} />}
     </div>
   );
@@ -323,36 +304,38 @@ export interface Person {
 
 /** The crew engaged on the day, and the actors of its scenes, each with their call [FDS-03]. */
 function useRecipients(team: Team, day: DayInfo, data: CallSheetData, recipients: Recipient[]): Person[] {
-  return useMemo(() => {
-    const out = new Map<string, Person>();
-    const contact = new Map(team.contacts.map((c) => [c.id, c]));
-    const kept = new Map(recipients.map((r) => [r.contactId, r]));
-    const add = (contactId: string, what: string, time: string) => {
-      const c = contact.get(contactId);
-      if (!c) return;
-      const known = out.get(contactId);
-      const r = kept.get(contactId);
-      if (known) {
-        known.what = `${known.what} · ${what}`;
-        known.time = earliest([known.time, time]) || known.time;
-        return;
-      }
-      out.set(contactId, { contactId, name: c.name, what, time: r?.callTime || time, own: !!r?.callTime, sent: !!r?.sent, confirmed: !!r?.confirmed });
-    };
-    for (const character of day.characters) {
-      const role = team.cast.find((x) => x.character === character);
-      if (role?.contactId) {
-        const call = data.cast[character];
-        add(role.contactId, t("team.plays", { name: character }), earliest([call?.pickup ?? "", call?.hmc ?? "", call?.onSet ?? ""]) || data.generalCall);
-      }
+  return useMemo(() => recipientsOf(team, day, data, recipients), [team, day, data, recipients]);
+}
+
+export function recipientsOf(team: Team, day: DayInfo, data: CallSheetData, recipients: Recipient[]): Person[] {
+  const out = new Map<string, Person>();
+  const contact = new Map(team.contacts.map((c) => [c.id, c]));
+  const kept = new Map(recipients.map((r) => [r.contactId, r]));
+  const add = (contactId: string, what: string, time: string) => {
+    const c = contact.get(contactId);
+    if (!c) return;
+    const known = out.get(contactId);
+    const r = kept.get(contactId);
+    if (known) {
+      known.what = `${known.what} · ${what}`;
+      known.time = earliest([known.time, time]) || known.time;
+      return;
     }
-    for (const m of team.crew) {
-      if (day.date && ((m.startDate && day.date < m.startDate) || (m.endDate && day.date > m.endDate))) continue;
-      add(m.contactId, m.role, data.departments[m.department] || data.generalCall);
+    out.set(contactId, { contactId, name: c.name, what, time: r?.callTime || time, own: !!r?.callTime, sent: !!r?.sent, confirmed: !!r?.confirmed });
+  };
+  for (const character of day.characters) {
+    const role = team.cast.find((x) => x.character === character);
+    if (role?.contactId) {
+      const call = data.cast[character];
+      add(role.contactId, t("team.plays", { name: character }), earliest([call?.pickup ?? "", call?.hmc ?? "", call?.onSet ?? ""]) || data.generalCall);
     }
-    for (const r of recipients) if (!out.has(r.contactId)) add(r.contactId, t("callsheet.guest"), r.callTime || data.generalCall);
-    return [...out.values()].sort((a, b) => (a.time || "99").localeCompare(b.time || "99") || a.name.localeCompare(b.name));
-  }, [team, day, data, recipients]);
+  }
+  for (const m of team.crew) {
+    if (day.date && ((m.startDate && day.date < m.startDate) || (m.endDate && day.date > m.endDate))) continue;
+    add(m.contactId, m.role, data.departments[m.department] || data.generalCall);
+  }
+  for (const r of recipients) if (!out.has(r.contactId)) add(r.contactId, t("callsheet.guest"), r.callTime || data.generalCall);
+  return [...out.values()].sort((a, b) => (a.time || "99").localeCompare(b.time || "99") || a.name.localeCompare(b.name));
 }
 
 /** The top of the sheet as it is printed: the film and the day, the general call in large, the times and the weather of the day. */
@@ -377,8 +360,8 @@ function Masthead({
 }) {
   const c = (path: string) => (changed.has(path) ? "changed" : "");
   const sun = day.date && data.locations[0]?.coordinates ? sunTimes(day.date, data.locations[0].coordinates) : null;
-  const time = (key: "readyToShoot" | "lunch" | "wrap" | "sunrise" | "sunset", label: string, placeholder = t("callsheet.timePlaceholder")) => (
-    <Field key={key} label={label} className={c(key)} value={data[key]} placeholder={placeholder} normalize={normalizeTime} onCommit={(v) => save({ [key]: v })} />
+  const time = (key: "readyToShoot" | "lunch" | "wrap" | "sunrise" | "sunset", label: string, placeholder = t("callsheet.timePlaceholder"), hint?: string) => (
+    <Field key={key} label={label} className={c(key)} value={data[key]} placeholder={placeholder} normalize={normalizeTime} title={hint} onCommit={(v) => save({ [key]: v })} />
   );
   return (
     <header className="pr-cs-mast">
@@ -386,12 +369,13 @@ function Masthead({
         {logo && <MediaImage path={logo} alt="" className="pr-cs-logo" />}
         <div>
           <h3>{title}</h3>
-          <p>
-            {t("callsheet.paperTitle")} · {t("schedule.dayN", { n: day.number, total })}
-          </p>
-          <p className="pr-cs-date">{date}</p>
+          <p>{t("callsheet.paperTitle")}</p>
         </div>
       </div>
+      <p className="pr-cs-day">
+        <strong>{t("schedule.dayN", { n: day.number, total })}</strong>
+        <span>{date}</span>
+      </p>
       <Field
         label={t("callsheet.generalCall")}
         className={`pr-cs-call ${c("generalCall")}`}
@@ -404,27 +388,43 @@ function Masthead({
         {time("readyToShoot", t("callsheet.readyToShoot"))}
         {time("lunch", t("callsheet.lunch"))}
         {time("wrap", t("callsheet.wrap"))}
-        {time("sunrise", t("callsheet.sunrise"), sun?.rise ?? "–")}
-        {time("sunset", t("callsheet.sunset"), sun?.set ?? "–")}
-        <Field label={t("callsheet.weather")} className={`wide ${c("weather")}`} value={data.weather} placeholder={t("callsheet.weatherPlaceholder")} onCommit={(v) => save({ weather: v })} />
+        {time("sunrise", t("callsheet.sunrise"), sun?.rise ?? "–", sun ? t("callsheet.sunComputed") : undefined)}
+        {time("sunset", t("callsheet.sunset"), sun?.set ?? "–", sun ? t("callsheet.sunComputed") : undefined)}
+        <Field label={t("callsheet.weather")} className={c("weather")} multiline value={data.weather} placeholder={t("callsheet.weatherPlaceholder")} onCommit={(v) => save({ weather: v })} />
       </div>
-      <p className="pr-cs-sun">{sun ? t("callsheet.sunComputed") : t("callsheet.sunHelp")}</p>
+      {!sun && <p className="pr-cs-sun">{t("callsheet.sunHelp")}</p>}
     </header>
   );
 }
 
+/** The short texts that follow one another go two by two; one left alone takes the whole width. */
+const HALF: SectionId[] = ["extras", "needs", "notes", "nextDay", "contacts"];
+
+function halves(ids: SectionId[]): { id: SectionId; half: boolean }[] {
+  let run = 0;
+  return ids.map((id, i) => {
+    run = HALF.includes(id) ? run + 1 : 0;
+    const paired = run % 2 === 0 || HALF.includes(ids[i + 1]);
+    return { id, half: run > 0 && paired };
+  });
+}
+
 function SheetSection({
   id,
+  half,
   data,
   day,
+  numbers,
   team,
   changed,
   save,
   onRefill,
 }: {
   id: SectionId;
+  half: boolean;
   data: CallSheetData;
   day: DayInfo;
+  numbers: Map<string, number>;
   team: Team;
   changed: Set<string>;
   save: (p: Partial<CallSheetData>) => void;
@@ -432,6 +432,11 @@ function SheetSection({
 }) {
   const c = (path: string) => (changed.has(path) ? "changed" : "");
   const title = t(`callsheet.sections.${id}`);
+  const text = (key: "extras" | "needs" | "notes" | "nextDay" | "contacts", placeholder?: string) => (
+    <Section title={title} className={`${c(key)} ${half ? "half" : ""}`}>
+      <Field label={title} hideLabel multiline value={data[key]} placeholder={placeholder ?? "–"} onCommit={(v) => save({ [key]: v })} />
+    </Section>
+  );
   switch (id) {
     case "times":
       // Always at the top of the page, in the masthead.
@@ -442,7 +447,7 @@ function SheetSection({
           title={title}
           className={c("locations") || c("base")}
           aside={
-            <button type="button" className="btn small" onClick={() => save({ locations: [...data.locations, { name: "", address: "", coordinates: "", parking: "", notes: "" }] })}>
+            <button type="button" className="btn small ghost" onClick={() => save({ locations: [...data.locations, { name: "", address: "", coordinates: "", parking: "", notes: "" }] })}>
               <Plus aria-hidden="true" />
               {t("callsheet.addLocation")}
             </button>
@@ -451,17 +456,19 @@ function SheetSection({
           {data.locations.map((l, i) => {
             const set = (p: Partial<CallLocation>) => save({ locations: data.locations.map((x, j) => (j === i ? { ...x, ...p } : x)) });
             return (
-              <div key={i} className={`pr-loc ${c(`locations.${i}`)}`}>
-                <div className="pr-grid">
-                  <Field label={t("callsheet.setName")} value={l.name} onCommit={(v) => set({ name: v })} />
-                  <Field label={t("callsheet.coordinates")} value={l.coordinates} placeholder={t("callsheet.coordinatesPlaceholder")} onCommit={(v) => set({ coordinates: v })} />
-                  <Field label={t("callsheet.address")} className="wide" multiline value={l.address} onCommit={(v) => set({ address: v })} />
-                  <Field label={t("callsheet.parking")} value={l.parking} onCommit={(v) => set({ parking: v })} />
-                  <Field label={t("callsheet.access")} value={l.notes} onCommit={(v) => set({ notes: v })} />
+              <div key={i} className="pr-cs-set">
+                <div className="pr-cs-where">
+                  <Field label={t("callsheet.setName")} hideLabel className={`pr-cs-setname ${c(`locations.${i}.name`)}`} value={l.name} placeholder={t("callsheet.setName")} onCommit={(v) => set({ name: v })} />
+                  <Field label={t("callsheet.address")} hideLabel multiline className={c(`locations.${i}.address`)} value={l.address} placeholder={t("callsheet.address")} onCommit={(v) => set({ address: v })} />
+                </div>
+                <div className="pr-cs-lines">
+                  <Field label={t("callsheet.coordinates")} className={`pr-cs-line ${c(`locations.${i}.coordinates`)}`} value={l.coordinates} placeholder={t("callsheet.coordinatesPlaceholder")} onCommit={(v) => set({ coordinates: v })} />
+                  <Field label={t("callsheet.parking")} multiline className={`pr-cs-line ${c(`locations.${i}.parking`)}`} value={l.parking} placeholder="–" onCommit={(v) => set({ parking: v })} />
+                  <Field label={t("callsheet.access")} multiline className={`pr-cs-line ${c(`locations.${i}.notes`)}`} value={l.notes} placeholder="–" onCommit={(v) => set({ notes: v })} />
                 </div>
                 <button
                   type="button"
-                  className="btn tiny ghost pr-loc-x"
+                  className="btn tiny ghost pr-cs-set-x"
                   aria-label={t("callsheet.removeLocation", { name: l.name })}
                   title={t("callsheet.removeLocation", { name: l.name })}
                   onClick={() => save({ locations: data.locations.filter((_x, j) => j !== i) })}
@@ -471,18 +478,18 @@ function SheetSection({
               </div>
             );
           })}
-          <Field label={t("callsheet.base")} className={c("base")} multiline value={data.base} placeholder={t("callsheet.basePlaceholder")} onCommit={(v) => save({ base: v })} />
+          <Field label={t("callsheet.base")} className={`pr-cs-line pr-cs-base ${c("base")}`} multiline value={data.base} placeholder={t("callsheet.basePlaceholder")} onCommit={(v) => save({ base: v })} />
         </Section>
       );
     case "safety":
       return (
         <Section title={title} className={c("hospital") || c("pharmacy") || c("emergency") || c("safety")}>
-          <div className="pr-grid">
-            <Field label={t("callsheet.hospital")} className={c("hospital")} multiline value={data.hospital} onCommit={(v) => save({ hospital: v })} />
-            <Field label={t("callsheet.pharmacy")} className={c("pharmacy")} multiline value={data.pharmacy} onCommit={(v) => save({ pharmacy: v })} />
-            <Field label={t("callsheet.emergency")} className={`wide ${c("emergency")}`} value={data.emergency} onCommit={(v) => save({ emergency: v })} />
-            <Field label={t("callsheet.safety")} className={`wide ${c("safety")}`} multiline value={data.safety} placeholder={t("callsheet.safetyPlaceholder")} onCommit={(v) => save({ safety: v })} />
+          <div className="pr-cs-cells">
+            <Field label={t("callsheet.emergency")} className={c("emergency")} multiline value={data.emergency} placeholder="–" onCommit={(v) => save({ emergency: v })} />
+            <Field label={t("callsheet.hospital")} className={c("hospital")} multiline value={data.hospital} placeholder="–" onCommit={(v) => save({ hospital: v })} />
+            <Field label={t("callsheet.pharmacy")} className={c("pharmacy")} multiline value={data.pharmacy} placeholder="–" onCommit={(v) => save({ pharmacy: v })} />
           </div>
+          <Field label={t("callsheet.safety")} className={`pr-cs-line pr-cs-base ${c("safety")}`} multiline value={data.safety} placeholder={t("callsheet.safetyPlaceholder")} onCommit={(v) => save({ safety: v })} />
         </Section>
       );
     case "scenes":
@@ -496,7 +503,7 @@ function SheetSection({
             </button>
           }
         >
-          <table className="pr-table">
+          <table className="pr-table pr-cs-scenes">
             <thead>
               <tr>
                 <th>{t("callsheet.sceneCol")}</th>
@@ -507,16 +514,31 @@ function SheetSection({
               </tr>
             </thead>
             <tbody>
-              {day.scenes.map((s) => (
-                <tr key={s.scene.id}>
-                  <td className="num">{s.scene.number}</td>
-                  <td className="pr-slug">{s.scene.heading}</td>
-                  <td className="muted">{s.scene.text.split("\n").slice(1).find((l) => l.trim())?.slice(0, 120) ?? ""}</td>
-                  <td>{s.cast.join(", ")}</td>
-                  <td className="num">{formatEighths(s.scene.eighths)}</td>
-                </tr>
-              ))}
+              {day.scenes.map((s) => {
+                const summary = s.scene.text.split("\n").slice(1).find((l) => l.trim()) ?? "";
+                return (
+                  <tr key={s.scene.id}>
+                    <td>
+                      <span className={`pr-cs-sc tone-${stripTone(s.facts)}`}>{s.scene.number}</span>
+                    </td>
+                    <td className="pr-slug">{s.scene.heading}</td>
+                    <td className="muted">
+                      <span className="pr-cs-summary" title={summary}>
+                        {summary}
+                      </span>
+                    </td>
+                    <td className="pr-cs-who">{s.cast.join(", ")}</td>
+                    <td className="num">{formatEighths(s.scene.eighths)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4}>{plural("callsheet.sceneTotal", day.scenes.length)}</td>
+                <td className="num">{formatEighths(day.eighths)}</td>
+              </tr>
+            </tfoot>
           </table>
         </Section>
       );
@@ -534,11 +556,12 @@ function SheetSection({
             <table className="pr-table pr-cast-table">
               <thead>
                 <tr>
+                  <th className="num">{t("team.number")}</th>
                   <th>{t("team.character")}</th>
                   <th>{t("team.actor")}</th>
-                  <th>{t("callsheet.pickup")}</th>
-                  <th>{t("callsheet.hmc")}</th>
-                  <th>{t("callsheet.onSet")}</th>
+                  <th className="pr-cs-time">{t("callsheet.pickup")}</th>
+                  <th className="pr-cs-time">{t("callsheet.hmc")}</th>
+                  <th className="pr-cs-time">{t("callsheet.onSet")}</th>
                   <th>{t("team.notes")}</th>
                 </tr>
               </thead>
@@ -547,19 +570,20 @@ function SheetSection({
                   const call = data.cast[ch] ?? EMPTY_CALL;
                   const set = (p: Partial<typeof call>) => save({ cast: { ...data.cast, [ch]: { ...call, ...p } } });
                   const cell = (key: "pickup" | "hmc" | "onSet", label: string) => (
-                    <td className={c(`cast.${ch}.${key}`)}>
+                    <td className={`pr-cs-time ${c(`cast.${ch}.${key}`)}`}>
                       <Field label={`${label} – ${ch}`} hideLabel value={call[key]} placeholder="–" normalize={normalizeTime} onCommit={(v) => set({ [key]: v })} />
                     </td>
                   );
                   return (
                     <tr key={ch}>
+                      <td className="num">{numbers.get(ch) ?? ""}</td>
                       <td className="pr-slug">{ch}</td>
                       <td>{actor(ch) ?? <span className="muted">{t("team.toCast")}</span>}</td>
                       {cell("pickup", t("callsheet.pickup"))}
                       {cell("hmc", t("callsheet.hmc"))}
                       {cell("onSet", t("callsheet.onSet"))}
                       <td className={c(`cast.${ch}.notes`)}>
-                        <Field label={`${t("team.notes")} – ${ch}`} hideLabel value={call.notes} onCommit={(v) => set({ notes: v })} />
+                        <Field label={`${t("team.notes")} – ${ch}`} hideLabel multiline value={call.notes} placeholder="–" onCommit={(v) => set({ notes: v })} />
                       </td>
                     </tr>
                   );
@@ -571,11 +595,7 @@ function SheetSection({
       );
     }
     case "extras":
-      return (
-        <Section title={title} className={c("extras")}>
-          <Field label={title} hideLabel multiline value={data.extras} placeholder={t("callsheet.extrasPlaceholder")} onCommit={(v) => save({ extras: v })} />
-        </Section>
-      );
+      return text("extras", t("callsheet.extrasPlaceholder"));
     case "departments": {
       const depts = [...new Set(team.crew.map((m) => m.department))];
       return (
@@ -583,12 +603,12 @@ function SheetSection({
           {depts.length === 0 ? (
             <p className="muted small">{t("callsheet.noCrew")}</p>
           ) : (
-            <div className="pr-grid four">
+            <div className="pr-cs-depts">
               {depts.map((d) => (
                 <Field
                   key={d}
                   label={departmentName(d)}
-                  className={c(`departments.${d}`)}
+                  className={`pr-cs-line ${c(`departments.${d}`)}`}
                   value={data.departments[d] ?? ""}
                   placeholder={data.generalCall || "–"}
                   normalize={normalizeTime}
@@ -601,171 +621,146 @@ function SheetSection({
       );
     }
     case "needs":
-      return (
-        <Section title={title} className={c("needs")}>
-          <Field label={title} hideLabel multiline value={data.needs} placeholder={t("callsheet.needsPlaceholder")} onCommit={(v) => save({ needs: v })} />
-        </Section>
-      );
+      return text("needs", t("callsheet.needsPlaceholder"));
     case "notes":
-      return (
-        <Section title={title} className={c("notes")}>
-          <Field label={title} hideLabel multiline value={data.notes} onCommit={(v) => save({ notes: v })} />
-        </Section>
-      );
+      return text("notes");
     case "nextDay":
-      return (
-        <Section title={title} className={c("nextDay")}>
-          <Field label={title} hideLabel multiline value={data.nextDay} onCommit={(v) => save({ nextDay: v })} />
-        </Section>
-      );
+      return text("nextDay");
     case "contacts":
-      return (
-        <Section title={title} className={c("contacts")}>
-          <Field label={title} hideLabel multiline value={data.contacts} placeholder={t("callsheet.contactsPlaceholder")} onCommit={(v) => save({ contacts: v })} />
-        </Section>
-      );
+      return text("contacts", t("callsheet.contactsPlaceholder"));
   }
 }
 
-/** Who gets the sheet, their own time, and the ticks set by hand as the sheet goes and comes back confirmed [FDS-03, FDS-06]. */
-function Recipients({ sheet, people }: { sheet: Sheet; people: Person[] }) {
+/**
+ * Before the sheet goes out: who gets it, their own time, and who has confirmed. Once the version is out, the same
+ * window tells who got it, and sends it to whoever has not yet [FDS-03, FDS-06].
+ */
+function SendDialog({
+  sheet,
+  people,
+  version,
+  pending,
+  changes: count,
+  onSend,
+  onClose,
+}: {
+  sheet: Sheet;
+  people: Person[];
+  version: number;
+  pending: boolean;
+  changes: number;
+  onSend: (to: Person[]) => void;
+  onClose: () => void;
+}) {
   const { notify } = useProject();
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
-  const sent = people.filter((p) => p.sent).length;
-  const confirmed = people.filter((p) => p.confirmed).length;
-  if (people.length === 0) {
-    return (
-      <EmptyState title={t("callsheet.noRecipientTitle")}>
-        <p className="muted">{t("callsheet.noRecipientText")}</p>
-      </EmptyState>
-    );
-  }
-  return (
-    <>
-      <div className="pr-toolbar">
-        <p className="muted">{t("callsheet.recipientsHelp", { sent, confirmed, total: people.length })}</p>
-        <span className="spacer" />
-        <button
-          type="button"
-          className="btn small"
-          disabled={sent === people.length}
-          onClick={() => void Promise.all(people.filter((p) => !p.sent).map((p) => setRecipient(sheet.id, p.contactId, { sent: true }))).catch(fail)}
-        >
-          {t("callsheet.allSent")}
-        </button>
-      </div>
-      <table className="pr-table">
-        <thead>
-          <tr>
-            <th>{t("team.person")}</th>
-            <th>{t("callsheet.forWhat")}</th>
-            <th>{t("callsheet.callTime")}</th>
-            <th className="center">{t("callsheet.sentCol")}</th>
-            <th className="center">{t("callsheet.confirmedCol")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {people.map((p) => (
-            <tr key={p.contactId}>
-              <th scope="row">{p.name}</th>
-              <td className="muted">{p.what}</td>
-              <td>
-                <Field
-                  label={t("callsheet.callOf", { name: p.name })}
-                  hideLabel
-                  value={p.own ? p.time : ""}
-                  placeholder={p.time || "–"}
-                  normalize={normalizeTime}
-                  onCommit={(v) => void setRecipient(sheet.id, p.contactId, { callTime: v }).catch(fail)}
-                />
-              </td>
-              <td className="center">
-                <input type="checkbox" checked={p.sent} aria-label={t("callsheet.sentTo", { name: p.name })} onChange={(e) => void setRecipient(sheet.id, p.contactId, { sent: e.target.checked }).catch(fail)} />
-              </td>
-              <td className="center">
-                <input
-                  type="checkbox"
-                  checked={p.confirmed}
-                  aria-label={t("callsheet.confirmedBy", { name: p.name })}
-                  onChange={(e) => void setRecipient(sheet.id, p.contactId, { confirmed: e.target.checked, ...(e.target.checked && { sent: true }) }).catch(fail)}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
-  );
-}
-
-/** The report at the end of the day: scenes and shots done, times, incidents, continuity [FDS-08]. */
-function Report({ sheet, day }: { sheet: Sheet; day: DayInfo }) {
-  const { notify } = useProject();
-  const [r, setR] = useState<DayReport>(sheet.report);
-  useEffect(() => setR(sheet.report), [sheet.report]);
-  const save = (patch: Partial<DayReport>) => {
-    const next = dayReport({ ...r, ...patch });
-    setR(next);
-    void saveReport(sheet.id, next).catch((e) => notify({ text: describeError(e), tone: "error" }));
+  const [chosen, setChosen] = useState(() => new Set(people.filter((p) => pending || !p.sent).map((p) => p.contactId)));
+  // The list is sorted by call time: a time changed here must not make its row jump away.
+  const [order] = useState(() => people.map((p) => p.contactId));
+  const rank = (p: Person) => {
+    const i = order.indexOf(p.contactId);
+    return i < 0 ? order.length : i;
   };
+  const rows = [...people].sort((a, b) => rank(a) - rank(b));
+  const to = rows.filter((p) => chosen.has(p.contactId));
+  const all = to.length === people.length;
+  // Nothing was sent yet the first time: the two columns of what came back would stay empty.
+  const followed = sheet.versions.length > 0;
+  const lastN = sheet.versions[sheet.versions.length - 1]?.n;
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(chosen);
+    if (on) next.add(id);
+    else next.delete(id);
+    setChosen(next);
+  };
+  const help = !pending
+    ? t("callsheet.sendFollowText", { sent: people.filter((p) => p.sent).length, confirmed: people.filter((p) => p.confirmed).length, total: people.length })
+    : followed
+      ? plural("callsheet.sendAgainText", count, { v: lastN })
+      : t("callsheet.sendText");
+  const label = to.length === 0 ? t(pending ? "callsheet.sendN" : "callsheet.sendAgain", { n: version }) : plural(pending ? "callsheet.sendTo" : "callsheet.sendAgainTo", to.length, { v: version });
   return (
-    <>
-      <Section
-        title={t("callsheet.scenesShot")}
-        aside={
-          <button
-            type="button"
-            className="btn small"
-            title={t("callsheet.allShotHint")}
-            disabled={day.scenes.every((s) => r.scenes[s.scene.id] === "done")}
-            onClick={() => save({ scenes: { ...r.scenes, ...Object.fromEntries(day.scenes.map((s) => [s.scene.id, "done" as const])) } })}
-          >
-            {t("callsheet.allShot")}
-          </button>
-        }
-      >
-        <ul className="pr-shot-scenes">
-          {day.scenes.map((s) => (
-            <li key={s.scene.id}>
-              <span className="num">{s.scene.number}</span>
-              <span className="pr-slug">{s.scene.heading}</span>
-              <span className="spacer" />
-              <Segmented
-                label={t("callsheet.sceneState", { n: s.scene.number })}
-                value={r.scenes[s.scene.id] ?? "no"}
-                onChange={(v) => {
-                  const scenes = { ...r.scenes };
-                  if (v === "no") delete scenes[s.scene.id];
-                  else scenes[s.scene.id] = v;
-                  save({ scenes });
-                }}
-                options={[
-                  { id: "no", label: t("callsheet.notShot") },
-                  { id: "part", label: t("callsheet.partShot") },
-                  { id: "done", label: t("callsheet.doneShot") },
-                ]}
-              />
-            </li>
-          ))}
-        </ul>
-      </Section>
-      <Section title={t("callsheet.realTimes")}>
-        <div className="pr-grid four">
-          {(["call", "firstShot", "lunch", "wrap"] as const).map((k) => (
-            <Field key={k} label={t(`callsheet.real.${k}`)} value={r[k]} placeholder="–" normalize={normalizeTime} onCommit={(v) => save({ [k]: v })} />
-          ))}
-        </div>
-      </Section>
-      <Section title={t("callsheet.done")}>
-        <div className="pr-grid">
-          <Field label={t("callsheet.shotsDone")} multiline value={r.shots} placeholder={t("callsheet.shotsPlaceholder")} onCommit={(v) => save({ shots: v })} />
-          <Field label={t("callsheet.screenTime")} value={r.screenTime} placeholder="3 min 20" onCommit={(v) => save({ screenTime: v })} />
-          <Field label={t("callsheet.incidents")} className="wide" multiline value={r.incidents} onCommit={(v) => save({ incidents: v })} />
-          <Field label={t("callsheet.continuity")} className="wide" multiline value={r.continuity} onCommit={(v) => save({ continuity: v })} />
-          <Field label={t("team.notes")} className="wide" multiline value={r.notes} onCommit={(v) => save({ notes: v })} />
-        </div>
-      </Section>
-    </>
+    <Dialog
+      title={t(pending ? "callsheet.sendTitle" : "callsheet.sendFollowTitle", { n: version })}
+      className="pr-send"
+      onCancel={onClose}
+      actions={[
+        { label: pending ? t("common.cancel") : t("common.close"), onClick: onClose },
+        { label, primary: true, disabled: to.length === 0 && (!pending || people.length > 0), onClick: () => onSend(to) },
+      ]}
+    >
+      {people.length === 0 ? (
+        <>
+          <p>
+            <strong>{t("callsheet.noRecipientTitle")}</strong>
+          </p>
+          <p className="muted">{t("callsheet.noRecipientText")}</p>
+        </>
+      ) : (
+        <>
+          <p className="muted">{help}</p>
+          <div className="pr-send-list">
+            <table className="pr-table pr-quiet">
+              <thead>
+                <tr>
+                  <th>
+                    <label className="choice">
+                      <input
+                        type="checkbox"
+                        checked={all}
+                        ref={(el) => {
+                          if (el) el.indeterminate = to.length > 0 && !all;
+                        }}
+                        onChange={(e) => setChosen(new Set(e.target.checked ? people.map((p) => p.contactId) : []))}
+                      />
+                      {t("team.person")}
+                    </label>
+                  </th>
+                  <th>{t("callsheet.forWhat")}</th>
+                  <th>{t("callsheet.callTime")}</th>
+                  {followed && <th className="center">{t("callsheet.sentCol")}</th>}
+                  {followed && <th className="center">{t("callsheet.confirmedCol")}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr key={p.contactId} className={chosen.has(p.contactId) ? "" : "off"}>
+                    <th scope="row">
+                      <label className="choice">
+                        <input type="checkbox" checked={chosen.has(p.contactId)} onChange={(e) => toggle(p.contactId, e.target.checked)} />
+                        {p.name}
+                      </label>
+                    </th>
+                    <td className="muted">{p.what}</td>
+                    <td className="pr-send-time">
+                      <Field
+                        label={t("callsheet.callOf", { name: p.name })}
+                        hideLabel
+                        value={p.own ? p.time : ""}
+                        placeholder={p.time || "–"}
+                        normalize={normalizeTime}
+                        onCommit={(v) => void setRecipient(sheet.id, p.contactId, { callTime: v }).catch(fail)}
+                      />
+                    </td>
+                    {followed && <td className="center muted">{p.sent ? t("callsheet.versionShort", { n: lastN }) : "–"}</td>}
+                    {followed && (
+                      <td className="center">
+                        <input
+                          type="checkbox"
+                          checked={p.confirmed}
+                          aria-label={t("callsheet.confirmedBy", { name: p.name })}
+                          onChange={(e) => void setRecipient(sheet.id, p.contactId, { confirmed: e.target.checked, ...(e.target.checked && { sent: true }) }).catch(fail)}
+                        />
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </Dialog>
   );
 }
 

@@ -35,6 +35,7 @@ fn print_to_pdf(
     use windows_core::{Interface, HSTRING};
 
     let err = |e: windows_core::Error| e.message();
+    let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     unsafe {
         let core = webview.controller().CoreWebView2().map_err(err)?;
         let core7: ICoreWebView2_7 = core.cast().map_err(err)?;
@@ -54,7 +55,7 @@ fn print_to_pdf(
         let handler = PrintToPdfCompletedHandler::create(Box::new(move |result, ok| {
             let outcome = match result {
                 Err(e) => Err(e.message()),
-                Ok(()) if !ok => Err("WebView2 n'a pas pu écrire le PDF (fichier ouvert dans un autre programme ?)".into()),
+                Ok(()) if !ok => Err(format!("{name} n'a pas pu être écrit : ce fichier est peut-être ouvert dans un autre programme.")),
                 Ok(()) => Ok(()),
             };
             let _ = tx.send(outcome);

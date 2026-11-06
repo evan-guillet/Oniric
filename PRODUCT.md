@@ -12,7 +12,7 @@ Scénaristes et réalisateurs, souvent seuls, qui écrivent un film sur leur PC 
 
 ## Product Purpose
 
-Oniric est un logiciel libre (GPL-3.0) de création de films : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. La version 3.0 couvre l'écriture : Atelier d'écriture en neuf étapes, de l'idée au scénario verrouillé, Bible du film, éditeur de scénario aux formats français et américain, Structure (Tableau et Chronologie), Versions, notes, exports PDF, FDX et Fountain ; la préparation de la mise en scène : moodboards, découpage technique, storyboard ; et la préparation du tournage : équipe, dépouillement, plan de travail, feuilles de service.
+Oniric est un logiciel libre (GPL-3.0) de création de films : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. La version 4.0 couvre l'écriture : Atelier d'écriture en neuf étapes, de l'idée au scénario verrouillé, Bible du film, éditeur de scénario aux formats français et américain, Structure (Tableau et Chronologie), Versions, notes, exports PDF, FDX et Fountain ; la préparation de la mise en scène : moodboards, découpage technique, storyboard ; et la préparation du tournage : équipe, dépouillement, plan de travail, feuilles de service, budget, repérages avec carte, autorisations.
 
 ## Positioning
 
@@ -29,7 +29,8 @@ Tout le parcours d'un film dans une seule application locale : l'Atelier guide l
 
 - Interface entièrement en français ; code et commentaires en anglais.
 - La page de scénario à l'écran suit la pagination de l'impression (Courier Prime, marges du format) : ses métriques ne doivent pas changer.
-- La Réalisation et la Production (équipe, dépouillement, plan de travail, feuilles de service) sont là ; le budget, les repérages et les autorisations sont visibles dans la navigation mais arrivent en 4.0.
+- La Réalisation et la Production sont là en entier : équipe, dépouillement, plan de travail, feuilles de service, budget, repérages et autorisations.
+- La carte des repérages est la seule partie qui se connecte à Internet. Elle demande à être activée, se coupe dans les Réglages, et rien du projet ne sort.
 - Clair et sombre, selon le réglage de Windows.
 
 ## Brand Commitments

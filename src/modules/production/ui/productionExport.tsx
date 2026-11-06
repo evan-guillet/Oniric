@@ -8,7 +8,7 @@ import { formatMinutes, toCsv } from "../../realisation/domain/shots";
 import { formatEighths } from "../../script/screenplay/domain/duration";
 import { readImage } from "../../shared/media";
 import { loadBreakdown, readCategories } from "../application/breakdown";
-import type { Sheet } from "../application/callSheets";
+import { loadSheets, readTemplate, type Sheet } from "../application/callSheets";
 import { loadPlans, type ProductionEvent } from "../application/schedule";
 import { loadTeam, type Team } from "../application/team";
 import { CSV_FIELDS, cardRow, toVCard } from "../domain/contacts";
@@ -19,7 +19,8 @@ import { parseDay, presence } from "../domain/schedule";
 import { stripTone } from "../domain/sceneFacts";
 import { sunTimes } from "../domain/sun";
 import { reportGroups } from "./BreakdownView";
-import type { Person } from "./CallSheetsView";
+import { recipientsOf, type Person } from "./CallSheetsView";
+import { shortDate } from "./parts";
 import { board, dayTitle, type Board } from "./ScheduleView";
 
 type Api = Pick<ProjectApi, "session" | "printPdf" | "project" | "notify">;
@@ -167,7 +168,18 @@ export async function exportContactsVcf(api: Pick<Api, "project">): Promise<stri
   return unwrap(await commands.exportText(`${t("team.tabs.contacts")} - ${api.project.title}.vcf`, toVCard(team.contacts)));
 }
 
-type ReportBy = "category" | "set" | "character";
+/** The contacts to choose a card from, in the export window. */
+export async function contactNames(): Promise<{ id: string; name: string }[]> {
+  return (await loadTeam()).contacts.map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** What the project knows of one person, to hand to them. */
+export async function exportContactCard(id: string): Promise<string | null> {
+  const contact = (await loadTeam()).contacts.find((c) => c.id === id);
+  return contact ? unwrap(await commands.exportText(`${contact.name}.vcf`, toVCard([contact]))) : null;
+}
+
+export type ReportBy = "category" | "set" | "character";
 
 async function breakdownGroups(api: Api, by: ReportBy) {
   await api.session.flush();
@@ -397,6 +409,40 @@ export async function exportCalendar(api: Api, b?: Board, events?: ProductionEve
   return unwrap(await commands.exportText(`${t("schedule.calendar")} - ${api.project.title}.ics`, toIcs(api.project.title, list)));
 }
 
+/** A shooting day that has a call sheet, as the export window offers it, and how many people it calls. */
+export interface SheetDay {
+  id: string;
+  label: string;
+  people: number;
+}
+
+async function sheetsNow(api: Pick<Api, "session">) {
+  const [b, team, { sheets, recipients }] = await Promise.all([boardNow(api), loadTeam(), loadSheets()]);
+  const days = b.days
+    .filter((d) => d.day.kind === "shoot")
+    .flatMap((day) => {
+      const sheet = sheets.find((s) => s.dayId === day.day.id);
+      return sheet ? [{ day, sheet, people: recipientsOf(team, day, sheet.data, recipients.filter((r) => r.sheetId === sheet.id)) }] : [];
+    });
+  return { b, team, days };
+}
+
+export async function sheetDays(api: Pick<Api, "session">): Promise<SheetDay[]> {
+  const { days } = await sheetsNow(api);
+  return days.map(({ day, people }) => ({
+    id: day.day.id,
+    label: day.date ? `${t("schedule.dayShort", { n: day.number })} · ${shortDate(day.date)}` : t("schedule.dayShort", { n: day.number }),
+    people: people.length,
+  }));
+}
+
+/** The sheet of a day from the export window, general or one file per person. */
+export async function exportSheetOf(api: Api, dayId: string, individual: boolean): Promise<void> {
+  const [{ b, team, days }, template] = await Promise.all([sheetsNow(api), readTemplate()]);
+  const found = days.find((d) => d.day.day.id === dayId);
+  if (found) await exportCallSheets(api, { board: b, team, day: found.day, sheet: found.sheet, template, people: found.people, individual });
+}
+
 /** One call sheet as it prints; `person` puts their own call at the top [FDS-02, FDS-03]. */
 function CallSheetPage({
   title,
@@ -504,6 +550,10 @@ function CallSheetPage({
                 <td className="num">{formatEighths(s.scene.eighths)}</td>
               </tr>
             ))}
+            <tr className="end">
+              <td colSpan={3}>{plural("callsheet.sceneTotal", day.scenes.length)}</td>
+              <td className="num">{formatEighths(day.eighths)}</td>
+            </tr>
           </tbody>
         </table>
       </section>
@@ -619,10 +669,10 @@ function CallSheetPage({
   );
 }
 
-/** The sheet of a day, general or one file per person named after them, in one go [FDS-05]. */
+/** The sheet of a day, general or one file per person named after them, in one go; `notice` says it in other words than « exported », `onProgress` follows a list [FDS-05]. */
 export async function exportCallSheets(
   api: Api,
-  { board: b, team, day, sheet, template, people, individual }: { board: Board; team: Team; day: Board["days"][number]; sheet: Sheet; template: Template; people: Person[]; individual: boolean },
+  { board: b, team, day, sheet, template, people, individual, notice, onProgress }: { board: Board; team: Team; day: Board["days"][number]; sheet: Sheet; template: Template; people: Person[]; individual: boolean; notice?: string; onProgress?: (done: number, total: number) => void },
 ): Promise<void> {
   const logo = template.logo ? await readImage(template.logo).catch(() => null) : null;
   const name = t("schedule.dayShort", { n: day.number });
@@ -640,78 +690,11 @@ export async function exportCallSheets(
   for (const p of people) {
     const path = await api.printPdf(`${t("callsheet.fileName", { day: name })} - ${p.name}.pdf`, page(p), size, true);
     if (path) paths.push(path);
+    onProgress?.(paths.length, people.length);
   }
   if (paths.length)
     api.notify({
-      text: t("workspace.exportedMany", { count: paths.length }),
+      text: notice ?? t("workspace.exportedMany", { count: paths.length }),
       actions: [{ label: t("workspace.showInFolder"), onClick: () => void commands.reveal(paths[0], false) }],
     });
 }
-
-/** The report of a day in PDF [FDS-08]. */
-export async function exportDayReport(api: Api, { day, sheet, total }: { day: Board["days"][number]; sheet: Sheet; total: number }): Promise<void> {
-  const r = sheet.report;
-  const name = t("schedule.dayN", { n: day.number, total });
-  await api.printPdf(
-    `${t("callsheet.reportFile", { day: t("schedule.dayShort", { n: day.number }) })} - ${api.project.title}.pdf`,
-    <div className="pr-print">
-      <div className="run">
-        <h1>
-          {t("callsheet.report")} · {name}
-        </h1>
-        <p className="sub">
-          {api.project.title} · {longDate(day.date)}
-        </p>
-        <h2>{t("callsheet.scenesShot")}</h2>
-        <table>
-          <tbody>
-            {day.scenes.map((s) => (
-              <tr key={s.scene.id}>
-                <td className="num" style={{ width: "6%" }}>
-                  {s.scene.number}
-                </td>
-                <td className="slug">{s.scene.heading}</td>
-                <td>{r.scenes[s.scene.id] === "done" ? t("callsheet.doneShot") : r.scenes[s.scene.id] === "part" ? t("callsheet.partShot") : t("callsheet.notShot")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <h2>{t("callsheet.realTimes")}</h2>
-        <table>
-          <tbody>
-            <tr>
-              {(["call", "firstShot", "lunch", "wrap"] as const).map((k) => (
-                <td key={k}>
-                  <span className="muted">{t(`callsheet.real.${k}`)}</span> <b>{r[k] || "–"}</b>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-        {(
-          [
-            ["shotsDone", r.shots],
-            ["screenTime", r.screenTime],
-            ["incidents", r.incidents],
-            ["continuity", r.continuity],
-          ] as const
-        )
-          .filter(([, v]) => v)
-          .map(([k, v]) => (
-            <section key={k}>
-              <h2>{t(`callsheet.${k}`)}</h2>
-              <p className="cs-text">{v}</p>
-            </section>
-          ))}
-        {r.notes && (
-          <section>
-            <h2>{t("team.notes")}</h2>
-            <p className="cs-text">{r.notes}</p>
-          </section>
-        )}
-      </div>
-    </div>,
-    { width: A4.short, height: A4.long, css: CSS(A4.short, A4.long) },
-  );
-}
-

@@ -1,6 +1,6 @@
 [package]
 name = "oniric"
-version = "3.0.0"
+version = "4.0.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 description = "Logiciel libre de création de films"
@@ -28,6 +28,7 @@ app = [
   "dep:webview2-com",
   "dep:windows",
   "dep:windows-core",
+  "dep:ureq",
 ]
 
 [build-dependencies]
@@ -46,6 +47,8 @@ specta = { version = "=2.0.0-rc.25", features = ["derive"], optional = true }
 specta-typescript = { version = "0.0.12", optional = true }
 tauri-plugin-dialog = { version = "2.8.3", optional = true }
 tauri-plugin-opener = { version = "2.7.2", optional = true }
+# The one network dependency, for the map of the scouting: see src/network.rs.
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"], optional = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_System_Threading"] }

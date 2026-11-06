@@ -1,27 +1,45 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   BookUser,
+  Briefcase,
+  Camera,
   Check,
+  ChevronRight,
   Clapperboard,
   Contact as ContactIcon,
+  Copy,
   Crown,
   Download,
+  Drama,
   Eye,
   EyeOff,
   FileText,
+  Film,
   ImagePlus,
-  Network,
+  Lightbulb,
+  Megaphone,
+  MessageCircle,
+  Mic,
+  Music,
+  Palette,
+  PenLine,
   Pencil,
   Plus,
-  Rows3,
+  Shirt,
+  Sparkles,
   Star,
   Trash2,
+  Truck,
   Upload,
   UserPlus,
+  UserRound,
   Users,
+  Wallet,
   X,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import type { CandidateStatus, CastKind, ContractStatus } from "../../../core/db/schema";
@@ -31,12 +49,11 @@ import { confirmRemoval, Dialog } from "../../../ui-kit/Dialog";
 import { EmptyState } from "../../../ui-kit/Form";
 import { MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
 import { SearchBox } from "../../../ui-kit/SearchBox";
-import { Segmented } from "../../../ui-kit/Segmented";
 import { Select } from "../../../ui-kit/Select";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { useLive } from "../../../core/db/live";
 import { loadEntries } from "../../script/bible/application/bible";
-import { useProject } from "../../project/ui/projectContext";
+import { PAGE_KEY, useProject } from "../../project/ui/projectContext";
 import { fold } from "../../script/bible/domain/types";
 import { useScenes } from "../../script/screenplay/application/scriptSession";
 import { pickImage } from "../../shared/media";
@@ -44,78 +61,191 @@ import {
   addAway,
   addCandidate,
   addContact,
-  addContacts,
   addCrew,
   castNumbers,
   chooseCandidate,
   deleteCast,
   deleteContact,
   ensureRole,
-  readBook,
   refreshFromBook,
   removeAway,
   removeCandidate,
   removeCrew,
-  removeFromBook,
   saveToBook,
   setCast,
-  takeFromBook,
   updateCandidate,
   updateContact,
   updateCrew,
   useCatalog,
   useTeam,
   writeCatalog,
-  type BookCard,
   type Candidate,
   type Contact,
   type CrewMember,
   type Team,
 } from "../application/team";
 import { addRole, CANDIDATE_STATUSES, CAST_KINDS, CONTRACTS, DEPARTMENTS, departmentName, REGIMES, rolesOf } from "../domain/catalog";
-import { cardsFromCsv, cardsFromVCard, samePerson, toVCard, type Card, type ContactData } from "../domain/contacts";
-import { Avatar, dateRange, Field, HeaderTabs, Section, useFilePick } from "./parts";
+import type { ContactData } from "../domain/contacts";
+import { Avatar, dateRange, Field, Section } from "./parts";
 
 type Tab = "crew" | "cast" | "casting" | "contacts";
 
-/** The team of the film: the crew by department, the cast, the casting and the contacts [EQU-01 to EQU-08]. */
-export function TeamView() {
-  const [tab, setTab] = useStoredState<Tab>("oniric.team.tab", "crew");
+/**
+ * The team of the film: the crew by department, the cast, the casting and the contacts [EQU-01 to EQU-08].
+ * `home` changes each time the team is chosen in the side bar, which brings the casting and the contacts back to their categories.
+ */
+export function TeamView({ home }: { home: number }) {
+  const [tab, setTab] = useStoredState<Tab>(PAGE_KEY.team, "crew");
   const team = useTeam();
   // The contact opened in the contacts, from wherever it was asked for.
   const [opened, setOpened] = useState<string | null>(null);
+  const [lastHome, setLastHome] = useState(home);
+  if (home !== lastHome) {
+    setLastHome(home);
+    setOpened(null);
+  }
   const openContact = (id: string) => {
     setOpened(id);
     setTab("contacts");
   };
-  return (
-    <>
-      <HeaderTabs
-        label={t("team.display")}
-        value={tab}
-        onChange={setTab}
-        options={[
-          { id: "crew", label: t("team.tabs.crew"), icon: Users },
-          { id: "cast", label: t("team.tabs.cast"), icon: Clapperboard },
-          { id: "casting", label: t("team.tabs.casting"), icon: Star },
-          { id: "contacts", label: t("team.tabs.contacts"), icon: BookUser },
-        ]}
-      />
-      {team &&
-        (tab === "crew" ? (
-          <CrewTab team={team} onContact={openContact} />
-        ) : tab === "cast" ? (
-          <CastTab team={team} onContact={openContact} />
-        ) : tab === "casting" ? (
-          <CastingTab team={team} onContact={openContact} />
-        ) : (
-          <ContactsTab team={team} opened={opened} onOpen={setOpened} />
-        ))}
-    </>
-  );
+  if (!team) return null;
+  if (tab === "crew") return <CrewTab team={team} onContact={openContact} />;
+  if (tab === "cast") return <CastTab team={team} onContact={openContact} />;
+  if (tab === "casting") return <CastingTab key={home} team={team} onContact={openContact} />;
+  return <ContactsTab key={home} team={team} opened={opened} onOpen={setOpened} />;
 }
 
 const contractTone: Record<ContractStatus, string> = { none: "", sent: "warn", signed: "ok" };
+
+/** One category of the casting or of the contacts: what its card shows. */
+type TeamCategory = { id: string; title: string; icon: LucideIcon; count: string; countHint?: string };
+
+/**
+ * The levels of a tab, as in the Bible: the categories, the cards of one, the page of one card. The header says where
+ * one is; the page's name or Escape goes back up, and the focus goes back to the card one left.
+ */
+function useLevels({ home, group, count, page, onHome, onClosePage }: { home: string; group: { id: string; title: string } | null; count: number; page: { id: string; name: string } | null; onHome: () => void; onClosePage: () => void }) {
+  const { setTrail } = useProject();
+  const trailKey = JSON.stringify([group?.title, count, page?.name]);
+  useEffect(() => {
+    if (!group && !page) return setTrail(null);
+    setTrail([
+      {
+        label: home,
+        onClick: () => {
+          onClosePage();
+          onHome();
+        },
+      },
+      ...(group ? [page ? { label: group.title, onClick: onClosePage } : { label: group.title, count }] : []),
+      ...(page ? [{ label: page.name }] : []),
+    ]);
+  }, [trailKey, setTrail]);
+  useEffect(() => () => setTrail(null), [setTrail]);
+  useEffect(() => {
+    if (!group && !page) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as HTMLElement).closest("input, textarea, select, dialog, [role=dialog], [role=menu]")) return;
+      if (page) onClosePage();
+      else onHome();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [!!group, !!page]);
+
+  const groupId = group?.id ?? null;
+  const lastGroup = useRef(groupId);
+  useEffect(() => {
+    const was = lastGroup.current;
+    lastGroup.current = groupId;
+    if (was === groupId) return;
+    requestAnimationFrame(() => {
+      if (!groupId && was) document.querySelector<HTMLElement>(`.type-card[data-type="${CSS.escape(was)}"]`)?.focus();
+      if (groupId) document.querySelector<HTMLElement>(".entry-card-open")?.focus();
+    });
+  }, [groupId]);
+  const lastPage = useRef<string | null>(null);
+  useEffect(() => {
+    if (page) {
+      lastPage.current = page.id;
+      return;
+    }
+    const id = lastPage.current;
+    if (!id) return;
+    lastPage.current = null;
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`.entry-card-open[data-entry="${CSS.escape(id)}"]`)?.focus());
+  }, [page?.id]);
+}
+
+/** The categories of a tab: an icon, a name and how many it holds; the whole card opens it. */
+function CategoryCards({ categories, onOpen }: { categories: TeamCategory[]; onOpen: (id: string) => void }) {
+  return (
+    <ul className="type-cards pr-categories">
+      {categories.map((c) => (
+        <li key={c.id}>
+          <button type="button" className="type-card" data-type={c.id} onClick={() => onOpen(c.id)}>
+            <span className="type-card-icon">
+              <c.icon aria-hidden="true" />
+            </span>
+            <span className="type-card-name">{c.title}</span>
+            <span className="type-card-count" title={c.countHint}>
+              {c.count}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** People or parts under the category they belong to, whose name leads into it when it has a page of its own. */
+function FoundSections({ sections, onCategory }: { sections: { category: TeamCategory; cards: ReactNode; n: ReactNode }[]; onCategory?: (id: string) => void }) {
+  return (
+    <div className="entry-sections">
+      {sections.map(({ category: c, cards, n }) => (
+        <section key={c.id} className="entry-section" aria-labelledby={`team-section-${c.id}`}>
+          <header className="entry-section-head">
+            <h2 id={`team-section-${c.id}`}>
+              <c.icon aria-hidden="true" />
+              {onCategory ? (
+                <button type="button" className="entry-section-link" onClick={() => onCategory(c.id)}>
+                  {c.title}
+                </button>
+              ) : (
+                c.title
+              )}
+              <span className="entry-section-count" title={c.countHint}>
+                {n}
+              </span>
+            </h2>
+          </header>
+          {cards}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/** A person or a part among the cards: the button holds the name, and its ::after spreads over the whole card. */
+function TeamCard({ id, name, face, sub, meta, heading: Heading, onOpen }: { id: string; name: ReactNode; face: ReactNode; sub?: ReactNode; meta?: ReactNode; heading: "h2" | "h3"; onOpen: () => void }) {
+  const describe = useId();
+  return (
+    <li className="entry-card">
+      <Heading className="entry-card-head">
+        {face}
+        <button type="button" className="entry-card-open entry-name" data-entry={id} aria-describedby={sub || meta ? describe : undefined} onClick={onOpen}>
+          {name}
+        </button>
+      </Heading>
+      {(sub || meta) && (
+        <span id={describe} className="pr-card-text">
+          {sub && <span className="entry-card-summary">{sub}</span>}
+          {meta && <span className="entry-card-meta">{meta}</span>}
+        </span>
+      )}
+    </li>
+  );
+}
 
 /** Asks a name and makes a contact of it; its id, or null. */
 function useNewContact() {
@@ -157,8 +287,9 @@ function ContactSelect({ team, value, onChange, label, none }: { team: Team; val
 
 function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => void }) {
   const { ask, notify } = useProject();
-  const [shape, setShape] = useStoredState<"list" | "chart">("oniric.team.shape", "list");
   const [editing, setEditing] = useState<CrewMember | "new" | null>(null);
+  // The departments unfolded in the list; a search unfolds what it finds.
+  const [unfolded, setUnfolded] = useStoredState<string[]>("oniric.team.unfolded", []);
   const [query, setQuery] = useState("");
   const contact = useMemo(() => new Map(team.contacts.map((c) => [c.id, c])), [team.contacts]);
   const needle = fold(query.trim());
@@ -188,18 +319,8 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   return (
     <div className="view pr-view">
       <main className="view-main wide">
-        <div className="pr-toolbar">
-          <SearchBox value={query} onChange={setQuery} placeholder={t("team.searchCrew")} label={t("team.searchCrewLabel")} />
-          <span className="spacer" />
-          <Segmented
-            label={t("team.shape")}
-            value={shape}
-            onChange={setShape}
-            options={[
-              { id: "list", label: t("team.list"), icon: Rows3 },
-              { id: "chart", label: t("team.chart"), icon: Network },
-            ]}
-          />
+        <div className="bible-toolbar">
+          {team.crew.length > 0 && <SearchBox value={query} onChange={setQuery} placeholder={t("team.searchCrew")} label={t("team.searchCrewLabel")} />}
           <button type="button" className="btn primary" onClick={() => setEditing("new")}>
             <UserPlus aria-hidden="true" />
             {t("team.addToCrew")}
@@ -211,182 +332,88 @@ function CrewTab({ team, onContact }: { team: Team; onContact: (id: string) => v
           </EmptyState>
         ) : groups.length === 0 ? (
           <p className="muted pr-none">{t("team.nothingFound")}</p>
-        ) : shape === "list" ? (
-          groups.map((g) => (
-            <section key={g.id} className="pr-group" aria-label={departmentName(g.id)}>
-              <h2 className="pr-group-head">
-                {departmentName(g.id)}
-                <span className="pr-count">{g.members.length}</span>
-              </h2>
-              <ul className="pr-rows">
-                {g.members.map((m) => {
-                  const c = contact.get(m.contactId);
-                  return (
-                    <li key={m.id} className="pr-row">
-                      <button type="button" className="pr-row-main" onClick={() => setEditing(m)}>
-                        <Avatar name={c?.name ?? "?"} photo={c?.data.photo} />
-                        <span className="pr-row-text">
-                          <span className="pr-row-title">
-                            {c?.name}
-                            {m.head && (
-                              <span className="badge pr-head" title={t("team.head")}>
-                                <Crown aria-hidden="true" />
-                                {t("team.head")}
-                              </span>
-                            )}
-                          </span>
-                          <span className="pr-row-sub">{m.role}</span>
-                        </span>
-                        <span className="pr-row-meta">{dateRange(m.startDate, m.endDate)}</span>
-                        <span className="pr-row-meta num">{m.rate}</span>
-                        <span className={`badge ${contractTone[m.contract]}`}>{t(`team.contracts.${m.contract}`)}</span>
-                      </button>
-                      <MoreMenu label={t("team.postMenu", { name: c?.name ?? "" })} items={menu(m)} />
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))
         ) : (
-          <OrgChart groups={groups} led={new Set(team.crew.filter((m) => m.head).map((m) => m.department))} contact={contact} onOpen={setEditing} />
+          <div className="pr-depts">
+            {groups.map((g) => {
+              const open = !!needle || unfolded.includes(g.id);
+              const heads = team.crew.filter((m) => m.department === g.id && m.head);
+              const unsent = g.members.filter((m) => m.contract === "none").length;
+              const sent = g.members.filter((m) => m.contract === "sent").length;
+              return (
+                <section key={g.id} className="pr-dept" aria-label={departmentName(g.id)}>
+                  <h2>
+                    <button
+                      type="button"
+                      className="pr-dept-head"
+                      aria-expanded={open}
+                      disabled={!!needle}
+                      onClick={() => setUnfolded(open ? unfolded.filter((d) => d !== g.id) : [...unfolded, g.id])}
+                    >
+                      <ChevronRight className="pr-dept-caret" aria-hidden="true" />
+                      <span className="pr-dept-name">
+                        <span>{departmentName(g.id)}</span>
+                        <span className="pr-count">{g.members.length}</span>
+                      </span>
+                      <span className="pr-dept-lead">
+                        {heads.length > 0 ? (
+                          <>
+                            <Avatar name={contact.get(heads[0].contactId)?.name ?? "?"} photo={contact.get(heads[0].contactId)?.data.photo} size={22} />
+                            <span className="pr-dept-lead-name">{heads.map((m) => contact.get(m.contactId)?.name).join(", ")}</span>
+                            <Crown className="pr-dept-crown" aria-label={t("team.head")} />
+                          </>
+                        ) : (
+                          <span className="muted">{t("team.noHead")}</span>
+                        )}
+                      </span>
+                      <span className="pr-dept-state">
+                        {unsent > 0 && <span className="badge">{plural("team.deptUnsent", unsent)}</span>}
+                        {sent > 0 && <span className="badge warn">{plural("team.deptSent", sent)}</span>}
+                      </span>
+                    </button>
+                  </h2>
+                  {open && (
+                    <ul className="pr-rows">
+                      {g.members.map((m) => {
+                        const c = contact.get(m.contactId);
+                        return (
+                          <li key={m.id} className="pr-row">
+                            <button type="button" className="pr-row-main" onClick={() => setEditing(m)}>
+                              <Avatar name={c?.name ?? "?"} photo={c?.data.photo} />
+                              <span className="pr-row-text">
+                                <span className="pr-row-title">
+                                  {c?.name}
+                                  {m.head && (
+                                    <span className="badge pr-head" title={t("team.head")}>
+                                      <Crown aria-hidden="true" />
+                                      {t("team.head")}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="pr-row-sub">{m.role}</span>
+                              </span>
+                              <span className="pr-row-meta">{dateRange(m.startDate, m.endDate)}</span>
+                              <span className="pr-row-meta num">{m.rate}</span>
+                              <span className={`badge ${contractTone[m.contract]}`}>{t(`team.contracts.${m.contract}`)}</span>
+                            </button>
+                            <MoreMenu label={t("team.postMenu", { name: c?.name ?? "" })} items={menu(m)} />
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         )}
       </main>
-      {editing && <CrewDialog team={team} member={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
-    </div>
-  );
-}
-
-type Group = { id: string; members: CrewMember[] };
-
-/** The departments the production runs; every other one, the artistic and technical crew, answers to the direction. */
-const PRODUCTION_SIDE = ["logistics", "finance", "release"];
-const COLUMN = 240;
-const GAP = 14;
-
-/** The width of an element, followed as it changes. */
-function useWidth(): [(el: HTMLElement | null) => void, number] {
-  const [el, setEl] = useState<HTMLElement | null>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [el]);
-  return [setEl, width];
-}
-
-/** About how tall a department card stands, in rows: its title, then its people. */
-const weight = (g: Group) => 2 + g.members.length + g.members.filter((m) => m.head).length * 0.4;
-
-/** The departments shared out over `n` columns, in their order, each to the shortest column so far. */
-function columns(groups: Group[], n: number): Group[][] {
-  const cols: Group[][] = Array.from({ length: n }, () => []);
-  const height = new Array<number>(n).fill(0);
-  for (const g of groups) {
-    const i = height.indexOf(Math.min(...height));
-    cols[i].push(g);
-    height[i] += weight(g);
-  }
-  return cols.filter((c) => c.length > 0);
-}
-
-/**
- * The organisation chart [EQU-04]: production and direction at the head of the film, each over the departments that
- * answer to it, and in every department its head over the people of the team.
- */
-function OrgChart({
-  groups,
-  led,
-  contact,
-  onOpen,
-}: {
-  groups: Group[];
-  /** The departments that have a head, whether or not the search shows them. */
-  led: Set<string>;
-  contact: Map<string, Contact>;
-  onOpen: (m: CrewMember) => void;
-}) {
-  const [ref, width] = useWidth();
-  const person = (m: CrewMember) => {
-    const c = contact.get(m.contactId);
-    return (
-      <button type="button" className={m.head ? "pr-org-person head" : "pr-org-person"} onClick={() => onOpen(m)}>
-        <Avatar name={c?.name ?? "?"} photo={c?.data.photo} size={m.head ? 34 : 26} />
-        <span className="pr-row-text">
-          <span className="pr-row-title">{c?.name}</span>
-          <span className="pr-row-sub">{m.role}</span>
-        </span>
-        {m.head && <Crown className="pr-org-crown" aria-label={t("team.head")} />}
-      </button>
-    );
-  };
-  const dept = (g: Group, lead = false) => {
-    const heads = g.members.filter((m) => m.head);
-    const rest = g.members.filter((m) => !m.head);
-    return (
-      <section key={g.id} className={lead ? "pr-org-dept lead" : "pr-org-dept"} aria-label={departmentName(g.id)}>
-        <h2>
-          <span>{departmentName(g.id)}</span>
-          {!led.has(g.id) ? <span className="badge warn">{t("team.noHead")}</span> : <span className="pr-count">{g.members.length}</span>}
-        </h2>
-        {heads.map((m) => (
-          <div key={m.id} className="pr-org-heads">
-            {person(m)}
-          </div>
-        ))}
-        {rest.length > 0 && (
-          <ul className={heads.length ? "pr-org-team under" : "pr-org-team"}>
-            {rest.map((m) => (
-              <li key={m.id}>{person(m)}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-    );
-  };
-
-  const find = (id: string) => groups.find((g) => g.id === id);
-  const branches = [
-    { lead: find("production"), groups: groups.filter((g) => PRODUCTION_SIDE.includes(g.id)) },
-    { lead: find("direction"), groups: groups.filter((g) => g.id !== "production" && g.id !== "direction" && !PRODUCTION_SIDE.includes(g.id)) },
-  ].filter((b) => b.lead || b.groups.length);
-  // The columns the page holds go to each branch after the height of its departments; too narrow, the branches stack.
-  const total = Math.max(1, Math.floor((width + GAP) / (COLUMN + GAP)));
-  const side = total >= 3 && branches.length === 2;
-  const load = branches.map((b) => b.groups.reduce((s, g) => s + weight(g), 0));
-  const first = side ? Math.min(total - 1, Math.max(1, Math.round((total * load[0]) / (load[0] + load[1])))) : total;
-  const people = new Set(groups.flatMap((g) => g.members.map((m) => m.contactId))).size;
-  const headless = groups.filter((g) => !led.has(g.id)).length;
-
-  return (
-    <div className="pr-org" ref={ref}>
-      <p className="pr-org-sum">
-        <span>{plural("team.orgPeople", people)}</span>
-        <span>{plural("team.orgDepartments", groups.length)}</span>
-        {headless > 0 && <span className="badge warn">{plural("team.orgHeadless", headless)}</span>}
-      </p>
-      {width > 0 && (
-        <div className={side ? "pr-org-branches side" : "pr-org-branches"}>
-          {branches.map((b, i) => {
-            const cols = columns(b.groups, side ? (i === 0 ? first : total - first) : total);
-            return (
-              <div key={i} className="pr-org-branch" style={{ flexGrow: side ? (i === 0 ? first : total - first) : 1 }}>
-                {b.lead && dept(b.lead, true)}
-                {cols.length > 0 && (
-                  <div className={b.lead ? "pr-org-cols hung" : "pr-org-cols"} style={{ "--cols": cols.length } as React.CSSProperties}>
-                    {cols.map((c, j) => (
-                      <div key={j} className="pr-org-col">
-                        {c.map((g) => dept(g))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      {editing && (
+        <CrewDialog
+          team={team}
+          member={editing === "new" ? null : editing}
+          onSaved={(department) => !unfolded.includes(department) && setUnfolded([...unfolded, department])}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
@@ -395,7 +422,7 @@ function OrgChart({
 const OTHER = "\u0000other";
 
 /** A post of the crew, new or to change; `contactId` chooses the person of a new one. */
-function CrewDialog({ team, member, contactId, onClose }: { team: Team; member: CrewMember | null; contactId?: string; onClose: () => void }) {
+function CrewDialog({ team, member, contactId, onSaved, onClose }: { team: Team; member: CrewMember | null; contactId?: string; onSaved?: (department: string) => void; onClose: () => void }) {
   const { prompt, notify, openSettings } = useProject();
   const catalog = useCatalog();
   const [draft, setDraft] = useState<Omit<CrewMember, "id" | "rank">>(
@@ -408,6 +435,7 @@ function CrewDialog({ team, member, contactId, onClose }: { team: Team; member: 
     try {
       if (member) await updateCrew(member.id, { ...draft, role });
       else await addCrew(team.crew, { ...draft, role });
+      onSaved?.(draft.department);
       onClose();
     } catch (e) {
       notify({ text: describeError(e), tone: "error" });
@@ -546,15 +574,9 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
   }
   return (
     <div className="view pr-view">
-      <main className="view-main wide">
-        <div className="pr-toolbar">
-          <p className="muted">{t("team.castHelp")}</p>
-          <span className="spacer" />
-          <button type="button" className="btn" onClick={() => void addPart()}>
-            <Plus aria-hidden="true" />
-            {t("team.addPart")}
-          </button>
-        </div>
+      <main className="view-main pr-frame-main">
+        <div className="pr-frame">
+          <div className="pr-frame-scroll">
         <table className="pr-table pr-quiet">
           <thead>
             <tr>
@@ -629,6 +651,12 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
             })}
           </tbody>
         </table>
+          </div>
+          <button type="button" className="pr-frame-add" onClick={() => void addPart()}>
+            <Plus aria-hidden="true" />
+            {t("team.addPart")}
+          </button>
+        </div>
       </main>
     </div>
   );
@@ -636,17 +664,37 @@ function CastTab({ team, onContact }: { team: Team; onContact: (id: string) => v
 
 const statusTone: Record<CandidateStatus, string> = { candidate: "", audition: "warn", shortlist: "warn", chosen: "ok", declined: "danger" };
 
+const kindIcons: Record<CastKind, LucideIcon> = { lead: Star, supporting: UserRound, bit: MessageCircle, extra: Users, double: Copy, stunt: Zap };
+
 /** The parts to cast, the people seen for each, their auditions, and the final choice [EQU-06]. */
 function CastingTab({ team, onContact }: { team: Team; onContact: (id: string) => void }) {
   const { project, ask, notify } = useProject();
   const characters = useCharacters(team).filter((c) => (team.cast.find((r) => r.character === c.name)?.kind ?? "supporting") !== "extra");
   const [picked, setPicked] = useState<string | null>(null);
-  const current = characters.find((c) => c.name === picked) ?? characters[0] ?? null;
+  const kindOf = (name: string) => team.cast.find((r) => r.character === name)?.kind ?? "supporting";
+  const current = characters.find((c) => c.name === picked) ?? null;
   const role = current ? team.cast.find((r) => r.character === current.name) : undefined;
   const candidates = role ? team.candidates.filter((c) => c.roleId === role.id) : [];
   const contact = new Map(team.contacts.map((c) => [c.id, c]));
   const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
   const create = useNewContact();
+  const actorOf = (name: string) => {
+    const r = team.cast.find((x) => x.character === name);
+    return r?.contactId ? contact.get(r.contactId) : undefined;
+  };
+  const kinds = CAST_KINDS.map((k) => {
+    const parts = characters.filter((c) => kindOf(c.name) === k);
+    const category: TeamCategory = { id: k, title: t(`team.kindGroups.${k}`), icon: kindIcons[k], count: `${parts.filter((c) => actorOf(c.name)).length}/${parts.length}`, countHint: t("team.partsFilled") };
+    return { category, parts };
+  }).filter((g) => g.parts.length > 0);
+  useLevels({
+    home: t("team.tabs.casting"),
+    group: null,
+    count: 0,
+    page: current ? { id: current.name, name: current.name } : null,
+    onHome: () => {},
+    onClosePage: () => setPicked(null),
+  });
 
   const add = async (contactId: string | null) => {
     if (!current || !contactId) return;
@@ -676,41 +724,31 @@ function CastingTab({ team, onContact }: { team: Team; onContact: (id: string) =
       </div>
     );
   }
-  const actorOf = (name: string) => {
-    const r = team.cast.find((x) => x.character === name);
-    return r?.contactId ? contact.get(r.contactId) : undefined;
-  };
+  const partCards = (parts: typeof characters, heading: "h2" | "h3") => (
+    <ul className="entry-cards">
+      {parts.map((c) => {
+        const r = team.cast.find((x) => x.character === c.name);
+        const n = r ? team.candidates.filter((x) => x.roleId === r.id && x.status !== "declined").length : 0;
+        const actor = actorOf(c.name);
+        return (
+          <TeamCard
+            key={c.name}
+            id={c.name}
+            heading={heading}
+            name={c.name}
+            face={actor ? <Avatar name={actor.name} photo={actor.data.photo} size={32} /> : <span className="pr-seat" aria-hidden="true" />}
+            sub={actor ? actor.name : n ? <span className="pr-card-warn">{plural("team.candidates", n)}</span> : <span className="muted">{t("team.toCast")}</span>}
+            meta={<span className={c.scenes ? "entry-card-where" : "entry-card-where none"}>{plural("team.inScenes", c.scenes)}</span>}
+            onOpen={() => setPicked(c.name)}
+          />
+        );
+      })}
+    </ul>
+  );
   return (
-    <div className="view split pr-split">
-      <nav className="view-side pr-side" aria-label={t("team.parts")}>
-        <ul className="pr-side-list">
-          {characters.map((c) => {
-            const r = team.cast.find((x) => x.character === c.name);
-            const n = r ? team.candidates.filter((x) => x.roleId === r.id && x.status !== "declined").length : 0;
-            const actor = actorOf(c.name);
-            return (
-              <li key={c.name}>
-                <button type="button" className={c.name === current?.name ? "on" : ""} aria-current={c.name === current?.name} onClick={() => setPicked(c.name)}>
-                  <span className="pr-slug">{c.name}</span>
-                  <span className={actor ? "pr-side-sub ok" : "pr-side-sub"}>
-                    {actor ? (
-                      <>
-                        <Check aria-hidden="true" />
-                        {actor.name}
-                      </>
-                    ) : n ? (
-                      plural("team.candidates", n)
-                    ) : (
-                      t("team.toCast")
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <main className="view-main">
+    <div className="view pr-view">
+      <main key={current?.name ?? ""} className="view-main wide">
+        {!current && <FoundSections sections={kinds.map((g) => ({ category: g.category, n: g.category.count, cards: partCards(g.parts, "h3") }))} />}
         {current && (
           <>
             <header className="pr-casting-head">
@@ -816,76 +854,125 @@ function CastingTab({ team, onContact }: { team: Team; onContact: (id: string) =
   );
 }
 
+const departmentIcons: Record<string, LucideIcon> = {
+  production: Briefcase,
+  writing: PenLine,
+  direction: Clapperboard,
+  camera: Camera,
+  grip: Lightbulb,
+  sound: Mic,
+  art: Palette,
+  wardrobe: Shirt,
+  cast: Drama,
+  effects: Sparkles,
+  post: Film,
+  music: Music,
+  logistics: Truck,
+  release: Megaphone,
+  finance: Wallet,
+};
+
+const NO_POST = "\u0000others";
+
+/** The contacts by what they are on the film: their department, the actors with who plays or auditions, then the others. Someone with two posts is in both. */
+function contactGroups(team: Team): { id: string; title: string; icon: LucideIcon; people: Contact[] }[] {
+  const crew = team.crew.map((m) => m.department);
+  const acting = new Set([...team.cast.map((r) => r.contactId), ...team.candidates.map((c) => c.contactId)]);
+  const isIn = (c: Contact, d: string) => team.crew.some((m) => m.contactId === c.id && m.department === d) || (d === "cast" && acting.has(c.id));
+  return [
+    ...[...new Set<string>([...DEPARTMENTS, ...crew])].map((d) => ({ id: d, title: departmentName(d), icon: departmentIcons[d] ?? Users, people: team.contacts.filter((c) => isIn(c, d)) })),
+    { id: NO_POST, title: t("team.otherContacts"), icon: ContactIcon, people: team.contacts.filter((c) => !acting.has(c.id) && !team.crew.some((m) => m.contactId === c.id)) },
+  ].filter((g) => g.people.length > 0);
+}
+
 /** The people of the project, their cards, and the address book of the computer [EQU-01, EQU-07, EQU-08]. */
 function ContactsTab({ team, opened, onOpen }: { team: Team; opened: string | null; onOpen: (id: string | null) => void }) {
-  const { notify, transfer } = useProject();
   const [query, setQuery] = useState("");
-  const [book, setBook] = useState<BookCard[] | null>(null);
   const create = useNewContact();
+  const groups = contactGroups(team);
+  // A contact opened from elsewhere lands in its category, which its page then leads back to.
+  const [group, setGroup] = useState<string | null>(() => groups.find((g) => g.people.some((c) => c.id === opened))?.id ?? null);
   const needle = fold(query.trim());
-  const shown = team.contacts.filter((c) => !needle || fold(`${c.name} ${c.data.trades.join(" ")} ${c.data.email}`).includes(needle));
-  const current = team.contacts.find((c) => c.id === opened) ?? shown[0] ?? null;
-  const fail = (e: unknown) => notify({ text: describeError(e), tone: "error" });
-  const [fileInput, pickFile] = useFilePick(".csv,.vcf,.vcard,text/csv,text/vcard", (text, name) => {
-    const cards = /\.vcf$|\.vcard$/i.test(name) || /BEGIN:VCARD/i.test(text) ? cardsFromVCard(text) : cardsFromCsv(text, csvLabels());
-    const fresh = cards.filter((c) => !team.contacts.some((k) => samePerson(k, c)));
-    if (cards.length === 0) return notify({ text: t("team.importNone"), tone: "error" });
-    void addContacts(fresh)
-      .then(() => notify({ text: t("team.imported", { count: fresh.length, skipped: cards.length - fresh.length }) }))
-      .catch(fail);
+  const matches = (c: Contact) => !needle || fold(`${c.name} ${c.data.trades.join(" ")} ${c.data.email} ${rolesLine(team, c)}`).includes(needle);
+  const inGroup = groups.find((g) => g.id === group);
+  const shown = inGroup?.people.filter(matches) ?? [];
+  const current = team.contacts.find((c) => c.id === opened) ?? null;
+  const go = (next: string | null) => {
+    setGroup(next);
+    setQuery("");
+  };
+  useLevels({
+    home: t("team.tabs.contacts"),
+    group: inGroup ?? null,
+    count: shown.length,
+    page: current,
+    onHome: () => go(null),
+    onClosePage: () => onOpen(null),
   });
+  const addContact = () =>
+    void create(query).then((id) => {
+      if (!id) return;
+      // Without a post yet: that is where it waits when its page closes.
+      go(NO_POST);
+      onOpen(id);
+    });
+  const personCards = (people: Contact[], heading: "h2" | "h3") => (
+    <ul className="entry-cards">
+      {people.map((c) => (
+        <TeamCard key={c.id} id={c.id} heading={heading} name={c.name} face={<Avatar name={c.name} photo={c.data.photo} size={32} />} sub={rolesLine(team, c) || c.data.trades.join(", ")} onOpen={() => onOpen(c.id)} />
+      ))}
+    </ul>
+  );
+  const found = groups.map((g) => ({ g, people: g.people.filter(matches) })).filter((x) => x.people.length > 0);
+  const noMatch = !!needle && (inGroup ? shown.length === 0 : found.length === 0);
   return (
-    <div className="view split pr-split contacts">
-      {fileInput}
-      <nav className="view-side pr-side" aria-label={t("team.tabs.contacts")}>
-        <div className="pr-side-tools">
-          <SearchBox value={query} onChange={setQuery} placeholder={t("team.searchContacts")} label={t("team.searchContactsLabel")} />
-          <button type="button" className="btn primary" onClick={() => void create(query).then((id) => id && (onOpen(id), setQuery("")))}>
-            <Plus aria-hidden="true" />
-            {t("team.newContactShort")}
-          </button>
-          <MoreMenu
-            label={t("team.contactsMenu")}
-            items={[
-              { label: t("team.fromBook"), icon: BookUser, onClick: () => void readBook().then(setBook).catch(fail) },
-              { label: t("team.importFile"), icon: Upload, hint: t("team.importFileHint"), onClick: pickFile },
-              { label: t("team.exportFiles"), icon: Download, onClick: () => transfer("export", "production") },
-            ]}
-          />
-        </div>
-        {team.contacts.length === 0 ? (
-          <p className="muted pr-none">{t("team.contactsEmpty")}</p>
-        ) : (
-          <ul className="pr-side-list people">
-            {shown.map((c) => (
-              <li key={c.id}>
-                <button type="button" className={c.id === current?.id ? "on" : ""} aria-current={c.id === current?.id} onClick={() => onOpen(c.id)}>
-                  <Avatar name={c.name} photo={c.data.photo} />
-                  <span className="pr-row-text">
-                    <span className="pr-row-title">{c.name}</span>
-                    <span className="pr-row-sub">{rolesLine(team, c) || c.data.trades.join(", ")}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </nav>
-      <main className="view-main">
+    <div className="view pr-view">
+      <main key={current?.id ?? group ?? ""} className={current ? "view-main" : "view-main wide"}>
         {current ? (
           <ContactPane key={current.id} team={team} contact={current} onGone={() => onOpen(null)} />
-        ) : (
+        ) : team.contacts.length === 0 ? (
           <EmptyState title={t("team.contactsEmptyTitle")}>
             <p className="muted">{t("team.contactsEmptyText")}</p>
+            <p className="empty-actions">
+              <button type="button" className="btn primary" onClick={addContact}>
+                <Plus aria-hidden="true" />
+                {t("team.newContact")}
+              </button>
+            </p>
           </EmptyState>
+        ) : (
+          <>
+            <div className="bible-toolbar">
+              <SearchBox
+                value={query}
+                onChange={setQuery}
+                placeholder={t("team.searchContacts")}
+                label={inGroup ? t("bible.searchInLabel", { title: inGroup.title }) : t("team.searchContactsLabel")}
+              />
+              <button type="button" className="btn primary" onClick={addContact}>
+                <Plus aria-hidden="true" />
+                {t("team.newContact")}
+              </button>
+            </div>
+            {inGroup ? (
+              personCards(shown, "h2")
+            ) : needle ? (
+              <FoundSections
+                sections={found.map(({ g, people }) => ({ category: { ...g, count: String(g.people.length) }, n: people.length, cards: personCards(people, "h3") }))}
+                onCategory={go}
+              />
+            ) : (
+              <CategoryCards categories={groups.map((g) => ({ ...g, count: String(g.people.length) }))} onOpen={go} />
+            )}
+            <p className="entry-cards-none muted" role="status">
+              {noMatch ? t("team.nothingFound") : ""}
+            </p>
+          </>
         )}
       </main>
-      {book && <BookDialog book={book} team={team} onClose={() => setBook(null)} />}
     </div>
   );
 }
-
-const csvLabels = () => Object.fromEntries((["name", "phone", "email", "address", "language", "trades", "agent", "regime", "diet", "allergies", "emergency", "notes"] as const).map((f) => [f, t(`team.fields.${f}`)]));
 
 /** « Cadreur · Joue MARIE »: what a person is in the project. */
 function rolesLine(team: Team, c: Contact): string {
@@ -934,19 +1021,6 @@ function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; 
           },
         ]
       : []),
-    {
-      label: t("team.exportCard"),
-      icon: FileText,
-      hint: t("team.exportCardHint"),
-      onClick: async () => {
-        try {
-          const path = unwrap(await commands.exportText(`${contact.name}.vcf`, toVCard([contact])));
-          notify({ text: t("workspace.exported", { file: path.split(/[\\/]/).slice(-2).join("\\") }), actions: [{ label: t("workspace.showInFolder"), onClick: () => void commands.reveal(path, false) }] });
-        } catch (e) {
-          fail(e);
-        }
-      },
-    },
     {
       label: t("team.deleteContact"),
       icon: Trash2,
@@ -1156,78 +1230,5 @@ function ContactPane({ team, contact, onGone }: { team: Team; contact: Contact; 
       </Section>
       {post && <CrewDialog team={team} member={post === "new" ? null : post} contactId={contact.id} onClose={() => setPost(null)} />}
     </div>
-  );
-}
-
-/** The cards of the address book of this computer, to copy into the project [EQU-01, RG-04]. */
-function BookDialog({ book, team, onClose }: { book: BookCard[]; team: Team; onClose: () => void }) {
-  const { notify, ask } = useProject();
-  const [cards, setCards] = useState(book);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const here = (c: Card & { id: string }) => team.contacts.some((k) => k.bookId === c.id || samePerson(k, c));
-  const take = async () => {
-    try {
-      const n = await takeFromBook(cards.filter((c) => picked.has(c.id)));
-      notify({ text: plural("team.takenFromBook", n) });
-      onClose();
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    }
-  };
-  return (
-    <Dialog
-      title={t("team.bookTitle")}
-      onCancel={onClose}
-      actions={[
-        { label: t("common.cancel"), onClick: onClose },
-        { label: picked.size ? t("team.takeN", { count: picked.size }) : t("team.take"), primary: true, disabled: picked.size === 0, onClick: () => void take() },
-      ]}
-    >
-      <p className="muted">{t("team.bookHelp")}</p>
-      {cards.length === 0 ? (
-        <p className="pr-empty-box muted">{t("team.bookEmpty")}</p>
-      ) : (
-        <ul className="pr-book-list">
-          {cards.map((c) => {
-            const already = here(c);
-            return (
-              <li key={c.id}>
-                <label className={already ? "choice muted" : "choice"}>
-                  <input
-                    type="checkbox"
-                    disabled={already}
-                    checked={picked.has(c.id)}
-                    onChange={(e) => {
-                      const next = new Set(picked);
-                      if (e.target.checked) next.add(c.id);
-                      else next.delete(c.id);
-                      setPicked(next);
-                    }}
-                  />
-                  <Avatar name={c.name} size={24} />
-                  <span className="pr-row-text">
-                    <span className="pr-row-title">{c.name}</span>
-                    <span className="pr-row-sub">{already ? t("team.alreadyHere") : c.data.trades.join(", ")}</span>
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className="btn tiny ghost"
-                  aria-label={t("team.forget", { name: c.name })}
-                  title={t("team.forget", { name: c.name })}
-                  onClick={async () => {
-                    if (!(await confirmRemoval(ask, { title: t("team.forgetTitle", { name: c.name }), text: t("team.forgetText"), label: t("common.removeAction") }))) return;
-                    await removeFromBook(c.id);
-                    setCards(cards.filter((x) => x.id !== c.id));
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </Dialog>
   );
 }

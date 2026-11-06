@@ -10,6 +10,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../../migrations/0003_icone_type.sql"),
     include_str!("../../migrations/0004_realisation.sql"),
     include_str!("../../migrations/0005_produire.sql"),
+    include_str!("../../migrations/0006_preparer.sql"),
 ];
 
 pub const LATEST: u32 = MIGRATIONS.len() as u32;

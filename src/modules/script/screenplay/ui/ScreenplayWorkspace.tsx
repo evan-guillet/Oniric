@@ -1,14 +1,10 @@
 import {
-  FileText,
-  ListTree,
   Pencil,
   Plus,
-  StickyNote,
-  type LucideIcon,
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { commands } from "../../../../bindings";
@@ -19,8 +15,8 @@ import { uuidv7 } from "../../../../core/ids";
 import { useWritingPrefs } from "../../../../core/writingPrefs";
 import { confirmRemoval, useChoice } from "../../../../ui-kit/Dialog";
 import { MoreMenu } from "../../../../ui-kit/MoreMenu";
-import { Segmented, type SegmentedOption } from "../../../../ui-kit/Segmented";
-import { useProject } from "../../../project/ui/projectContext";
+import { useStoredState } from "../../../../ui-kit/useStoredState";
+import { PAGE_KEY, useProject } from "../../../project/ui/projectContext";
 import { bibleIndex } from "../../bible/application/bible";
 import { wikiPlugin } from "../../bible/ui/wikiPlugin";
 import {
@@ -36,6 +32,7 @@ import {
   writeTitlePage,
 } from "../application/titlePageSettings";
 import { formatCss, type ScreenplayFormat } from "../domain/formats";
+import { noteRoom } from "../domain/noteRoom";
 import {
   contactValue,
   emptyTitlePage,
@@ -43,21 +40,25 @@ import {
   type ContactKey,
   MENTIONS,
   type MentionId,
+  resolveTitlePage,
   type TitleAuto,
   type TitlePage,
 } from "../domain/titlePage";
 import { schema } from "./editor/schema";
-import { ScriptEditor, type EditorSnapshot } from "./editor/ScriptEditor";
+import { ScriptEditor, type EditorSnapshot, type MarkSpan } from "./editor/ScriptEditor";
 import { sceneGapsPlugin } from "./editor/sceneGaps";
 import { notePlugin, refreshNotes, type NoteHost } from "./editor/notePlugin";
 import { ElementBar } from "./ElementBar";
 import { expectedPdf } from "./expectedPdf";
+import { PreviewDesk } from "./PreviewDesk";
+import { PrintTitlePage } from "./PrintPages";
 import { ScriptLedger } from "./ScriptLedger";
 import { SceneList, type ListGroup, type ListTarget, type SceneRow } from "./SceneList";
 import { STORY_TABLES, deleteAct, deleteSequence, loadStory, storyOutline, updateSceneMeta } from "../../views/application/story";
 import { numberedParts } from "../../views/domain/outline";
 import { useScenes } from "../application/scriptSession";
 import { useLock } from "../application/lock";
+import { useSceneNumbers } from "../application/sceneNumbers";
 import { exportScreenplayPdf } from "./screenplayExport";
 
 import { Select } from "../../../../ui-kit/Select";
@@ -86,17 +87,15 @@ function sceneCardCss(ids: string[], color: (id: string) => string | null, curre
   return rules.join("\n");
 }
 
-/** What the side panel shows: the scenes, the notes or the script's information, chosen by the tabs at its head. */
-type Panel = "scenes" | "notes" | "info";
-/** The panel's tabs: one is always chosen, and pressing it again keeps it. */
-const PANEL_ICONS: Record<Panel, LucideIcon> = { scenes: ListTree, notes: StickyNote, info: FileText };
-const panelTabs = (): SegmentedOption<Panel>[] =>
-  (["scenes", "notes", "info"] as const).map((id) => ({
-    id,
-    label: t(`script.panels.${id}`),
-    hint: t(`script.panels.${id}Hint`),
-    icon: PANEL_ICONS[id],
-  }));
+/**
+ * The Scénario's pages, chosen in the side bar: the writing beside its scenes, its notes facing their passages; the
+ * title page beside its fields; the whole script as it prints.
+ */
+type Page = "text" | "info" | "preview";
+const PAGES: readonly string[] = ["text", "info", "preview"];
+
+/** How far a scene card reaches past the text on each side, as `.desk.display-cards` draws it, in pixels. */
+const CARD_PAD = 0.6 * 96;
 
 function sameRows(a: SceneRow[], b: SceneRow[]) {
   return (
@@ -121,41 +120,58 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   const [format, setFormat] = useState<ScreenplayFormat | null>(null);
   const [snap, setSnap] = useState<EditorSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
-  const [panel, setPanel] = useState<Panel>("scenes");
+  const [kept] = useStoredState(PAGE_KEY.script, "text");
+  const page = (PAGES.includes(kept) ? kept : "text") as Page;
+  const preview = page === "preview";
+  const info = page === "info";
   // How the writing shows on the desk, chosen in the settings: the pagination, exports and printing stay the same.
   const display = useWritingPrefs();
   const linksRef = useRef(display.links);
   linksRef.current = display.links;
-  /** A panel's tab shows it in place of the others; pressed again, it stays. */
-  const showPanel = (next: Panel) => {
-    if (next === panel) return;
-    setPanel(next);
-    setShownNote(null);
-    if (next !== "info") requestAnimationFrame(() => editorRef.current?.focus());
-  };
   // The notes, for the card a passage opens in the text.
   const notes = useLive(loadNotes, ["note"]);
   const [popped, setPopped] = useState<{ id: string; card: HTMLElement } | null>(null);
   const [popEditing, setPopEditing] = useState(false);
   // The note a Ctrl+click on its passage brought up in the panel; `at` tells two clicks on the same one apart.
   const [shownNote, setShownNote] = useState<{ id: string; at: number } | null>(null);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  // The room left beside the text on the desk: with enough of it each note faces its passage, without it the note opens
+  // in a card over the text. A desk out of sight keeps its last width.
+  const [deskWidth, setDeskWidth] = useState(0);
+  useEffect(() => {
+    const desk = deskRef.current;
+    if (!desk) return;
+    const measure = () => {
+      const box = getComputedStyle(desk);
+      if (desk.clientWidth > 0) setDeskWidth(desk.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight));
+    };
+    const resized = new ResizeObserver(measure);
+    resized.observe(desk);
+    return () => resized.disconnect();
+  }, []);
+  const room =
+    format && page === "text" && deskWidth > 0
+      ? noteRoom(deskWidth, (format.page.width - format.margins.left - format.margins.right) * 96, display.cards ? CARD_PAD : 0, display.cards ? 20 : 40)
+      : null;
+  /** The note just made without room beside the text: its card opens ready to be written. */
+  const pendingNote = useRef<string | null>(null);
   const noteHost = useRef<NoteHost | null>(null);
   noteHost.current = {
     open: (id) => !!notes?.some((n) => n.id === id),
+    floats: () => !room,
     archived: () => new Set(),
     render: (id, card) => {
-      setPopEditing(false);
+      setPopEditing(!!id && id === pendingNote.current);
+      pendingNote.current = null;
       setPopped(id ? { id, card } : null);
     },
-    reveal: (id) => {
-      setPanel("notes");
-      setShownNote({ id, at: Date.now() });
-    },
+    reveal: (id) => setShownNote({ id, at: Date.now() }),
   };
+  const hasRoom = !!room;
   useEffect(() => {
     const view = editorRef.current?.view;
     if (view && notes) refreshNotes(view);
-  }, [notes]);
+  }, [notes, hasRoom]);
   const rowsRef = useRef<SceneRow[]>([]);
   /** « + Nouvelle scène » between two cards: set once the story is loaded. */
   const addAfterRef = useRef<(afterId: string) => void>(() => {});
@@ -230,9 +246,18 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     };
   }, [t, notify, session, plugins]);
 
+  // Back on the writing, the caret is back too, and in view: the desk lost its place while another page showed.
+  const lastPage = useRef(page);
   useEffect(() => {
-    if (active) requestAnimationFrame(() => editorRef.current?.focus());
-  }, [active]);
+    const changed = lastPage.current !== page;
+    lastPage.current = page;
+    if (!active || page !== "text") return;
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      editor?.focus();
+      if (changed) editor?.view.dispatch(editor.view.state.tr.scrollIntoView());
+    });
+  }, [active, page]);
 
   // The writing preferences, changed in the settings, apply at once.
   const prefs = useWritingPrefs();
@@ -286,13 +311,16 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
   };
   useEffect(() => () => void flushTitle(), [flushTitle]);
   useEffect(() => {
-    if (panel !== "info") void flushTitle();
-  }, [panel, flushTitle]);
+    if (!info) void flushTitle();
+  }, [info, flushTitle]);
   // The version in progress moves when a version is frozen, the date at midnight: both are read again on showing the page.
   useEffect(() => {
-    if (panel !== "info") return;
+    if (!info && !preview) return;
     void titleAuto().then((auto) => setTitlePage((t) => t && { ...t, auto }));
-  }, [panel]);
+  }, [info, preview]);
+  const sceneNumbers = useSceneNumbers();
+  // The preview prints what the PDF prints: the title page saved, the numbers of a locked script.
+  const printedTitle = titlePage?.stored ? resolveTitlePage(titlePage.stored, titlePage.auto) : null;
 
   const saveNow = useCallback(async () => {
     try {
@@ -493,37 +521,84 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
     [story, sceneInfos, currentId],
   );
 
+  // The notes beside the text. The text only moves over for notes that are there.
+  const noteSpans = page === "text" && notes?.length ? (editorRef.current?.marks("note") ?? []).filter((s) => notes.some((n) => n.id === s.id)) : [];
+  const sceneIds = noteSpans.length ? (editorRef.current?.sceneIds() ?? []) : [];
+  const margin = !!room && noteSpans.length > 0;
+  const shift = margin ? room.shift : 0;
+  // What the act and sequence pin has left of the column on the left; too little, and it gives way to the notes.
+  const pinRoom = format ? (deskWidth - format.page.width * 96) / 2 + ((format.margins.left + format.margins.right) / 2 - 0.6) * 96 - 38 - shift : 0;
+
+  /** A note on the passage selected, or the caret's line: it opens ready to be written, beside the text or over it. */
+  const addNote = async () => {
+    const editor = editorRef.current;
+    const range = editor?.selectionRange();
+    if (!editor || !range) {
+      notify({ text: t("script.notes.placeCursor"), tone: "warning" });
+      return;
+    }
+    const id = uuidv7();
+    const now = nowIso();
+    // Before the mark: its card may open as soon as the mark is there.
+    if (!room) pendingNote.current = id;
+    try {
+      await session.flush();
+      await write("Note", ["note"], [
+        db.insertInto("note").values({ id, scene_id: range.sceneId, quote: range.text.slice(0, 300), body: "", created_at: now, updated_at: now }),
+      ]);
+      editor.addMark(range.from, range.to, schema.marks.note.create({ id }));
+      if (room) setEditingNote(id);
+      else editor.caretAt(range.to);
+    } catch (e) {
+      notify({ text: describeError(e), tone: "error" });
+    }
+  };
+
   return (
     <>
       {format && <style>{formatCss(format, false)}</style>}
       {display.cards && story && <style>{cardCss}</style>}
       {choice}
-      <div className="workspace">
-        <aside className="sidebar" aria-label={t("script.panel")}>
-          <div className="side-tabs">
-            <Segmented label={t("script.panel")} options={panelTabs()} value={panel} onChange={showPanel} />
-          </div>
-          <div className="sidebar-body">
-            {panel === "scenes" && (
-              <SceneList
-                scenes={rows}
-                groups={groups}
-                current={snap?.sceneIndex ?? 0}
-                onSelect={selectScene}
-                foldKey={`oniric.script.folds.${project.id}`}
-                onRemove={(target) => void removeFromList(target)}
-              />
-            )}
-            {panel === "notes" && <NotesPanel editor={editorRef.current} shown={shownNote} />}
-            {panel === "info" && titlePage && (
-              <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
-            )}
-          </div>
-        </aside>
+      <div className={preview ? "workspace wide" : "workspace"}>
+        {!preview && (
+          <aside className="sidebar" aria-label={t("script.panel")}>
+            <div className="sidebar-body">
+              {page === "text" && (
+                <SceneList
+                  scenes={rows}
+                  groups={groups}
+                  current={snap?.sceneIndex ?? 0}
+                  onSelect={selectScene}
+                  foldKey={`oniric.script.folds.${project.id}`}
+                  onRemove={(target) => void removeFromList(target)}
+                />
+              )}
+              {info && titlePage && (
+                <TitlePagePanel page={titlePage.draft} onChange={editTitle} />
+              )}
+            </div>
+          </aside>
+        )}
 
+        {preview && format && snap && (
+          <PreviewDesk
+            active={active}
+            pagination={snap.pagination}
+            format={format}
+            titlePage={printedTitle && hasContent(printedTitle) ? printedTitle : null}
+            blocks={snap.blocks}
+            sceneNumbers={locked && sceneNumbers === "none" ? "both" : sceneNumbers}
+            labels={locked ? session.scenes().map((s) => s.number) : undefined}
+          />
+        )}
+
+        {info && format && titlePage && <TitleSheet page={resolveTitlePage(titlePage.draft, titlePage.auto)} format={format} />}
+
+        {/* Hidden, not taken down, on the pages without it: the editor holds the text and its caret. */}
         <main
           ref={deskRef}
-          className={`desk sheetless ${display.cards ? "display-cards" : "display-bare"}${display.links ? "" : " links-off"}`}
+          hidden={preview || info}
+          className={`desk sheetless ${display.cards ? "display-cards" : "display-bare"}${display.links ? "" : " links-off"}${margin ? " with-notes" : ""}${shift > 0 && pinRoom < 66 ? " notes-tight" : ""}`}
         >
           {/* Beside the text, in the margin left of it. */}
           {format && (
@@ -531,7 +606,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               className="story-pin-rail"
               style={{
                 width: `${format.page.width}in`,
-                translate: `${(format.margins.right - format.margins.left) / 2}in`,
+                translate: `calc(${(format.margins.right - format.margins.left) / 2}in - ${shift}px)`,
               }}
             >
               <div
@@ -541,7 +616,7 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                     top: pinTop,
                     right: `calc(100% - ${format.margins.left - 0.6}in + 22px)`,
                     // As wide as the room left of the cards, up to 180px.
-                    maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px))`,
+                    maxWidth: `min(180px, calc((100cqw - ${format.page.width}in) / 2 + ${(format.margins.left + format.margins.right) / 2 - 0.6}in - 38px - ${shift}px))`,
                     "--act": pin?.color ?? undefined,
                   } as CSSProperties
                 }
@@ -584,7 +659,14 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
               style={{
                 width: `${format.page.width}in`,
                 // Without a sheet, the text block itself is centred rather than the page.
-                translate: `${(format.margins.right - format.margins.left) / 2}in`,
+                translate: `calc(${(format.margins.right - format.margins.left) / 2}in - ${shift}px)`,
+                ...({
+                  "--text-w": `${format.page.width - format.margins.left - format.margins.right}in`,
+                  "--text-left": `${format.margins.left}in`,
+                  "--card-pad": display.cards ? `${CARD_PAD}px` : "0px",
+                  "--note-gap": display.cards ? "20px" : "40px",
+                  "--note-w": `${room?.width ?? 0}px`,
+                } as CSSProperties),
               }}
             >
               <div
@@ -596,11 +678,23 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
                   paddingBottom: typewriter ? "45vh" : undefined,
                 }}
               />
+              {page === "text" && notes && notes.length > 0 && (
+                <NotesMargin
+                  editor={editorRef.current}
+                  notes={notes}
+                  spans={noteSpans}
+                  sceneIds={sceneIds}
+                  margin={!!room}
+                  shown={shownNote}
+                  editing={editingNote}
+                  onEditing={setEditingNote}
+                />
+              )}
             </div>
           )}
         </main>
         {/* The kinds of element, fixed at the bottom of the desk while writing. */}
-        {format && <ElementBar editor={editorRef.current} snap={snap} />}
+        {format && page === "text" && <ElementBar editor={editorRef.current} snap={snap} onNote={() => void addNote()} />}
       </div>
 
       {/* The card of the note under the caret or the pointer, drawn where the editor placed it. */}
@@ -631,6 +725,32 @@ export function ScreenplayWorkspace({ active }: { active: boolean }) {
         })()}
 
     </>
+  );
+}
+
+/** The title page alone, on the desk, the whole sheet in view however small the window. */
+function TitleSheet({ page, format }: { page: TitlePage; format: ScreenplayFormat }) {
+  const deskRef = useRef<HTMLElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const { width, height } = format.page;
+  useEffect(() => {
+    const desk = deskRef.current;
+    if (!desk) return;
+    const fit = () => {
+      const box = getComputedStyle(desk);
+      const room = (size: number, a: string, b: string) => (size - parseFloat(a) - parseFloat(b)) / 96;
+      setZoom(Math.min(1, room(desk.clientWidth, box.paddingLeft, box.paddingRight) / width, room(desk.clientHeight, box.paddingTop, box.paddingBottom) / height));
+    };
+    const resized = new ResizeObserver(fit);
+    resized.observe(desk);
+    return () => resized.disconnect();
+  }, [width, height]);
+  return (
+    <main ref={deskRef} className="desk desk-print desk-title">
+      <div className="fmt" style={{ zoom }}>
+        <PrintTitlePage page={page} format={format} />
+      </div>
+    </main>
   );
 }
 
@@ -811,106 +931,133 @@ async function loadNotes(): Promise<NoteRow[]> {
   }));
 }
 
-/** Margin notes anchored to a passage of the screenplay [EDT-07]. */
-function NotesPanel({ editor, shown }: { editor: ScriptEditor | null; shown: { id: string; at: number } | null }) {
-  const { session, notify } = useProject();
-  const notes = useLive(loadNotes, ["note"]);
-  const [editing, setEditing] = useState<string | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+/**
+ * The notes beside the text [EDT-07]: each stands level with its passage, in a column that scrolls with the text. Notes
+ * too close for that follow one another, and a scene whose notes run past its end grows to hold them. Without room
+ * beside the text (`margin` false) only the notes whose passage is gone show, under it.
+ */
+function NotesMargin({
+  editor,
+  notes,
+  spans,
+  sceneIds,
+  margin,
+  shown,
+  editing,
+  onEditing,
+}: {
+  editor: ScriptEditor | null;
+  notes: NoteRow[];
+  spans: MarkSpan[];
+  sceneIds: string[];
+  margin: boolean;
+  shown: { id: string; at: number } | null;
+  editing: string | null;
+  onEditing: (id: string | null) => void;
+}) {
+  const rootRef = useRef<HTMLUListElement>(null);
+  const tallRef = useRef<HTMLStyleElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const spanOf = new Map(spans.map((s) => [s.id, s]));
+  const scenes = margin ? sceneIds.filter((id) => spans.some((s) => s.sceneId === id)) : [];
+  const noteIn = (sceneId: string) =>
+    notes
+      .filter((n) => spanOf.get(n.id)?.sceneId === sceneId)
+      .sort((a, b) => spanOf.get(a.id)!.from - spanOf.get(b.id)!.from);
+  const orphans = notes.filter((n) => !spanOf.has(n.id));
+
+  const place = () => {
+    const root = rootRef.current;
+    const column = root?.closest<HTMLElement>(".page-column");
+    const desk = column?.closest<HTMLElement>(".desk");
+    const tallStyle = tallRef.current;
+    if (!root || !column || !desk || !tallStyle || !editor || !desk.offsetWidth) return;
+    // Read from the layout as it stands, nothing undone first: the desk must not lose its place, nor an open menu close.
+    const origin = column.getBoundingClientRect().top;
+    const tall: string[] = [];
+    let moved = 0;
+    let bottom = -Infinity;
+    for (const id of scenes) {
+      const scene = column.querySelector<HTMLElement>(`.mount .scene[data-id="${id}"]`);
+      if (!scene?.lastElementChild) continue;
+      for (const n of noteIn(id)) {
+        const card = root.querySelector<HTMLElement>(`[data-note="${CSS.escape(n.id)}"]`);
+        if (!card) continue;
+        const top = Math.max(editor.view.coordsAtPos(spanOf.get(n.id)!.from).top - origin + moved, bottom + 8);
+        card.style.top = `${top}px`;
+        bottom = top + card.offsetHeight;
+      }
+      const box = scene.getBoundingClientRect();
+      const css = getComputedStyle(scene);
+      const own = scene.lastElementChild.getBoundingClientRect().bottom - box.top + parseFloat(css.paddingBottom) + parseFloat(css.borderBottomWidth);
+      const start = box.top - origin + moved;
+      const height = Math.max(own, Math.ceil(bottom - start));
+      if (height > own) tall.push(`.desk.with-notes .mount .scene[data-id="${id}"] { min-height: ${height}px; }`);
+      moved += height - box.height;
+    }
+    const rules = tall.join("\n");
+    if (tallStyle.textContent !== rules) tallStyle.textContent = rules;
+  };
+  const placeRef = useRef(place);
+  placeRef.current = place;
+  useLayoutEffect(place);
+  useEffect(() => {
+    const column = rootRef.current?.closest<HTMLElement>(".page-column");
+    const text = column?.querySelector<HTMLElement>(".ProseMirror");
+    const desk = column?.closest<HTMLElement>(".desk");
+    if (!text || !desk) return;
+    const resized = new ResizeObserver(() => placeRef.current());
+    resized.observe(text);
+    resized.observe(desk);
+    return () => resized.disconnect();
+  }, []);
+
   // The note asked for from the text: brought into view, and lit for a moment.
   useEffect(() => {
-    if (!shown || !notes) return;
-    const card = listRef.current?.querySelector<HTMLElement>(`[data-note="${CSS.escape(shown.id)}"]`);
+    if (!shown) return;
+    const card = rootRef.current?.querySelector<HTMLElement>(`[data-note="${CSS.escape(shown.id)}"]`);
     if (!card) return;
-    card.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    card.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     setFlash(shown.id);
     const timer = window.setTimeout(() => setFlash(null), 1400);
     return () => window.clearTimeout(timer);
-  }, [shown, !!notes]);
-  const docVersion = useRef(0);
-  const [, force] = useState(0);
-  useEffect(() => {
-    const stop = session.subscribeDoc(() => force(++docVersion.current));
-    return () => {
-      stop();
-    };
-  }, [session]);
-  if (!notes) return <div className="notes-panel" ref={listRef} />;
-  const spans = new Map((editor?.marks("note") ?? []).map((s) => [s.id, s]));
-  const order = (n: NoteRow) =>
-    spans.get(n.id)?.from ?? Number.MAX_SAFE_INTEGER;
-  const sorted = [...notes].sort((a, b) => order(a) - order(b));
+  }, [shown, spans.length]);
 
-  const add = async () => {
-    const range = editor?.selectionRange();
-    if (!editor || !range) {
-      notify({
-        text: t("script.notes.placeCursor"),
-        tone: "warning",
-      });
-      return;
-    }
-    const id = uuidv7();
-    const now = nowIso();
-    try {
-      await session.flush();
-      await write(
-        "Note",
-        ["note"],
-        [
-          db
-            .insertInto("note")
-            .values({
-              id,
-              scene_id: range.sceneId,
-              quote: range.text.slice(0, 300),
-              body: "",
-              created_at: now,
-              updated_at: now,
-            }),
-        ],
-      );
-      editor.addMark(range.from, range.to, schema.marks.note.create({ id }));
-      setEditing(id);
-    } catch (e) {
-      notify({ text: describeError(e), tone: "error" });
-    }
+  const head = editor?.view.state.selection.head ?? -1;
+  const card = (n: NoteRow) => {
+    const span = spanOf.get(n.id) ?? null;
+    return (
+      <NoteCard
+        key={n.id}
+        note={n}
+        span={span}
+        editor={editor}
+        editing={editing === n.id}
+        onEditing={(on) => onEditing(on ? n.id : null)}
+        flash={flash === n.id}
+        here={!!span && span.from <= head && head <= span.to}
+      />
+    );
   };
 
-  const card = (n: NoteRow) => (
-    <NoteCard
-      key={n.id}
-      note={n}
-      span={spans.get(n.id) ?? null}
-      editor={editor}
-      editing={editing === n.id}
-      onEditing={(on) => setEditing(on ? n.id : null)}
-      flash={flash === n.id}
-    />
-  );
-
   return (
-    <div className="notes-panel" ref={listRef}>
-      <ul className="notes">
-        {/* The next note, as a card still to fill: it says where the note will go. */}
-        <li>
-          <button type="button" className="note-new" onClick={() => void add()}>
-            <span className="note-new-label">
-              <Plus aria-hidden="true" />
-              {t("script.notes.create")}
-            </span>
-            <span className="note-new-hint">{t("script.notes.createHint")}</span>
-          </button>
-        </li>
-        {sorted.map(card)}
+    <>
+      <style ref={tallRef} />
+      <ul className="note-margin" ref={rootRef}>
+        {scenes.flatMap((id) => noteIn(id).map(card))}
       </ul>
-    </div>
+      {orphans.length > 0 && (
+        <section className="notes-orphans" aria-label={t("script.notes.orphans")}>
+          <h2>{t("script.notes.orphans")}</h2>
+          <ul className="notes">{orphans.map(card)}</ul>
+        </section>
+      )}
+    </>
   );
 }
 
 /**
- * A note's card, the same in the notes panel and over the text: the passage quoted, the « ⋯ » menu, the note.
+ * A note's card, the same beside the text and over it: the passage quoted, the « ⋯ » menu, the note.
  * Over the text (`inText`) the passage is right under it: it is quoted, not a way to reach it.
  */
 function NoteCard({
@@ -921,6 +1068,7 @@ function NoteCard({
   onEditing,
   inText = false,
   flash = false,
+  here = false,
 }: {
   note: NoteRow;
   span: { from: number; to: number; text: string } | null;
@@ -929,6 +1077,8 @@ function NoteCard({
   onEditing: (on: boolean) => void;
   inText?: boolean;
   flash?: boolean;
+  /** The caret is in its passage. */
+  here?: boolean;
 }) {
   const { notify, ask } = useProject();
   const Tag = inText ? "div" : "li";
@@ -938,7 +1088,7 @@ function NoteCard({
     );
   const quote = t("dash.quote", { quote: span?.text ?? n.quote });
   return (
-    <Tag className={["note", flash && "flash"].filter(Boolean).join(" ")} data-note={inText ? undefined : n.id}>
+    <Tag className={["note", flash && "flash", here && "here"].filter(Boolean).join(" ")} data-note={inText ? undefined : n.id}>
       <div className="note-top">
         {inText ? (
           <p className="note-quote">{quote}</p>

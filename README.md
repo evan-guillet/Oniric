@@ -2,7 +2,7 @@
 
 Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer et produire un film, sur son ordinateur, sans compte ni nuage. Oniric ne se connecte à Internet que pour la carte des repérages, et seulement si on l'active.
 
-**Version 3.0** : écrire, mettre en scène et préparer le tournage. En plus du socle de la 0.1 (projet, éditeur aux formats français et américain, PDF, enregistrement automatique, survie aux plantages) :
+**Version 4.0** : écrire, mettre en scène et préparer le tournage jusqu'au budget, aux repérages et aux autorisations. En plus du socle de la 0.1 (projet, éditeur aux formats français et américain, PDF, enregistrement automatique, survie aux plantages) :
 
 - l'**Atelier d'écriture** et ses neuf étapes : préparation, personnages, structure, documents préparatoires (synopsis, séquencier, traitement, continuité dialoguée), écriture, puis réécriture par passes avec temps de repos et aides à la relecture, retours des lecteurs (exemplaires PDF numérotés, fiches de lecture, remarques triées, vérifications de forme), protection et diffusion (dépôts, logline, note d'intention, dossier de présentation en PDF, suivi des soumissions) et développement (demandes de réécriture) ;
 - le **verrouillage du scénario** : numéros de scène figés (12A, 12B…) et révisions de couleur, les lignes changées marquées d'un astérisque dans la marge du PDF ;
@@ -13,15 +13,17 @@ Logiciel libre (GPL-3.0) de création de films pour Windows : écrire, préparer
 - l'export **FDX** (Final Draft), l'import FDX et Fountain ;
 - les **sauvegardes** automatiques dans un dossier à part, et leur restauration ;
 - la **Réalisation** : des **moodboards** libres (images glissées ou collées, couleurs, textes, notes, palette tirée des images), le **découpage technique** de chaque scène en plans (tableau ou cartes, ordre de tournage, couverture du texte) et le **storyboard**, une case par plan, dessinée dans Oniric ou importée, avec leurs exports PDF et CSV ;
-- la **Production** : l'**Équipe** (contacts avec import et export CSV et vCard, carnet d'adresses commun aux projets de l'ordinateur, équipe technique par département et organigramme, distribution, casting), le **Dépouillement** (fiche par scène, texte surligné aux couleurs des catégories, suggestions, rapports PDF et CSV), le **Plan de travail** (bandes à glisser entre les journées, répartition automatique, conflits, plusieurs plans, présence des comédiens, calendrier ; exports PDF, XLSX et iCal) et les **Feuilles de service** (préremplies depuis le plan, lever et coucher du soleil, destinataires, versions diffusées, une feuille par personne, rapport de fin de journée).
+- la **Production** : l'**Équipe** (contacts avec import et export CSV et vCard, carnet d'adresses commun aux projets de l'ordinateur, équipe technique par département, distribution, casting), le **Dépouillement** (fiche par scène, texte surligné aux couleurs des catégories, suggestions, rapports PDF et CSV), le **Plan de travail** (bandes à glisser entre les journées, répartition automatique, conflits, plusieurs plans, présence des comédiens, calendrier ; exports PDF, XLSX et iCal) et les **Feuilles de service** (préremplies depuis le plan, lever et coucher du soleil, destinataires à cocher avant la diffusion, versions diffusées, une feuille par personne).
 
-Le budget, les repérages et les autorisations arrivent dans la version 4.0.
+- **Budget** : devis type français ou grille internationale, chapitres, postes et lignes reliés à l'équipe, au plan de travail, au dépouillement et aux décors ; charges, TVA, imprévus, plusieurs versions à comparer, dépenses avec justificatifs, plan de financement, multidevise, exports PDF et XLSX.
+- **Repérages** : fiches de décors reliées aux lieux de la Bible, position lue dans les photos, visites, comparaison des pistes, et une carte OpenStreetMap avec recherche d'adresse, itinéraires, direction du soleil, heure dorée, zones hors ligne, capture et image calée.
+- **Autorisations** : demandes par décor et par période, dates limites et rappels, alerte quand une journée du plan tombe dans un décor sans autorisation, droits à l'image, assurances, courriers et contrats remplis d'après le projet, en PDF et DOCX.
 
 Les choix techniques sont décrits dans le [document d'architecture](docs/Architecture_Oniric.md) ; le besoin, dans le [PRD](docs/PRD_Oniric.md) et le [cahier des charges](docs/Cahier_des_charges_Oniric.md).
 
 ## Utiliser Oniric
 
-1. Lancer `Oniric_3.0.0_x64-setup.exe`. L'installation se fait pour l'utilisateur, sans droits d'administrateur. L'installateur n'est pas encore signé : Windows SmartScreen demande une confirmation (« Informations complémentaires › Exécuter quand même »).
+1. Lancer `Oniric_4.0.0_x64-setup.exe`. L'installation se fait pour l'utilisateur, sans droits d'administrateur. L'installateur n'est pas encore signé : Windows SmartScreen demande une confirmation (« Informations complémentaires › Exécuter quand même »).
 2. **Nouveau projet** : un titre, un format, un emplacement. Le projet est un dossier ordinaire. **Importer un scénario…** crée un projet à partir d'un fichier Final Draft (`.fdx`) ou Fountain.
 3. Écrire. `Entrée` et `Tab` passent d'un élément à l'autre comme dans les logiciels professionnels ; `Ctrl+1` à `Ctrl+8` choisissent l'élément ; taper `INT.` en début d'action crée un en-tête de scène.
 4. **Exporter en PDF** (`Ctrl+P`) : le fichier arrive dans le dossier `exports` du projet. **Options d'export…** imprime dans un autre format ; **Page de titre…** la remplit.
@@ -105,4 +107,4 @@ Le cœur se teste sans Tauri (`--no-default-features`). L'application Windows pe
 
 ## Licence
 
-GPL-3.0 ou ultérieure, voir [LICENSE](LICENSE). Courier Prime est sous licence OFL.
+GPL-3.0 ou ultérieure, voir [LICENSE](LICENSE). Courier Prime et les lettres Noto Sans de la carte sont sous licence OFL. Fond de carte © contributeurs OpenStreetMap, via OpenFreeMap.
