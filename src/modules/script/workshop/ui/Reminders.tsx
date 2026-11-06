@@ -37,10 +37,11 @@ export function Reminders() {
       if (due) lines.push(plural("reminders.requests", due));
       if (lines.length) notify({ text: lines.join(" "), tone: "warning", actions: [{ label: t("reminders.open"), onClick: () => go("workshop") }] });
       // The permits to send soon, and those that ran out [AUT-02].
-      const permits = await query(db.selectFrom("permit").select(["status", "deadline", "end_date"]));
+      const permits = await query(db.selectFrom("permit").select(["status", "deadline"]));
       const limit = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
       const toSend = permits.filter((p) => p.status === "todo" && p.deadline && p.deadline <= limit).length;
-      const lapsed = permits.filter((p) => p.status === "granted" && p.end_date && p.end_date < today).length;
+      // A permit granted for days now past did its job; a shooting day it no longer covers is the schedule's alert.
+      const lapsed = permits.filter((p) => p.status === "expired").length;
       if (toSend || lapsed)
         notify({
           text: [toSend && plural("reminders.permits", toSend), lapsed && plural("reminders.permitsLapsed", lapsed)].filter(Boolean).join(" "),

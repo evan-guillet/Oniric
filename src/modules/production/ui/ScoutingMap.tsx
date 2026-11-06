@@ -16,7 +16,7 @@ import { readImage, storeImage } from "../../shared/media";
 import { usePlans } from "../application/schedule";
 import { addLocation, saveRoute, updateLocation, useOverlays, writeOverlays, type MapOverlay, type RealLocation, type Scouting } from "../application/scouting";
 import { useTeam } from "../application/team";
-import { decorsOfPlace } from "../domain/permits";
+import { chosenDecors } from "../domain/permits";
 import { formatDistance, formatDuration, REAL_KINDS, ZONE_MAX_TILES, zoneCount, type Bounds } from "../domain/scouting";
 import { goldenHours, localTime, sunPosition, sunTimesUtc, utcMinutesOf } from "../domain/sun";
 import { useLive } from "../../../core/db/live";
@@ -106,7 +106,7 @@ export default function ScoutingMap({ scouting: s, focus, onOpen }: { scouting: 
     const day = shootDayRefs(board).find((d) => d.id === dayId);
     if (!day) return null;
     const decors = decorRefs(s.locations, entries);
-    return new Set(day.places.flatMap((p) => decorsOfPlace(p, decors).map((d) => d.id)));
+    return new Set(day.places.flatMap((p) => chosenDecors(p, decors).map((d) => d.id)));
   }, [dayId, board, entries, s.locations]);
   const visible = useMemo(
     () =>

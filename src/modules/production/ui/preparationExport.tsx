@@ -15,7 +15,7 @@ import { toBase64, toXlsx, type XlsxCell } from "../domain/files";
 import { toDocx } from "../domain/permits";
 import { formatDistance, formatDuration } from "../domain/scouting";
 import { readImage } from "../../shared/media";
-import { budgetFacts, decorRefs, money } from "./preparation";
+import { budgetFacts, decorRefs, money, workWeek } from "./preparation";
 import { board } from "./ScheduleView";
 import { shortDate } from "./parts";
 
@@ -59,7 +59,7 @@ async function budgetData(api: Api): Promise<{ budget: Budget; lines: BudgetRow[
   const budget = data.budgets.find((b) => b.id === data.currentId);
   if (!budget) throw new Error(t("budget.nothingToExport"));
   const bd = board(api.session.scenes(), plans, team, plans.schedules.find((x) => x.id === plans.currentId) ?? null, byScene(shots));
-  const facts = budgetFacts(bd, team, scouting, breakdown, decorRefs(scouting.locations, entries));
+  const facts = budgetFacts(bd, team, scouting, breakdown, decorRefs(scouting.locations, entries), workWeek(plans));
   return { budget, lines: data.lines.filter((l) => l.budgetId === budget.id), facts, expenses: data.expenses, funding: data.funding };
 }
 

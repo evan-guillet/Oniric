@@ -23,8 +23,8 @@ import { loadBudgets } from "../../production/application/budget";
 import { loadPermits } from "../../production/application/permits";
 import { loadScouting } from "../../production/application/scouting";
 import { dueSoon } from "../../production/domain/permits";
-import { overruns, rollUp, spentBy, topsheet } from "../../production/domain/budget";
-import { money, usePermitAlerts } from "../../production/ui/preparation";
+import { NO_FACTS, overruns, rollUp, spentBy, topsheet } from "../../production/domain/budget";
+import { money, useBudgetFacts, usePermitAlerts } from "../../production/ui/preparation";
 
 const num = { format: (n: number) => numberFormat().format(n) };
 const longDay = { format: (d: Date) => dateFormat({ weekday: "long", day: "numeric", month: "long" }).format(d) };
@@ -157,14 +157,16 @@ function useShootWaiting(): { key: string; view: ViewId; text: string }[] {
   const alerts = usePermitAlerts();
   const permits = useLive(loadPermits, ["permit"]);
   const budgets = useLive(loadBudgets, ["budget", "budget_line", "budget_expense", "project_setting"]);
+  const facts = useBudgetFacts();
   const today = new Date().toISOString().slice(0, 10);
   const out: { key: string; view: ViewId; text: string }[] = [];
   for (const a of alerts ?? []) out.push({ key: `a${a.dayId}${a.locationId}`, view: "permits", text: t("dash.noPermit", { day: a.number, name: a.name }) });
   for (const p of dueSoon(permits?.permits ?? [], today)) out.push({ key: `p${p.id}`, view: "permits", text: t("dash.permitDue", { date: p.deadline ? dateFormat({ day: "numeric", month: "long" }).format(new Date(`${p.deadline}T12:00:00`)) : "" }) });
   const current = budgets?.budgets.find((b) => b.id === budgets.currentId);
-  if (budgets && current) {
+  // Until the links are read, a linked line would count as planned at nothing, and look overrun.
+  if (budgets && current && facts !== NO_FACTS) {
     const lines = budgets.lines.filter((l) => l.budgetId === current.id);
-    for (const o of overruns(lines, rollUp(lines, current.settings), spentBy(lines, budgets.expenses, current.settings))) out.push({ key: `o${o.id}`, view: "budget", text: t("dash.overrun", { name: o.label, amount: money(o.over, current.settings.currency) }) });
+    for (const o of overruns(lines, rollUp(lines, current.settings, facts), spentBy(lines, budgets.expenses, current.settings))) out.push({ key: `o${o.id}`, view: "budget", text: t("dash.overrun", { name: o.label, amount: money(o.over, current.settings.currency) }) });
   }
   return out;
 }
@@ -418,6 +420,7 @@ function Shortcuts({ story }: { story: Story | undefined }) {
   const versions = useLive(listVersions, ["script_version"]);
   const budgets = useLive(loadBudgets, ["budget", "budget_line", "project_setting"]);
   const currentBudget = budgets?.budgets.find((b) => b.id === budgets.currentId);
+  const facts = useBudgetFacts();
   const scouting = useLive(loadScouting, ["real_location"]);
   const sets = scouting?.locations.filter((l) => l.kind === "set") ?? [];
   const permitList = useLive(loadPermits, ["permit"]);
@@ -454,7 +457,7 @@ function Shortcuts({ story }: { story: Story | undefined }) {
       view: "budget",
       label: t("nav.views.budget"),
       icon: Wallet,
-      detail: !budgets ? "…" : currentBudget ? t("dash.budgetTotal", { name: currentBudget.name, total: money(topsheet(budgets.lines.filter((l) => l.budgetId === currentBudget.id), currentBudget.settings).total, currentBudget.settings.currency) }) : t("dash.noBudget"),
+      detail: !budgets ? "…" : !currentBudget ? t("dash.noBudget") : facts === NO_FACTS ? "…" : t("dash.budgetTotal", { name: currentBudget.name, total: money(topsheet(budgets.lines.filter((l) => l.budgetId === currentBudget.id), currentBudget.settings, facts).total, currentBudget.settings.currency) }),
     },
     {
       view: "scouting",

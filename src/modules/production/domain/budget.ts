@@ -82,8 +82,11 @@ export interface GridLine {
 /** What the rest of the film says about the linked lines. */
 export interface BudgetFacts {
   shootDays: number;
-  /** A post of the crew: its days of presence on the schedule, and the rate written on its contract. */
-  crew: Map<string, { days: number; rate: number | null }>;
+  /**
+   * A post of the crew: its days of presence on the schedule, and the rate written on its contract.
+   * A rate by the week says how many days the schedule works in a week.
+   */
+  crew: Map<string, { days: number; rate: number | null; perWeek?: number }>;
   /** A breakdown element: the shooting days it is needed on. */
   element: Map<string, number>;
   /** A real set: the shooting days there, and its rental per day. */
@@ -98,6 +101,19 @@ export function parseRate(text: string): number | null {
   if (!m) return null;
   const n = Number(m[0].replace(/ /g, "").replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * The rate of a contract and what it pays for: a day unless it says a week. Paid by the month, the hour or the meal, it
+ * cannot be multiplied by days of presence: null, and the line keeps the rate typed on it.
+ */
+export function parsePay(text: string): { rate: number; per: "day" | "week" } | null {
+  const rate = parseRate(text);
+  if (rate === null) return null;
+  const words = text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  if (/\b(sem|semaines?|semanas?|weeks?|wk|hebdo\w*)\b/.test(words)) return { rate, per: "week" };
+  if (/\b(mois|months?|mes(es)?|heures?|hours?|horas?|h|repas|meals?|comidas?|forfait|flat|unite?s?|units?)\b/.test(words)) return null;
+  return { rate, per: "day" };
 }
 
 export const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -116,7 +132,9 @@ export function resolved(d: LineData, facts: BudgetFacts): LineData {
   if (link.kind === "element") return { ...d, quantity: facts.element.get(link.id) ?? 0, unit: "day" };
   if (link.kind === "crew") {
     const c = facts.crew.get(link.id);
-    return c ? { ...d, quantity: c.days, unit: "day", rate: c.rate ?? d.rate } : d;
+    if (!c) return d;
+    if (c.perWeek && c.rate !== null) return { ...d, quantity: cents(c.days / c.perWeek), unit: "week", rate: c.rate };
+    return { ...d, quantity: c.days, unit: "day", rate: c.rate ?? d.rate };
   }
   const l = facts.location.get(link.id);
   return l ? { ...d, quantity: l.days, unit: "day", rate: l.rental ?? d.rate } : d;

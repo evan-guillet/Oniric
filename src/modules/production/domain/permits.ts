@@ -35,6 +35,8 @@ export interface DecorRef {
   id: string;
   name: string;
   noPermit: boolean;
+  /** Kept or booked: the production will really shoot there. */
+  retained: boolean;
   /** The bible's places it plays, as names written in headings. */
   plays: string[];
 }
@@ -64,6 +66,12 @@ export function decorsOfPlace(place: string, decors: DecorRef[]): DecorRef[] {
   return decors.filter((d) => d.plays.some((n) => fold(n) === key) || fold(d.name) === key);
 }
 
+/** Where a place will really be shot: the sets kept for it; while none is, the leads still in the running. */
+export function chosenDecors(place: string, decors: DecorRef[]): DecorRef[] {
+  const all = decorsOfPlace(place, decors);
+  return all.some((d) => d.retained) ? all.filter((d) => d.retained) : all;
+}
+
 const covers = (p: PermitRef, date: string | null) => !date || ((!p.start || p.start <= date) && (!p.end || date <= p.end));
 
 /** Every shooting day in a set with no permit granted for that day [AUT-04]; a set that needs none is left out. */
@@ -72,7 +80,7 @@ export function permitAlerts(days: ShootDayRef[], decors: DecorRef[], permits: P
   for (const day of days) {
     const seen = new Set<string>();
     for (const place of day.places) {
-      for (const d of decorsOfPlace(place, decors)) {
+      for (const d of chosenDecors(place, decors)) {
         if (d.noPermit || seen.has(d.id)) continue;
         seen.add(d.id);
         const own = permits.filter((p) => p.locationId === d.id);

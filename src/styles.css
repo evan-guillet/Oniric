@@ -14238,8 +14238,8 @@ input.pr-qty {
   font-variant-numeric: tabular-nums;
 }
 .bu-grid .bu-label {
-  width: 30%;
-  min-width: 260px;
+  width: 38%;
+  min-width: 300px;
 }
 .bu-grid .pr-field input {
   height: 28px;
@@ -14250,6 +14250,19 @@ input.pr-qty {
 }
 .bu-grid .select {
   width: 118px;
+}
+.bu-rate-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.bu-grid td.bu-rate .pr-field input,
+.bu-grid td.bu-rate .bu-linked {
+  width: 92px;
+}
+.bu-grid .select.bu-currency {
+  width: 72px;
 }
 .bu-chapter > * {
   background: var(--panel-2);

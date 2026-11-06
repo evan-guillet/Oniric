@@ -5,7 +5,7 @@ import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
 import type { BudgetKind, FundingStatus } from "../../../core/db/schema";
 import { describeError } from "../../../core/errors";
-import { plural, t } from "../../../core/i18n";
+import { numberFormat, plural, t } from "../../../core/i18n";
 import { confirmRemoval, Dialog } from "../../../ui-kit/Dialog";
 import { EmptyState } from "../../../ui-kit/Form";
 import { MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
@@ -179,7 +179,7 @@ function NumberCell({ label, value, onCommit, suffix, readOnly, title }: { label
     return (
       <span className="bu-num bu-linked" title={title}>
         <Link2 aria-hidden="true" />
-        {value.toLocaleString()}
+        {numberFormat({ maximumFractionDigits: 2 }).format(value)}
       </span>
     );
   return (
@@ -365,8 +365,20 @@ function Line({ line: l, settings: s, facts, cells, onSet, onLink, onNotes, onDe
       <td className="num">
         <NumberCell label={t("budget.columns.people")} value={d.people} onCommit={(n) => onSet({ people: n })} />
       </td>
-      <td className="num">
-        <NumberCell label={t("budget.columns.rate")} value={d.rate} readOnly={rateFollows} title={t("budget.linkedHint")} onCommit={(n) => onSet({ rate: n })} />
+      <td className="num bu-rate">
+        <span className="bu-rate-cell">
+          <NumberCell label={t("budget.columns.rate")} value={d.rate} readOnly={rateFollows} title={t("budget.linkedHint")} onCommit={(n) => onSet({ rate: n })} />
+          {/* Only a budget that knows other currencies needs the choice; a line in one no longer listed keeps showing it. */}
+          {(s.exchange.length > 0 || (d.currency && d.currency !== s.currency)) && (
+            <Select className="bu-currency" value={d.currency || s.currency} aria-label={t("budget.currency")} onChange={(e) => onSet({ currency: e.target.value === s.currency ? "" : e.target.value })}>
+              {[...new Set([s.currency, ...s.exchange.map((x) => x.currency).filter(Boolean), d.currency || s.currency])].map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          )}
+        </span>
       </td>
       <td>
         <Select value={d.social} aria-label={t("budget.columns.social")} onChange={(e) => onSet({ social: e.target.value })}>
@@ -641,7 +653,7 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
                 <tr key={key}>
                   <th scope="row">
                     {t(`budget.rows.${key}`)}
-                    {pct ? <span className="muted"> · {pct} %</span> : null}
+                    {pct ? <span className="muted"> · {numberFormat({ maximumFractionDigits: 2 }).format(pct)} %</span> : null}
                   </th>
                   {otherSheet && <td className="num muted">{money(otherSheet[key], other!.settings.currency)}</td>}
                   <td className="num">{money(v, s.currency)}</td>

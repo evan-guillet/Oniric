@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { budgetSettings, compareChapters, fundingTotals, lineCost, lineData, overruns, parseRate, resolved, rollUp, spentBy, topsheet, type BudgetFacts, type GridLine } from "./budget";
+import { budgetSettings, compareChapters, fundingTotals, lineCost, lineData, overruns, parsePay, parseRate, resolved, rollUp, spentBy, topsheet, type BudgetFacts, type GridLine } from "./budget";
 import { fillModel, permitAlerts, dueSoon, toDocx, type DecorRef, type PermitRef } from "./permits";
 import { exifPosition, formatDuration, haversine, meanScore, zoneCount, zoneTiles } from "./scouting";
 import { goldenHours, sunPosition, sunTimesUtc } from "./sun";
@@ -11,6 +11,21 @@ describe("budget", () => {
   it("reads a rate written by hand", () => {
     expect(parseRate("1 250,50 € / jour")).toBe(1250.5);
     expect(parseRate("selon accord")).toBeNull();
+  });
+  it("tells what a rate pays for", () => {
+    expect(parsePay("220 € / jour")).toEqual({ rate: 220, per: "day" });
+    expect(parsePay("250")).toEqual({ rate: 250, per: "day" });
+    expect(parsePay("1 400 € / semaine")).toEqual({ rate: 1400, per: "week" });
+    expect(parsePay("1 400 €/sem.")).toEqual({ rate: 1400, per: "week" });
+    expect(parsePay("$900 per week")).toEqual({ rate: 900, per: "week" });
+    expect(parsePay("18 € / repas")).toBeNull();
+    expect(parsePay("3 000 € par mois")).toBeNull();
+    expect(parsePay("selon accord")).toBeNull();
+  });
+  it("shares a rate by the week over the days worked", () => {
+    const facts: BudgetFacts = { shootDays: 12, crew: new Map([["m", { days: 9, rate: 1000, perWeek: 5 }]]), element: new Map(), location: new Map() };
+    expect(resolved(lineData({ link: { kind: "crew", id: "m" } }), facts)).toMatchObject({ quantity: 1.8, unit: "week", rate: 1000 });
+    expect(lineCost(lineData({ link: { kind: "crew", id: "m" } }), settings, facts).gross).toBe(1800);
   });
   it("costs a line with its contributions, tax and currency", () => {
     expect(lineCost(lineData({ quantity: 3, people: 2, rate: 100, social: "t", vat: 20 }), settings)).toEqual({ gross: 600, social: 300, vat: 120 });
@@ -48,8 +63,8 @@ describe("budget", () => {
 
 describe("permits", () => {
   const decors: DecorRef[] = [
-    { id: "a", name: "Mairie", noPermit: false, plays: ["CUISINE DE MARIE"] },
-    { id: "b", name: "Chez Paul", noPermit: true, plays: ["SALON"] },
+    { id: "a", name: "Mairie", noPermit: false, retained: true, plays: ["CUISINE DE MARIE"] },
+    { id: "b", name: "Chez Paul", noPermit: true, retained: true, plays: ["SALON"] },
   ];
   const day = { id: "d", number: 1, date: "2027-03-10", places: ["Cuisine de Marie", "SALON"] };
   const permit = (o: Partial<PermitRef>): PermitRef => ({ id: "p", locationId: "a", status: "granted", start: null, end: null, deadline: null, ...o });
@@ -57,6 +72,11 @@ describe("permits", () => {
     expect(permitAlerts([day], decors, [])).toMatchObject([{ locationId: "a", waiting: null }]);
     expect(permitAlerts([day], decors, [permit({ status: "sent" })])).toMatchObject([{ waiting: "sent" }]);
     expect(permitAlerts([day], decors, [permit({})])).toEqual([]);
+  });
+  it("leaves out a lead when a set was kept for the place, and watches the leads while none is", () => {
+    const lead: DecorRef = { id: "c", name: "Repli", noPermit: false, retained: false, plays: ["CUISINE DE MARIE"] };
+    expect(permitAlerts([day], [...decors, lead], []).map((a) => a.locationId)).toEqual(["a"]);
+    expect(permitAlerts([day], [lead, decors[1]], []).map((a) => a.locationId)).toEqual(["c"]);
   });
   it("looks at the dates of the permit", () => {
     expect(permitAlerts([day], decors, [permit({ start: "2027-04-01", end: "2027-04-02" })])).toHaveLength(1);
