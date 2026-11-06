@@ -17,7 +17,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { MapSettings } from "../../production/ui/MapSettings";
-import { Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -61,6 +61,7 @@ import {
   type ScreenplayFormat,
 } from "../../script/screenplay/domain/formats";
 import { ProjectContext, type SettingsPage } from "./projectContext";
+import { openShortcuts } from "./ShortcutsPanel";
 import { FRAME_RATIOS, useAbbreviations, useNumbering, useRatio, writeAbbreviation, writeNumbering, writeRatio, type FrameRatio } from "../../realisation/application/shots";
 import { ratioName } from "../../realisation/ui/FrameViewer";
 import { choiceLabel } from "../../realisation/ui/common";
@@ -209,6 +210,9 @@ export function SettingsScreen({
       onOpenProject(dir);
     });
 
+  // The shortcuts are found here like a page, but open on their panel, which any screen can show.
+  const go = (id: PageId) => (id === "shortcuts" ? openShortcuts() : setPage(id));
+
   const link = (id: PageId) => {
     const p = pageOf(id);
     return (
@@ -216,7 +220,7 @@ export function SettingsScreen({
         type="button"
         className={id === page ? "nav-link on" : "nav-link"}
         aria-current={id === page ? "page" : undefined}
-        onClick={() => setPage(id)}
+        onClick={() => go(id)}
       >
         <p.icon aria-hidden="true" />
         <span>{p.label}</span>
@@ -251,7 +255,7 @@ export function SettingsScreen({
             onKeyDown={(e) => {
               // Entrée opens the first page found.
               const first = groups[0]?.pages[0] ?? (aboutShown ? "about" : null);
-              if (e.key === "Enter" && first) setPage(first);
+              if (e.key === "Enter" && first) go(first);
             }}
           />
         </label>
@@ -291,7 +295,6 @@ export function SettingsScreen({
             />
           )}
           {page === "map" && <MapSettings notify={notify} Group={Group} Row={Row} Switch={Switch} />}
-          {page === "shortcuts" && <ShortcutSettings />}
           {page === "script" && ctx && <ScriptSettings notify={notify} />}
           {page === "shotlist" && ctx && <ShotlistSettings notify={notify} />}
           {page === "breakdown" && ctx && <CategoriesEditor />}
@@ -1067,85 +1070,6 @@ function BackupSettings({
           ))}
         </Group>
       )}
-    </>
-  );
-}
-
-/** The keys whose name changes with the language; the others (Ctrl, Tab, letters) are written as they are. */
-const KEY_NAMES: Record<string, string> = { Maj: "shift", Échap: "escape", Entrée: "enter", Molette: "wheel", Clic: "click" };
-export const keyName = (k: string) => (KEY_NAMES[k] ? t(`keys.${KEY_NAMES[k]}`) : k);
-
-/** Keys as they are pressed together: « Ctrl » « K ». */
-function Keys({ keys }: { keys: string }) {
-  return (
-    <span className="keys">
-      {keys.split(" ").map((group, i) => (
-        <Fragment key={i}>
-          {i > 0 && <span className="keys-or">{t("settings.or")}</span>}
-          {group.split("+").map((k, j) => (
-            <kbd key={j}>{keyName(k)}</kbd>
-          ))}
-        </Fragment>
-      ))}
-    </span>
-  );
-}
-
-function ShortcutSettings() {
-  const { t } = useTranslation();
-  const groups: { title: string; rows: [string, string][] }[] = [
-    {
-      title: t("settings.sc.everywhere"),
-      rows: [
-        ["Ctrl+K", t("settings.sc.palette")],
-        ["Ctrl+/", t("settings.sc.shortcuts")],
-        ["Échap", t("settings.sc.close")],
-      ],
-    },
-    {
-      title: t("nav.views.script"),
-      rows: [
-        ["Ctrl+S", t("settings.sc.save")],
-        ["Ctrl+P", t("settings.sc.pdf")],
-        ["Ctrl++ Ctrl+-", t("settings.sc.previewZoom")],
-        ["Ctrl+Z", t("settings.sc.undo")],
-        ["Ctrl+Y Ctrl+Maj+Z", t("settings.sc.redo")],
-        ["/ @ [[", t("settings.sc.link")],
-        ["Ctrl+Clic", t("settings.sc.openLink")],
-      ],
-    },
-    {
-      title: t("settings.sc.elements"),
-      rows: [
-        ["Entrée", t("settings.sc.next")],
-        ["Tab", t("settings.sc.cycle")],
-        ["Maj+Tab", t("settings.sc.back")],
-        ...ELEMENT_TYPES.map((type, i): [string, string] => [`Ctrl+${i + 1}`, t(`elements.${type}`)]),
-        ["INT. EXT.", t("settings.sc.heading")],
-        ["(", t("settings.sc.paren")],
-      ],
-    },
-    {
-      title: t("settings.sc.views"),
-      rows: [
-        ["Ctrl+Molette", t("settings.sc.zoom")],
-        ["Entrée", t("settings.sc.openScene")],
-      ],
-    },
-  ];
-  return (
-    <>
-      {groups.map((g) => (
-        <Group key={g.title} title={g.title}>
-          {g.rows.map(([keys, what], i) => (
-            <div className="set-row shortcut" key={i}>
-              <span className="set-row-help">{what}</span>
-              <Keys keys={keys} />
-            </div>
-          ))}
-        </Group>
-      ))}
-      <p className="set-note">{t("settings.shortcutsNote")}</p>
     </>
   );
 }

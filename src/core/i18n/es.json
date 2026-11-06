@@ -172,7 +172,6 @@
       "light": "Cambiar al tema claro",
       "dark": "Cambiar al tema oscuro"
     },
-    "language": "Idioma: {{language}}",
     "bibleImported": "Biblia importada: {{added}} ficha(s) añadida(s), {{updated}} actualizada(s).",
     "renameProject": "Cambiar el nombre del proyecto",
     "projectTitle": "Título del proyecto"
@@ -416,7 +415,10 @@
       "everywhere": "En todas partes",
       "palette": "Paleta de comandos: ir a una vista, una escena, una ficha, una acción",
       "shortcuts": "Ver estos atajos",
-      "close": "Cerrar el diálogo o el menú abierto",
+      "goTo": "Ir a",
+      "duplicate": "Duplicar la selección del moodboard",
+      "find": "Buscar en el desglose de planos",
+      "close": "Cerrar este panel, el diálogo o el menú abierto",
       "save": "Guardar ahora mismo (se guarda solo)",
       "pdf": "Exportar en PDF",
       "undo": "Deshacer",
@@ -434,7 +436,7 @@
       "openScene": "Abrir la escena elegida en el Guion",
       "previewZoom": "Acercar o alejar la vista previa (Ctrl + 0: tamaño real)"
     },
-    "shortcutsNote": "Mantén Ctrl en el Guion: la barra de elementos muestra sus atajos.",
+    "shortcutsNote": "Mantén Ctrl: cada botón muestra la tecla que lleva a él.",
     "numbers": {
       "none": "Ninguno",
       "left": "A la izquierda",

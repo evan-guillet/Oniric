@@ -10,7 +10,6 @@ import {
   Video,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ELEMENT_TYPES, type ElementType } from "../domain/formats";
 import type { EditorSnapshot, ScriptEditor } from "./editor/ScriptEditor";
@@ -32,32 +31,13 @@ const ICONS: Record<ElementType, LucideIcon> = {
  */
 export function ElementBar({ editor, snap, onNote }: { editor: ScriptEditor | null; snap: EditorSnapshot | null; onNote: () => void }) {
   const { t } = useTranslation();
-  const [keys, setKeys] = useState(false);
-
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "Control") setKeys(true);
-    };
-    const up = (e: KeyboardEvent) => {
-      if (e.key === "Control") setKeys(false);
-    };
-    const off = () => setKeys(false);
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    window.addEventListener("blur", off);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", off);
-    };
-  }, []);
 
   if (!editor) return null;
   const current = snap?.type ?? "action";
 
   return (
     <div
-      className={keys ? "element-bar keys" : "element-bar"}
+      className="element-bar"
       role="toolbar"
       aria-label={t("workspace.element")}
       onMouseDown={(e) => e.preventDefault()}

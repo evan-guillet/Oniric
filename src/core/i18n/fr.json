@@ -172,7 +172,6 @@
       "light": "Passer au thème clair",
       "dark": "Passer au thème sombre"
     },
-    "language": "Langue : {{language}}",
     "bibleImported": "Bible importée : {{added}} fiche(s) ajoutée(s), {{updated}} mise(s) à jour.",
     "renameProject": "Renommer le projet",
     "projectTitle": "Titre du projet"
@@ -410,7 +409,10 @@
       "everywhere": "Partout",
       "palette": "Palette de commandes : aller à une vue, une scène, une fiche, une action",
       "shortcuts": "Voir ces raccourcis",
-      "close": "Fermer le dialogue ou le menu ouvert",
+      "goTo": "Aller à",
+      "duplicate": "Dupliquer la sélection du moodboard",
+      "find": "Chercher dans le découpage",
+      "close": "Fermer ce panneau, le dialogue ou le menu ouvert",
       "save": "Enregistrer tout de suite (l'enregistrement se fait de lui-même)",
       "pdf": "Exporter en PDF",
       "undo": "Annuler",
@@ -428,7 +430,7 @@
       "openScene": "Ouvrir la scène choisie dans le Scénario",
       "previewZoom": "Zoomer ou dézoomer l'aperçu (Ctrl + 0 : taille réelle)"
     },
-    "shortcutsNote": "Maintenez Ctrl dans le Scénario : la barre des éléments affiche leurs raccourcis.",
+    "shortcutsNote": "Maintenez Ctrl : chaque bouton affiche la touche à taper pour y aller.",
     "numbers": {
       "none": "Aucun",
       "left": "À gauche",

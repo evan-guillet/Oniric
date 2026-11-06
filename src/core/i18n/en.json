@@ -172,7 +172,6 @@
       "light": "Switch to the light theme",
       "dark": "Switch to the dark theme"
     },
-    "language": "Language: {{language}}",
     "bibleImported": "Bible imported: {{added}} entries added, {{updated}} updated.",
     "renameProject": "Rename the project",
     "projectTitle": "Project title"
@@ -416,7 +415,10 @@
       "everywhere": "Everywhere",
       "palette": "Command palette: go to a view, a scene, an entry, an action",
       "shortcuts": "Show these shortcuts",
-      "close": "Close the open dialog or menu",
+      "goTo": "Go to",
+      "duplicate": "Duplicate the moodboard selection",
+      "find": "Search the shot list",
+      "close": "Close this panel, the open dialog or menu",
       "save": "Save right now (saving happens on its own)",
       "pdf": "Export as PDF",
       "undo": "Undo",
@@ -434,7 +436,7 @@
       "openScene": "Open the chosen scene in the Screenplay",
       "previewZoom": "Zoom the preview in or out (Ctrl + 0: actual size)"
     },
-    "shortcutsNote": "Hold Ctrl in the Screenplay: the element bar shows their shortcuts.",
+    "shortcutsNote": "Hold Ctrl: each button shows the key to press to reach it.",
     "numbers": {
       "none": "None",
       "left": "Left",

@@ -7,6 +7,8 @@ import { createProject, openProject, probeProject } from "./modules/project/appl
 import type { ScriptImport } from "./interop/importScript";
 import { Home } from "./modules/project/ui/Home";
 import { ProjectShell, type WorkspaceHandle } from "./modules/project/ui/ProjectShell";
+import { ShortcutsPanel } from "./modules/project/ui/ShortcutsPanel";
+import { watchCtrl } from "./ui-kit/CtrlHint";
 import { useChoice } from "./ui-kit/Dialog";
 import { TitleBar } from "./ui-kit/TitleBar";
 import { Toasts, type ToastMessage } from "./ui-kit/Toast";
@@ -130,6 +132,8 @@ export function App() {
     return true;
   }, [ask, notify, t]);
 
+  useEffect(watchCtrl, []);
+
   const live = useRef({ screen, closeProject });
   live.current = { screen, closeProject };
 
@@ -156,6 +160,7 @@ export function App() {
 
   return (
     <div className="app-frame">
+      <ShortcutsPanel />
       {screen.kind !== "project" && <TitleBar title="Oniric" />}
       <div className="app-body">
         {screen.kind === "home" && <Home startup={startup} onOpen={(dir) => void openFlow(dir)} onCreate={create} notify={notify} />}

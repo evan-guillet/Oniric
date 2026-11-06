@@ -77,7 +77,7 @@ import { listVersions } from "../../script/screenplay/application/versions";
 import { describeCoreError, describeError } from "../../../core/errors";
 import { markEditorStep, stepHistory } from "../../../core/history";
 import { PromptDialog, type PromptRequest } from "../../../ui-kit/PromptDialog";
-import { getLanguage, LANGUAGES, setLanguage, t } from "../../../core/i18n";
+import { LANGUAGES, setLanguage, t } from "../../../core/i18n";
 import {
   getThemePreference,
   onThemePreference,
@@ -86,7 +86,8 @@ import {
 } from "../../../core/theme";
 import { importScript, IMPORT_ACCEPT } from "../../../interop/importScript";
 import { confirmRemoval, type ChoiceRequest } from "../../../ui-kit/Dialog";
-import { FloatingMenu, MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
+import { CtrlHint } from "../../../ui-kit/CtrlHint";
+import { MoreMenu, type MoreItem } from "../../../ui-kit/MoreMenu";
 import type { ToastMessage } from "../../../ui-kit/Toast";
 import {
   bibleCategories,
@@ -121,6 +122,8 @@ import { Reminders } from "../../script/workshop/ui/Reminders";
 import { useWritingJournal } from "../../script/stats/application/journal";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { DashboardView, lastSceneKey } from "./DashboardView";
+import { navKeyOf, PALETTE_KEY, SETTINGS_KEY, SHORTCUTS_KEY, viewOfKey } from "./navKeys";
+import { openShortcuts, toggleShortcuts, useShortcutsOpen } from "./ShortcutsPanel";
 import {
   PAGE_KEY,
   PARTS_HIDDEN_SETTING,
@@ -666,25 +669,44 @@ export function ProjectShell({
     setView(id);
   }, []);
 
-  // Ctrl+K opens the palette from anywhere in the project, unless a dialog is already open; Ctrl+/ the shortcuts.
+  const navNow = useRef({ view, hiddenParts });
+  navNow.current = { view, hiddenParts };
+  // From anywhere in the project, unless a dialog is open: Ctrl+K the palette, Ctrl+, the settings, Ctrl and a letter a view.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-      if (e.key === "/" || e.code === "Slash") {
-        if (document.querySelector("dialog[open]:not(.palette)")) return;
-        e.preventDefault();
-        setPalette(false);
-        setSettings("shortcuts");
+      if (e.key === SHORTCUTS_KEY || e.code === "Slash") {
+        // The panel opens itself; the palette makes way for it.
+        if (!document.querySelector("dialog[open]:not(.palette)")) setPalette(false);
         return;
       }
-      if (e.shiftKey || e.key.toLowerCase() !== "k") return;
-      if (document.querySelector("dialog[open]:not(.palette)")) return;
+      if (e.shiftKey || document.querySelector("dialog[open]:not(.palette)")) return;
+      const key = e.key.toLowerCase();
+      if (key === PALETTE_KEY.toLowerCase()) {
+        e.preventDefault();
+        setPalette((p) => !p);
+        return;
+      }
+      if (document.querySelector("dialog.palette[open]")) return;
+      if (key === SETTINGS_KEY) {
+        e.preventDefault();
+        setSettings((s) => (s ? null : "appearance"));
+        return;
+      }
+      const { view, hiddenParts } = navNow.current;
+      const id = viewOfKey(key, view);
+      if (!id || NAV.some((g) => hiddenParts.includes(g.part) && g.items.some((item) => item.id === id))) return;
       e.preventDefault();
-      setPalette((p) => !p);
+      setSettings(null);
+      goView(id);
+      // Back to the script, back to the writing.
+      if (id === "script") requestAnimationFrame(() => session.editor?.focus());
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
+  }, [goView, session]);
+
+  const shortcutsOpen = useShortcutsOpen();
 
   const paletteItems = useMemo((): PaletteItem[] => {
     const dashboard: PaletteItem = {
@@ -743,7 +765,7 @@ export function ProjectShell({
       action("export", t("workspace.export"), FileOutput, () => transfer("export"), t("palette.kw.export")),
       { ...action("folder", t("shell.openFolder"), FolderOpen, () => void commands.reveal(project.dir, true), t("palette.kw.folder")), detail: project.dir },
       action("settings", t("shell.settings"), Settings, () => setSettings("appearance"), t("palette.kw.settings")),
-      action("shortcuts", t("shell.shortcuts"), Keyboard, () => setSettings("shortcuts"), t("palette.kw.shortcuts")),
+      action("shortcuts", t("shell.shortcuts"), Keyboard, openShortcuts, t("palette.kw.shortcuts")),
       action("light", t("palette.themeLight"), Sun, () => void setThemePreference("light"), t("palette.kw.light")),
       action("dark", t("palette.themeDark"), Moon, () => void setThemePreference("dark"), t("palette.kw.dark")),
       action("system", t("palette.themeSystem"), Monitor, () => void setThemePreference("system"), t("palette.kw.system")),
@@ -879,12 +901,6 @@ export function ProjectShell({
                   icon: FolderOpen,
                   onClick: () => void commands.reveal(project.dir, true),
                 },
-                {
-                  label: t("shell.settings"),
-                  icon: Settings,
-                  onClick: () => setSettings("appearance"),
-                  separated: true,
-                },
               ]}
             />
             <button
@@ -915,6 +931,7 @@ export function ProjectShell({
             <kbd className="nav-keys" aria-hidden="true">
               Ctrl K
             </kbd>
+            <CtrlHint keys={PALETTE_KEY} />
           </button>
           <input
             ref={fileRef}
@@ -943,7 +960,7 @@ export function ProjectShell({
           <div className="shell-nav-parts">
             <ul className="nav-home">
               <li>
-                <NavButton item={DASHBOARD} on={view === "dashboard"} onClick={() => goView("dashboard")} />
+                <NavButton item={DASHBOARD} keyHint={navKeyOf("dashboard", view)} on={view === "dashboard"} onClick={() => goView("dashboard")} />
               </li>
             </ul>
             {NAV.filter((g) => !hiddenParts.includes(g.part)).map((g) => {
@@ -983,6 +1000,7 @@ export function ProjectShell({
                               key={item.id}
                               session={session}
                               item={item}
+                              keyHint={navKeyOf(item.id, view)}
                               on={view === item.id}
                               open={view === item.id ? !railed && !foldedHere : !railed && openPages.includes(item.id)}
                               shown={view === item.id && railed}
@@ -995,6 +1013,7 @@ export function ProjectShell({
                             <NavGroup
                               key={item.id}
                               item={item}
+                              keyHint={navKeyOf(item.id, view)}
                               on={view === item.id}
                               // On the rail, only the view one is on shows its pages.
                               open={view === item.id ? railed || !foldedHere : !railed && openPages.includes(item.id)}
@@ -1007,6 +1026,7 @@ export function ProjectShell({
                           <li key={item.id}>
                             <NavButton
                               item={item}
+                              keyHint={navKeyOf(item.id, view)}
                               on={view === item.id}
                               onClick={() => goView(item.id)}
                             />
@@ -1019,9 +1039,43 @@ export function ProjectShell({
               );
             })}
           </div>
-          {/* Leaving the project fills the foot, its arrow toward the window's edge; the language, the shortcuts and the theme,
-              used now and then, sit beside it as icons. */}
+          {/* The settings fill the first row, the shortcuts and the theme beside them as icons; leaving the project, its arrow
+              toward the window's edge, comes last. */}
           <div className="shell-nav-foot">
+            <div className="shell-nav-foot-row">
+              <button
+                type="button"
+                className="nav-link"
+                aria-keyshortcuts={`Control+${SETTINGS_KEY}`}
+                title={`${t("shell.settings")} (Ctrl ${SETTINGS_KEY})`}
+                onClick={() => setSettings("appearance")}
+              >
+                <Settings aria-hidden="true" />
+                <span>{t("shell.settings")}</span>
+                <CtrlHint keys={SETTINGS_KEY} />
+              </button>
+              <button
+                type="button"
+                className={shortcutsOpen ? "nav-icon-btn on" : "nav-icon-btn"}
+                aria-label={t("shell.shortcuts")}
+                aria-keyshortcuts={`Control+${SHORTCUTS_KEY}`}
+                aria-expanded={shortcutsOpen}
+                title={t("shell.shortcutsTitle")}
+                onClick={toggleShortcuts}
+              >
+                <Keyboard aria-hidden="true" />
+                <CtrlHint keys={SHORTCUTS_KEY} />
+              </button>
+              <button
+                type="button"
+                className="nav-icon-btn"
+                aria-label={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
+                title={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
+                onClick={() => void setThemePreference(THEME_NEXT[theme])}
+              >
+                {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+              </button>
+            </div>
             <button
               type="button"
               className="nav-link nav-close"
@@ -1031,26 +1085,6 @@ export function ProjectShell({
             >
               <LogOut aria-hidden="true" />
               <span>{t("common.close")}</span>
-            </button>
-            <LanguageButton />
-            <button
-              type="button"
-              className="nav-icon-btn"
-              aria-label={t("shell.shortcuts")}
-              aria-keyshortcuts="Control+/"
-              title={t("shell.shortcutsTitle")}
-              onClick={() => setSettings("shortcuts")}
-            >
-              <Keyboard aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className="nav-icon-btn"
-              aria-label={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
-              title={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
-              onClick={() => void setThemePreference(THEME_NEXT[theme])}
-            >
-              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
             </button>
           </div>
         </nav>
@@ -1302,12 +1336,17 @@ type Shown = "light" | "dark";
 /** The theme button swaps one for the other. */
 const THEME_NEXT: Record<Shown, Shown> = { light: "dark", dark: "light" };
 
+/** A view's name, with its shortcut when it has one. */
+const navTitle = (label: string, key: string | undefined) => (key ? `${label} (Ctrl ${key})` : label);
+
 function NavButton({
   item,
+  keyHint,
   on,
   onClick,
 }: {
   item: NavItem;
+  keyHint?: string;
   on: boolean;
   onClick: () => void;
 }) {
@@ -1319,7 +1358,8 @@ function NavButton({
         .filter(Boolean)
         .join(" ")}
       aria-current={on ? "page" : undefined}
-      title={item.later ? t("shell.comesIn", { view: item.label, version: item.later }) : item.label}
+      aria-keyshortcuts={keyHint && `Control+${keyHint}`}
+      title={item.later ? t("shell.comesIn", { view: item.label, version: item.later }) : navTitle(item.label, keyHint)}
       onClick={onClick}
     >
       <Icon aria-hidden="true" />
@@ -1329,12 +1369,14 @@ function NavButton({
           {item.later}
         </span>
       )}
+      <CtrlHint keys={keyHint} />
     </button>
   );
 }
 
 type NavGroupProps = {
   item: NavItem;
+  keyHint?: string;
   on: boolean;
   open: boolean;
   live: LivePages;
@@ -1366,7 +1408,7 @@ function BibleNavGroup({ session, shown, ...group }: Omit<NavGroupProps, "counts
  * folds and unfolds, and `onAdd` puts a « + » before it that makes a new page. Pages have their names unfolded, their
  * icons on the rail.
  */
-function NavGroup({ item, on, open, live, onAdd, counts, onToggle, onGo }: NavGroupProps) {
+function NavGroup({ item, keyHint, on, open, live, onAdd, counts, onToggle, onGo }: NavGroupProps) {
   const [kept, keep] = useStoredState(item.pages!.key, "");
   const { list, shown } = pagesOf(item, live, kept);
   const Icon = item.icon;
@@ -1377,7 +1419,8 @@ function NavGroup({ item, on, open, live, onAdd, counts, onToggle, onGo }: NavGr
           type="button"
           className={on ? (open ? "nav-link within" : "nav-link on") : "nav-link"}
           aria-current={on && !open ? "page" : on ? "true" : undefined}
-          title={item.label}
+          aria-keyshortcuts={keyHint && `Control+${keyHint}`}
+          title={navTitle(item.label, keyHint)}
           onClick={() => {
             if (on) onToggle(open);
             onGo();
@@ -1385,6 +1428,7 @@ function NavGroup({ item, on, open, live, onAdd, counts, onToggle, onGo }: NavGr
         >
           <Icon aria-hidden="true" />
           <span>{item.label}</span>
+          <CtrlHint keys={keyHint} />
         </button>
         {onAdd && (
           <button type="button" className="nav-unfold nav-add" aria-label={onAdd.label} title={onAdd.hint} onClick={onAdd.run}>
@@ -1540,44 +1584,4 @@ function useBackupWatch(notify: Notify) {
       void failed.then((u) => u());
     };
   }, [notify]);
-}
-
-/** The language of the interface: each one named in itself, the current one checked. */
-function LanguageButton() {
-  const { i18n } = useTranslation();
-  const button = useRef<HTMLButtonElement>(null);
-  const [at, setAt] = useState<{ bottom: number; left: number } | null>(null);
-  const current = LANGUAGES.find((l) => l.id === getLanguage())!;
-  const label = t("shell.language", { language: current.name });
-  return (
-    <>
-      <button
-        ref={button}
-        type="button"
-        className={at ? "nav-icon-btn on" : "nav-icon-btn"}
-        aria-label={label}
-        title={label}
-        aria-haspopup="menu"
-        aria-expanded={!!at}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setAt(at ? null : { bottom: window.innerHeight - r.top + 4, left: r.left });
-        }}
-      >
-        <Languages aria-hidden="true" />
-      </button>
-      {at && (
-        <FloatingMenu
-          anchor={button}
-          style={{ bottom: at.bottom, left: at.left, minWidth: 180 }}
-          onClose={() => setAt(null)}
-          items={LANGUAGES.map((l) => ({
-            label: l.name,
-            checked: l.id === i18n.language,
-            onClick: () => void setLanguage(l.id),
-          }))}
-        />
-      )}
-    </>
-  );
 }
