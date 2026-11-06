@@ -1039,43 +1039,8 @@ export function ProjectShell({
               );
             })}
           </div>
-          {/* The settings fill the first row, the shortcuts and the theme beside them as icons; leaving the project, its arrow
-              toward the window's edge, comes last. */}
+          {/* One line: leaving the project, its arrow toward the window's edge, then the settings, the shortcuts and the theme as icons. */}
           <div className="shell-nav-foot">
-            <div className="shell-nav-foot-row">
-              <button
-                type="button"
-                className="nav-link"
-                aria-keyshortcuts={`Control+${SETTINGS_KEY}`}
-                title={`${t("shell.settings")} (Ctrl ${SETTINGS_KEY})`}
-                onClick={() => setSettings("appearance")}
-              >
-                <Settings aria-hidden="true" />
-                <span>{t("shell.settings")}</span>
-                <CtrlHint keys={SETTINGS_KEY} />
-              </button>
-              <button
-                type="button"
-                className={shortcutsOpen ? "nav-icon-btn on" : "nav-icon-btn"}
-                aria-label={t("shell.shortcuts")}
-                aria-keyshortcuts={`Control+${SHORTCUTS_KEY}`}
-                aria-expanded={shortcutsOpen}
-                title={t("shell.shortcutsTitle")}
-                onClick={toggleShortcuts}
-              >
-                <Keyboard aria-hidden="true" />
-                <CtrlHint keys={SHORTCUTS_KEY} />
-              </button>
-              <button
-                type="button"
-                className="nav-icon-btn"
-                aria-label={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
-                title={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
-                onClick={() => void setThemePreference(THEME_NEXT[theme])}
-              >
-                {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-              </button>
-            </div>
             <button
               type="button"
               className="nav-link nav-close"
@@ -1085,6 +1050,38 @@ export function ProjectShell({
             >
               <LogOut aria-hidden="true" />
               <span>{t("common.close")}</span>
+            </button>
+            <button
+              type="button"
+              className="nav-icon-btn"
+              aria-label={t("shell.settings")}
+              aria-keyshortcuts={`Control+${SETTINGS_KEY}`}
+              title={`${t("shell.settings")} (Ctrl ${SETTINGS_KEY})`}
+              onClick={() => setSettings("appearance")}
+            >
+              <Settings aria-hidden="true" />
+              <CtrlHint keys={SETTINGS_KEY} />
+            </button>
+            <button
+              type="button"
+              className={shortcutsOpen ? "nav-icon-btn on" : "nav-icon-btn"}
+              aria-label={t("shell.shortcuts")}
+              aria-keyshortcuts={`Control+${SHORTCUTS_KEY}`}
+              aria-expanded={shortcutsOpen}
+              title={t("shell.shortcutsTitle")}
+              onClick={toggleShortcuts}
+            >
+              <Keyboard aria-hidden="true" />
+              <CtrlHint keys={SHORTCUTS_KEY} />
+            </button>
+            <button
+              type="button"
+              className="nav-icon-btn"
+              aria-label={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
+              title={t(`shell.themeTo.${THEME_NEXT[theme]}`)}
+              onClick={() => void setThemePreference(THEME_NEXT[theme])}
+            >
+              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
             </button>
           </div>
         </nav>

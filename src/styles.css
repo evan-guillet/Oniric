@@ -1311,7 +1311,7 @@ input.switch:disabled {
   border: none;
   border-left: 1px solid var(--line);
   border-top: 1px solid var(--line);
-  border-top-left-radius: 10px;
+  border-radius: 0;
   background: var(--panel);
   box-shadow: var(--shadow-lg);
   color: var(--ink);
@@ -2138,16 +2138,11 @@ input.switch:disabled {
 .shell-nav .shell-nav-foot {
   flex: none;
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-top: 8px;
-}
-.shell-nav-foot-row {
-  display: flex;
   align-items: center;
   gap: 2px;
+  padding-top: 8px;
 }
-.shell-nav-foot-row .nav-link {
+.shell-nav-foot .nav-link {
   flex: 1;
   min-width: 0;
 }
@@ -2304,10 +2299,13 @@ html[data-ctrl] .shell-nav.rail .nav-link > .ctrl-hint {
   clip-path: inset(50%);
 }
 /* Folded, the foot stacks: leaving the project at the very bottom, every button a square. */
-.shell-nav.rail .shell-nav-foot,
-.shell-nav.rail .shell-nav-foot-row {
+.shell-nav.rail .shell-nav-foot {
   flex-direction: column;
-  align-items: center;
+  gap: 1px;
+}
+/* Stacked, leaving the project stays at the very bottom. */
+.shell-nav.rail .nav-close {
+  order: 1;
 }
 .shell-nav.rail .shell-nav-foot :is(.nav-icon-btn, .nav-link) {
   flex: none;
