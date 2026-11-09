@@ -14913,10 +14913,16 @@ input.pr-qty {
  * row the best value is in ink, the others in grey, and the notches of a mark are neutral, so that no colour but the
  * state dots competes with the photos.
  */
+.sc-compare-view {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Set into the page from edge to edge, like the cast: no frame, no margin; it scrolls both ways by itself. */
 .sc-compare-scroll {
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   background: var(--panel);
 }
 .sc-compare {
@@ -14927,7 +14933,7 @@ input.pr-qty {
   font-variant-numeric: tabular-nums;
 }
 .sc-compare-labels {
-  width: 176px;
+  width: 208px;
 }
 /* The column of the best mean, lightly lifted from top to bottom. */
 .sc-compare col.best {
@@ -14939,8 +14945,16 @@ input.pr-qty {
   text-align: left;
   font-weight: 400;
 }
+/* The names of the criteria line up with the page's own margin, the last lead keeps the same air on the right. */
+.sc-compare tbody th,
+.sc-compare thead td {
+  padding-left: 32px;
+}
+.sc-compare tr > :last-child {
+  padding-right: 32px;
+}
 .sc-compare thead th {
-  padding-top: 14px;
+  padding-top: 20px;
   padding-bottom: 14px;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
@@ -14959,9 +14973,6 @@ input.pr-qty {
   font: inherit;
   text-align: left;
   cursor: pointer;
-}
-.view-main.sc-compare-main {
-  --main-max: 1640px;
 }
 .sc-compare-lead .sc-cover {
   width: 100%;
@@ -15030,9 +15041,6 @@ input.pr-qty {
   height: 40px;
   border-bottom: 1px solid var(--line);
 }
-.sc-compare tbody tr:last-child > * {
-  border-bottom: 0;
-}
 /* The names of the criteria stay in view while many leads scroll past. */
 .sc-compare tbody th,
 .sc-compare thead td {
@@ -15047,7 +15055,7 @@ input.pr-qty {
 }
 .sc-add-row .btn {
   position: sticky;
-  left: 14px;
+  left: 32px;
 }
 .sc-compare tbody th {
   color: var(--ink-2);
@@ -15130,18 +15138,6 @@ input.pr-qty {
   outline-offset: -2px;
   border-radius: 4px;
 }
-.sc-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  font-size: 12.5px;
-}
-.sc-hint svg {
-  width: 14px;
-  height: 14px;
-}
-
 .sc-map-view {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -3865,8 +3865,6 @@
     "capture": "Map capture",
     "deleteTitle": "Delete “{{name}}”?",
     "deleteText": "Its card, visits and routes go with it; its permit requests stay, without a set.",
-    "comparePlace": "Place of the story",
-    "allSets": "All sets",
     "addCriterion": "Add a criterion",
     "criterionName": "Criterion name",
     "removeCriterion": "Remove criterion {{name}}",
@@ -3876,7 +3874,6 @@
     "stars": "{{n}} out of 5",
     "compareEmptyTitle": "Nothing to compare",
     "compareEmptyText": "Add sets and link them to a place of the Bible: their leads will come here side by side.",
-    "compareHint": "Link several sets to the same place of the Bible to compare only them.",
     "criteria": {
       "look": "Look",
       "access": "Access",

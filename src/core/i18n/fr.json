@@ -3865,8 +3865,6 @@
     "capture": "Capture de la carte",
     "deleteTitle": "Supprimer « {{name}} » ?",
     "deleteText": "Sa fiche, ses visites et ses trajets partent avec lui ; ses demandes d'autorisation restent, sans décor.",
-    "comparePlace": "Lieu de l'histoire",
-    "allSets": "Tous les décors",
     "addCriterion": "Ajouter un critère",
     "criterionName": "Nom du critère",
     "removeCriterion": "Retirer le critère {{name}}",
@@ -3876,7 +3874,6 @@
     "stars": "{{n}} sur 5",
     "compareEmptyTitle": "Rien à comparer",
     "compareEmptyText": "Ajoutez des décors et reliez-les à un lieu de la Bible : leurs pistes viendront ici côte à côte.",
-    "compareHint": "Reliez plusieurs décors au même lieu de la Bible pour ne comparer qu'eux.",
     "criteria": {
       "look": "Esthétique",
       "access": "Accès",

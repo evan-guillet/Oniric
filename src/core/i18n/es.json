@@ -3865,8 +3865,6 @@
     "capture": "Captura del mapa",
     "deleteTitle": "¿Eliminar «{{name}}»?",
     "deleteText": "Su ficha, visitas y trayectos se van con él; sus solicitudes de permiso se quedan, sin decorado.",
-    "comparePlace": "Lugar de la historia",
-    "allSets": "Todos los decorados",
     "addCriterion": "Añadir un criterio",
     "criterionName": "Nombre del criterio",
     "removeCriterion": "Quitar el criterio {{name}}",
@@ -3876,7 +3874,6 @@
     "stars": "{{n}} de 5",
     "compareEmptyTitle": "Nada que comparar",
     "compareEmptyText": "Añada decorados y vincúlelos a un lugar de la Biblia: sus pistas vendrán aquí una al lado de otra.",
-    "compareHint": "Vincule varios decorados al mismo lugar de la Biblia para comparar solo esos.",
     "criteria": {
       "look": "Estética",
       "access": "Acceso",
