@@ -12,6 +12,7 @@ import { EmptyState } from "../../../ui-kit/Form";
 import { MoreMenu } from "../../../ui-kit/MoreMenu";
 import { SearchBox } from "../../../ui-kit/SearchBox";
 import { Select } from "../../../ui-kit/Select";
+import { DragScroll } from "../../../ui-kit/DragScroll";
 import { useStoredState } from "../../../ui-kit/useStoredState";
 import { PAGE_KEY, useProject } from "../../project/ui/projectContext";
 import { loadEntries, type Entry } from "../../script/bible/application/bible";
@@ -539,7 +540,7 @@ function Compare({ scouting: s, onOpen }: { scouting: Scouting; onOpen: (id: str
   const cell = (on: boolean) => (on ? "lead" : undefined);
   return (
     <div className="view pr-view sc-compare-view">
-      <div className="sc-compare-scroll">
+      <DragScroll className="sc-compare-scroll">
         <table className="sc-compare" style={{ minWidth: 208 + shown.length * 168 }}>
           <colgroup>
             <col className="sc-compare-labels" />
@@ -631,7 +632,7 @@ function Compare({ scouting: s, onOpen }: { scouting: Scouting; onOpen: (id: str
             </tr>
           </tbody>
         </table>
-      </div>
+      </DragScroll>
     </div>
   );
 }

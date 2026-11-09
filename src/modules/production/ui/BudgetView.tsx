@@ -563,7 +563,22 @@ function SettingsDialog({ budget, onClose }: { budget: Budget; onClose: () => vo
   );
 }
 
-/** The topsheet, side by side with another version when one is chosen, and the overruns [BUD-05, BUD-06, BUD-08]. */
+/** How much of a whole is used: a thin gauge, red past the whole. */
+function Gauge({ part, whole, label }: { part: number; whole: number; label?: string }) {
+  const ratio = whole > 0 ? part / whole : 0;
+  return (
+    <span className={`bu-gauge${ratio > 1 ? " over" : ""}`} role="img" aria-label={label} title={label}>
+      <i style={{ width: `${Math.min(100, ratio * 100)}%` }} />
+    </span>
+  );
+}
+
+const percent = (part: number, whole: number) => (whole > 0 ? numberFormat({ maximumFractionDigits: 0 }).format((part / whole) * 100) : "0");
+
+/**
+ * The topsheet, set into the page [BUD-05, BUD-06, BUD-08]. A band says first what the film costs and how much is
+ * spent, the overruns follow in one amber line, then the chapters with what each has spent against what it plans.
+ */
 function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; lines: BudgetRow[]; facts: BudgetFacts }) {
   const { project } = useProject();
   const s = budget.settings;
@@ -574,7 +589,7 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
   const costs = useMemo(() => rollUp(lines, s, facts), [lines, s, facts]);
   const spent = useMemo(() => spentBy(lines, b.expenses, s), [lines, b.expenses, s]);
   const over = useMemo(() => overruns(lines, costs, spent), [lines, costs, spent]);
-  const totalSpent = lines.filter((l) => l.level === "chapter").reduce((n, l) => n + (spent.get(l.id) ?? 0), 0);
+  const totalSpent = cents(lines.filter((l) => l.level === "chapter").reduce((n, l) => n + (spent.get(l.id) ?? 0), 0));
   const delta = (a: number, c: number) => {
     const n = cents(a - c);
     if (!n) return <span className="muted">–</span>;
@@ -582,12 +597,24 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
   };
   const compared = otherSheet ? compareChapters(otherSheet, sheet) : null;
   const rows = ["social", "overheads", "insurance", "bond", "contingency"] as const;
+  const empty = <td />;
   return (
-    <div className="view pr-view">
-      <main className="view-main wide">
-        <div className="bible-toolbar bu-summary-tools">
-          <span className="muted">{t(`budget.kinds.${budget.kind}`)}</span>
-          {b.budgets.length > 1 && (
+    <div className="view pr-view bu-page">
+      <header className="bu-head">
+        <div className="bu-figure">
+          <span>{t("budget.rows.total")}</span>
+          <b>{money(sheet.total, s.currency)}</b>
+        </div>
+        <div className="bu-figure">
+          <span>{t("budget.columns.spent")}</span>
+          <b>{money(totalSpent, s.currency)}</b>
+          <span className="bu-figure-gauge">
+            <Gauge part={totalSpent} whole={sheet.total} />
+            <span className="muted">{t("budget.ofBudget", { pct: percent(totalSpent, sheet.total) })}</span>
+          </span>
+        </div>
+        {b.budgets.length > 1 && (
+          <span className="bu-head-end">
             <Select value={other?.id ?? ""} aria-label={t("budget.compareWith")} onChange={(e) => setWithId(e.target.value)}>
               <option value="">{t("budget.noCompare")}</option>
               {b.budgets
@@ -598,24 +625,25 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
                   </option>
                 ))}
             </Select>
-          )}
-        </div>
-        {over.length > 0 && (
-          <section className="bu-alert" role="status">
-            <AlertTriangle aria-hidden="true" />
-            <div>
-              <p>
-                <b>{plural("budget.overruns", over.length)}</b>
-              </p>
-              <ul>
-                {over.slice(0, 5).map((o) => (
-                  <li key={o.id}>{t("budget.overrun", { name: o.label || t("budget.untitled"), amount: money(o.over, s.currency) })}</li>
-                ))}
-              </ul>
-            </div>
-          </section>
+          </span>
         )}
-        <table className="pr-table bu-topsheet">
+      </header>
+      {over.length > 0 && (
+        <p className="bu-overruns" role="status">
+          <AlertTriangle aria-hidden="true" />
+          <b>{plural("budget.overruns", over.length)}</b>
+          <span>
+            {over.slice(0, 5).map((o, i) => (
+              <span key={o.id}>
+                {i > 0 && <span className="bu-sep"> · </span>}
+                {o.label || t("budget.untitled")} <span className="bu-over-by">+{money(o.over, s.currency)}</span>
+              </span>
+            ))}
+          </span>
+        </p>
+      )}
+      <div className="bu-sheet">
+        <table className="bu-flat bu-topsheet">
           <thead>
             <tr>
               <th>{t("budget.columns.chapter")}</th>
@@ -623,12 +651,13 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
               <th className="num">{budget.name}</th>
               {other && <th className="num">{t("budget.columns.delta")}</th>}
               <th className="num">{t("budget.columns.share")}</th>
-              <th className="num">{t("budget.columns.spent")}</th>
+              <th className="bu-spent-col">{t("budget.columns.spent")}</th>
             </tr>
           </thead>
           <tbody>
             {(compared ?? sheet.chapters.map((c) => ({ origin: c.origin, code: c.code, label: c.label, a: 0, b: c.cost.gross, delta: 0 }))).map((c) => {
               const own = sheet.chapters.find((x) => x.origin === c.origin);
+              const used = own ? (spent.get(own.id) ?? 0) : 0;
               return (
                 <tr key={c.origin}>
                   <th scope="row">
@@ -639,7 +668,14 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
                   <td className="num">{money(c.b, s.currency)}</td>
                   {other && <td className="num">{delta(c.b, c.a)}</td>}
                   <td className="num muted">{sheet.lines ? `${Math.round((c.b / sheet.lines) * 100)} %` : ""}</td>
-                  <td className="num muted">{own && spent.get(own.id) ? money(spent.get(own.id)!, s.currency) : ""}</td>
+                  <td className="bu-spent-col">
+                    {used > 0 && (
+                      <span className="bu-spent">
+                        <span className="num">{money(cents(used), s.currency)}</span>
+                        <Gauge part={used} whole={c.b} label={t("budget.spentOfPlanned", { pct: percent(used, c.b) })} />
+                      </span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -648,8 +684,15 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
               {otherSheet && <td className="num muted">{money(otherSheet.lines, other!.settings.currency)}</td>}
               <td className="num">{money(sheet.lines, s.currency)}</td>
               {otherSheet && <td className="num">{delta(sheet.lines, otherSheet.lines)}</td>}
-              <td />
-              <td className="num">{totalSpent ? money(cents(totalSpent), s.currency) : ""}</td>
+              {empty}
+              <td className="bu-spent-col">
+                {totalSpent > 0 && (
+                  <span className="bu-spent">
+                    <span className="num">{money(totalSpent, s.currency)}</span>
+                    <Gauge part={totalSpent} whole={sheet.lines} label={t("budget.spentOfPlanned", { pct: percent(totalSpent, sheet.lines) })} />
+                  </span>
+                )}
+              </td>
             </tr>
             {rows.map((key) => {
               const v = sheet[key];
@@ -664,8 +707,8 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
                   {otherSheet && <td className="num muted">{money(otherSheet[key], other!.settings.currency)}</td>}
                   <td className="num">{money(v, s.currency)}</td>
                   {otherSheet && <td className="num">{delta(v, otherSheet[key])}</td>}
-                  <td />
-                  <td />
+                  {empty}
+                  {empty}
                 </tr>
               );
             })}
@@ -674,8 +717,8 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
               {otherSheet && <td className="num muted">{money(otherSheet.net, other!.settings.currency)}</td>}
               <td className="num">{money(sheet.net, s.currency)}</td>
               {otherSheet && <td className="num">{delta(sheet.net, otherSheet.net)}</td>}
-              <td />
-              <td />
+              {empty}
+              {empty}
             </tr>
             {sheet.vat > 0 && (
               <tr>
@@ -683,8 +726,8 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
                 {otherSheet && <td className="num muted">{money(otherSheet.vat, other!.settings.currency)}</td>}
                 <td className="num">{money(sheet.vat, s.currency)}</td>
                 {otherSheet && <td className="num">{delta(sheet.vat, otherSheet.vat)}</td>}
-                <td />
-                <td />
+                {empty}
+                {empty}
               </tr>
             )}
             <tr className="bu-grand">
@@ -692,12 +735,12 @@ function Summary({ b, budget, lines, facts }: { b: Budgets; budget: Budget; line
               {otherSheet && <td className="num">{money(otherSheet.total, other!.settings.currency)}</td>}
               <td className="num">{money(sheet.total, s.currency)}</td>
               {otherSheet && <td className="num">{delta(sheet.total, otherSheet.total)}</td>}
-              <td />
-              <td />
+              {empty}
+              {empty}
             </tr>
           </tbody>
         </table>
-      </main>
+      </div>
     </div>
   );
 }
@@ -734,7 +777,14 @@ export function Attachment({ path, kind, onChange, label }: { path: string | nul
   );
 }
 
-/** Money spent, on a line of the budget, with its receipt [BUD-06]. */
+/** An amount as one reads it (« 6 300 », « 186,40 »), read back by `readNumber` when it is changed. */
+const amountText = (n: number) => (n ? numberFormat({ minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n) : "");
+
+/**
+ * Money spent, on a line of the budget, with its receipt [BUD-06]. The list is set into the page under a band that
+ * keeps the search, the total and « Nouvelle dépense »; the fields read as text, the receipt and the bin wait for the
+ * pointer.
+ */
 function Expenses({ b, budget, lines }: { b: Budgets; budget: Budget; lines: BudgetRow[] }) {
   const { ask } = useProject();
   const fail = useFail();
@@ -751,28 +801,45 @@ function Expenses({ b, budget, lines }: { b: Budgets; budget: Budget; lines: Bud
     if ((!e.label && !e.amount) || (await confirmRemoval(ask, { title: t("budget.deleteExpense", { name: e.label || money(e.amount, e.currency || s.currency) }), text: t("budget.deleteExpenseText") }))) await deleteExpense(e.id).catch(fail);
   };
   return (
-    <div className="view pr-view">
-      <main className="view-main wide">
-        <div className="bible-toolbar">
-          {b.expenses.length > 0 && <SearchBox value={q} onChange={setQ} placeholder={t("budget.searchExpense")} label={t("budget.searchExpense")} />}
-          <span className="bu-toolbar-end">
-            {b.expenses.length > 0 && <span className="muted">{t("budget.spentTotal", { total: money(cents(total), s.currency) })}</span>}
-            <button type="button" className="btn primary" onClick={add}>
-              <Plus aria-hidden="true" />
-              {t("budget.newExpense")}
-            </button>
-          </span>
-        </div>
-        {b.expenses.length === 0 ? (
+    <div className="view pr-view bu-page">
+      <header className="bu-head">
+        {b.expenses.length > 0 && <SearchBox value={q} onChange={setQ} placeholder={t("budget.searchExpense")} label={t("budget.searchExpense")} />}
+        <span className="bu-head-end">
+          {b.expenses.length > 0 && (
+            <span className="bu-head-total">
+              <b>{money(cents(total), s.currency)}</b> <span className="muted">{t("budget.spentWord")}</span>
+            </span>
+          )}
+          <button type="button" className="btn primary" onClick={add}>
+            <Plus aria-hidden="true" />
+            {t("budget.newExpense")}
+          </button>
+        </span>
+      </header>
+      {b.expenses.length === 0 ? (
+        <div className="bu-sheet bu-sheet-pad">
           <EmptyState title={t("budget.noExpenseTitle")}>
             <p className="muted">{t("budget.noExpenseText")}</p>
           </EmptyState>
-        ) : shown.length === 0 ? (
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="bu-sheet bu-sheet-pad">
           <p className="muted pr-none" role="status">
             {t("budget.noMatch")}
           </p>
-        ) : (
-          <table className="pr-table pr-quiet bu-table">
+        </div>
+      ) : (
+        <div className="bu-sheet">
+          <table className="bu-flat pr-quiet bu-table bu-expenses">
+            <colgroup>
+              <col className="bu-c-date" />
+              <col />
+              <col className="bu-c-supplier" />
+              <col className="bu-c-line" />
+              <col className="bu-c-amount" />
+              <col className="bu-c-receipt" />
+              <col className="bu-c-act" />
+            </colgroup>
             <thead>
               <tr>
                 <th>{t("budget.columns.date")}</th>
@@ -791,10 +858,10 @@ function Expenses({ b, budget, lines }: { b: Budgets; budget: Budget; lines: Bud
                     <Field label={t("budget.columns.date")} hideLabel type="date" value={e.date ?? ""} onCommit={(v) => void updateExpense(e.id, { date: v || null }).catch(fail)} />
                   </td>
                   <td>
-                    <Field label={t("budget.columns.expense")} hideLabel value={e.label} placeholder={t("budget.expensePlaceholder")} onCommit={(v) => void updateExpense(e.id, { label: v }).catch(fail)} />
+                    <Field label={t("budget.columns.expense")} hideLabel value={e.label} title={e.label} placeholder={t("budget.expensePlaceholder")} onCommit={(v) => void updateExpense(e.id, { label: v }).catch(fail)} />
                   </td>
                   <td>
-                    <Field label={t("budget.columns.supplier")} hideLabel value={e.supplier} placeholder="–" onCommit={(v) => void updateExpense(e.id, { supplier: v }).catch(fail)} />
+                    <Field label={t("budget.columns.supplier")} hideLabel value={e.supplier} title={e.supplier} placeholder="–" onCommit={(v) => void updateExpense(e.id, { supplier: v }).catch(fail)} />
                   </td>
                   <td>
                     <Select value={e.origin ?? ""} aria-label={t("budget.columns.line")} onChange={(x) => void updateExpense(e.id, { origin: x.target.value || null }).catch(fail)}>
@@ -817,14 +884,14 @@ function Expenses({ b, budget, lines }: { b: Budgets; budget: Budget; lines: Bud
                   </td>
                   <td className="num">
                     <span className="bu-amount">
-                      <Field label={t("budget.columns.amount")} hideLabel value={e.amount ? String(e.amount).replace(".", ",") : ""} placeholder="0" onCommit={(v) => void updateExpense(e.id, { amount: readNumber(v) }).catch(fail)} />
+                      <Field label={t("budget.columns.amount")} hideLabel value={amountText(e.amount)} placeholder="0" onCommit={(v) => void updateExpense(e.id, { amount: readNumber(v) }).catch(fail)} />
                       <Field label={t("budget.currency")} hideLabel className="bu-cur" value={e.currency} normalize={(v) => v.trim().toUpperCase().slice(0, 3)} onCommit={(v) => void updateExpense(e.id, { currency: v }).catch(fail)} />
                     </span>
                   </td>
-                  <td>
+                  <td className={e.receipt ? undefined : "bu-later"}>
                     <Attachment path={e.receipt} kind="justificatifs" label={t("budget.attachReceipt")} onChange={(p) => void updateExpense(e.id, { receipt: p }).catch(fail)} />
                   </td>
-                  <td>
+                  <td className="bu-later">
                     <button type="button" className="icon-btn" aria-label={t("budget.deleteExpenseShort")} onClick={() => void remove(e)}>
                       <Trash2 aria-hidden="true" />
                     </button>
@@ -833,13 +900,19 @@ function Expenses({ b, budget, lines }: { b: Budgets; budget: Budget; lines: Bud
               ))}
             </tbody>
           </table>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
 
-/** Where the money comes from, and how much of the budget it covers [BUD-07]. */
+/** The colour of each state of a source, from asked to paid. */
+const fundingTone: Record<FundingStatus, string> = { asked: "warn", granted: "info", paid: "ok" };
+
+/**
+ * Where the money comes from, and how much of the budget it covers [BUD-07]. A band reads the cover first: what is
+ * found against what the film costs, then one gauge in three shades (paid, granted, asked) over what is missing.
+ */
 function FundingPage({ b, budget, lines, facts }: { b: Budgets; budget: Budget; lines: BudgetRow[]; facts: BudgetFacts }) {
   const { ask } = useProject();
   const fail = useFail();
@@ -847,93 +920,134 @@ function FundingPage({ b, budget, lines, facts }: { b: Budgets; budget: Budget; 
   const totals = useMemo(() => fundingTotals(b.funding, s), [b.funding, s]);
   const need = useMemo(() => topsheet(lines, s, facts).total, [lines, s, facts]);
   const missing = cents(need - totals.total);
+  const scale = Math.max(need, totals.total) || 1;
   const remove = async (f: Funding) => {
     if ((!f.name && !f.amount) || (await confirmRemoval(ask, { title: t("budget.deleteFunding", { name: f.name || t("budget.untitled") }), text: t("budget.deleteFundingText") }))) await deleteFunding(f.id).catch(fail);
   };
+  const parts = (["paid", "granted", "asked"] as const).filter((k) => totals[k] > 0);
   return (
-    <div className="view pr-view">
-      <main className="view-main wide">
-        <div className="bible-toolbar">
-          <p className="bu-cover">
-            {need > 0 && t("budget.coverage", { covered: money(totals.total, s.currency), need: money(need, s.currency) })}
-            {need > 0 && missing > 0 && <span className="muted"> · {t("budget.missing", { amount: money(missing, s.currency) })}</span>}
-          </p>
+    <div className="view pr-view bu-page">
+      <header className="bu-head bu-cover-head">
+        <div className="bu-cover-text">
+          {need > 0 ? (
+            <p className="bu-cover">
+              {t("budget.coverage", { covered: money(totals.total, s.currency), need: money(need, s.currency) })}
+              {missing > 0 && <span className="muted"> · {t("budget.missing", { amount: money(missing, s.currency) })}</span>}
+            </p>
+          ) : (
+            <span />
+          )}
           <button type="button" className="btn primary" onClick={() => void addFunding(b, s.currency).catch(fail)}>
             <Plus aria-hidden="true" />
             {t("budget.newFunding")}
           </button>
         </div>
-        {b.funding.length === 0 ? (
+        {need > 0 && totals.total > 0 && (
+          <>
+            <span className="bu-cover-gauge" role="img" aria-label={t("budget.coverage", { covered: money(totals.total, s.currency), need: money(need, s.currency) })}>
+              {parts.map((k) => (
+                <i key={k} className={fundingTone[k]} style={{ width: `${(totals[k] / scale) * 100}%` }} />
+              ))}
+            </span>
+            <ul className="bu-legend">
+              {parts.map((k) => (
+                <li key={k}>
+                  <span className={`bu-dot ${fundingTone[k]}`} aria-hidden="true" />
+                  {t(`budget.fundingStatuses.${k}`)} <b>{money(totals[k], s.currency)}</b>
+                </li>
+              ))}
+              {missing > 0 && (
+                <li>
+                  <span className="bu-dot" aria-hidden="true" />
+                  {t("budget.missingShort")} <b>{money(missing, s.currency)}</b>
+                </li>
+              )}
+            </ul>
+          </>
+        )}
+      </header>
+      {b.funding.length === 0 ? (
+        <div className="bu-sheet bu-sheet-pad">
           <EmptyState title={t("budget.noFundingTitle")}>
             <p className="muted">{t("budget.noFundingText")}</p>
           </EmptyState>
-        ) : (
-          <>
-            <table className="pr-table pr-quiet bu-table">
-              <thead>
-                <tr>
-                  <th>{t("budget.columns.source")}</th>
-                  <th>{t("budget.columns.fundingKind")}</th>
-                  <th className="num">{t("budget.columns.amount")}</th>
-                  <th>{t("budget.columns.status")}</th>
-                  <th>{t("budget.notes")}</th>
-                  <th aria-label={t("budget.columns.actions")} />
+        </div>
+      ) : (
+        <div className="bu-sheet">
+          <table className="bu-flat pr-quiet bu-table bu-funding">
+            <colgroup>
+              <col className="bu-c-source" />
+              <col className="bu-c-kind" />
+              <col className="bu-c-amount" />
+              <col className="bu-c-state" />
+              <col />
+              <col className="bu-c-act" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>{t("budget.columns.source")}</th>
+                <th>{t("budget.columns.fundingKind")}</th>
+                <th className="num">{t("budget.columns.amount")}</th>
+                <th>{t("budget.columns.status")}</th>
+                <th>{t("budget.notes")}</th>
+                <th aria-label={t("budget.columns.actions")} />
+              </tr>
+            </thead>
+            <tbody>
+              {b.funding.map((f) => (
+                <tr key={f.id}>
+                  <td>
+                    <Field label={t("budget.columns.source")} hideLabel value={f.name} title={f.name} placeholder={t("budget.sourcePlaceholder")} onCommit={(v) => void updateFunding(f.id, { name: v }).catch(fail)} />
+                  </td>
+                  <td>
+                    <Select value={f.kind} aria-label={t("budget.columns.fundingKind")} onChange={(e) => void updateFunding(f.id, { kind: e.target.value }).catch(fail)}>
+                      {FUNDING_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {t(`budget.fundingKinds.${k}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </td>
+                  <td className="num">
+                    <span className="bu-amount">
+                      <Field label={t("budget.columns.amount")} hideLabel value={amountText(f.amount)} placeholder="0" onCommit={(v) => void updateFunding(f.id, { amount: readNumber(v) }).catch(fail)} />
+                      <Field label={t("budget.currency")} hideLabel className="bu-cur" value={f.currency} normalize={(v) => v.trim().toUpperCase().slice(0, 3)} onCommit={(v) => void updateFunding(f.id, { currency: v }).catch(fail)} />
+                    </span>
+                  </td>
+                  <td>
+                    <Select
+                      value={f.status}
+                      aria-label={t("budget.columns.status")}
+                      className="bu-state-select"
+                      display={
+                        <span className="bu-state">
+                          <span className={`bu-dot ${fundingTone[f.status]}`} aria-hidden="true" />
+                          {t(`budget.fundingStatuses.${f.status}`)}
+                        </span>
+                      }
+                      onChange={(e) => void updateFunding(f.id, { status: e.target.value as FundingStatus }).catch(fail)}
+                    >
+                      {FUNDING_STATUSES.map((k) => (
+                        <option key={k} value={k}>
+                          {t(`budget.fundingStatuses.${k}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </td>
+                  <td>
+                    <Field label={t("budget.notes")} hideLabel value={f.notes} title={f.notes} placeholder="–" onCommit={(v) => void updateFunding(f.id, { notes: v }).catch(fail)} />
+                  </td>
+                  <td className="bu-later">
+                    <button type="button" className="icon-btn" aria-label={t("budget.deleteFundingShort")} onClick={() => void remove(f)}>
+                      <Trash2 aria-hidden="true" />
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {b.funding.map((f) => (
-                  <tr key={f.id}>
-                    <td>
-                      <Field label={t("budget.columns.source")} hideLabel value={f.name} placeholder={t("budget.sourcePlaceholder")} onCommit={(v) => void updateFunding(f.id, { name: v }).catch(fail)} />
-                    </td>
-                    <td>
-                      <Select value={f.kind} aria-label={t("budget.columns.fundingKind")} onChange={(e) => void updateFunding(f.id, { kind: e.target.value }).catch(fail)}>
-                        {FUNDING_KINDS.map((k) => (
-                          <option key={k} value={k}>
-                            {t(`budget.fundingKinds.${k}`)}
-                          </option>
-                        ))}
-                      </Select>
-                    </td>
-                    <td className="num">
-                      <span className="bu-amount">
-                        <Field label={t("budget.columns.amount")} hideLabel value={f.amount ? String(f.amount).replace(".", ",") : ""} placeholder="0" onCommit={(v) => void updateFunding(f.id, { amount: readNumber(v) }).catch(fail)} />
-                        <Field label={t("budget.currency")} hideLabel className="bu-cur" value={f.currency} normalize={(v) => v.trim().toUpperCase().slice(0, 3)} onCommit={(v) => void updateFunding(f.id, { currency: v }).catch(fail)} />
-                      </span>
-                    </td>
-                    <td>
-                      <Select value={f.status} aria-label={t("budget.columns.status")} onChange={(e) => void updateFunding(f.id, { status: e.target.value as FundingStatus }).catch(fail)}>
-                        {FUNDING_STATUSES.map((k) => (
-                          <option key={k} value={k}>
-                            {t(`budget.fundingStatuses.${k}`)}
-                          </option>
-                        ))}
-                      </Select>
-                    </td>
-                    <td>
-                      <Field label={t("budget.notes")} hideLabel value={f.notes} placeholder="–" onCommit={(v) => void updateFunding(f.id, { notes: v }).catch(fail)} />
-                    </td>
-                    <td>
-                      <button type="button" className="icon-btn" aria-label={t("budget.deleteFundingShort")} onClick={() => void remove(f)}>
-                        <Trash2 aria-hidden="true" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bu-subtotal">
-                  <th scope="row" colSpan={2}>
-                    {t("budget.fundingStatuses.paid")} · {money(totals.paid, s.currency)} — {t("budget.fundingStatuses.granted")} · {money(totals.granted, s.currency)} — {t("budget.fundingStatuses.asked")} · {money(totals.asked, s.currency)}
-                  </th>
-                  <td className="num">{money(totals.total, s.currency)}</td>
-                  <td colSpan={3} />
-                </tr>
-              </tfoot>
-            </table>
-          </>
-        )}
-      </main>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

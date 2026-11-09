@@ -14584,9 +14584,6 @@ input.pr-qty {
   align-items: center;
   gap: 8px;
 }
-.bu-summary-tools {
-  justify-content: space-between;
-}
 .bu-alert {
   display: flex;
   gap: 10px;
@@ -14617,9 +14614,6 @@ input.pr-qty {
 }
 .bu-alert li {
   padding: 2px 0;
-}
-.bu-topsheet {
-  max-width: 920px;
 }
 .bu-topsheet tbody th {
   font-weight: 400;
@@ -14656,10 +14650,6 @@ input.pr-qty {
   color: var(--ok);
   background: var(--ok-soft);
 }
-.bu-cover {
-  margin: 0;
-}
-
 .badge.bad {
   background: var(--danger-soft);
   border-color: var(--danger-line);
@@ -15709,4 +15699,337 @@ input.pr-qty {
 }
 .set-row.stack .pr-field.bare input {
   width: 100%;
+}
+
+/* A sheet wider than the page moves under the mouse: a double arrow says so, on all but its controls. */
+.drag-scroll {
+  cursor: ew-resize;
+}
+.drag-scroll :is(button, a, input, select, textarea, label, [role="radio"]) {
+  cursor: pointer;
+}
+.drag-scroll input:is([type="text"], :not([type])),
+.drag-scroll textarea {
+  cursor: text;
+}
+.drag-scroll.dragging,
+.drag-scroll.dragging * {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+/*
+ * Récapitulatif, Dépenses, Financement: set into the page from edge to edge like the Devis. A band on top says what
+ * matters first (the cost, the spending, the cover) and keeps the page's tools; the sheet under it scrolls, its head
+ * held, its first and last cells on the page's 32 px margin.
+ */
+.bu-page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bu-head {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 40px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.bu-head-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+.bu-head-total b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.bu-figure {
+  display: grid;
+  gap: 2px;
+  align-self: start;
+}
+.bu-figure > span:first-child {
+  color: var(--muted);
+  font-size: 12px;
+}
+.bu-figure b {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.bu-figure-gauge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.bu-figure-gauge .bu-gauge {
+  width: 160px;
+}
+/* A thin gauge: grey on its track, red past the whole. */
+.bu-gauge {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 9%, var(--panel));
+}
+.bu-gauge i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 46%, var(--panel));
+}
+.bu-gauge.over i {
+  background: var(--danger-dot);
+}
+/* The overruns, on one amber line across the page. */
+.bu-overruns {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 9px 32px;
+  border-bottom: 1px solid var(--warning-line);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.bu-overruns svg {
+  width: 15px;
+  height: 15px;
+}
+.bu-over-by {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bu-sep {
+  opacity: 0.6;
+}
+.bu-sheet {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--panel);
+}
+.bu-sheet-pad {
+  padding: 24px 32px 48px;
+}
+.bu-flat {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+.bu-flat thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 36px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sunken);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.bu-flat tbody th,
+.bu-flat tbody td {
+  height: 40px;
+  padding: 2px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 400;
+}
+.bu-flat tr > :first-child {
+  padding-left: 32px;
+}
+.bu-flat tr > :last-child {
+  padding-right: 32px;
+}
+.bu-flat .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.bu-flat tbody tr:hover > * {
+  background: color-mix(in srgb, var(--ink) 2.5%, var(--panel));
+}
+.bu-flat tbody tr.bu-subtotal > *,
+.bu-flat tbody tr.bu-subtotal:hover > * {
+  background: var(--sunken);
+}
+/* What can wait on a row (a receipt to join, the bin) shows when the row is pointed at or worked in. */
+.bu-flat tbody tr:not(:hover):not(:focus-within) .bu-later > * {
+  opacity: 0;
+}
+.bu-later > * {
+  transition: opacity 120ms ease-out;
+}
+.bu-flat .bu-date input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+.bu-flat tr:hover .bu-date input::-webkit-calendar-picker-indicator,
+.bu-flat .bu-date input:focus::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
+.bu-flat .pr-field input {
+  width: 100%;
+  text-overflow: ellipsis;
+}
+.bu-flat .bu-amount .pr-field:first-child input {
+  width: 104px;
+}
+.bu-flat .bu-amount .pr-field {
+  flex: none;
+}
+.bu-flat .bu-cur input {
+  width: 58px;
+  text-overflow: clip;
+}
+.bu-flat .select {
+  width: 100%;
+  min-width: 0;
+}
+/* Récapitulatif: the chapters, then what each has spent against what it plans. */
+.bu-topsheet th:first-child {
+  width: auto;
+}
+.bu-topsheet th.num,
+.bu-topsheet td.num {
+  width: 160px;
+}
+.bu-topsheet thead th.num:nth-last-child(2),
+.bu-topsheet tbody td.num:nth-last-child(2) {
+  width: 90px;
+}
+.bu-topsheet .bu-spent-col {
+  width: 300px;
+}
+.bu-spent {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.bu-spent .num {
+  text-align: right;
+}
+.bu-flat .bu-grand > * {
+  height: 52px;
+  border-bottom: 0;
+}
+/* Dépenses and Financement: room for what is read, narrow columns for what is short. */
+.bu-c-date {
+  width: 172px;
+}
+.bu-c-supplier {
+  width: 18%;
+}
+.bu-c-line {
+  width: 20%;
+}
+.bu-c-amount {
+  width: 220px;
+}
+.bu-c-receipt {
+  width: 200px;
+}
+.bu-c-act {
+  width: 72px;
+}
+.bu-c-source {
+  width: 26%;
+}
+.bu-c-kind {
+  width: 18%;
+}
+.bu-c-state {
+  width: 150px;
+}
+/* Financement: the cover first, in one gauge of three shades over what is missing. */
+.bu-cover-head {
+  display: grid;
+  gap: 10px;
+}
+.bu-cover-text {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.bu-cover-text .btn {
+  margin-left: auto;
+}
+.bu-cover {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.bu-cover-gauge {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 8%, var(--panel));
+}
+.bu-cover-gauge i {
+  display: block;
+  height: 100%;
+}
+.bu-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.bu-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bu-legend b {
+  color: var(--ink-2);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.bu-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 14%, var(--panel));
+}
+.bu-dot.ok,
+.bu-cover-gauge i.ok {
+  background: var(--ok-dot);
+}
+.bu-dot.info,
+.bu-cover-gauge i.info {
+  background: var(--accent);
+}
+.bu-dot.warn,
+.bu-cover-gauge i.warn {
+  background: var(--warning-dot);
+}
+.bu-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
