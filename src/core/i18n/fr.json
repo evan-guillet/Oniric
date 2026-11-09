@@ -3871,6 +3871,8 @@
     "criterionName": "Nom du critère",
     "removeCriterion": "Retirer le critère {{name}}",
     "mean": "Moyenne",
+    "bestScore": "Meilleure note",
+    "meanOutOf": "Moyenne : {{n}} sur 5",
     "stars": "{{n}} sur 5",
     "compareEmptyTitle": "Rien à comparer",
     "compareEmptyText": "Ajoutez des décors et reliez-les à un lieu de la Bible : leurs pistes viendront ici côte à côte.",

@@ -14908,45 +14908,162 @@ input.pr-qty {
   border-radius: 8px;
   border: 1px solid var(--line);
 }
+/*
+ * Comparer: the table points at the answer. Each lead's mean sits under its photo and the best one says so; in every
+ * row the best value is in ink, the others in grey, and the notches of a mark are neutral, so that no colour but the
+ * state dots competes with the photos.
+ */
 .sc-compare-scroll {
   overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
 }
 .sc-compare {
-  width: auto;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
-.sc-compare thead td {
-  background: var(--panel);
+.sc-compare-labels {
+  width: 176px;
+}
+/* The column of the best mean, lightly lifted from top to bottom. */
+.sc-compare col.best {
+  background: color-mix(in srgb, var(--ink) 2.5%, var(--panel));
+}
+.sc-compare th,
+.sc-compare td {
+  padding: 0 14px;
+  text-align: left;
+  font-weight: 400;
 }
 .sc-compare thead th {
-  width: 220px;
-  min-width: 180px;
+  padding-top: 14px;
+  padding-bottom: 14px;
   vertical-align: top;
-  background: var(--panel);
-  font-weight: 500;
-  color: var(--ink);
+  border-bottom: 1px solid var(--line);
 }
-.sc-compare thead .sc-cover {
+.sc-compare thead td {
+  border-bottom: 1px solid var(--line);
+}
+.sc-compare-lead {
+  display: grid;
+  gap: 10px;
   width: 100%;
-  height: 112px;
-  margin-bottom: 8px;
-}
-.sc-compare-name {
-  display: block;
-  margin-bottom: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--ink);
-  font-weight: 600;
-  white-space: normal;
+  font: inherit;
   text-align: left;
+  cursor: pointer;
+}
+.view-main.sc-compare-main {
+  --main-max: 1640px;
+}
+.sc-compare-lead .sc-cover {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  transition: filter 160ms ease-out;
+}
+.sc-compare-lead:hover .sc-cover {
+  filter: brightness(1.06);
+}
+.sc-compare-lead:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+/* Two lines kept for every name, so the states and the marks of all the leads stand on one line. */
+.sc-compare-name {
+  display: -webkit-box;
+  min-height: calc(2 * 1.35em);
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.sc-compare-lead:hover .sc-compare-name {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.sc-compare thead .sc-status {
+  margin-top: 6px;
+}
+.sc-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sc-score b {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+/* « Meilleure note » sits on the photo of the best lead, where the eye lands first. */
+.sc-compare-cover {
+  position: relative;
+  display: block;
+}
+.sc-compare-cover .sc-best {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+.sc-compare tbody th,
+.sc-compare tbody td {
+  height: 40px;
+  border-bottom: 1px solid var(--line);
+}
+.sc-compare tbody tr:last-child > * {
+  border-bottom: 0;
+}
+/* The names of the criteria stay in view while many leads scroll past. */
+.sc-compare tbody th,
+.sc-compare thead td {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+  box-shadow: inset -1px 0 var(--line);
+}
+.sc-compare .sc-add-row th {
+  position: static;
+}
+.sc-add-row .btn {
+  position: sticky;
+  left: 14px;
 }
 .sc-compare tbody th {
-  width: 180px;
-  min-width: 160px;
-  font-weight: 400;
-  background: var(--sunken);
   color: var(--ink-2);
 }
 .sc-compare tbody td {
-  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.sc-compare tbody td.lead {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sc-compare tbody td.muted {
+  color: var(--muted);
+}
+.sc-compare tbody tr:not(.sc-add-row):hover > * {
+  background: color-mix(in srgb, var(--ink) 3%, var(--panel));
 }
 .sc-criterion {
   display: flex;
@@ -14955,37 +15072,63 @@ input.pr-qty {
   gap: 8px;
 }
 .sc-criterion .icon-btn {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   opacity: 0;
 }
 .sc-compare tr:hover .sc-criterion .icon-btn,
 .sc-criterion .icon-btn:focus-visible {
   opacity: 1;
 }
-.sc-stars {
-  display: inline-flex;
+.sc-compare .sc-add-row th {
+  height: 40px;
 }
-.sc-stars button {
+.sc-add-row .btn.text {
+  color: var(--muted);
+}
+/* The facts of each lead (rent, road, visits) after the marks, past a stronger rule. */
+.sc-compare .sc-add-row > * {
+  border-bottom-color: var(--line-strong);
+}
+/* Five notches: grey up to the mark, ink when it is the best of its row; the pointer previews in blue. */
+.sc-meter {
+  display: inline-flex;
+  margin-left: -4px;
+}
+.sc-meter button {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 28px;
   padding: 0;
   border: 0;
   background: none;
-  color: var(--line-strong);
   cursor: pointer;
+  --notch: color-mix(in srgb, var(--ink) 9%, var(--panel));
 }
-.sc-stars button.on {
-  color: var(--warning-dot);
+.sc-meter button.on {
+  --notch: color-mix(in srgb, var(--ink) 46%, var(--panel));
 }
-.sc-stars button.on svg {
-  fill: currentColor;
+.sc-meter.lead button.on {
+  --notch: var(--ink);
 }
-.sc-stars svg {
-  width: 16px;
-  height: 16px;
+.sc-meter i {
+  width: 18px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--notch);
+  transition: background-color 100ms ease-out;
+}
+.sc-meter:hover button {
+  --notch: var(--accent);
+}
+.sc-meter:hover button:hover ~ button {
+  --notch: color-mix(in srgb, var(--ink) 9%, var(--panel));
+}
+.sc-meter button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 .sc-hint {
   display: flex;

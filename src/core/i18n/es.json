@@ -3871,6 +3871,8 @@
     "criterionName": "Nombre del criterio",
     "removeCriterion": "Quitar el criterio {{name}}",
     "mean": "Media",
+    "bestScore": "Mejor nota",
+    "meanOutOf": "Media: {{n}} sobre 5",
     "stars": "{{n}} de 5",
     "compareEmptyTitle": "Nada que comparar",
     "compareEmptyText": "Añada decorados y vincúlelos a un lugar de la Biblia: sus pistas vendrán aquí una al lado de otra.",

@@ -3871,6 +3871,8 @@
     "criterionName": "Criterion name",
     "removeCriterion": "Remove criterion {{name}}",
     "mean": "Average",
+    "bestScore": "Best score",
+    "meanOutOf": "Average: {{n}} out of 5",
     "stars": "{{n}} out of 5",
     "compareEmptyTitle": "Nothing to compare",
     "compareEmptyText": "Add sets and link them to a place of the Bible: their leads will come here side by side.",

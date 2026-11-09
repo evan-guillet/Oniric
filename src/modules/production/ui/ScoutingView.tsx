@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Building2, Crosshair, ImagePlus, Map as MapIcon, MapPin, Plus, Star, Trash2, X } from "lucide-react";
+import { Building2, Crosshair, ImagePlus, Map as MapIcon, MapPin, Plus, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
@@ -469,13 +469,16 @@ function VisitCard({ visit: v }: { visit: Visit }) {
   );
 }
 
-/** Five stars for a criterion; pressing the one given again takes it back. */
-function Stars({ value, label, onChange }: { value: number; label: string; onChange: (n: number) => void }) {
+/**
+ * A mark out of five, as five notches: pressing the one given again takes it back. The pointer previews the mark it
+ * would give; `lead` sets the notches in ink when this is the best mark of its row.
+ */
+function Meter({ value, label, lead, onChange }: { value: number; label: string; lead: boolean; onChange: (n: number) => void }) {
   return (
-    <span className="sc-stars" role="radiogroup" aria-label={label}>
+    <span className={`sc-meter${lead ? " lead" : ""}`} role="radiogroup" aria-label={label}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={t("scouting.stars", { n })} className={n <= value ? "on" : ""} onClick={() => onChange(value === n ? 0 : n)}>
-          <Star aria-hidden="true" />
+          <i />
         </button>
       ))}
     </span>
@@ -484,7 +487,19 @@ function Stars({ value, label, onChange }: { value: number; label: string; onCha
 
 const criterionName = (c: Criterion) => c.name || t(`scouting.criteria.${c.id}`, { defaultValue: c.id });
 
-/** The leads for one place of the story, side by side: photos and a grid of marks [REP-05]. */
+/** The ids whose value is the best of the row, the lowest when `low`; none when fewer than two compete or all tie. */
+function leaders(values: [string, number | null][], low = false): Set<string> {
+  const given = values.filter((v): v is [string, number] => v[1] !== null && (low || v[1] > 0));
+  if (given.length < 2) return new Set();
+  const best = low ? Math.min(...given.map((v) => v[1])) : Math.max(...given.map((v) => v[1]));
+  const won = given.filter((v) => v[1] === best);
+  return won.length === given.length ? new Set() : new Set(won.map((v) => v[0]));
+}
+
+/**
+ * The leads for one place of the story, side by side [REP-05]. The table points at the answer: each lead's mean under
+ * its photo, « Meilleure note » on the best, and in every row the best value in ink, the others in grey.
+ */
 function Compare({ scouting: s, places, onOpen }: { scouting: Scouting; places: Entry[]; onOpen: (id: string) => void }) {
   const { project, prompt } = useProject();
   const fail = useFail();
@@ -509,92 +524,136 @@ function Compare({ scouting: s, places, onOpen }: { scouting: Scouting; places: 
     const name = (await prompt(t("scouting.addCriterion"), t("scouting.criterionName")))?.trim();
     if (name) await writeCriteria([...criteria, { id: `c${Date.now()}`, name }]).catch(fail);
   };
+  const means = new Map(shown.map((l) => [l.id, meanScore(l.data.scores, ids)]));
+  const best = leaders(shown.map((l) => [l.id, means.get(l.id) ?? null]));
+  const cheapest = leaders(shown.map((l) => [l.id, l.data.rental]), true);
+  // By road when the route is known, as the crow flies otherwise; the crow's metres only compete among themselves.
+  const trip = new Map(
+    shown.map((l) => {
+      const r = base && s.routes.find((x) => x.from === base.id && x.to === l.id && x.mode === "car");
+      const crow = base && l.lat !== null ? haversine({ lat: l.lat, lon: l.lon! }, { lat: base.lat!, lon: base.lon! }) : null;
+      return [l.id, { road: r || null, crow }] as const;
+    }),
+  );
+  const byRoad = shown.some((l) => trip.get(l.id)!.road);
+  const closest = leaders(shown.map((l) => { const x = trip.get(l.id)!; return [l.id, byRoad ? (x.road?.duration ?? null) : x.crow]; }), true);
+  const visits = new Map(shown.map((l) => [l.id, s.visits.filter((v) => v.locationId === l.id).length]));
+  const one = numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const cell = (on: boolean) => (on ? "lead" : undefined);
   return (
     <div className="view pr-view">
       <main className="view-main wide sc-compare-main">
-        <div className="bible-toolbar">
-          <Select value={place?.id ?? ""} aria-label={t("scouting.comparePlace")} onChange={(e) => setPlaceId(e.target.value)}>
-            <option value="">{t("scouting.allSets")}</option>
-            {withSets.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-          <button type="button" className="btn bu-push" onClick={() => void addCriterion()}>
-            <Plus aria-hidden="true" />
-            {t("scouting.addCriterion")}
-          </button>
-        </div>
+        {withSets.length > 0 && (
+          <div className="bible-toolbar">
+            <Select value={place?.id ?? ""} aria-label={t("scouting.comparePlace")} onChange={(e) => setPlaceId(e.target.value)}>
+              <option value="">{t("scouting.allSets")}</option>
+              {withSets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         <div className="sc-compare-scroll">
-          <table className="pr-table sc-compare">
+          <table className="sc-compare" style={{ minWidth: 176 + shown.length * 168 }}>
+            <colgroup>
+              <col className="sc-compare-labels" />
+              {shown.map((l) => (
+                <col key={l.id} className={best.has(l.id) ? "best" : undefined} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <td />
-                {shown.map((l) => (
-                  <th key={l.id} scope="col">
-                    <Cover location={l} />
-                    <button type="button" className="btn text small sc-compare-name" onClick={() => onOpen(l.id)}>
-                      {l.name || t("scouting.unnamed")}
-                    </button>
-                    <StatusBadge status={l.status} />
-                  </th>
-                ))}
+                {shown.map((l) => {
+                  const m = means.get(l.id) ?? null;
+                  return (
+                    <th key={l.id} scope="col">
+                      <button type="button" className="sc-compare-lead" onClick={() => onOpen(l.id)}>
+                        <span className="sc-compare-cover">
+                          <Cover location={l} />
+                          {best.has(l.id) && <span className="badge ok sc-best">{t("scouting.bestScore")}</span>}
+                        </span>
+                        <span className="sc-compare-name">{l.name || t("scouting.unnamed")}</span>
+                      </button>
+                      <StatusBadge status={l.status} />
+                      <span className="sc-score" aria-label={m === null ? undefined : t("scouting.meanOutOf", { n: one.format(m) })}>
+                        <b aria-hidden="true">{m === null ? "–" : one.format(m)}</b>
+                        <span aria-hidden="true">/ 5</span>
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {criteria.map((c) => (
-                <tr key={c.id}>
-                  <th scope="row">
-                    <span className="sc-criterion">
-                      {criterionName(c)}
-                      <button type="button" className="icon-btn" aria-label={t("scouting.removeCriterion", { name: criterionName(c) })} onClick={() => void writeCriteria(criteria.filter((x) => x.id !== c.id)).catch(fail)}>
-                        <X aria-hidden="true" />
-                      </button>
-                    </span>
-                  </th>
-                  {shown.map((l) => (
-                    <td key={l.id}>
-                      <Stars value={l.data.scores[c.id] ?? 0} label={`${l.name} · ${criterionName(c)}`} onChange={(n) => void updateLocation(l.id, { data: { ...l.data, scores: { ...l.data.scores, [c.id]: n } } }).catch(fail)} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              <tr className="bu-subtotal">
-                <th scope="row">{t("scouting.mean")}</th>
-                {shown.map((l) => {
-                  const m = meanScore(l.data.scores, ids);
-                  return <td key={l.id}>{m === null ? "–" : numberFormat({ maximumFractionDigits: 1 }).format(m)}</td>;
-                })}
+              {criteria.map((c) => {
+                const lead = leaders(shown.map((l) => [l.id, l.data.scores[c.id] ?? 0]));
+                return (
+                  <tr key={c.id}>
+                    <th scope="row">
+                      <span className="sc-criterion">
+                        {criterionName(c)}
+                        <button type="button" className="icon-btn" aria-label={t("scouting.removeCriterion", { name: criterionName(c) })} onClick={() => void writeCriteria(criteria.filter((x) => x.id !== c.id)).catch(fail)}>
+                          <X aria-hidden="true" />
+                        </button>
+                      </span>
+                    </th>
+                    {shown.map((l) => (
+                      <td key={l.id}>
+                        <Meter value={l.data.scores[c.id] ?? 0} lead={lead.has(l.id)} label={`${l.name} · ${criterionName(c)}`} onChange={(n) => void updateLocation(l.id, { data: { ...l.data, scores: { ...l.data.scores, [c.id]: n } } }).catch(fail)} />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+              <tr className="sc-add-row">
+                <th scope="row" colSpan={shown.length + 1}>
+                  <button type="button" className="btn text small" onClick={() => void addCriterion()}>
+                    <Plus aria-hidden="true" />
+                    {t("scouting.addCriterion")}
+                  </button>
+                </th>
               </tr>
-              <tr>
+              <tr className="sc-facts-start">
                 <th scope="row">{t("scouting.fields.rental")}</th>
                 {shown.map((l) => (
-                  <td key={l.id}>{l.data.rental === null ? "–" : money(l.data.rental)}</td>
+                  <td key={l.id} className={cell(cheapest.has(l.id))}>
+                    {l.data.rental === null ? <span className="muted">–</span> : money(l.data.rental)}
+                  </td>
                 ))}
               </tr>
               {base && (
                 <tr>
                   <th scope="row">{t("scouting.fromBaseShort")}</th>
                   {shown.map((l) => {
-                    const r = s.routes.find((x) => x.from === base.id && x.to === l.id && x.mode === "car");
-                    return <td key={l.id}>{r ? `${formatDistance(r.distance)} · ${formatDuration(r.duration)}` : l.lat !== null ? formatDistance(haversine({ lat: l.lat, lon: l.lon! }, { lat: base.lat!, lon: base.lon! })) : "–"}</td>;
+                    const x = trip.get(l.id)!;
+                    return (
+                      <td key={l.id} className={cell(closest.has(l.id))}>
+                        {x.road ? `${formatDistance(x.road.distance)} · ${formatDuration(x.road.duration)}` : x.crow !== null ? formatDistance(x.crow) : <span className="muted">–</span>}
+                      </td>
+                    );
                   })}
                 </tr>
               )}
               <tr>
                 <th scope="row">{t("scouting.visits")}</th>
                 {shown.map((l) => (
-                  <td key={l.id}>{plural("scouting.visitCount", s.visits.filter((v) => v.locationId === l.id).length)}</td>
+                  <td key={l.id} className={visits.get(l.id) ? undefined : "muted"}>
+                    {plural("scouting.visitCount", visits.get(l.id)!)}
+                  </td>
                 ))}
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="muted sc-hint">
-          <Crosshair aria-hidden="true" />
-          {t("scouting.compareHint")}
-        </p>
+        {!place && (
+          <p className="muted sc-hint">
+            <Crosshair aria-hidden="true" />
+            {t("scouting.compareHint")}
+          </p>
+        )}
       </main>
     </div>
   );
