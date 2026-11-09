@@ -62,7 +62,7 @@ import { castNumbers, useTeam, type Team } from "../application/team";
 import { sceneFacts, stripTone, type SceneFacts } from "../domain/sceneFacts";
 import { arrange, dayConflicts, dayDates, parseDay, presence, sceneMinutes, shootNumbers, type ArrangeBy, type Conflict, type Presence } from "../domain/schedule";
 import type { PermitAlert } from "../domain/permits";
-import { Field, HeaderTools, shortDate } from "./parts";
+import { Field, shortDate, ViewTools } from "./parts";
 import { usePermitAlerts } from "./preparation";
 
 type Tab = "strips" | "dood" | "calendar";
@@ -228,7 +228,7 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
     },
   ];
   return (
-    <HeaderTools>
+    <ViewTools>
       <Select value={s.id} aria-label={t("schedule.version")} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
         {plans.schedules.map((x) => (
           <option key={x.id} value={x.id}>
@@ -237,11 +237,11 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
         ))}
       </Select>
       <MoreMenu label={t("schedule.versionMenu")} items={items} />
-      <button type="button" className="btn" onClick={onSettings}>
+      <button type="button" className="btn view-tools-end" onClick={onSettings}>
         <Settings2 aria-hidden="true" />
         {t("schedule.settings")}
       </button>
-    </HeaderTools>
+    </ViewTools>
   );
 }
 
@@ -1129,15 +1129,14 @@ function Calendar({ plans, board: b, onShowStrips }: { plans: Plans; board: Boar
       },
     },
   ];
-  const addButton = (
-    <button type="button" className="rz-add-row pr-cal-add" onClick={() => setAdding("new")}>
-      <Plus aria-hidden="true" />
-      {t("schedule.addStage")}
-    </button>
-  );
-
   return (
     <div className="pr-cal-wrap">
+      <ViewTools>
+        <button type="button" className={`btn view-tools-end${rows.length === 0 ? " primary" : ""}`} onClick={() => setAdding("new")}>
+          <Plus aria-hidden="true" />
+          {t("schedule.addStage")}
+        </button>
+      </ViewTools>
       {rows.length === 0 ? (
         <div className="pr-cal-empty">
           <EmptyState title={t("schedule.calendarEmptyTitle")}>
@@ -1245,7 +1244,6 @@ function Calendar({ plans, board: b, onShowStrips }: { plans: Plans; board: Boar
           </div>
         </div>
       )}
-      <div className="pr-cal-foot">{addButton}</div>
       {adding && <StageDialog event={adding === "new" ? null : adding} onClose={() => setAdding(null)} />}
     </div>
   );

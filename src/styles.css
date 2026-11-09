@@ -2348,8 +2348,8 @@ html[data-ctrl] .shell-nav.rail .nav-link > .ctrl-hint {
   border-left: 1px solid var(--line);
 }
 /*
- * The window's top band: the breadcrumb, the view's tools, then the window's buttons flush in the corner.
- * Its empty parts move the window, as a title bar would.
+ * The window's top band: the breadcrumb, then the window's buttons flush in the corner. Nothing else: a view's tools
+ * go in the bar under it. Its empty parts move the window, as a title bar would.
  */
 .view-header {
   flex: none;
@@ -2362,10 +2362,8 @@ html[data-ctrl] .shell-nav.rail .nav-link > .ctrl-hint {
   user-select: none;
   -webkit-user-select: none;
 }
-/* The location keeps its width (up to half the header); the view's tools take the rest. */
 .view-header-text {
-  flex-shrink: 0;
-  max-width: 50%;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   min-width: 0;
@@ -2378,34 +2376,39 @@ html[data-ctrl] .shell-nav.rail .nav-link > .ctrl-hint {
   margin: 0 6px;
   color: var(--line-strong);
 }
-.view-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  margin-left: auto;
-  padding: 7px 0;
-}
-.view-header-actions .search-box {
-  flex: 0 1 280px;
-  min-width: 140px;
-}
-/* Short of room, only the search gives way: the window's buttons stay in the corner. */
-.view-header-actions > :not(.search-box) {
-  flex: none;
-}
-.view-header-actions > .select {
-  min-width: 180px;
-}
-.view-header-actions:empty + .titlebar-controls {
-  margin-left: auto;
-}
 .view-header .titlebar-controls {
   flex: none;
   align-self: stretch;
+  margin-left: auto;
 }
-.view-header-actions:empty {
+/*
+ * The view's own tools, in a bar under the header: what is chosen on the left, what is done on the right (from the
+ * first `.view-tools-end`). A view with no tools leaves it empty, and it is gone.
+ */
+.view-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.view-tools:empty {
   display: none;
+}
+.view-tools > * {
+  flex: none;
+}
+.view-tools > .select {
+  min-width: 200px;
+}
+.view-tools > .view-tools-end {
+  margin-left: auto;
+}
+.view-tools > .view-tools-end ~ .view-tools-end {
+  margin-left: 0;
 }
 .view-title {
   display: flex;
@@ -11460,6 +11463,10 @@ td.changed input {
 .pr-view:has(.pr-bd-list) {
   scrollbar-gutter: stable;
 }
+/* The view scrolls, not its column: left to scroll, the column would hold the open row's line, which would never stick. */
+.pr-view:has(.pr-bd-list) > .view-main {
+  overflow: visible;
+}
 .pr-report-by .select {
   flex: none;
   width: 200px;
@@ -11905,6 +11912,8 @@ td.changed input {
  */
 .pr-bd-list {
   --bd-row: 44px;
+  /* The rows and their hover stay inside the rounded corners; a clip-path, as overflow would unstick the open row's line. */
+  clip-path: inset(0 round var(--radius-lg));
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -13231,14 +13240,6 @@ input.pr-qty {
   line-height: 46px;
   white-space: nowrap;
   pointer-events: none;
-}
-.pr-cal-foot {
-  flex: none;
-  border-top: 1px solid var(--line-strong);
-  background: var(--panel);
-}
-.pr-cal-add {
-  padding-left: 16px;
 }
 @media (max-width: 1000px) {
   .pr-cal {

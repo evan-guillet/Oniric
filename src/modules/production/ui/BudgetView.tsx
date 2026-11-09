@@ -60,7 +60,7 @@ import {
   type LineLink,
 } from "../domain/budget";
 import { departmentName } from "../domain/catalog";
-import { Field, HeaderTools } from "./parts";
+import { Field, ViewTools } from "./parts";
 import { money, useBudgetFacts } from "./preparation";
 
 type Tab = "grid" | "summary" | "expenses" | "funding";
@@ -156,7 +156,7 @@ function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSett
     },
   ];
   return (
-    <HeaderTools>
+    <ViewTools>
       <Select value={current.id} aria-label={t("budget.version")} onChange={(e) => void chooseBudget(e.target.value).catch(fail)}>
         {b.budgets.map((x) => (
           <option key={x.id} value={x.id}>
@@ -165,11 +165,11 @@ function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSett
         ))}
       </Select>
       <MoreMenu label={t("budget.versionMenu")} items={items} />
-      <button type="button" className="btn" onClick={onSettings}>
+      <button type="button" className="btn view-tools-end" onClick={onSettings}>
         <Settings2 aria-hidden="true" />
         {t("budget.settings")}
       </button>
-    </HeaderTools>
+    </ViewTools>
   );
 }
 

@@ -6,10 +6,10 @@ import { MediaImage } from "../../shared/media";
 import { initials } from "../domain/contacts";
 import { parseDay } from "../domain/schedule";
 
-/** What the page shown puts in the header of the window, right of where one is. */
-export function HeaderTools({ children }: { children: ReactNode }) {
-  const { headerActions } = useProject();
-  return headerActions && createPortal(children, headerActions);
+/** What the page shown puts in the bar of tools under the header of the window. */
+export function ViewTools({ children }: { children: ReactNode }) {
+  const { viewTools } = useProject();
+  return viewTools && createPortal(children, viewTools);
 }
 
 /** A photo, or the initials of the name on a tint of its own. */

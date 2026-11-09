@@ -57,8 +57,8 @@ export interface ProjectApi {
     page: { width: number; height: number; css?: string },
     quiet?: boolean,
   ) => Promise<string | null>;
-  /** The right end of the view header, where the current view puts its own buttons (through a portal). */
-  headerActions: HTMLElement | null;
+  /** The bar under the view header, where the current view puts its own tools (through a portal); empty, it is hidden. */
+  viewTools: HTMLElement | null;
   /** Opens the settings, on `page` when given. */
   openSettings: (page?: SettingsPage) => void;
   /** Opens the project's import or export window, on `section` when given. */

@@ -360,7 +360,7 @@ export function ProjectShell({
     content: ReactNode;
     css: string;
   } | null>(null);
-  const [headerActions, setHeaderActions] = useState<HTMLElement | null>(null);
+  const [viewTools, setViewTools] = useState<HTMLElement | null>(null);
   const [trail, setTrail] = useState<Crumb[] | null>(null);
   const [transferReq, setTransferReq] = useState<{
     mode: TransferMode;
@@ -539,7 +539,7 @@ export function ProjectShell({
       openScene,
       openEntry,
       printPdf,
-      headerActions,
+      viewTools,
       transfer,
       setTrail,
       openSettings: (page: SettingsPage = "appearance") => setSettings(page),
@@ -554,7 +554,7 @@ export function ProjectShell({
       openScene,
       openEntry,
       printPdf,
-      headerActions,
+      viewTools,
       transfer,
       setTrail,
     ],
@@ -1092,8 +1092,8 @@ export function ProjectShell({
             view={view}
             trail={trail}
             live={live}
-            actionsRef={setHeaderActions}
           />
+          <div ref={setViewTools} className="view-tools" />
           <div className="shell-main">
             <div className="view-host" hidden={view !== "script"}>
               <ScreenplayWorkspace active={view === "script"} />
@@ -1483,13 +1483,11 @@ function ViewHeader({
   view,
   trail,
   live,
-  actionsRef,
 }: {
   project: OpenState;
   view: ViewId;
   trail: Crumb[] | null;
   live: LivePages;
-  actionsRef: (el: HTMLElement | null) => void;
 }) {
   const group = NAV.find((g) => g.items.some((i) => i.id === view));
   const item = group?.items.find((i) => i.id === view);
@@ -1533,7 +1531,6 @@ function ViewHeader({
           )}
         </h1>
       </nav>
-      <div ref={actionsRef} className="view-header-actions" />
       <WindowControls />
     </header>
   );

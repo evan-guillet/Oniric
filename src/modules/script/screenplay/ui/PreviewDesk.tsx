@@ -37,7 +37,7 @@ export function PreviewDesk({
   labels?: string[];
 }) {
   const { t } = useTranslation();
-  const { headerActions } = useProject();
+  const { viewTools } = useProject();
   const [layout, setLayout] = useStoredState<Layout>("oniric.script.preview.layout", "sheets");
   const [zoom, setZoom] = useStoredState("oniric.script.preview.zoom", 1);
   const deskRef = useRef<HTMLElement>(null);
@@ -102,7 +102,7 @@ export function PreviewDesk({
   return (
     <main ref={deskRef} className={`desk desk-print layout-${shown}`}>
       {active &&
-        headerActions &&
+        viewTools &&
         createPortal(
           <>
             <Segmented
@@ -111,7 +111,7 @@ export function PreviewDesk({
               onChange={changeLayout}
               options={LAYOUTS.map((id) => ({ id, label: t(`script.preview.${id}`), hint: t(`script.preview.${id}Hint`) }))}
             />
-            <div className="segmented preview-zoom" role="group" aria-label={t("script.preview.zoom")}>
+            <div className="segmented preview-zoom view-tools-end" role="group" aria-label={t("script.preview.zoom")}>
               <button type="button" className="seg" aria-label={t("canvas.zoomOut")} title={t("canvas.zoomOutTitle")} disabled={zoom <= ZOOMS[0]} onClick={() => step(false)}>
                 <Minus aria-hidden="true" />
               </button>
@@ -123,7 +123,7 @@ export function PreviewDesk({
               </button>
             </div>
           </>,
-          headerActions,
+          viewTools,
         )}
       <div className="fmt" style={{ zoom }}>
         <PrintPages
