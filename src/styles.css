@@ -7409,6 +7409,46 @@ label.num input {
   right: -4px;
   border-top: 1px solid var(--line);
 }
+/* An option with its own actions: the row lights up whole, its « ⋯ » at the end, quiet until the pointer reaches it. */
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 3px;
+  border-radius: 5px;
+}
+.select-row:hover,
+.select-row:focus-within,
+.select-row.on {
+  background: var(--hover);
+}
+.project-menu.select-menu .select-row > button[role="option"] {
+  flex: 1;
+  min-width: 0;
+  background: none;
+}
+.project-menu.select-menu button.select-more {
+  justify-content: center;
+  width: 26px;
+  min-height: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--muted);
+  opacity: 0.55;
+  transition:
+    opacity 120ms ease-out,
+    background-color 120ms ease-out;
+}
+.select-row:hover button.select-more,
+.select-row:focus-within button.select-more,
+.select-row.on button.select-more {
+  opacity: 1;
+}
+.project-menu.select-menu button.select-more:hover,
+.select-row.on button.select-more {
+  background: var(--control-hover);
+  color: var(--ink);
+}
 .project-menu.select-menu button:disabled {
   cursor: default;
   opacity: 0.5;
@@ -13098,13 +13138,17 @@ input.pr-qty {
   padding: 0;
   list-style: none;
 }
+/*
+ * The rules belong to the cells, so that the sticky columns cover the line of the present day from edge to edge.
+ * Every row carries one rule at its foot and is 46 px above it, so the names, bars and tags sit at the same height
+ * in all of them, and the phase's rule falls on its last row's.
+ */
 .pr-cal-row {
   display: flex;
-  height: 46px;
+  height: 47px;
 }
-/* The rules belong to the cells, so that the sticky columns cover the line of the present day from edge to edge. */
-.pr-cal-row + .pr-cal-row > * {
-  border-top: 1px solid var(--line);
+.pr-cal-row > * {
+  border-bottom: 1px solid var(--line);
 }
 .pr-cal-row:last-child > *,
 .pr-cal-phase {

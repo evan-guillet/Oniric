@@ -3170,6 +3170,7 @@
     "deleteStageTitle": "Delete the stage “{{name}}”?",
     "deleteStageText": "The shooting days are not touched.",
     "stageMenu": "Actions on {{name}}",
+    "planMenu": "Actions on {{name}}",
     "stageTitle": "Title",
     "phase": "Stage",
     "phases": {
@@ -3617,6 +3618,7 @@
     "newFrom": "New version: {{model}}",
     "rename": "Rename version",
     "deleteVersion": "Delete version…",
+    "versionActions": "Actions on {{name}}",
     "deleteTitle": "Delete “{{name}}”?",
     "deleteText": "Its lines go with it. Expenses and financing stay.",
     "settings": "Settings",

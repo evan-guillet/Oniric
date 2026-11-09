@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
 import {
   Children,
   Fragment,
@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import type { MoreItem } from "./MoreMenu";
+import { FloatingMenu, type MoreItem } from "./MoreMenu";
 
 type Option = {
   value: string;
@@ -75,6 +75,8 @@ export function Select({
   onClose,
   display,
   actions,
+  optionActions,
+  optionMenuLabel,
   "aria-label": ariaLabel,
 }: {
   value: string;
@@ -90,8 +92,14 @@ export function Select({
   onClose?: () => void;
   /** What the field shows of the current choice in place of its label, the list still saying it whole. */
   display?: ReactNode;
-  /** What one does to the choices themselves (a new version, rename, delete), listed under them past a line. */
+  /** What one does besides choosing (a new version), listed under the choices past a line. */
   actions?: MoreItem[];
+  /**
+   * What one does to one choice (rename it, delete it): a « ⋯ » at the end of its row opens them, as does → on it.
+   * `optionMenuLabel` names that button for a screen reader, from the option's text.
+   */
+  optionActions?: (value: string) => MoreItem[];
+  optionMenuLabel?: (text: string) => string;
   "aria-label"?: string;
 }) {
   const options = readOptions(children);
@@ -124,7 +132,19 @@ export function Select({
   // The listeners below are set once per opening; they reach the latest owner callback through this.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  // The menu of one option, beside its « ⋯ »; the list stays open behind it.
+  const [sub, setSub] = useState<{ value: string; style: CSSProperties } | null>(null);
+  const subAnchor = useRef<HTMLElement | null>(null);
+  const subMenu = useRef<HTMLDivElement>(null);
+  const openSub = (more: HTMLElement, value: string) => {
+    const r = more.getBoundingClientRect();
+    subAnchor.current = more.parentElement;
+    const side: CSSProperties =
+      r.right + 6 + 240 <= window.innerWidth ? { left: r.right + 6 } : { right: window.innerWidth - r.left + 6 };
+    setSub({ value, style: { ...side, top: Math.max(8, Math.min(r.top - 5, window.innerHeight - 240)) } });
+  };
   const close = (refocus: boolean) => {
+    setSub(null);
     setOpen(false);
     onCloseRef.current?.();
     if (refocus) button.current?.focus();
@@ -160,16 +180,31 @@ export function Select({
       on?.focus();
       on?.scrollIntoView({ block: "nearest" });
     });
-    const items = () => [...(menu.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
+    // The « ⋯ » of the rows are left out of the arrows: → opens the menu of the option in focus.
+    const items = () => [
+      ...(menu.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled):not(.select-more)") ?? []),
+    ];
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (!menu.current?.contains(t) && !button.current?.contains(t)) close(false);
+      if (!menu.current?.contains(t) && !button.current?.contains(t) && !subMenu.current?.contains(t)) close(false);
     };
     const onScroll = (e: Event) => {
-      if (!menu.current?.contains(e.target as Node)) close(false);
+      const t = e.target as Node;
+      if (!menu.current?.contains(t) && !subMenu.current?.contains(t)) close(false);
     };
     const onKey = (e: KeyboardEvent) => {
+      // While the menu of an option is open, its own keys run it.
+      if (subMenu.current) return;
       const all = items();
+      const more =
+        e.key === "ArrowRight" && (document.activeElement as HTMLElement | null)?.getAttribute("role") === "option"
+          ? document.activeElement?.parentElement?.querySelector<HTMLElement>(".select-more")
+          : null;
+      if (more) {
+        e.preventDefault();
+        openSub(more, (document.activeElement as HTMLElement).dataset.value ?? "");
+        return;
+      }
       const i = all.indexOf(document.activeElement as HTMLButtonElement);
       if (e.key === "Escape") {
         e.preventDefault();
@@ -285,20 +320,46 @@ export function Select({
                       <span className="select-group-n">{listed.filter((x) => x.group === head).length}</span>
                     </button>
                   )}
-                  {folded ? null : (
-                    <button
-                      type="button"
-                      role="option"
-                      data-value={o.value}
-                      data-group={foldable ? o.group : undefined}
-                      aria-selected={o.value === value}
-                      disabled={o.disabled}
-                      onClick={() => choose(o)}
-                    >
-                      <span className="check-box radio" aria-hidden="true" />
-                      <span className="more-item">{o.label}</span>
-                    </button>
-                  )}
+                  {folded
+                    ? null
+                    : (() => {
+                        const option = (
+                          <button
+                            type="button"
+                            role="option"
+                            data-value={o.value}
+                            data-group={foldable ? o.group : undefined}
+                            aria-selected={o.value === value}
+                            disabled={o.disabled}
+                            onClick={() => choose(o)}
+                          >
+                            <span className="check-box radio" aria-hidden="true" />
+                            <span className="more-item">{o.label}</span>
+                          </button>
+                        );
+                        if (!optionActions) return option;
+                        const on = sub?.value === o.value;
+                        return (
+                          <div className={`select-row${on ? " on" : ""}`} role="none">
+                            {option}
+                            <button
+                              type="button"
+                              className="select-more"
+                              tabIndex={-1}
+                              aria-label={optionMenuLabel?.(o.text) ?? o.text}
+                              title={optionMenuLabel?.(o.text)}
+                              aria-haspopup="menu"
+                              aria-expanded={on}
+                              onClick={(e) => {
+                                if (on) setSub(null);
+                                else openSub(e.currentTarget, o.value);
+                              }}
+                            >
+                              <Ellipsis aria-hidden="true" />
+                            </button>
+                          </div>
+                        );
+                      })()}
                 </Fragment>
               );
             })}
@@ -327,6 +388,24 @@ export function Select({
           </div>,
           button.current?.closest("dialog") ?? document.body,
         )}
+      {open && sub && optionActions && (
+        <FloatingMenu
+          menuRef={subMenu}
+          anchor={subAnchor}
+          style={sub.style}
+          onClose={() => {
+            setSub(null);
+            subAnchor.current?.querySelector<HTMLElement>('[role="option"]')?.focus();
+          }}
+          items={optionActions(sub.value).map((item) => ({
+            ...item,
+            onClick: () => {
+              close(false);
+              item.onClick();
+            },
+          }))}
+        />
+      )}
     </>
   );
 }

@@ -201,35 +201,42 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
         if (name) void createSchedule(plans, name, null).catch(fail);
       },
     },
-    {
-      label: t("schedule.duplicate"),
-      icon: Copy,
-      hint: t("schedule.duplicateHint"),
-      onClick: async () => {
-        const name = (await prompt(t("schedule.duplicate"), t("schedule.name"), t("schedule.copyName", { name: s.name })))?.trim();
-        if (name) void createSchedule(plans, name, s).catch(fail);
-      },
-    },
-    {
-      label: t("schedule.rename"),
-      icon: Pencil,
-      onClick: async () => {
-        const name = (await prompt(t("schedule.rename"), t("schedule.name"), s.name))?.trim();
-        if (name) void updateSchedule(s.id, { name }).catch(fail);
-      },
-    },
-    {
-      label: t("schedule.delete"),
-      icon: Trash2,
-      danger: true,
-      onClick: async () => {
-        if (await confirmRemoval(ask, { title: t("schedule.deleteTitle", { name: s.name }), text: t("schedule.deleteText") })) void deleteSchedule(s.id).catch(fail);
-      },
-    },
   ];
+  // What is done to one plan, from the « ⋯ » of its row: the one chosen or another.
+  const planItems = (id: string): MoreItem[] => {
+    const x = plans.schedules.find((p) => p.id === id);
+    if (!x) return [];
+    return [
+      {
+        label: t("schedule.duplicate"),
+        icon: Copy,
+        hint: t("schedule.duplicateHint"),
+        onClick: async () => {
+          const name = (await prompt(t("schedule.duplicate"), t("schedule.name"), t("schedule.copyName", { name: x.name })))?.trim();
+          if (name) void createSchedule(plans, name, x).catch(fail);
+        },
+      },
+      {
+        label: t("schedule.rename"),
+        icon: Pencil,
+        onClick: async () => {
+          const name = (await prompt(t("schedule.rename"), t("schedule.name"), x.name))?.trim();
+          if (name) void updateSchedule(x.id, { name }).catch(fail);
+        },
+      },
+      {
+        label: t("schedule.delete"),
+        icon: Trash2,
+        danger: true,
+        onClick: async () => {
+          if (await confirmRemoval(ask, { title: t("schedule.deleteTitle", { name: x.name }), text: t("schedule.deleteText") })) void deleteSchedule(x.id).catch(fail);
+        },
+      },
+    ];
+  };
   return (
     <ViewTools>
-      <Select value={s.id} aria-label={t("schedule.version")} actions={items} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
+      <Select value={s.id} aria-label={t("schedule.version")} actions={items} optionActions={planItems} optionMenuLabel={(name) => t("schedule.planMenu", { name })} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
         {plans.schedules.map((x) => (
           <option key={x.id} value={x.id}>
             {x.name}

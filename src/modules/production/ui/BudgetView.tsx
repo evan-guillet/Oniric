@@ -120,46 +120,51 @@ function Start({ b }: { b: Budgets }) {
 function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSettings: () => void }) {
   const { prompt, ask } = useProject();
   const fail = useFail();
-  const copy = async (kind: BudgetKind) => {
+  const copy = async (from: Budget, kind: BudgetKind) => {
     const name = (await prompt(t("budget.newVersion"), t("budget.versionName"), t(`budget.kinds.${kind}`)))?.trim();
-    if (name) await duplicateBudget(b, current, name, kind).catch(fail);
+    if (name) await duplicateBudget(b, from, name, kind).catch(fail);
   };
-  const items: MoreItem[] = [
-    ...BUDGET_KINDS.map((k) => ({ label: t("budget.copyAs", { kind: t(`budget.kinds.${k}`) }), icon: Copy, onClick: () => void copy(k) })),
-    ...GRID_MODELS.map((m) => ({
-      label: t("budget.newFrom", { model: t(`budget.models.${m.id}`) }),
-      icon: Plus,
-      onClick: () => {
-        void (async () => {
-          const name = (await prompt(t("budget.newVersion"), t("budget.versionName"), t("budget.kinds.estimate")))?.trim();
-          if (name) await createBudget(b, name, "estimate", m).catch(fail);
-        })();
-      },
-    })),
-    {
-      label: t("budget.rename"),
-      icon: Pencil,
-      onClick: () => {
-        void (async () => {
-          const name = (await prompt(t("budget.rename"), t("budget.versionName"), current.name))?.trim();
-          if (name) await updateBudget(current.id, { name }).catch(fail);
-        })();
-      },
+  const items: MoreItem[] = GRID_MODELS.map((m) => ({
+    label: t("budget.newFrom", { model: t(`budget.models.${m.id}`) }),
+    icon: Plus,
+    onClick: () => {
+      void (async () => {
+        const name = (await prompt(t("budget.newVersion"), t("budget.versionName"), t("budget.kinds.estimate")))?.trim();
+        if (name) await createBudget(b, name, "estimate", m).catch(fail);
+      })();
     },
-    {
-      label: t("budget.deleteVersion"),
-      icon: Trash2,
-      danger: true,
-      onClick: () => {
-        void (async () => {
-          if (await confirmRemoval(ask, { title: t("budget.deleteTitle", { name: current.name }), text: t("budget.deleteText") })) await deleteBudget(current.id).catch(fail);
-        })();
+  }));
+  // What is done to one version, from the « ⋯ » of its row: the one shown or another.
+  const versionItems = (id: string): MoreItem[] => {
+    const x = b.budgets.find((v) => v.id === id);
+    if (!x) return [];
+    return [
+      ...BUDGET_KINDS.map((k) => ({ label: t("budget.copyAs", { kind: t(`budget.kinds.${k}`) }), icon: Copy, onClick: () => void copy(x, k) })),
+      {
+        label: t("budget.rename"),
+        icon: Pencil,
+        onClick: () => {
+          void (async () => {
+            const name = (await prompt(t("budget.rename"), t("budget.versionName"), x.name))?.trim();
+            if (name) await updateBudget(x.id, { name }).catch(fail);
+          })();
+        },
       },
-    },
-  ];
+      {
+        label: t("budget.deleteVersion"),
+        icon: Trash2,
+        danger: true,
+        onClick: () => {
+          void (async () => {
+            if (await confirmRemoval(ask, { title: t("budget.deleteTitle", { name: x.name }), text: t("budget.deleteText") })) await deleteBudget(x.id).catch(fail);
+          })();
+        },
+      },
+    ];
+  };
   return (
     <ViewTools>
-      <Select value={current.id} aria-label={t("budget.version")} actions={items} onChange={(e) => void chooseBudget(e.target.value).catch(fail)}>
+      <Select value={current.id} aria-label={t("budget.version")} actions={items} optionActions={versionItems} optionMenuLabel={(name) => t("budget.versionActions", { name })} onChange={(e) => void chooseBudget(e.target.value).catch(fail)}>
         {b.budgets.map((x) => (
           <option key={x.id} value={x.id}>
             {x.name}

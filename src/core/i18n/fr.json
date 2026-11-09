@@ -3170,6 +3170,7 @@
     "deleteStageTitle": "Supprimer l'étape « {{name}} » ?",
     "deleteStageText": "Les journées de tournage ne sont pas touchées.",
     "stageMenu": "Actions sur {{name}}",
+    "planMenu": "Actions sur {{name}}",
     "stageTitle": "Intitulé",
     "phase": "Étape",
     "phases": {
@@ -3617,6 +3618,7 @@
     "newFrom": "Nouvelle version : {{model}}",
     "rename": "Renommer la version",
     "deleteVersion": "Supprimer la version…",
+    "versionActions": "Actions sur {{name}}",
     "deleteTitle": "Supprimer « {{name}} » ?",
     "deleteText": "Ses lignes partent avec elle. Les dépenses et le financement restent.",
     "settings": "Réglages",

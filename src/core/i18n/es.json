@@ -3170,6 +3170,7 @@
     "deleteStageTitle": "¿Eliminar la etapa «{{name}}»?",
     "deleteStageText": "Las jornadas de rodaje no se tocan.",
     "stageMenu": "Acciones sobre {{name}}",
+    "planMenu": "Acciones sobre {{name}}",
     "stageTitle": "Título",
     "phase": "Etapa",
     "phases": {
@@ -3617,6 +3618,7 @@
     "newFrom": "Nueva versión: {{model}}",
     "rename": "Renombrar la versión",
     "deleteVersion": "Eliminar la versión…",
+    "versionActions": "Acciones sobre {{name}}",
     "deleteTitle": "¿Eliminar «{{name}}»?",
     "deleteText": "Sus líneas se van con ella. Los gastos y la financiación se quedan.",
     "settings": "Ajustes",
