@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { AlertTriangle, ChevronRight, Link2, Paperclip, Plus, Settings2, StickyNote, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronRight, Copy, Link2, Paperclip, Pencil, Plus, Settings2, StickyNote, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { commands } from "../../../bindings";
 import { unwrap } from "../../../core/db/client";
@@ -125,9 +125,10 @@ function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSett
     if (name) await duplicateBudget(b, current, name, kind).catch(fail);
   };
   const items: MoreItem[] = [
-    ...BUDGET_KINDS.map((k) => ({ label: t("budget.copyAs", { kind: t(`budget.kinds.${k}`) }), onClick: () => void copy(k) })),
+    ...BUDGET_KINDS.map((k) => ({ label: t("budget.copyAs", { kind: t(`budget.kinds.${k}`) }), icon: Copy, onClick: () => void copy(k) })),
     ...GRID_MODELS.map((m) => ({
       label: t("budget.newFrom", { model: t(`budget.models.${m.id}`) }),
+      icon: Plus,
       onClick: () => {
         void (async () => {
           const name = (await prompt(t("budget.newVersion"), t("budget.versionName"), t("budget.kinds.estimate")))?.trim();
@@ -137,6 +138,7 @@ function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSett
     })),
     {
       label: t("budget.rename"),
+      icon: Pencil,
       onClick: () => {
         void (async () => {
           const name = (await prompt(t("budget.rename"), t("budget.versionName"), current.name))?.trim();
@@ -157,14 +159,13 @@ function Tools({ b, current, onSettings }: { b: Budgets; current: Budget; onSett
   ];
   return (
     <ViewTools>
-      <Select value={current.id} aria-label={t("budget.version")} onChange={(e) => void chooseBudget(e.target.value).catch(fail)}>
+      <Select value={current.id} aria-label={t("budget.version")} actions={items} onChange={(e) => void chooseBudget(e.target.value).catch(fail)}>
         {b.budgets.map((x) => (
           <option key={x.id} value={x.id}>
             {x.name}
           </option>
         ))}
       </Select>
-      <MoreMenu label={t("budget.versionMenu")} items={items} />
       <button type="button" className="btn view-tools-end" onClick={onSettings}>
         <Settings2 aria-hidden="true" />
         {t("budget.settings")}

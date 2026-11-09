@@ -7392,6 +7392,23 @@ label.num input {
   min-height: 32px;
   padding: 6px 10px;
 }
+/* The options and the actions on them stand in the menu's own grid; a line sets the actions apart. */
+.select-list,
+.select-actions {
+  display: contents;
+}
+.select-actions > button:first-child {
+  position: relative;
+  margin-top: 9px;
+}
+.select-actions > button:first-child::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  right: -4px;
+  border-top: 1px solid var(--line);
+}
 .project-menu.select-menu button:disabled {
   cursor: default;
   opacity: 0.5;

@@ -229,14 +229,13 @@ function Versions({ plans, board: b, onSettings }: { plans: Plans; board: Board;
   ];
   return (
     <ViewTools>
-      <Select value={s.id} aria-label={t("schedule.version")} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
+      <Select value={s.id} aria-label={t("schedule.version")} actions={items} onChange={(e) => void chooseSchedule(e.target.value).catch(fail)}>
         {plans.schedules.map((x) => (
           <option key={x.id} value={x.id}>
             {x.name}
           </option>
         ))}
       </Select>
-      <MoreMenu label={t("schedule.versionMenu")} items={items} />
       <button type="button" className="btn view-tools-end" onClick={onSettings}>
         <Settings2 aria-hidden="true" />
         {t("schedule.settings")}

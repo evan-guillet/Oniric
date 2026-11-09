@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import type { MoreItem } from "./MoreMenu";
 
 type Option = {
   value: string;
@@ -73,6 +74,7 @@ export function Select({
   defaultOpen,
   onClose,
   display,
+  actions,
   "aria-label": ariaLabel,
 }: {
   value: string;
@@ -88,6 +90,8 @@ export function Select({
   onClose?: () => void;
   /** What the field shows of the current choice in place of its label, the list still saying it whole. */
   display?: ReactNode;
+  /** What one does to the choices themselves (a new version, rename, delete), listed under them past a line. */
+  actions?: MoreItem[];
   "aria-label"?: string;
 }) {
   const options = readOptions(children);
@@ -253,12 +257,10 @@ export function Select({
         createPortal(
           <div
             ref={menu}
-            id={listId}
-            className="project-menu check-menu select-menu"
-            role="listbox"
-            aria-label={ariaLabel}
+            className={`project-menu check-menu select-menu${actions?.length ? " more-menu" : ""}`}
             style={style}
           >
+            <div id={listId} className="select-list" role="listbox" aria-label={ariaLabel}>
             {listed.map((o) => {
               const head = o.group !== lastGroup && o.group ? o.group : null;
               lastGroup = o.group;
@@ -300,6 +302,28 @@ export function Select({
                 </Fragment>
               );
             })}
+            </div>
+            {!!actions?.length && (
+              <div className="select-actions" role="group" aria-label={ariaLabel}>
+                {actions.map(({ label, icon: Icon, hint, danger, onClick }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={[danger && "danger", hint && "with-hint"].filter(Boolean).join(" ") || undefined}
+                    onClick={() => {
+                      close(false);
+                      onClick();
+                    }}
+                  >
+                    {Icon ? <Icon aria-hidden="true" /> : <span className="more-icon-gap" aria-hidden="true" />}
+                    <span className="more-item">
+                      {label}
+                      {hint && <span className="more-item-hint">{hint}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>,
           button.current?.closest("dialog") ?? document.body,
         )}
