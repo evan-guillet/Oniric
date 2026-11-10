@@ -457,18 +457,20 @@ export function ProjectShell({
       if (document.querySelector("dialog[open]")) return;
       e.preventDefault();
       const redo = key === "y" || e.shiftKey;
+      // One toast for the whole history: each Ctrl+Z rewrites it instead of stacking a new one.
+      const say = (m: Omit<ToastMessage, "id" | "slot">) => notify({ ...m, slot: "history" });
       const run = (again: boolean) =>
         stepHistory(again, session.editor)
           .then((done) => {
-            if (done === "none") notify({ text: t(again ? "history.nothingToRedo" : "history.nothingToUndo") });
-            else if (done === "textChanged") notify({ text: t("history.textChanged"), tone: "warning" });
+            if (done === "none") say({ text: t(again ? "history.nothingToRedo" : "history.nothingToUndo") });
+            else if (done === "textChanged") say({ text: t("history.textChanged"), tone: "warning" });
             else
-              notify({
+              say({
                 text: t(again ? "history.redone" : "history.undone", { label: done.label }),
                 actions: [{ label: t(again ? "history.undo" : "history.redo"), onClick: () => void run(!again) }],
               });
           })
-          .catch((err) => notify({ text: describeError(err), tone: "error" }));
+          .catch((err) => say({ text: describeError(err), tone: "error" }));
       void run(redo);
     };
     window.addEventListener("keydown", onKey);

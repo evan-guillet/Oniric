@@ -26,7 +26,15 @@ export function App() {
   const workspace = useRef<WorkspaceHandle | null>(null);
   const nextToast = useRef(1);
 
-  const notify = useCallback((m: Omit<ToastMessage, "id">) => setToasts((all) => [...all, { ...m, id: nextToast.current++ }]), []);
+  const notify = useCallback(
+    (m: Omit<ToastMessage, "id">) =>
+      setToasts((all) => {
+        const shown = m.slot ? all.find((x) => x.slot === m.slot) : undefined;
+        // Same slot: the new words replace the old in place, and its countdown starts again.
+        return shown ? all.map((x) => (x === shown ? { ...m, id: shown.id } : x)) : [...all, { ...m, id: nextToast.current++ }];
+      }),
+    [],
+  );
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((m) => m.id !== id)), []);
 
   const showProject = useCallback(

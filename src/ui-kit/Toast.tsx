@@ -7,6 +7,8 @@ export interface ToastMessage {
   text: string;
   tone?: "info" | "warning" | "error";
   actions?: { label: string; onClick: () => void }[];
+  /** A toast with the same slot takes the place of the one shown, instead of piling up under it. */
+  slot?: string;
   /** Milliseconds before it disappears; never for errors. */
   timeout?: number;
 }
